@@ -230,11 +230,11 @@ a {
    Home
    --------------------------------------------------------------------------------------------------------------- */
 
+/* Cards fill the width, adding columns as the window grows. */
 .workspace-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  max-width: 720px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -242,17 +242,34 @@ a {
 
 .workspace-card {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-surface);
 }
 
+.workspace-card:hover {
+  border-color: var(--color-accent);
+}
+
+.workspace-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .workspace-name {
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workspace-summary {
