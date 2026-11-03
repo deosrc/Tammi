@@ -109,6 +109,56 @@
                     }
                 </div>
 
+                <div class="settings-field">
+                    <label for="agent-@index-session-id-arguments">Session ID arguments</label>
+                    <textarea id="agent-@index-session-id-arguments"
+                              class="settings-arguments"
+                              rows="2"
+                              value="@ArgumentLines.Format(definition.SessionIdArguments)"
+                              @onchange="e => UpdateDefinitionAsync(index, d => d with { SessionIdArguments = ArgumentLines.Parse(Text(e)) })"></textarea>
+                    <p class="settings-help">
+                        Added after the arguments when the agent starts a new session, so TAMMi can resume it later.
+                        <code>@AgentDefinition.SessionIdPlaceholder</code> is replaced with a session ID that TAMMi
+                        makes up (a UUID), e.g. <code>--session-id</code> then <code>@AgentDefinition.SessionIdPlaceholder</code>.
+                        Leave this empty if the agent can't be given a session ID.
+                    </p>
+                    @if (definition.SessionIdArguments.Count > 0 && !HasSessionIdPlaceholder(definition.SessionIdArguments))
+                    {
+                        <p class="warning">
+                            None of these arguments has <code>@AgentDefinition.SessionIdPlaceholder</code>, so the
+                            session can't be resumed.
+                        </p>
+                    }
+                </div>
+
+                <div class="settings-field">
+                    <label for="agent-@index-resume-arguments">Resume arguments</label>
+                    <textarea id="agent-@index-resume-arguments"
+                              class="settings-arguments"
+                              rows="2"
+                              value="@ArgumentLines.Format(definition.ResumeArguments)"
+                              @onchange="e => UpdateDefinitionAsync(index, d => d with { ResumeArguments = ArgumentLines.Parse(Text(e)) })"></textarea>
+                    <p class="settings-help">
+                        Added after the arguments, in place of the session ID and initial prompt arguments, to resume a
+                        session. <code>@AgentDefinition.SessionIdPlaceholder</code> is replaced with the session's ID,
+                        e.g. <code>--resume</code> then <code>@AgentDefinition.SessionIdPlaceholder</code>. Sessions
+                        can only be resumed when both these and the session ID arguments are set.
+                    </p>
+                    @if (definition.ResumeArguments.Count > 0 && !HasSessionIdPlaceholder(definition.ResumeArguments))
+                    {
+                        <p class="warning">
+                            None of these arguments has <code>@AgentDefinition.SessionIdPlaceholder</code>, so the
+                            agent won't know which session to resume.
+                        </p>
+                    }
+                    else if (definition.SessionIdArguments.Count > 0 != definition.ResumeArguments.Count > 0)
+                    {
+                        <p class="warning">
+                            Set both the session ID arguments and the resume arguments to resume this agent's sessions.
+                        </p>
+                    }
+                </div>
+
                 @if (!string.IsNullOrWhiteSpace(definition.Command))
                 {
                     <dl class="settings-values agent-command-preview">
@@ -118,6 +168,13 @@
                         {
                             <dt>With a prompt</dt>
                             <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildArguments(PromptExample))</code></dd>
+                        }
+                        @if (definition.CanResume)
+                        {
+                            <dt>New session</dt>
+                            <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildArguments(PromptExample, SessionIdExample))</code></dd>
+                            <dt>Resuming</dt>
+                            <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildResumeArguments(SessionIdExample))</code></dd>
                         }
                     </dl>
                 }
@@ -182,6 +239,7 @@
 
     // Shown in place of the prompt in the command previews.
     private const string PromptExample = "<initial prompt>";
+    private const string SessionIdExample = "<session ID>";
 
     private IReadOnlyList<AgentDefinition> Definitions => Current.CustomDefinitions;
 
@@ -190,6 +248,9 @@
     private static bool HasPromptPlaceholder(AgentDefinition definition) =>
         definition.PromptArguments.Any(argument =>
             argument.Contains(AgentDefinition.PromptPlaceholder, StringComparison.Ordinal));
+
+    private static bool HasSessionIdPlaceholder(IEnumerable<string> arguments) =>
+        arguments.Any(argument => argument.Contains(AgentDefinition.SessionIdPlaceholder, StringComparison.Ordinal));
 
     private Task AddDefinitionAsync() =>
         UpdateDefinitionsAsync(definitions =>

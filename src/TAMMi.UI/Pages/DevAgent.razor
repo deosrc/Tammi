@@ -6,9 +6,12 @@
 @inject AgentLauncher AgentLauncher
 @inject IFolderPicker FolderPicker
 @inject ISettingsStore SettingsStore
+@inject IAppPaths AppPaths
+@inject TimeProvider TimeProvider
 
 @* A developer page for starting an Agent Definition in a folder, with or without an initial prompt, stopping it and
-   following its state. Agents with hooks show Working, Needs input and Idle while they run. *@
+   following its state. Agents with hooks show Working, Needs input and Idle while they run. Sessions that can be
+   resumed are recorded in the app's data folder, so they can be resumed after a restart. *@
 <div class="dev-page">
     <header>
         <h1>Agent</h1>
@@ -57,6 +60,41 @@
         <p class="error">@_error</p>
     }
 
+    @if (_sessions.Count > 0 || _sessionStore.Problem is not null)
+    {
+        <details class="dev-agent-sessions" open="@(_agent is null)">
+            <summary>Recorded sessions (@_sessions.Count)</summary>
+            @if (_sessionStore.Problem is not null)
+            {
+                <p class="error">@_sessionStore.Problem</p>
+            }
+            <ul>
+                @foreach (var session in _sessions)
+                {
+                    var definition = session.FindDefinition(Definitions);
+                    <li @key="session.Id">
+                        <span>
+                            @session.AgentName in <code>@session.WorkingDirectory</code>,
+                            @session.LastStartedAt.ToLocalTime().ToString("g") (<code>@session.Id</code>)
+                        </span>
+                        @if (definition is null)
+                        {
+                            <span class="warning">No agent is called "@session.AgentName" now.</span>
+                        }
+                        else if (!definition.CanResume)
+                        {
+                            <span class="warning">@definition.Name doesn't say how to resume sessions.</span>
+                        }
+                        <button type="button" @onclick="() => ResumeAsync(session)"
+                                disabled="@(IsRunning || definition?.CanResume != true)">Resume</button>
+                        <button type="button" @onclick="() => ForgetAsync(session)"
+                                disabled="@(IsRunning && _agent?.SessionId == session.Id)">Forget</button>
+                    </li>
+                }
+            </ul>
+        </details>
+    }
+
     @if (_agent is not null)
     {
         <Terminal @key="_agent" Session="_agent.Session" Class="dev-page-terminal" />
@@ -64,7 +102,13 @@
 </div>
 
 @code {
+    // Kept apart from the workspaces' sessions, which live in their .tammi/ folders.
+    private const string SessionsFileName = "dev-agent-sessions.json";
+
     private IReadOnlyList<AgentDefinition> Definitions => SettingsStore.Current.Agents.Definitions;
+
+    private AgentSessionFileStore _sessionStore = null!;
+    private IReadOnlyList<AgentSession> _sessions = [];
 
     private int _definitionIndex;
     private string _workingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -82,6 +126,14 @@
     private string InitialPromptText => InitialPrompt.Expand(
         SettingsStore.Current.Agents.InitialPromptTemplate,
         string.IsNullOrWhiteSpace(_contextFile) ? DefaultContextFile : _contextFile.Trim());
+
+    protected override async Task OnInitializedAsync()
+    {
+        _sessionStore = new AgentSessionFileStore(Path.Combine(AppPaths.DataDirectory, SessionsFileName));
+        await LoadSessionsAsync();
+    }
+
+    private async Task LoadSessionsAsync() => _sessions = await _sessionStore.ListAsync();
 
     private async Task StartAsync()
     {
@@ -103,13 +155,79 @@
                 PtySize.Default,
                 _sendInitialPrompt ? InitialPromptText : null);
             agent.StateChanged += OnStateChanged;
+            agent.SessionIdChanged += OnSessionIdChanged;
             _agent = agent;
         }
         catch (Exception ex) when (ex is IOException or ArgumentException
             or System.Runtime.InteropServices.ExternalException)
         {
             _error = ex.Message;
+            return;
         }
+
+        await RecordSessionAsync(_agent);
+    }
+
+    private async Task ResumeAsync(AgentSession session)
+    {
+        _error = null;
+        if (session.FindDefinition(Definitions) is not { } definition)
+        {
+            _error = $"No agent is called \"{session.AgentName}\" now, so the session can't be resumed.";
+            return;
+        }
+
+        await EndAsync();
+
+        try
+        {
+            var agent = AgentLauncher.Resume(definition, session, PtySize.Default);
+            agent.StateChanged += OnStateChanged;
+            agent.SessionIdChanged += OnSessionIdChanged;
+            _agent = agent;
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException
+            or System.Runtime.InteropServices.ExternalException)
+        {
+            _error = ex.Message;
+            return;
+        }
+
+        await RecordSessionAsync(_agent);
+    }
+
+    private async Task RecordSessionAsync(Agent agent)
+    {
+        if (AgentSession.Of(agent, TimeProvider.GetUtcNow()) is not { } session)
+        {
+            return;
+        }
+
+        try
+        {
+            await _sessionStore.RecordAsync(session);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _error = $"The agent is running, but its session couldn't be recorded, so it can't be resumed after a restart. {ex.Message}";
+        }
+
+        await LoadSessionsAsync();
+    }
+
+    private async Task ForgetAsync(AgentSession session)
+    {
+        _error = null;
+        try
+        {
+            await _sessionStore.ForgetAsync(session.Id);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _error = $"Couldn't forget the session. {ex.Message}";
+        }
+
+        await LoadSessionsAsync();
     }
 
     private async Task StopAsync()
@@ -143,6 +261,13 @@
     // Raised on a background thread.
     private void OnStateChanged(Agent agent) => _ = InvokeAsync(StateHasChanged);
 
+    // Raised on a background thread, when the agent's hooks report its session, or that it has moved to another one.
+    private void OnSessionIdChanged(Agent agent) => _ = InvokeAsync(async () =>
+    {
+        await RecordSessionAsync(agent);
+        StateHasChanged();
+    });
+
     private static string DescribeState(Agent agent) => agent.State switch
     {
         AgentState.Running => $"{agent.Definition.Name} (PID {agent.Session.ProcessId}): Running",
@@ -161,6 +286,7 @@
             var agent = _agent;
             _agent = null;
             agent.StateChanged -= OnStateChanged;
+            agent.SessionIdChanged -= OnSessionIdChanged;
             await agent.DisposeAsync();
         }
     }

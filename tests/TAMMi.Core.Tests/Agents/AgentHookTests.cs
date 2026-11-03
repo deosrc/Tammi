@@ -122,6 +122,67 @@ public sealed class AgentHookTests : IAsyncDisposable
         Assert.Equal(AgentState.Running, agent.State);
     }
 
+    [Fact]
+    public void SessionId_FollowsSessionHooksReport()
+    {
+        var launchId = Guid.NewGuid().ToString();
+        var clearedId = Guid.NewGuid().ToString();
+        var hooks = _server.Register();
+        var agent = new Agent(AgentDefinition.ClaudeCode, "/work", new FakePtySession(), hooks, launchId);
+        var changes = new List<string?>();
+        agent.SessionIdChanged += changed => changes.Add(changed.SessionId);
+
+        Send(hooks, "UserPromptSubmit", launchId);
+        Send(hooks, "Stop", launchId);
+        // As after Claude Code's /clear, which starts another session in the same process.
+        Send(hooks, "UserPromptSubmit", clearedId);
+
+        Assert.Equal(clearedId, agent.SessionId);
+        Assert.Equal([clearedId], changes);
+    }
+
+    [Fact]
+    public void SessionId_WithoutIdAtLaunch_ComesFromHooks()
+    {
+        var id = Guid.NewGuid().ToString();
+        var definition = AgentDefinition.ClaudeCode with { SessionIdArguments = [] };
+        var hooks = _server.Register();
+        var agent = new Agent(definition, "/work", new FakePtySession(), hooks);
+        Assert.True(definition.CanResume);
+        Assert.Null(agent.SessionId);
+
+        Send(hooks, "UserPromptSubmit", id);
+
+        Assert.Equal(id, agent.SessionId);
+    }
+
+    [Theory]
+    [InlineData("--dangerously-skip-permissions")]
+    [InlineData("not-a-uuid")]
+    [InlineData("")]
+    public void SessionId_ReportedThatCantBeResumed_IsIgnored(string reported)
+    {
+        var launchId = Guid.NewGuid().ToString();
+        var hooks = _server.Register();
+        var agent = new Agent(AgentDefinition.ClaudeCode, "/work", new FakePtySession(), hooks, launchId);
+
+        Send(hooks, "UserPromptSubmit", reported);
+
+        Assert.Equal(launchId, agent.SessionId);
+    }
+
+    [Fact]
+    public void SessionId_WhenDefinitionCantResume_IsntTakenFromHooks()
+    {
+        var hooks = _server.Register();
+        var definition = AgentDefinition.ClaudeCode with { ResumeArguments = [] };
+        var agent = new Agent(definition, "/work", new FakePtySession(), hooks);
+
+        Send(hooks, "UserPromptSubmit", Guid.NewGuid().ToString());
+
+        Assert.Null(agent.SessionId);
+    }
+
     public ValueTask DisposeAsync() => _server.DisposeAsync();
 
     private (Agent Agent, AgentHookRegistration Hooks) CreateAgent(FakePtySession session)
@@ -130,9 +191,12 @@ public sealed class AgentHookTests : IAsyncDisposable
         return (new Agent(AgentDefinition.ClaudeCode, "/work", session, hooks), hooks);
     }
 
-    private static void Send(AgentHookRegistration hooks, string eventName)
+    private static void Send(AgentHookRegistration hooks, string eventName, string? sessionId = null)
     {
-        using var hookEvent = JsonDocument.Parse(JsonSerializer.Serialize(new { hook_event_name = eventName }));
+        object body = sessionId is null
+            ? new { hook_event_name = eventName }
+            : new { hook_event_name = eventName, session_id = sessionId };
+        using var hookEvent = JsonDocument.Parse(JsonSerializer.Serialize(body));
         hooks.OnEventReceived(hookEvent.RootElement);
     }
 }

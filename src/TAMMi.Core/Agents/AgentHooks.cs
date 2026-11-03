@@ -28,4 +28,17 @@ public abstract class AgentHooks
     /// <c>null</c> when the event doesn't change the state.
     /// </returns>
     public abstract AgentState? StateAfter(JsonElement hookEvent);
+
+    /// <summary>
+    /// Whether the hooks report the Agent Session's ID (see <see cref="SessionIdFrom"/>), so TAMMi can resume the
+    /// session without setting its ID at launch.
+    /// </summary>
+    public virtual bool ReportsSessionId => false;
+
+    /// <summary>
+    /// The Agent Session ID that a hook event reports, so TAMMi follows the agent when it moves to another session.
+    /// </summary>
+    /// <param name="hookEvent">The event, as the hook sent it.</param>
+    /// <returns>The ID of the session the agent is in, or <c>null</c> if the event doesn't say.</returns>
+    public virtual string? SessionIdFrom(JsonElement hookEvent) => null;
 }

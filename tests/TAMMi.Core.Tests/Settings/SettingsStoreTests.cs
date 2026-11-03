@@ -173,7 +173,12 @@ public sealed class SettingsStoreTests : IDisposable
     {
         AgentDefinition[] definitions =
         [
-            new AgentDefinition("Codex", "codex", "--full-auto") { PromptArguments = ["{prompt}"] },
+            new AgentDefinition("Codex", "codex", "--full-auto")
+            {
+                PromptArguments = ["{prompt}"],
+                SessionIdArguments = ["--id", "{sessionId}"],
+                ResumeArguments = ["resume", "{sessionId}"],
+            },
             new AgentDefinition("No prompt", "/opt/agent", "a b", "\"quoted\""),
         ];
 
@@ -199,7 +204,9 @@ public sealed class SettingsStoreTests : IDisposable
         var agents = JsonNode.Parse(File.ReadAllText(SettingsPath))!["agents"]!.AsObject();
         Assert.Equal(["customDefinitions", "initialPromptTemplate"], agents.Select(p => p.Key));
         var definition = Assert.Single(agents["customDefinitions"]!.AsArray())!.AsObject();
-        Assert.Equal(["name", "command", "arguments", "promptArguments"], definition.Select(p => p.Key));
+        Assert.Equal(
+            ["name", "command", "arguments", "promptArguments", "sessionIdArguments", "resumeArguments"],
+            definition.Select(p => p.Key));
     }
 
     [Fact]

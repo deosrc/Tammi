@@ -97,5 +97,85 @@ public class AgentDefinitionTests
         Assert.NotEqual(definition, definition with { Arguments = ["-b"] });
         Assert.NotEqual(definition, definition with { PromptArguments = [] });
         Assert.NotEqual(definition, definition with { Command = "other" });
+        Assert.NotEqual(definition, definition with { SessionIdArguments = ["--id", "{sessionId}"] });
+        Assert.NotEqual(definition, definition with { ResumeArguments = ["--resume", "{sessionId}"] });
     }
+
+    [Fact]
+    public void BuildArguments_WithSessionId_AddsSessionIdArgumentsBeforePrompt()
+    {
+        var definition = Resumable with { PromptArguments = ["{prompt}"] };
+
+        Assert.Equal(["-a", "--id", "abc", "--tag=abc", "do it"], definition.BuildArguments("do it", "abc"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void BuildArguments_WithoutSessionId_LeavesSessionIdArgumentsOut(string? sessionId)
+    {
+        Assert.Equal(["-a"], Resumable.BuildArguments(null, sessionId));
+    }
+
+    [Fact]
+    public void BuildArguments_WhenAgentCantResume_LeavesSessionIdOut()
+    {
+        // Setting the ID is no use without a way to resume, so neither list on its own is used.
+        var definition = Resumable with { ResumeArguments = [] };
+
+        Assert.False(definition.CanResume);
+        Assert.Equal(["-a"], definition.BuildArguments(null, "abc"));
+    }
+
+    [Fact]
+    public void BuildResumeArguments_ReplacesSessionIdArgumentsAndPrompt()
+    {
+        var definition = Resumable with { PromptArguments = ["{prompt}"] };
+
+        Assert.Equal(["-a", "--resume", "abc"], definition.BuildResumeArguments("abc"));
+    }
+
+    [Fact]
+    public void BuildResumeArguments_WhenAgentCantResume_Throws()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            (Resumable with { SessionIdArguments = [] }).BuildResumeArguments("abc"));
+    }
+
+    [Fact]
+    public void ClaudeCode_SetsSessionIdAtLaunchAndResumesIt()
+    {
+        var claude = AgentDefinition.ClaudeCode;
+
+        Assert.True(claude.CanResume);
+        Assert.Equal(["--session-id", "abc", "Read tasks.md"], claude.BuildArguments("Read tasks.md", "abc"));
+        Assert.Equal(["--resume", "abc"], claude.BuildResumeArguments("abc"));
+    }
+
+    [Fact]
+    public void CanResume_WithHooksThatReportSessionId_NeedsOnlyResumeArguments()
+    {
+        var definition = AgentDefinition.ClaudeCode with { SessionIdArguments = [] };
+
+        Assert.True(definition.CanResume);
+        Assert.Equal(["do it"], definition.BuildArguments("do it", "abc"));
+        Assert.False((definition with { ResumeArguments = [] }).CanResume);
+    }
+
+    [Fact]
+    public void Normalize_FillsInMissingSessionArguments()
+    {
+        var definition = new AgentDefinition("Test", "agent") { SessionIdArguments = null!, ResumeArguments = ["-r", null!] };
+
+        var normalized = definition.Normalize();
+
+        Assert.Empty(normalized.SessionIdArguments);
+        Assert.Equal(["-r"], normalized.ResumeArguments);
+    }
+
+    private static AgentDefinition Resumable { get; } = new("Test", "agent", "-a")
+    {
+        SessionIdArguments = ["--id", "{sessionId}", "--tag={sessionId}"],
+        ResumeArguments = ["--resume", "{sessionId}"],
+    };
 }

@@ -34,6 +34,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
 | **Agent Definition** | A configured agent CLI (e.g. Claude Code) that TAMMi can start: name, command, arguments, how to pass the initial prompt, and how to resume a session. |
+| **Agent Session** | One conversation with an agent. TAMMi records it so it can be resumed after a restart, with the agent's own resume command. |
 | **Supported Agent** | An agent CLI that TAMMi knows how to start, with a built-in Agent Definition (e.g. Claude Code). It's always offered and isn't configured by the user. |
 | **Custom Agent** | An agent CLI the user sets up with their own Agent Definition (e.g. Codex CLI or Gemini CLI). |
 | **Open in…** | Actions that open the workspace or a repository in an external tool (IDE, terminal, file manager, …). |
@@ -216,8 +217,8 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     TAMMi finds the command and runs it to get its version (e.g. `claude --version`). If that fails, it says why
     (not found, failed with an error, or didn't finish) and links to the agent's install guide. The user can check
     again after installing it.
-  - **Custom Agents** are added, edited, reordered and removed by the user. Each one has a name, command, arguments
-    and initial prompt arguments, and shows the command line it starts with. Each agent needs its own name, ignoring
+  - **Custom Agents** are added, edited, reordered and removed by the user. Each one has a name, command, arguments,
+    initial prompt arguments, session ID arguments and resume arguments, and shows the command lines it starts with. Each agent needs its own name, ignoring
     case and surrounding spaces, including the Supported Agents' names. A name that's already used is still saved,
     but shown as an error until it's changed.
   - Agents are offered in that order: the Supported Agents, then the Custom Agents.
@@ -336,10 +337,27 @@ are left to other tools for now.
   - Closing a workspace tab doesn't stop its terminals or agents. They keep running in the background,
     their status still shows on Home, and reopening the tab reattaches to them.
   - Closing TAMMi warns if any agents are running, then ends all terminal and agent processes.
-  - **Agent sessions can be resumed across app restarts.** TAMMi records each agent session (e.g. its
-    session ID) in `.tammi/`. Later, the user can return to it using the agent's own resume command
-    (e.g. `claude --resume <session-id>`). Each Agent Definition says how to resume a session and how
-    TAMMi gets the session ID (e.g. by setting it at launch, or reading it from a hook).
+  - **Agent Sessions can be resumed across app restarts.** TAMMi records each Agent Session (its ID, the
+    agent's name, the folder it was started in and when it was last started) in `.tammi/agent-sessions.json`.
+    Later, the user can return to it using the agent's own resume command (e.g. `claude --resume <session-id>`).
+    - TAMMi gets the session ID in either or both of two ways:
+      - **Setting it at launch:** TAMMi makes up a UUID and passes it with the Agent Definition's **session ID
+        arguments**, with `{sessionId}` where the ID goes (Claude Code: `--session-id {sessionId}`).
+      - **From the agent's hooks**, when they report it. Claude Code's hook events all carry the session's ID, so
+        TAMMi follows the agent when it moves to another session in the same process (e.g. after `/clear`) and
+        records the new session too. Only Supported Agents have hooks, so Custom Agents need session ID arguments.
+    - The definition's **resume arguments** resume a session (Claude Code: `--resume {sessionId}`). They're added
+      after its arguments in place of the session ID arguments and the initial prompt, which the session already
+      has. The agent resumes in the folder the session was started in.
+    - An agent's sessions are recorded only when its definition has resume arguments and a way to get the ID. Custom
+      Agents have neither list unless the user sets them.
+    - A session is resumed with the Agent Definition that has its agent's name now. If none has, or that definition
+      can no longer resume sessions, the session is still listed but can't be resumed.
+    - Only session IDs that TAMMi could have made (UUIDs) are resumed, so a changed file can't pass the agent other
+      arguments.
+    - The file is versioned like `settings.json`. If it can't be read, no sessions are listed, and TAMMi keeps a copy
+      of it as `agent-sessions.invalid.json` before it next changes the file.
+    - The user can forget a session, so it's no longer offered.
   - Plain terminals aren't restored after a restart.
 
 ## Integrations
