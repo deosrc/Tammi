@@ -437,6 +437,71 @@ a {
   margin: 0;
 }
 
+.badge {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+/* Third-party software list on the About page */
+
+.third-party-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 900px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.third-party-item {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.third-party-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.third-party-name {
+  font-weight: 600;
+}
+
+.third-party-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.license-text {
+  margin-top: var(--space-2);
+}
+
+.license-text summary {
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.license-text pre {
+  max-height: 320px;
+  overflow: auto;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+}
+
 /* ---------------------------------------------------------------------------------------------------------------
    Blazor error UI
    --------------------------------------------------------------------------------------------------------------- */

@@ -19,8 +19,12 @@ public static class AppRoutes
         new("Git", Settings + "/git"),
         new("Agents", Settings + "/agents"),
         new("Tools", Settings + "/tools"),
-        new("About", Settings + "/about"),
+        new("About", About),
     ];
+
+    public const string About = Settings + "/about";
+
+    public const string ThirdPartySoftware = About + "/third-party";
 
     private const string WorkspacePrefix = "workspaces/";
 
