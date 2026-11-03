@@ -123,8 +123,6 @@ own branch. It is created automatically when the workspace is created:
 
 Record the decision here when an item is resolved, and move it into the sections above.
 
-### Workspace on disk
-
 ### Tasks
 - Can one workspace mix tasks from different sources?
 - Is task state synced back to the integration (status changes, linking PRs)?
