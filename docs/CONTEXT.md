@@ -49,12 +49,16 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 ```
 <clone folder>/<repo>/              Local Repository (shared, outside any workspace)
 <parent folder>/<workspace name>/
+    .tammi/                         Workspace metadata (tasks, repositories, branches, settings)
     <repo>/                         Workspace Worktree of <clone folder>/<repo>
     <another repo>/                 Workspace Worktree of another Local Repository
 ```
 
 Workspaces never hold full clones. Each repository in a workspace is a worktree of a Local Repository,
 so several workspaces can work on the same repository at once without cloning it again.
+
+**Metadata.** Each workspace describes itself in its `.tammi/` folder. The app's data folder keeps only
+an index of known workspace paths, which Home uses to list workspaces.
 
 **Folder names.** A Workspace Worktree's folder defaults to the repository name (e.g. `api`). If two
 repositories in the workspace have the same name, TAMMi prefixes the owner (e.g. `acme-api`). The user
@@ -114,7 +118,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Workspace on disk
-- Where is workspace metadata stored: inside the workspace folder (e.g. `.tammi/`), in central app data, or both?
 - What happens to the folder and branches when a workspace is deleted or archived? Presumably `git worktree remove` for each repository. What if a worktree has uncommitted or unpushed changes?
 
 ### Tasks
