@@ -109,7 +109,7 @@ own branch. It is created automatically when the workspace is created:
 - Lists existing workspaces with a status summary for each, so the user can see what needs
   attention without opening the workspace:
   - **Working directory changes** across the workspace's repositories (e.g. uncommitted changes)
-  - **Agent status** for the workspace's AI agents (e.g. running, waiting for input, finished)
+  - **Agent status** for the workspace's AI agents (see [agent states](#agents))
 - Opening a workspace shows it in a **tab**. Several workspaces can be open at once.
 - Starts the Create Workspace flow.
 
@@ -147,7 +147,21 @@ own branch. It is created automatically when the workspace is created:
 - **Claude Code** is the first built-in Agent Definition. Others (e.g. Codex CLI, Gemini CLI) can be
   added as definitions.
 - **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or
-  status events (e.g. Claude Code hooks), TAMMi uses them for richer states such as "waiting for input".
+  status events (e.g. Claude Code hooks), TAMMi uses them for richer states. In keeping with the
+  principles, hooks are supplied when TAMMi launches the agent (e.g. through CLI arguments), never by
+  changing repository files.
+- **States**, shown on Home and in the Workspace View:
+
+  | State | Meaning | Needs hooks |
+  |-------|---------|-------------|
+  | Working | The agent is busy | Yes |
+  | Needs input | The agent is waiting on the user (e.g. a question or permission prompt) | Yes |
+  | Idle | The agent has finished its turn | Yes |
+  | Running | The process is running, but finer detail isn't available | No |
+  | Exited | The process ended normally | No |
+  | Error | The process crashed or exited with a non-zero code | No |
+
+  Agents with hooks use Working / Needs input / Idle while running. Agents without hooks show Running.
 
 ## Technical Constraints
 
@@ -165,9 +179,6 @@ own branch. It is created automatically when the workspace is created:
 ## Open Questions
 
 Record the decision here when an item is resolved, and move it into the sections above.
-
-### Agents
-- What agent states exist (e.g. running, waiting for input, idle, finished, errored)? These states appear on both Home and the Workspace View.
 
 ### Home status summary
 - How much detail does Home show? Options: per-repository breakdown, or a workspace-level summary such as "3 repos, 2 with changes".
