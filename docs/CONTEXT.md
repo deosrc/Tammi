@@ -78,7 +78,9 @@ therefore counts as a Local Repository for both the fork and the upstream reposi
 **Moved or deleted Local Repositories.** TAMMi detects when a Workspace Worktree's Local Repository
 has been moved or deleted, and marks the workspace as broken on Home and in the Workspace View. It
 offers to repair the worktree: either point it at the repository's new location (`git worktree repair`)
-or clone the repository again.
+or clone the repository again. `git worktree repair` doesn't fix the worktree's submodules, whose links to their
+git data are relative paths, so TAMMi relinks them itself. Moving a Workspace Folder breaks its worktrees in the
+same way, and is repaired the same way.
 
 **Metadata.** Each workspace describes itself in its `.tammi/` folder. The app's data folder keeps only
 an index of known workspace paths, which Home uses to list workspaces.
@@ -95,15 +97,21 @@ own branch. It is created automatically when the workspace is created:
 - The same branch name is used in every repository in the workspace.
 - **Base:** TAMMi fetches each Local Repository, then branches from the remote's default branch
   (e.g. `origin/main`). The user can choose a different base branch for each repository.
+- The new branch doesn't track its base, so pushing it publishes it under its own name rather than to the base.
 
 **Submodules.** When a Workspace Worktree is created, TAMMi checks out its submodules automatically
 (`git submodule update --init --recursive`).
 
 **Deleting a workspace.**
-1. If any worktree has uncommitted changes or unpushed commits, TAMMi lists them and asks the user to confirm.
+1. If any worktree has uncommitted changes or unpushed commits (including inside its submodules), TAMMi lists them
+   and asks the user to confirm. A worktree whose Local Repository is missing can't be checked, so it needs
+   confirming too.
 2. TAMMi removes each Workspace Worktree (`git worktree remove`) and then the Workspace Folder.
 3. TAMMi offers to delete the workspace branches from the Local Repositories. Branches that are merged
    or pushed are selected for deletion by default. Others are kept unless the user selects them.
+   - **Merged** means the branch's tip is reachable from its base branch (e.g. `origin/main`). Squash and rebase
+     merges aren't detected.
+   - **Pushed** means every commit on the branch is on a remote-tracking branch, as for unpushed commits on Home.
 
 ## Main Screens
 
