@@ -1,0 +1,30 @@
+namespace TAMMi.Core.Settings;
+
+/// <summary>
+/// The General section of the Settings screen.
+/// </summary>
+public sealed record GeneralSettings
+{
+    /// <summary>
+    /// The <see cref="DefaultWorkspaceParentFolder"/> used until the user changes it: <c>Workspaces</c> in the
+    /// user's home folder.
+    /// </summary>
+    public static string DefaultDefaultWorkspaceParentFolder { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "Workspaces");
+
+    /// <summary>
+    /// The folder new workspaces are created in, unless the user picks another one.
+    /// </summary>
+    public string DefaultWorkspaceParentFolder { get; init; } = DefaultDefaultWorkspaceParentFolder;
+
+    /// <summary>
+    /// Replaces a missing folder with the default.
+    /// </summary>
+    public GeneralSettings Normalize() => this with
+    {
+        DefaultWorkspaceParentFolder = string.IsNullOrWhiteSpace(DefaultWorkspaceParentFolder)
+            ? DefaultDefaultWorkspaceParentFolder
+            : DefaultWorkspaceParentFolder.Trim(),
+    };
+}

@@ -5,6 +5,11 @@ Task-first software development workspace manager, built with .NET MAUI Blazor H
 Read `docs/CONTEXT.md` before starting work. It defines the product, the glossary and the open questions.
 Use its glossary terms in code and UI. When a decision resolves an open question, update that document.
 
+## Code style
+
+Put each top-level type in its own file, named after the type (e.g. `FolderPickerOptions.cs`). Nested types can stay
+in their containing type's file.
+
 ## Third-party software
 
 Every third-party library that ships with the app must be listed on the About page's third-party software list.

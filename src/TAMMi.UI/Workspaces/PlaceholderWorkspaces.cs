@@ -15,5 +15,3 @@ internal static class PlaceholderWorkspaces
     public static PlaceholderWorkspace? Find(string workspaceId) =>
         All.FirstOrDefault(workspace => workspace.Id == workspaceId);
 }
-
-internal sealed record PlaceholderWorkspace(string Id, string Name, string Summary);
