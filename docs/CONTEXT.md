@@ -87,21 +87,18 @@ so several workspaces can work on the same repository at once without cloning it
 
 ## Technical Constraints
 
-- **Framework:** .NET MAUI
+- **Framework:** .NET MAUI Blazor Hybrid. The UI is written once as Blazor components in a shared
+  Razor class library, and each platform has its own host:
+  - **Windows:** a .NET MAUI app hosting the UI in a `BlazorWebView`
+  - **Linux:** a Photino.Blazor app hosting the same UI, because .NET MAUI doesn't officially support Linux desktop
 - **Platforms:** Windows and Linux at minimum, with other platforms possible later
-- See [Open Questions](#open-questions) about Linux support
+- Platform-specific services (PTY, file system watching, launching processes) are reached through
+  interfaces in shared code, with an implementation for each host.
+- Web-based UI components (e.g. xterm.js for the terminal) can be used inside the Blazor UI.
 
 ## Open Questions
 
 Record the decision here when an item is resolved, and move it into the sections above.
-
-### Platform
-- **MAUI on Linux.** .NET MAUI does not officially support Linux desktop. Options:
-  - a community Linux/GTK backend for MAUI
-  - MAUI Blazor Hybrid, with a Linux host such as Photino sharing the Blazor UI
-  - another cross-platform .NET UI framework (e.g. Avalonia)
-
-  This needs a decision before any UI scaffolding.
 
 ### Workspace on disk
 - Is a branch created automatically for each task? If so, what naming convention (e.g. `<task-key>-<slug>`)? A worktree needs a branch that isn't checked out in another worktree, so every Workspace Worktree needs its own branch (or a detached HEAD).
@@ -135,7 +132,7 @@ Record the decision here when an item is resolved, and move it into the sections
 - Is there one terminal per workspace, or can the user open several (e.g. one per repository)?
 - Which shell is used: the platform default (PowerShell on Windows, `$SHELL` on Linux), or a setting?
 - Do terminal sessions persist when a workspace tab is closed and reopened, or across app restarts?
-- Do CLI-based agents share the same terminal component? Embedding a terminal on Windows and Linux needs a PTY (ConPTY / `forkpty`) and a terminal renderer such as xterm.js. This links to the Platform decision.
+- Do CLI-based agents share the same terminal component? Embedding a terminal on Windows and Linux needs a PTY (ConPTY / `forkpty`) and a terminal renderer such as xterm.js.
 
 ### Open in… / Tools
 - Which tools are built in (VS Code, Visual Studio, Rider, terminal, file manager)? Does TAMMi detect installed tools automatically?
