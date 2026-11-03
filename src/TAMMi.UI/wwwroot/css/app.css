@@ -543,7 +543,7 @@ a {
    Developer pages
    --------------------------------------------------------------------------------------------------------------- */
 
-.dev-terminal {
+.dev-page {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -551,37 +551,37 @@ a {
   padding: var(--space-6);
 }
 
-.dev-terminal header {
+.dev-page header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-6);
 }
 
-.dev-terminal h1 {
+.dev-page h1 {
   margin: 0;
 }
 
-.dev-terminal form {
+.dev-page form {
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-.dev-terminal input {
+.dev-page input {
   width: 24rem;
   margin-left: var(--space-1);
   font-family: ui-monospace, monospace;
 }
 
-.dev-terminal .status {
+.dev-page .status {
   color: var(--color-text-muted);
 }
 
-.dev-terminal .error {
+.dev-page .error {
   margin: 0;
 }
 
-.dev-terminal-view {
+.dev-page-terminal {
   flex: 1;
 }

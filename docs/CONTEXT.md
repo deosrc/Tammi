@@ -212,10 +212,12 @@ are left to other tools for now.
   | Needs input | The agent is waiting on the user (e.g. a question or permission prompt) | Yes |
   | Idle | The agent has finished its turn | Yes |
   | Running | The process is running, but finer detail isn't available | No |
-  | Exited | The process ended normally | No |
-  | Error | The process crashed or exited with a non-zero code | No |
+  | Exited | The process ended normally, or the user stopped it | No |
+  | Error | The process crashed, was killed by something other than TAMMi, or exited with a non-zero code | No |
 
   Agents with hooks use Working / Needs input / Idle while running. Agents without hooks show Running.
+  Stopping an agent hangs up its terminal and kills the process if it doesn't exit, so the exit code it then
+  gets doesn't mean it failed: a stopped agent is Exited, whatever its exit code.
 - **Lifetime:**
   - Closing a workspace tab doesn't stop its terminals or agents. They keep running in the background,
     their status still shows on Home, and reopening the tab reattaches to them.
