@@ -110,6 +110,8 @@ own branch. It is created automatically when the workspace is created:
   attention without opening the workspace:
   - **Working directory changes** across the workspace's repositories (e.g. uncommitted changes)
   - **Agent status** for the workspace's AI agents (see [agent states](#agents))
+- Each workspace shows a compact summary line (e.g. "2/3 repos changed · 1 agent needs input"). It can
+  be expanded to show a breakdown for each repository and agent.
 - Opening a workspace shows it in a **tab**. Several workspaces can be open at once.
 - Starts the Create Workspace flow.
 
@@ -181,7 +183,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Home status summary
-- How much detail does Home show? Options: per-repository breakdown, or a workspace-level summary such as "3 repos, 2 with changes".
 - Which git states count as "changes"? Unstaged, staged and untracked files only, or also unpushed commits and being behind the remote?
 - How is the status kept current: file system watchers, polling, or refreshing when Home is shown? This matters most for workspaces that aren't open in a tab.
 
