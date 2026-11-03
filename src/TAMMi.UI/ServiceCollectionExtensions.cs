@@ -24,6 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AgentLauncher>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();
+        services.AddSingleton<IWorkspaceStore, WorkspaceStore>();
         return services;
     }
 }

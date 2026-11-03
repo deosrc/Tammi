@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using TAMMi.Core.Platform;
+using TAMMi.Core.Storage;
 
 namespace TAMMi.Core.Settings;
 
@@ -31,18 +32,11 @@ public sealed class SettingsStore : ISettingsStore
     /// </summary>
     public const string InvalidFileName = "settings.invalid.json";
 
-    private const string VersionProperty = "version";
-
     /// <summary>
     /// The settings file migrations. The migration at index <c>i</c> upgrades a file from version <c>i + 1</c> to
     /// version <c>i + 2</c>, so the current version is one more than the number of migrations.
     /// </summary>
     private static readonly IReadOnlyList<Action<JsonObject>> Migrations = [];
-
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = true,
-    };
 
     private readonly string _directory;
     private readonly IReadOnlyList<Action<JsonObject>> _migrations;
@@ -151,49 +145,10 @@ public sealed class SettingsStore : ISettingsStore
     /// <summary>
     /// Reads the settings file, or returns <c>null</c> if there isn't one.
     /// </summary>
-    private AppSettings? Read()
-    {
-        if (!File.Exists(FilePath))
-        {
-            return null;
-        }
-
-        var node = JsonNode.Parse(File.ReadAllText(FilePath), documentOptions: new JsonDocumentOptions
-        {
-            AllowTrailingCommas = true,
-            CommentHandling = JsonCommentHandling.Skip,
-        });
-        if (node is not JsonObject json)
-        {
-            throw new InvalidDataException("The file doesn't hold a JSON object.");
-        }
-
-        var version = ReadVersion(json);
-        for (var i = version - 1; i < _migrations.Count; i++)
-        {
-            _migrations[i](json);
-        }
-
-        json.Remove(VersionProperty);
-        return json.Deserialize<AppSettings>(SerializerOptions)
-            ?? throw new InvalidDataException("The file doesn't hold any settings.");
-    }
-
-    private static int ReadVersion(JsonObject json)
-    {
-        // TAMMi always writes the version, but a file written by hand might not have one.
-        if (!json.TryGetPropertyValue(VersionProperty, out var versionNode) || versionNode is null)
-        {
-            return 1;
-        }
-
-        if (versionNode is not JsonValue value || !value.TryGetValue(out int version) || version < 1)
-        {
-            throw new InvalidDataException($"The file's version '{versionNode.ToJsonString()}' isn't valid.");
-        }
-
-        return version;
-    }
+    private AppSettings? Read() =>
+        File.Exists(FilePath)
+            ? VersionedJsonFile.Deserialize<AppSettings>(File.ReadAllText(FilePath), _migrations)
+            : null;
 
     private void KeepInvalidFile()
     {
@@ -207,17 +162,6 @@ public sealed class SettingsStore : ISettingsStore
         }
     }
 
-    private async Task WriteAsync(AppSettings settings, CancellationToken cancellationToken)
-    {
-        var json = JsonSerializer.SerializeToNode(settings, SerializerOptions)!.AsObject();
-        json.Insert(0, VersionProperty, CurrentVersion);
-
-        Directory.CreateDirectory(_directory);
-
-        // Write a temporary file and move it into place, so a failed write can't leave a half-written file.
-        var temporaryPath = FilePath + ".tmp";
-        await File.WriteAllTextAsync(temporaryPath, json.ToJsonString(SerializerOptions), cancellationToken)
-            .ConfigureAwait(false);
-        File.Move(temporaryPath, FilePath, overwrite: true);
-    }
+    private Task WriteAsync(AppSettings settings, CancellationToken cancellationToken) =>
+        VersionedJsonFile.WriteAsync(FilePath, settings, CurrentVersion, cancellationToken);
 }
