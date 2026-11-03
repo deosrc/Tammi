@@ -610,6 +610,7 @@ a {
 
 .dev-page form {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
@@ -620,7 +621,12 @@ a {
   font-family: ui-monospace, monospace;
 }
 
+.dev-page input[type="checkbox"] {
+  width: auto;
+}
+
 .dev-page .status {
+  margin: 0;
   color: var(--color-text-muted);
 }
 

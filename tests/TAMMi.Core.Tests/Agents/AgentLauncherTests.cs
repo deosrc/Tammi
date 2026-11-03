@@ -29,6 +29,53 @@ public class AgentLauncherTests
     }
 
     [Fact]
+    public void Start_WithInitialPrompt_PassesItAsDefinitionSays()
+    {
+        var pty = new RecordingPtyService();
+        var definition = new AgentDefinition("Test", "test-agent", "--flag") { PromptArguments = ["-p", "{prompt}"] };
+        var prompt = InitialPrompt.Expand(InitialPrompt.DefaultTemplate, "/ws/.tammi/tasks.md");
+
+        new AgentLauncher(pty).Start(definition, Path.GetTempPath(), PtySize.Default, prompt);
+
+        Assert.Equal(["--flag", "-p", prompt], Assert.Single(pty.Requests).Request.Arguments);
+    }
+
+    [Fact]
+    public void Start_WithNullCharacterInPrompt_Throws()
+    {
+        var pty = new RecordingPtyService();
+
+        Assert.Throws<ArgumentException>(() => new AgentLauncher(pty).Start(
+            AgentDefinition.ClaudeCode, Path.GetTempPath(), PtySize.Default, "bad\0prompt"));
+        Assert.Empty(pty.Requests);
+    }
+
+    [Theory]
+    [MemberData(nameof(AgentDefinitionTests.SpecialPrompts), MemberType = typeof(AgentDefinitionTests))]
+    public async Task Start_PassesPromptToRealProcessUnchanged(string prompt)
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            Assert.Skip("This test runs a real process in a Linux pseudoterminal.");
+            return;
+        }
+
+        // The script prints each argument it gets, hex-encoded so the terminal can't change it.
+        var definition = new AgentDefinition(
+            "Shell", "/bin/sh", "-c", """for a in "$@"; do printf '%s' "$a" | od -An -tx1 | tr -d ' \n'; echo '|'; done; echo END""", "sh")
+        {
+            PromptArguments = ["{prompt}"],
+        };
+        var launcher = new AgentLauncher(new LinuxPtyService(new TestProcessLauncher()));
+
+        await using var agent = launcher.Start(definition, Path.GetTempPath(), PtySize.Default, prompt);
+        var output = await new PtyOutput(agent.Session).ReadUntilAsync("END");
+
+        var expected = prompt.Length == 0 ? "" : Convert.ToHexStringLower(System.Text.Encoding.UTF8.GetBytes(prompt)) + "|";
+        Assert.Equal(expected, output[..output.IndexOf("END", StringComparison.Ordinal)].ReplaceLineEndings(""));
+    }
+
+    [Fact]
     public void ClaudeCode_RunsClaude()
     {
         Assert.Equal("Claude Code", AgentDefinition.ClaudeCode.Name);
