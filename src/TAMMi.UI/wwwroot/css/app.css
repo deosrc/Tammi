@@ -525,3 +525,63 @@ a {
   top: 0.5rem;
   cursor: pointer;
 }
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Terminal
+   --------------------------------------------------------------------------------------------------------------- */
+
+/* The terminal fills this element. Its colours come from the xterm.js theme, which is dark in both app themes. */
+.terminal {
+  min-height: 0;
+  padding: var(--space-1);
+  overflow: hidden;
+  border-radius: var(--radius);
+  background-color: #1e1e1e;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Developer pages
+   --------------------------------------------------------------------------------------------------------------- */
+
+.dev-terminal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+  padding: var(--space-6);
+}
+
+.dev-terminal header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
+}
+
+.dev-terminal h1 {
+  margin: 0;
+}
+
+.dev-terminal form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dev-terminal input {
+  width: 24rem;
+  margin-left: var(--space-1);
+  font-family: ui-monospace, monospace;
+}
+
+.dev-terminal .status {
+  color: var(--color-text-muted);
+}
+
+.dev-terminal .error {
+  margin: 0;
+}
+
+.dev-terminal-view {
+  flex: 1;
+}
