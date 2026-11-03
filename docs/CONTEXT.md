@@ -149,16 +149,26 @@ own branch. It is created automatically when the workspace is created:
 Settings are grouped into sections, listed in a vertical tab list down the left of the screen:
 
 - **General**
-  - Default Workspace Parent Folder
+  - Default Workspace Parent Folder (defaults to `Workspaces` in the user's home folder)
+- **Integrations:** credentials and configuration
+- **Git**
   - Monitored Folder(s)
   - Manually added local repositories
-  - Status refresh interval for workspaces that aren't open
-  - Terminal shell: executable and arguments (defaults to the platform shell)
-- **Integrations:** credentials and configuration
-- **Git:** the versions of the git CLI and of libgit2 (used through LibGit2Sharp) that TAMMi uses
+  - Status refresh interval for workspaces that aren't open (whole minutes from 1 to 1440, default 5)
+  - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that TAMMi uses
 - **Agents:** the Agent Definitions available to start, and the initial prompt template
-- **Tools:** the external tools offered under "Open in…"
+- **Tools**
+  - The external tools offered under "Open in…"
+  - Terminal shell: executable and arguments (defaults to the platform shell)
 - **About:** the TAMMi version, and the git CLI and libgit2 versions
+
+Changes are saved as soon as they're made. The settings live in `settings.json` in the app's Config folder (see
+[Technical Constraints](#technical-constraints)):
+- The file has a `version`. When its layout changes, the version goes up and TAMMi migrates older files as it
+  loads them. A file from a newer TAMMi is read as far as possible.
+- Missing settings take their default values, and out-of-range values are brought into range.
+- If the file can't be read, TAMMi uses the defaults, says so on the Settings screen, and keeps a copy of the file
+  as `settings.invalid.json` so the next save doesn't lose it.
 
 ## Git
 
@@ -256,6 +266,9 @@ are left to other tools for now.
   data paths) are reached through interfaces in shared code, with an implementation for each host.
 - **App data** lives in `%LOCALAPPDATA%\TAMMi\{Config,Data,Cache}` on Windows, and in the XDG base
   directories on Linux (`~/.config/tammi`, `~/.local/share/tammi`, `~/.cache/tammi` by default).
+- **Window state:** TAMMi opens its window at the size it had when it was last closed, maximised if it was then.
+  The state is kept in `window-state.json` in the Data folder, apart from the settings. If it's missing or can't be
+  read, the window opens at its default size.
 - **Credentials** for integrations live in the platform secret store, never in settings or data files:
   - **Windows:** Windows Credential Manager, as generic credentials named `TAMMi:<key>`, saved for the local
     machine only.

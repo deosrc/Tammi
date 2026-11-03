@@ -43,8 +43,3 @@ public static class AppRoutes
     /// </summary>
     public static string Workspace(string workspaceId) => WorkspacePrefix + Uri.EscapeDataString(workspaceId);
 }
-
-/// <summary>
-/// A section of the Settings screen, shown in its tab list.
-/// </summary>
-public sealed record SettingsSection(string Title, string Route);

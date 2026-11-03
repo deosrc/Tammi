@@ -1,7 +1,10 @@
 using System.Runtime.Versioning;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Photino.Blazor;
+using Photino.NET;
 using TAMMi.Core;
+using TAMMi.Core.Windowing;
 using TAMMi.Linux.PlatformServices;
 using TAMMi.UI;
 
@@ -13,6 +16,8 @@ internal static class Program
 {
     private const int MaxWindowSize = 100_000;
 
+    private static readonly WindowState DefaultWindowState = new(1280, 800, IsMaximized: false);
+
     [STAThread]
     private static void Main(string[] args)
     {
@@ -22,19 +27,47 @@ internal static class Program
         builder.RootComponents.Add<Routes>("#app");
 
         var app = builder.Build();
+        var windowStateStore = app.Services.GetRequiredService<WindowStateStore>();
+        var windowState = windowStateStore.Load() ?? DefaultWindowState;
+
         app.MainWindow
             .SetTitle(AppInfo.Name)
             .SetMinSize(800, 600)
             // On Linux, Photino sends the maximum size along with the minimum size. Left unset it's -1, which
             // stops the window from being resized or maximised, so set a maximum no screen will reach.
             .SetMaxSize(MaxWindowSize, MaxWindowSize)
-            .SetSize(1280, 800)
+            .SetSize(windowState.Width, windowState.Height)
+            .SetMaximized(windowState.IsMaximized)
             .Center();
+        var windowStateTracker = TrackWindowState(app.MainWindow, windowState);
 
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             app.MainWindow.ShowMessage("Unhandled error", e.ExceptionObject.ToString());
 
         app.Run();
+
+        // Run returns once the window has closed.
+        windowStateStore.Save(windowStateTracker.Current);
+    }
+
+    private static WindowStateTracker TrackWindowState(PhotinoWindow window, WindowState initial)
+    {
+        var tracker = new WindowStateTracker(initial);
+
+        void Observe()
+        {
+            var mode = window.Maximized ? WindowMode.Maximized
+                : window.Minimized ? WindowMode.Minimized
+                : WindowMode.Normal;
+            tracker.Observe(window.Width, window.Height, mode);
+        }
+
+        window
+            .RegisterSizeChangedHandler((_, _) => Observe())
+            .RegisterMaximizedHandler((_, _) => Observe())
+            .RegisterRestoredHandler((_, _) => Observe())
+            .RegisterMinimizedHandler((_, _) => Observe());
+        return tracker;
     }
 
     /// <summary>

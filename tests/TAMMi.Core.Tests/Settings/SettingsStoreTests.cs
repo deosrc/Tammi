@@ -1,0 +1,334 @@
+using System.Text.Json.Nodes;
+using TAMMi.Core.Platform;
+using TAMMi.Core.Settings;
+
+namespace TAMMi.Core.Tests.Settings;
+
+public sealed class SettingsStoreTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "tammi-tests", Guid.NewGuid().ToString("N"));
+
+    // A folder that doesn't exist yet, as on first run.
+    private string ConfigDirectory => Path.Combine(_root, "config");
+
+    private string SettingsPath => Path.Combine(ConfigDirectory, SettingsStore.FileName);
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_root))
+        {
+            Directory.Delete(_root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Current_WithoutFile_ReturnsDefaultsWithoutWritingFile()
+    {
+        var store = CreateStore();
+
+        Assert.Equal(new AppSettings(), store.Current);
+        Assert.Null(store.LoadProblem);
+        Assert.False(File.Exists(SettingsPath));
+    }
+
+    [Fact]
+    public void Defaults_AreHomeWorkspacesFolderAndFiveMinutes()
+    {
+        var settings = new AppSettings();
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        Assert.Equal(Path.Combine(home, "Workspaces"), settings.General.DefaultWorkspaceParentFolder);
+        Assert.Equal(TimeSpan.FromMinutes(5), settings.Git.StatusRefreshInterval);
+    }
+
+    [Fact]
+    public void Constructor_UsesAppConfigDirectory()
+    {
+        var store = new SettingsStore(new TestAppPaths(ConfigDirectory));
+
+        Assert.Equal(SettingsPath, store.FilePath);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesSettingsThatANewStoreLoads()
+    {
+        var store = CreateStore();
+        var parentFolder = Path.Combine(_root, "workspaces");
+
+        await store.UpdateAsync(settings => settings with
+        {
+            General = settings.General with { DefaultWorkspaceParentFolder = parentFolder },
+            Git = settings.Git with { StatusRefreshInterval = TimeSpan.FromMinutes(15) },
+        }, TestContext.Current.CancellationToken);
+
+        var reloaded = CreateStore().Current;
+        Assert.Equal(parentFolder, reloaded.General.DefaultWorkspaceParentFolder);
+        Assert.Equal(TimeSpan.FromMinutes(15), reloaded.Git.StatusRefreshInterval);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WritesVersionFirst()
+    {
+        var store = CreateStore();
+
+        await store.UpdateAsync(settings => settings, TestContext.Current.CancellationToken);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        Assert.Equal("version", json.First().Key);
+        Assert.Equal(1, json["version"]!.GetValue<int>());
+        Assert.NotNull(json["general"]?["defaultWorkspaceParentFolder"]);
+        Assert.NotNull(json["git"]?["statusRefreshInterval"]);
+        Assert.False(File.Exists(SettingsPath + ".tmp"));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UpdatesCurrentAndRaisesChanged()
+    {
+        var store = CreateStore();
+        var changes = 0;
+        store.Changed += () => changes++;
+
+        var saved = await store.UpdateAsync(settings => settings with
+        {
+            Git = settings.Git with { StatusRefreshInterval = TimeSpan.FromMinutes(2) },
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TimeSpan.FromMinutes(2), store.Current.Git.StatusRefreshInterval);
+        Assert.Same(saved, store.Current);
+        Assert.Equal(1, changes);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(2000, 1440)]
+    public async Task UpdateAsync_ClampsStatusRefreshInterval(int minutes, int expectedMinutes)
+    {
+        var store = CreateStore();
+
+        var saved = await store.UpdateAsync(settings => settings with
+        {
+            Git = settings.Git with { StatusRefreshInterval = TimeSpan.FromMinutes(minutes) },
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TimeSpan.FromMinutes(expectedMinutes), saved.Git.StatusRefreshInterval);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdateAsync_WithBlankParentFolder_UsesDefault(string folder)
+    {
+        var store = CreateStore();
+
+        var saved = await store.UpdateAsync(settings => settings with
+        {
+            General = settings.General with { DefaultWorkspaceParentFolder = folder },
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(GeneralSettings.DefaultDefaultWorkspaceParentFolder, saved.General.DefaultWorkspaceParentFolder);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ConcurrentUpdates_AreAllApplied()
+    {
+        var store = CreateStore();
+
+        await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() => store.UpdateAsync(settings =>
+            settings with
+            {
+                Git = settings.Git with
+                {
+                    StatusRefreshInterval = settings.Git.StatusRefreshInterval + TimeSpan.FromMinutes(1),
+                },
+            },
+            TestContext.Current.CancellationToken))));
+
+        Assert.Equal(TimeSpan.FromMinutes(25), store.Current.Git.StatusRefreshInterval);
+        Assert.Equal(TimeSpan.FromMinutes(25), CreateStore().Current.Git.StatusRefreshInterval);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenCancelled_DoesNotChangeSettings()
+    {
+        var store = CreateStore();
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.UpdateAsync(
+            settings => settings with
+            {
+                Git = settings.Git with { StatusRefreshInterval = TimeSpan.FromMinutes(9) },
+            },
+            cancellation.Token));
+
+        Assert.Equal(GitSettings.DefaultStatusRefreshInterval, store.Current.Git.StatusRefreshInterval);
+        Assert.False(File.Exists(SettingsPath));
+    }
+
+    [Fact]
+    public void Current_WithMissingProperties_UsesDefaultsForThem()
+    {
+        WriteSettingsFile("""{ "version": 1, "git": { "statusRefreshInterval": "00:10:00" } }""");
+
+        var settings = CreateStore().Current;
+
+        Assert.Equal(TimeSpan.FromMinutes(10), settings.Git.StatusRefreshInterval);
+        Assert.Equal(
+            GeneralSettings.DefaultDefaultWorkspaceParentFolder,
+            settings.General.DefaultWorkspaceParentFolder);
+    }
+
+    [Theory]
+    [InlineData("""{ "version": 1 }""")]
+    [InlineData("""{ "version": 1, "general": null }""")]
+    [InlineData("""{ "version": 1, "general": { "defaultWorkspaceParentFolder": null } }""")]
+    [InlineData("""{ "version": 1, "git": null }""")]
+    [InlineData("""{ }""")]
+    public void Current_WithMissingOrNullValues_UsesDefaults(string json)
+    {
+        WriteSettingsFile(json);
+
+        var store = CreateStore();
+
+        Assert.Equal(new AppSettings(), store.Current);
+        Assert.Null(store.LoadProblem);
+    }
+
+    [Fact]
+    public void Current_WithOutOfRangeInterval_ClampsIt()
+    {
+        WriteSettingsFile("""{ "version": 1, "git": { "statusRefreshInterval": "00:00:05" } }""");
+
+        Assert.Equal(GitSettings.MinStatusRefreshInterval, CreateStore().Current.Git.StatusRefreshInterval);
+    }
+
+    [Fact]
+    public void Current_IgnoresUnknownPropertiesAndComments()
+    {
+        WriteSettingsFile("""
+            {
+              // Written by hand
+              "version": 1,
+              "unknown": { "a": 1 },
+              "git": { "statusRefreshInterval": "00:20:00", "unknown": true, },
+            }
+            """);
+
+        var store = CreateStore();
+
+        Assert.Equal(TimeSpan.FromMinutes(20), store.Current.Git.StatusRefreshInterval);
+        Assert.Null(store.LoadProblem);
+    }
+
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("[]")]
+    [InlineData("""{ "version": "one" }""")]
+    [InlineData("""{ "version": 0 }""")]
+    [InlineData("""{ "version": 1, "git": { "statusRefreshInterval": "soon" } }""")]
+    public void Current_WithInvalidFile_UsesDefaultsAndKeepsCopy(string contents)
+    {
+        WriteSettingsFile(contents);
+
+        var store = CreateStore();
+
+        Assert.Equal(new AppSettings(), store.Current);
+        Assert.NotNull(store.LoadProblem);
+        Assert.Contains(SettingsPath, store.LoadProblem);
+        Assert.Equal(contents, File.ReadAllText(Path.Combine(ConfigDirectory, SettingsStore.InvalidFileName)));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_AfterInvalidFile_ReplacesItAndClearsLoadProblem()
+    {
+        WriteSettingsFile("not json");
+        var store = CreateStore();
+        Assert.NotNull(store.LoadProblem);
+
+        await store.UpdateAsync(settings => settings, TestContext.Current.CancellationToken);
+
+        Assert.Null(store.LoadProblem);
+        Assert.Null(CreateStore().LoadProblem);
+        Assert.Equal("not json", File.ReadAllText(Path.Combine(ConfigDirectory, SettingsStore.InvalidFileName)));
+    }
+
+    [Fact]
+    public void Current_WithOlderVersion_RunsMigrationsInOrder()
+    {
+        WriteSettingsFile("""{ "version": 1, "refreshMinutes": 7 }""");
+        var applied = new List<int>();
+        IReadOnlyList<Action<JsonObject>> migrations =
+        [
+            // Version 1 to 2: moves a top-level property into the Git section.
+            json =>
+            {
+                applied.Add(1);
+                var minutes = json["refreshMinutes"]!.GetValue<int>();
+                json.Remove("refreshMinutes");
+                json["git"] = new JsonObject
+                {
+                    ["statusRefreshInterval"] = TimeSpan.FromMinutes(minutes).ToString("c"),
+                };
+            },
+            // Version 2 to 3: changes nothing.
+            _ => applied.Add(2),
+        ];
+
+        var store = new SettingsStore(ConfigDirectory, migrations);
+
+        Assert.Equal(TimeSpan.FromMinutes(7), store.Current.Git.StatusRefreshInterval);
+        Assert.Equal([1, 2], applied);
+        Assert.Equal(3, store.CurrentVersion);
+    }
+
+    [Fact]
+    public void Current_WithCurrentVersion_RunsNoMigrations()
+    {
+        WriteSettingsFile("""{ "version": 2 }""");
+        var applied = 0;
+
+        _ = new SettingsStore(ConfigDirectory, [_ => applied++]).Current;
+
+        Assert.Equal(0, applied);
+    }
+
+    [Fact]
+    public void Current_WithoutVersion_TreatsFileAsVersionOne()
+    {
+        WriteSettingsFile("""{ }""");
+        var applied = 0;
+
+        _ = new SettingsStore(ConfigDirectory, [_ => applied++]).Current;
+
+        Assert.Equal(1, applied);
+    }
+
+    [Fact]
+    public void Current_WithNewerVersion_ReadsKnownSettings()
+    {
+        WriteSettingsFile("""{ "version": 99, "git": { "statusRefreshInterval": "00:30:00" }, "future": 1 }""");
+
+        var store = CreateStore();
+
+        Assert.Equal(TimeSpan.FromMinutes(30), store.Current.Git.StatusRefreshInterval);
+        Assert.Null(store.LoadProblem);
+    }
+
+    private SettingsStore CreateStore() => new(ConfigDirectory, []);
+
+    private void WriteSettingsFile(string contents)
+    {
+        Directory.CreateDirectory(ConfigDirectory);
+        File.WriteAllText(SettingsPath, contents);
+    }
+
+    private sealed class TestAppPaths(string configDirectory) : IAppPaths
+    {
+        public string ConfigDirectory => configDirectory;
+
+        public string DataDirectory => throw new NotSupportedException();
+
+        public string CacheDirectory => throw new NotSupportedException();
+    }
+}
