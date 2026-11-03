@@ -50,12 +50,13 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 
 ### Workspace View (tab)
 
-- **Side panel**
-  - Git status of each repository in the workspace
+- **Side panel** (in this order, top to bottom)
   - Running agents
+  - Git status of each repository in the workspace
   - "Open in…" tools
 - **Git operations**, including a git graph view
 - **Agents**: start, interact with and stop AI agents
+- **Terminal**: an embedded terminal, opened in the workspace folder
 
 ### Settings
 
@@ -108,6 +109,12 @@ Record the decision here when an item is resolved, and move it into the sections
 - How much detail does Home show? Options: per-repository breakdown, or a workspace-level summary such as "3 repos, 2 with changes".
 - Which git states count as "changes"? Unstaged, staged and untracked files only, or also unpushed commits and being behind the remote?
 - How is the status kept current: file system watchers, polling, or refreshing when Home is shown? This matters most for workspaces that aren't open in a tab.
+
+### Terminal
+- Is there one terminal per workspace, or can the user open several (e.g. one per repository)?
+- Which shell is used: the platform default (PowerShell on Windows, `$SHELL` on Linux), or a setting?
+- Do terminal sessions persist when a workspace tab is closed and reopened, or across app restarts?
+- Do CLI-based agents share the same terminal component? Embedding a terminal on Windows and Linux needs a PTY (ConPTY / `forkpty`) and a terminal renderer such as xterm.js. This links to the Platform decision.
 
 ### Open in…
 - Which targets are built in (VS Code, Visual Studio, Rider, terminal, file manager)? Can users configure custom commands?
