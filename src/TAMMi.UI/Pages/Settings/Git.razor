@@ -1,7 +1,12 @@
 @page "/settings/git"
 @layout SettingsLayout
 @inherits SettingsSectionBase
+@implements IDisposable
+@using TAMMi.Core.Catalogue
+@using TAMMi.Core.Platform
 @using TAMMi.Core.Settings
+@inject IRepositoryCatalogue Catalogue
+@inject IFolderPicker FolderPicker
 
 <h1>Git</h1>
 
@@ -13,6 +18,146 @@
 </dl>
 
 <div class="settings-form">
+    <div class="settings-field">
+        <h2 class="settings-field-title">Monitored Folders</h2>
+        <p class="settings-help">
+            Folders where you clone repositories. TAMMi scans them, and their subfolders, for git repositories to add
+            to the Repository Catalogue.
+        </p>
+        @if (Current.MonitoredFolders.Count == 0)
+        {
+            <p class="placeholder">No Monitored Folders yet.</p>
+        }
+        else
+        {
+            <ul class="settings-list">
+                @foreach (var folder in Current.MonitoredFolders)
+                {
+                    <li class="settings-list-item">
+                        <span class="settings-list-path">@folder</span>
+                        @if (ProblemWith(folder) is { } problem)
+                        {
+                            <span class="error">@problem</span>
+                        }
+                        else if (!Catalogue.IsScanning && Snapshot.ScannedAt is not null)
+                        {
+                            <span class="settings-list-status">@RepositoryCount(CountIn(folder))</span>
+                        }
+                        <button type="button" class="button button-secondary" @onclick="() => RemoveMonitoredFolderAsync(folder)">Remove</button>
+                    </li>
+                }
+            </ul>
+        }
+        @if (_pendingMonitoredFolder is not null)
+        {
+            <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-monitored-folder-title" aria-describedby="confirm-monitored-folder-text">
+                <h3 id="confirm-monitored-folder-title" class="alert-title">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                    Folder Conflict
+                </h3>
+                <p id="confirm-monitored-folder-text">
+                    <span class="settings-list-path">@_pendingMonitoredFolder</span> holds
+                    @(_pendingRemovals.Count == 1 ? "this manually added repository" : "these manually added repositories").
+                    The scan will find @(_pendingRemovals.Count == 1 ? "it" : "them"), so adding the folder removes
+                    @(_pendingRemovals.Count == 1 ? "it" : "them") from the manually added repositories. The folder
+                    isn't added until you confirm.
+                </p>
+                <ul class="settings-list">
+                    @foreach (var repository in _pendingRemovals)
+                    {
+                        <li class="settings-list-item"><span class="settings-list-path">@repository</span></li>
+                    }
+                </ul>
+                <div class="settings-field-row">
+                    <button type="button" class="button button-warning" @onclick="ConfirmMonitoredFolderAsync">Replace with the monitored folder</button>
+                    <button type="button" class="button button-secondary" @onclick="CancelMonitoredFolder">Cancel</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="settings-field-row">
+                <button type="button" class="button" @onclick="AddMonitoredFolderAsync">Add folder…</button>
+            </div>
+        }
+    </div>
+
+    <div class="settings-field">
+        <h2 class="settings-field-title">Manually added local repositories</h2>
+        <p class="settings-help">Repositories outside the Monitored Folders that you want in the Repository Catalogue.</p>
+        @if (Current.LocalRepositories.Count == 0)
+        {
+            <p class="placeholder">No manually added repositories yet.</p>
+        }
+        else
+        {
+            <ul class="settings-list">
+                @foreach (var repository in Current.LocalRepositories)
+                {
+                    <li class="settings-list-item">
+                        <span class="settings-list-path">@repository</span>
+                        @if (ProblemWith(repository) is { } problem)
+                        {
+                            <span class="error">@problem</span>
+                        }
+                        <button type="button" class="button button-secondary" @onclick="() => RemoveLocalRepositoryAsync(repository)">Remove</button>
+                    </li>
+                }
+            </ul>
+        }
+        @if (_addRepositoryError is not null)
+        {
+            <p class="error">@_addRepositoryError</p>
+        }
+        <div class="settings-field-row">
+            <button type="button" class="button" @onclick="AddLocalRepositoryAsync">Add repository…</button>
+        </div>
+    </div>
+
+    <div class="settings-field">
+        <h2 class="settings-field-title">Repository Catalogue</h2>
+        <div class="settings-field-row">
+            <span>
+                @if (Catalogue.IsScanning)
+                {
+                    <text>Scanning for repositories…</text>
+                }
+                else if (Snapshot.ScannedAt is { } scannedAt)
+                {
+                    <text>@RepositoryCount(Snapshot.Repositories.Count) found, at @scannedAt.ToLocalTime().ToString("t").</text>
+                }
+            </span>
+            <button type="button" class="button button-secondary" disabled="@Catalogue.IsScanning" @onclick="RescanAsync">Rescan</button>
+        </div>
+        @if (_rescanError is not null)
+        {
+            <p class="error">@_rescanError</p>
+        }
+        @if (Snapshot.Repositories.Count > 0)
+        {
+            <details class="settings-details">
+                <summary>Show repositories</summary>
+                <ul class="settings-list">
+                    @foreach (var repository in Snapshot.Repositories)
+                    {
+                        <li class="settings-list-item">
+                            <span class="settings-list-name">@repository.Name</span>
+                            <span class="settings-list-path">@repository.Path</span>
+                        </li>
+                    }
+                </ul>
+            </details>
+        }
+        <p class="settings-help">
+            The catalogue is scanned again when these settings change and when folders are added to or removed from
+            a Monitored Folder. Rescan to find repositories added further down.
+        </p>
+    </div>
+
     <div class="settings-field">
         <label for="status-refresh-interval">Status refresh interval</label>
         <div class="settings-field-row">
@@ -41,21 +186,133 @@
     <p class="error">@SaveError</p>
 }
 
-<p class="placeholder">These settings will appear here:</p>
-
-<ul class="placeholder">
-    <li>Monitored Folders</li>
-    <li>Manually added local repositories</li>
-</ul>
-
 @code {
     private static readonly int MinMinutes = (int)GitSettings.MinStatusRefreshInterval.TotalMinutes;
     private static readonly int MaxMinutes = (int)GitSettings.MaxStatusRefreshInterval.TotalMinutes;
 
     private int _statusRefreshRevision;
+    private string? _addRepositoryError;
+    private string? _rescanError;
+    private string? _pendingMonitoredFolder;
+    private IReadOnlyList<string> _pendingRemovals = [];
 
-    private int StatusRefreshMinutes =>
-        (int)Math.Round(SettingsStore.Current.Git.StatusRefreshInterval.TotalMinutes);
+    private GitSettings Current => SettingsStore.Current.Git;
+
+    private RepositoryCatalogueSnapshot Snapshot => Catalogue.Current;
+
+    private int StatusRefreshMinutes => (int)Math.Round(Current.StatusRefreshInterval.TotalMinutes);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Catalogue.Changed += OnCatalogueChanged;
+        await ScanAsync(Catalogue.GetAsync);
+    }
+
+    public void Dispose() => Catalogue.Changed -= OnCatalogueChanged;
+
+    private void OnCatalogueChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private static string RepositoryCount(int count) => count == 1 ? "1 repository" : $"{count} repositories";
+
+    private string? ProblemWith(string path) =>
+        Snapshot.Problems.FirstOrDefault(problem => FileSystemPaths.Comparer.Equals(problem.Path, path))?.Message;
+
+    private int CountIn(string folder) =>
+        Snapshot.Repositories.Count(repository => repository.MonitoredFolders.Contains(folder, FileSystemPaths.Comparer));
+
+    private Task RescanAsync() => ScanAsync(Catalogue.RescanAsync);
+
+    private async Task ScanAsync(Func<CancellationToken, Task<RepositoryCatalogueSnapshot>> scan)
+    {
+        try
+        {
+            await scan(CancellationToken.None);
+            _rescanError = null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _rescanError = $"Couldn't scan for repositories. {ex.Message}";
+        }
+    }
+
+    private async Task AddMonitoredFolderAsync()
+    {
+        var folder = await FolderPicker.PickFolderAsync(new FolderPickerOptions { Title = "Add a Monitored Folder" });
+        if (folder is null)
+        {
+            return;
+        }
+
+        // The manually added repositories in the folder would be found twice, so they're removed, once confirmed.
+        folder = FileSystemPaths.Normalize(folder);
+        var inFolder = RepositoryCatalogue.FindLocalRepositoriesIn(folder, Current);
+        if (inFolder.Count > 0)
+        {
+            _pendingMonitoredFolder = folder;
+            _pendingRemovals = inFolder;
+            return;
+        }
+
+        await AddMonitoredFolderAsync(folder);
+    }
+
+    private async Task ConfirmMonitoredFolderAsync()
+    {
+        if (_pendingMonitoredFolder is { } folder)
+        {
+            CancelMonitoredFolder();
+            await AddMonitoredFolderAsync(folder);
+        }
+    }
+
+    private void CancelMonitoredFolder()
+    {
+        _pendingMonitoredFolder = null;
+        _pendingRemovals = [];
+    }
+
+    private Task AddMonitoredFolderAsync(string folder) =>
+        UpdateGitAsync(git =>
+        {
+            // Found again from the current settings, in case they changed while the user was deciding.
+            var inFolder = RepositoryCatalogue.FindLocalRepositoriesIn(folder, git);
+            return git with
+            {
+                MonitoredFolders = [.. git.MonitoredFolders, folder],
+                LocalRepositories = git.LocalRepositories.Except(inFolder, FileSystemPaths.Comparer).ToArray(),
+            };
+        });
+
+    private Task RemoveMonitoredFolderAsync(string folder) =>
+        UpdateGitAsync(git => git with
+        {
+            MonitoredFolders = git.MonitoredFolders.Where(f => !FileSystemPaths.Comparer.Equals(f, folder)).ToArray(),
+        });
+
+    private async Task AddLocalRepositoryAsync()
+    {
+        var folder = await FolderPicker.PickFolderAsync(new FolderPickerOptions { Title = "Add a local repository" });
+        if (folder is null)
+        {
+            return;
+        }
+
+        _addRepositoryError = RepositoryCatalogue.CheckNewLocalRepository(folder, Current) is { } problem
+            ? $"Couldn't add '{folder}'. {problem}"
+            : null;
+        if (_addRepositoryError is null)
+        {
+            await UpdateGitAsync(git => git with { LocalRepositories = [.. git.LocalRepositories, folder] });
+        }
+    }
+
+    private Task RemoveLocalRepositoryAsync(string repository) =>
+        UpdateGitAsync(git => git with
+        {
+            LocalRepositories = git.LocalRepositories
+                .Where(r => !FileSystemPaths.Comparer.Equals(r, repository))
+                .ToArray(),
+        });
 
     private Task OnStatusRefreshIntervalChanged(ChangeEventArgs e)
     {
@@ -67,9 +324,9 @@
             return Task.CompletedTask;
         }
 
-        return UpdateAsync(settings => settings with
-        {
-            Git = settings.Git with { StatusRefreshInterval = TimeSpan.FromMinutes(minutes) },
-        });
+        return UpdateGitAsync(git => git with { StatusRefreshInterval = TimeSpan.FromMinutes(minutes) });
     }
+
+    private Task UpdateGitAsync(Func<GitSettings, GitSettings> update) =>
+        UpdateAsync(settings => settings with { Git = update(settings.Git) });
 }

@@ -72,7 +72,24 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 Workspaces never hold full clones. Each repository in a workspace is a worktree of a Local Repository,
 so several workspaces can work on the same repository at once without cloning it again.
 
-**Matching clones to integration repositories.** A local clone and an integration repository are the
+**Finding Local Repositories.** The catalogue's Local Repositories come from the Monitored Folders and the manually
+added local repositories in the Git settings. A repository found by both, or in two overlapping Monitored Folders, is
+listed once.
+- A folder is a repository when it has a `.git` folder, or a `.git` file that doesn't belong to a linked worktree.
+- Scanning a Monitored Folder looks up to 20 folders down. It doesn't look inside repositories (so submodules and
+  repositories nested in another aren't listed on their own), and it skips linked worktrees, Workspace Folders, hidden
+  folders and links to other folders.
+- A manually added repository must be a repository's top folder, and not a worktree. It can't be in a Monitored
+  Folder, because the scan already finds it.
+- Adding a Monitored Folder that holds manually added repositories asks the user to confirm, then removes those
+  repositories from the manually added ones.
+- Missing folders and repositories that can't be read are left out of the catalogue and shown on the Settings screen.
+- The catalogue is scanned when it's first needed, when the user asks (Rescan on the Settings screen), when the
+  Monitored Folders or manually added repositories change, and when folders appear in or disappear from a Monitored
+  Folder. Only a Monitored Folder's own entries are watched, not its subfolders, so watching a large clone folder
+  doesn't use up the platform's watch limits. A repository cloned deeper down is found by the next scan.
+
+ A local clone and an integration repository are the
 same catalogue entry when any of the clone's remotes matches the integration repository's URL. URLs are
 normalised before comparing, so HTTPS and SSH forms match. A clone of a fork with an `upstream` remote
 therefore counts as a Local Repository for both the fork and the upstream repository.
@@ -184,8 +201,9 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     the same service again gives the same ID, and workspace tasks from it find their source again. The same service
     can't be connected twice.
 - **Git**
-  - Monitored Folder(s)
+  - Monitored Folder(s), each with how many repositories were found in it
   - Manually added local repositories
+  - The Repository Catalogue's size, with a Rescan button
   - Status refresh interval for workspaces that aren't open (whole minutes from 1 to 1440, default 5)
   - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that TAMMi uses
 - **Agents**

@@ -56,6 +56,19 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
         return commits.Select(ToCommitInfo).ToArray();
     }
 
+    /// <inheritdoc />
+    public IReadOnlyList<GitRemote> ReadRemotes(string path)
+    {
+        using Repository repository = Open(path);
+        return repository.Network.Remotes
+            .Select(remote => new GitRemote(
+                remote.Name,
+                remote.Url,
+                remote.PushUrl is { } pushUrl && pushUrl != remote.Url ? pushUrl : null))
+            .OrderBy(remote => remote.Name, StringComparer.Ordinal)
+            .ToArray();
+    }
+
     private static Repository Open(string path)
     {
         try

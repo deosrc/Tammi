@@ -33,6 +33,9 @@
   --color-success: #1a7f37;
   --color-success-bg: #dafbe1;
   --color-warning: #9a6700;
+  --color-warning-bg: #fff8c5;
+  --color-warning-border: #d4a72c;
+  --color-warning-text: #ffffff;
   --color-error-bg: #ffebe9;
   --color-jira: #0052cc;
 }
@@ -53,6 +56,9 @@
     --color-success: #3fb950;
     --color-success-bg: #12261e;
     --color-warning: #d29922;
+    --color-warning-bg: #3b2e0e;
+    --color-warning-border: #9e6a03;
+    --color-warning-text: #1f2328;
     --color-error-bg: #2d1416;
     --color-jira: #4c9aff;
   }
@@ -122,6 +128,44 @@ a {
   color: var(--color-warning);
 }
 
+/* A message that needs the user's attention, e.g. a change that waits for them to confirm it. */
+.alert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.alert p {
+  margin: 0;
+}
+
+.alert .settings-list {
+  margin: 0;
+}
+
+.alert-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.alert-warning {
+  border-color: var(--color-warning-border);
+  border-left-width: 4px;
+  background: var(--color-warning-bg);
+}
+
+.alert-warning .alert-title {
+  color: var(--color-warning);
+}
+
 /* Line icons drawn with inline SVG. They take the text colour. */
 .icon {
   width: 18px;
@@ -168,6 +212,12 @@ a {
 /* A button for actions that delete something. */
 .button-danger {
   background: var(--color-error);
+}
+
+/* A button that confirms a change with side effects, e.g. in a warning alert. */
+.button-warning {
+  background: var(--color-warning);
+  color: var(--color-warning-text);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
@@ -643,6 +693,58 @@ a {
   margin: var(--space-1) 0 0;
   font-size: var(--font-size-small);
   color: var(--color-text-muted);
+}
+
+/* A heading for a field that has no single input to label, e.g. a list of folders. */
+.settings-field-title {
+  margin: 0 0 var(--space-1);
+  font-size: inherit;
+  font-weight: 600;
+}
+
+/* Lists of folders in a setting, each with its status and actions. */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.settings-list-name {
+  font-weight: 600;
+}
+
+.settings-list-path {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, monospace;
+}
+
+.settings-list-status {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.settings-details {
+  margin-top: var(--space-2);
+}
+
+.settings-details summary {
+  cursor: pointer;
 }
 
 .badge {

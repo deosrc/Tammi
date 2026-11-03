@@ -327,6 +327,7 @@ public sealed class SettingsStoreTests : IDisposable
     [InlineData("""{ "version": 1, "general": null }""")]
     [InlineData("""{ "version": 1, "general": { "defaultWorkspaceParentFolder": null } }""")]
     [InlineData("""{ "version": 1, "git": null }""")]
+    [InlineData("""{ "version": 1, "git": { "monitoredFolders": null, "localRepositories": null } }""")]
     [InlineData("""{ "version": 1, "agents": null }""")]
     [InlineData("""{ "version": 1, "agents": { "initialPromptTemplate": null } }""")]
     [InlineData("""{ "version": 1, "agents": { "customDefinitions": null } }""")]
@@ -341,6 +342,40 @@ public sealed class SettingsStoreTests : IDisposable
 
         Assert.Equal(new AppSettings(), store.Current);
         Assert.Null(store.LoadProblem);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesFoldersAsFullPathsOnce()
+    {
+        var store = CreateStore();
+        var repos = Path.Combine(_root, "repos");
+        var api = Path.Combine(_root, "api");
+
+        await store.UpdateAsync(settings => settings with
+        {
+            Git = settings.Git with
+            {
+                MonitoredFolders = [repos + Path.DirectorySeparatorChar, "  ", $" {repos} ", Path.Combine(_root, "more")],
+                LocalRepositories = [api, api + Path.DirectorySeparatorChar, ""],
+            },
+        }, TestContext.Current.CancellationToken);
+
+        var reloaded = CreateStore().Current.Git;
+        Assert.Equal([repos, Path.Combine(_root, "more")], reloaded.MonitoredFolders);
+        Assert.Equal([api], reloaded.LocalRepositories);
+        Assert.Equal(store.Current.Git, reloaded);
+    }
+
+    [Fact]
+    public void GitSettings_WithEqualFolderLists_AreEqual()
+    {
+        var first = new GitSettings { MonitoredFolders = ["/a", "/b"], LocalRepositories = ["/c"] };
+        var second = new GitSettings { MonitoredFolders = ["/a", "/b"], LocalRepositories = ["/c"] };
+
+        Assert.Equal(first, second);
+        Assert.Equal(first.GetHashCode(), second.GetHashCode());
+        Assert.NotEqual(first, second with { MonitoredFolders = ["/b", "/a"] });
+        Assert.NotEqual(first, second with { LocalRepositories = [] });
     }
 
     [Fact]
