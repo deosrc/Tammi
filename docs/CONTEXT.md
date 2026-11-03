@@ -68,6 +68,11 @@ same catalogue entry when any of the clone's remotes matches the integration rep
 normalised before comparing, so HTTPS and SSH forms match. A clone of a fork with an `upstream` remote
 therefore counts as a Local Repository for both the fork and the upstream repository.
 
+**Moved or deleted Local Repositories.** TAMMi detects when a Workspace Worktree's Local Repository
+has been moved or deleted, and marks the workspace as broken on Home and in the Workspace View. It
+offers to repair the worktree: either point it at the repository's new location (`git worktree repair`)
+or clone the repository again.
+
 **Metadata.** Each workspace describes itself in its `.tammi/` folder. The app's data folder keeps only
 an index of known workspace paths, which Home uses to list workspaces.
 
@@ -133,9 +138,6 @@ own branch. It is created automatically when the workspace is created:
 ## Open Questions
 
 Record the decision here when an item is resolved, and move it into the sections above.
-
-### Repositories
-- What happens if a Local Repository is moved or deleted while workspaces still have worktrees from it?
 
 ### Agents
 - Which agents are supported first (e.g. Claude Code, others)? Are they run as CLI processes in an embedded terminal or through an SDK/API?
