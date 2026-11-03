@@ -1,0 +1,51 @@
+@page "/workspaces/{WorkspaceId}"
+@implements IDisposable
+@inject WorkspaceTabs WorkspaceTabs
+
+@if (_tab is null)
+{
+    <div class="page">
+        <h1>Workspace not open</h1>
+        <p>Open this workspace from <a href="@AppRoutes.Home">Home</a>.</p>
+    </div>
+}
+else
+{
+    @* Keyed by workspace, so switching tabs doesn't carry one workspace's collapsed sections over to another. *@
+    <div class="workspace-view" @key="_tab.WorkspaceId">
+        <aside class="side-panel">
+            <SidePanelSection Title="Agents">
+                <p class="placeholder">No agents running.</p>
+            </SidePanelSection>
+            <SidePanelSection Title="Repositories">
+                <p class="placeholder">Git status will appear here.</p>
+            </SidePanelSection>
+            <SidePanelSection Title="Open in…">
+                <p class="placeholder">Tools will appear here.</p>
+            </SidePanelSection>
+        </aside>
+        <div class="workspace-main">
+            <h1>@_tab.Name</h1>
+            <p class="placeholder">Git operations, agents and terminals will appear here.</p>
+        </div>
+    </div>
+}
+
+@code {
+    private WorkspaceTab? _tab;
+
+    [Parameter]
+    public string WorkspaceId { get; set; } = "";
+
+    protected override void OnInitialized() => WorkspaceTabs.Changed += OnTabsChanged;
+
+    protected override void OnParametersSet() => _tab = WorkspaceTabs.Find(WorkspaceId);
+
+    public void Dispose() => WorkspaceTabs.Changed -= OnTabsChanged;
+
+    private void OnTabsChanged() => InvokeAsync(() =>
+    {
+        _tab = WorkspaceTabs.Find(WorkspaceId);
+        StateHasChanged();
+    });
+}

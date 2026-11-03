@@ -1,0 +1,17 @@
+@page "/settings/about"
+@layout SettingsLayout
+
+<h1>About</h1>
+
+<p>@AppInfo.Name: task-first software development workspace manager.</p>
+
+<dl class="settings-values">
+    <dt>Version</dt>
+    <dd>@AppInfo.Version</dd>
+    <dt>Git CLI version</dt>
+    <dd><GitCliVersion /></dd>
+    <dt>libgit2 version</dt>
+    <dd><LibGit2Version /></dd>
+</dl>
+
+<p><a href="@AppRoutes.ThirdPartySoftware">Third-party software and licenses</a></p>

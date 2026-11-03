@@ -9,6 +9,11 @@ namespace TAMMi.Core.Git;
 public interface IGitRepositoryReader
 {
     /// <summary>
+    /// The versions of LibGit2Sharp and the native libgit2 library.
+    /// </summary>
+    GitLibraryVersion LibraryVersion { get; }
+
+    /// <summary>
     /// Reads the status of the repository at <paramref name="path"/>, including its submodules.
     /// </summary>
     /// <param name="path">The repository's working directory. Workspace Worktrees are supported.</param>

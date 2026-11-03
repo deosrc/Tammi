@@ -1,8 +1,32 @@
 @page "/"
+@inject WorkspaceTabs WorkspaceTabs
+@inject NavigationManager Navigation
 
-<h1>@AppInfo.Name</h1>
+<div class="page">
+    <h1>Workspaces</h1>
 
-<p>Task-first software development workspace manager.</p>
-<p class="placeholder">This is a placeholder page shared by the Windows and Linux hosts.</p>
+    <p class="placeholder">These are placeholder workspaces until workspaces can be created.</p>
 
-<PlatformServicesCheck />
+    <ul class="workspace-list">
+        @foreach (var workspace in PlaceholderWorkspaces.All)
+        {
+            <li class="workspace-card">
+                <div class="workspace-card-body">
+                    <div class="workspace-name" title="@workspace.Name">@workspace.Name</div>
+                    <div class="workspace-summary">@workspace.Summary</div>
+                </div>
+                <div class="workspace-card-actions">
+                    <button type="button" class="button" @onclick="() => Open(workspace)">Open</button>
+                </div>
+            </li>
+        }
+    </ul>
+</div>
+
+@code {
+    private void Open(PlaceholderWorkspace workspace)
+    {
+        WorkspaceTabs.Open(workspace.Id, workspace.Name);
+        Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id));
+    }
+}
