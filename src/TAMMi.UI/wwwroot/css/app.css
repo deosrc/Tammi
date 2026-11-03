@@ -30,6 +30,8 @@
   --color-accent-text: #ffffff;
   --color-focus: #0969da;
   --color-error: #cf222e;
+  --color-success: #1a7f37;
+  --color-warning: #9a6700;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,6 +47,8 @@
     --color-accent-text: #ffffff;
     --color-focus: #4c9aff;
     --color-error: #ff7b72;
+    --color-success: #3fb950;
+    --color-warning: #d29922;
   }
 }
 
@@ -131,6 +135,29 @@ a {
 
 .button:hover {
   filter: brightness(1.1);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  filter: none;
+}
+
+/* A quieter button for secondary actions, e.g. Cancel. */
+.button-secondary {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.button-secondary:hover {
+  background: var(--color-surface-hover);
+  filter: none;
+}
+
+/* A button for actions that delete something. */
+.button-danger {
+  background: var(--color-error);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
@@ -477,6 +504,35 @@ a {
   width: 6rem;
 }
 
+.settings-text {
+  width: 100%;
+  max-width: 480px;
+}
+
+/* A group of radio buttons, with a label like a field's. */
+.settings-field-label {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.settings-field label.settings-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+  font-weight: normal;
+}
+
+.settings-help.settings-intro {
+  max-width: 720px;
+  margin: 0 0 var(--space-6);
+}
+
+/* Messages in a form take the form's spacing. */
+.settings-form > p {
+  margin: 0;
+}
+
 .settings-help {
   margin: var(--space-1) 0 0;
   font-size: var(--font-size-small);
@@ -489,6 +545,100 @@ a {
   border-radius: 999px;
   font-size: var(--font-size-small);
   color: var(--color-text-muted);
+}
+
+/* Integrations section of Settings */
+
+.integration-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 900px;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  list-style: none;
+}
+
+.integration-item {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.integration-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.integration-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.integration-name {
+  font-weight: 600;
+}
+
+.integration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.integration-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.integration-message {
+  overflow-wrap: anywhere;
+}
+
+/* The authenticate and remove forms, shown inside an integration's entry. */
+.integration-panel {
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.integration-panel p {
+  margin-top: 0;
+}
+
+.integration-panel.settings-form {
+  gap: var(--space-4);
+}
+
+.integration-add {
+  margin-top: var(--space-4);
+}
+
+.status-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.status-ok {
+  background: var(--color-success);
+}
+
+.status-warning {
+  background: var(--color-warning);
+}
+
+.status-error {
+  background: var(--color-error);
 }
 
 /* Third-party software list on the About page */

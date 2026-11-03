@@ -168,7 +168,18 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
 - **General**
   - Default Workspace Parent Folder (defaults to `Workspaces` in the user's home folder)
-- **Integrations:** credentials and configuration
+- **Integrations:** the connected integrations, each with its connection status
+  - The user adds GitHub (github.com or a GitHub Enterprise Server) and JIRA sites, authenticates them again with a new
+    token, tests them and removes them.
+  - TAMMi checks a token with the service before saving it, so a rejected token is never saved and an integration is
+    never added without working credentials.
+  - Each integration's status is checked when the section opens and on demand: connected (with the account's name),
+    not authenticated (no token saved), authentication failed (the token was rejected), or couldn't connect (with the
+    reason, e.g. the service can't be reached or there's no credential store).
+  - Removing an integration deletes its token. An integration's ID comes from the service it connects to (`github`
+    for github.com, `github-<host>` for an Enterprise Server, `jira-<host>[-<path>]` for a JIRA site), so connecting
+    the same service again gives the same ID, and workspace tasks from it find their source again. The same service
+    can't be connected twice.
 - **Git**
   - Monitored Folder(s)
   - Manually added local repositories
