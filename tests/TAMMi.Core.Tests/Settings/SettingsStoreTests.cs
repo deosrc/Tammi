@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using TAMMi.Core.Agents;
 using TAMMi.Core.Platform;
 using TAMMi.Core.Settings;
 
@@ -129,6 +130,33 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.Equal(GeneralSettings.DefaultDefaultWorkspaceParentFolder, saved.General.DefaultWorkspaceParentFolder);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdateAsync_WithBlankInitialPromptTemplate_UsesDefault(string template)
+    {
+        var store = CreateStore();
+
+        var saved = await store.UpdateAsync(settings => settings with
+        {
+            Agents = settings.Agents with { InitialPromptTemplate = template },
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(InitialPrompt.DefaultTemplate, saved.Agents.InitialPromptTemplate);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesInitialPromptTemplate()
+    {
+        var template = "Read {contextFile}.\nThen \"start\" & say 100%.";
+        await CreateStore().UpdateAsync(settings => settings with
+        {
+            Agents = settings.Agents with { InitialPromptTemplate = template },
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(template, CreateStore().Current.Agents.InitialPromptTemplate);
+    }
+
     [Fact]
     public async Task UpdateAsync_ConcurrentUpdates_AreAllApplied()
     {
@@ -184,6 +212,8 @@ public sealed class SettingsStoreTests : IDisposable
     [InlineData("""{ "version": 1, "general": null }""")]
     [InlineData("""{ "version": 1, "general": { "defaultWorkspaceParentFolder": null } }""")]
     [InlineData("""{ "version": 1, "git": null }""")]
+    [InlineData("""{ "version": 1, "agents": null }""")]
+    [InlineData("""{ "version": 1, "agents": { "initialPromptTemplate": null } }""")]
     [InlineData("""{ }""")]
     public void Current_WithMissingOrNullValues_UsesDefaults(string json)
     {

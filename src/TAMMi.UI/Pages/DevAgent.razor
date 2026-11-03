@@ -1,11 +1,14 @@
 @page "/dev/agent"
 @using TAMMi.Core.Agents
 @using TAMMi.Core.Platform
+@using TAMMi.Core.Settings
 @implements IAsyncDisposable
 @inject AgentLauncher AgentLauncher
 @inject IFolderPicker FolderPicker
+@inject ISettingsStore SettingsStore
 
-@* A developer page for starting an Agent Definition in a folder, stopping it and following its state. *@
+@* A developer page for starting an Agent Definition in a folder, with or without an initial prompt, stopping it and
+   following its state. *@
 <div class="dev-page">
     <header>
         <h1>Agent</h1>
@@ -24,6 +27,11 @@
                 <input @bind="_workingDirectory" disabled="@IsRunning" />
             </label>
             <button type="button" @onclick="PickFolderAsync" disabled="@IsRunning">Choose…</button>
+            <label>
+                <input type="checkbox" @bind="_sendInitialPrompt" disabled="@IsRunning" />
+                Initial prompt, with context file
+            </label>
+            <input @bind="_contextFile" disabled="@(IsRunning || !_sendInitialPrompt)" placeholder="@DefaultContextFile" />
             @if (IsRunning)
             {
                 <button type="button" @onclick="StopAsync" disabled="@_stopping">Stop</button>
@@ -38,6 +46,11 @@
             <span class="status">@DescribeState(_agent)</span>
         }
     </header>
+
+    @if (_sendInitialPrompt && !IsRunning)
+    {
+        <p class="status">Prompt: @InitialPromptText</p>
+    }
 
     @if (_error is not null)
     {
@@ -58,8 +71,17 @@
     private Agent? _agent;
     private bool _stopping;
     private string? _error;
+    private bool _sendInitialPrompt = true;
+    private string _contextFile = "";
 
     private bool IsRunning => _agent?.State == AgentState.Running;
+
+    // The task context file isn't written yet, so any path will do.
+    private string DefaultContextFile => Path.Combine(_workingDirectory, ".tammi", "tasks.md");
+
+    private string InitialPromptText => InitialPrompt.Expand(
+        SettingsStore.Current.Agents.InitialPromptTemplate,
+        string.IsNullOrWhiteSpace(_contextFile) ? DefaultContextFile : _contextFile.Trim());
 
     private async Task StartAsync()
     {
@@ -69,7 +91,11 @@
         try
         {
             // The Terminal resizes the session to fit as soon as it's shown.
-            var agent = AgentLauncher.Start(Definitions[_definitionIndex], _workingDirectory, PtySize.Default);
+            var agent = AgentLauncher.Start(
+                Definitions[_definitionIndex],
+                _workingDirectory,
+                PtySize.Default,
+                _sendInitialPrompt ? InitialPromptText : null);
             agent.StateChanged += OnStateChanged;
             _agent = agent;
         }

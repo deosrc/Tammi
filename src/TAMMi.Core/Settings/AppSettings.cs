@@ -25,6 +25,11 @@ public sealed record AppSettings
     public IntegrationsSettings Integrations { get; init; } = new();
 
     /// <summary>
+    /// The Agents section.
+    /// </summary>
+    public AgentSettings Agents { get; init; } = new();
+
+    /// <summary>
     /// Replaces missing and out-of-range values with valid ones.
     /// </summary>
     public AppSettings Normalize() => this with
@@ -32,5 +37,6 @@ public sealed record AppSettings
         General = (General ?? new GeneralSettings()).Normalize(),
         Git = (Git ?? new GitSettings()).Normalize(),
         Integrations = (Integrations ?? new IntegrationsSettings()).Normalize(),
+        Agents = (Agents ?? new AgentSettings()).Normalize(),
     };
 }
