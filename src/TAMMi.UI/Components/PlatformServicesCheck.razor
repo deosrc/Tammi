@@ -1,0 +1,100 @@
+@using TAMMi.Core.Platform
+@implements IDisposable
+@inject IAppPaths AppPaths
+@inject IProcessLauncher ProcessLauncher
+@inject IFolderPicker FolderPicker
+@inject IFileSystemWatchService FileSystemWatchService
+
+@* A developer check that each platform service resolves and works in this host. Remove when real screens use them. *@
+<section class="platform-check">
+    <h2>Platform services</h2>
+
+    <dl>
+        <dt>Config folder</dt>
+        <dd>@AppPaths.ConfigDirectory</dd>
+        <dt>Data folder</dt>
+        <dd>@AppPaths.DataDirectory</dd>
+        <dt>Cache folder</dt>
+        <dd>@AppPaths.CacheDirectory</dd>
+        <dt>git</dt>
+        <dd>@_git</dd>
+        <dt>Watched folder</dt>
+        <dd>@(_folder ?? "None")</dd>
+        <dt>Last change</dt>
+        <dd>@_lastChange</dd>
+    </dl>
+
+    <button type="button" @onclick="PickFolderAsync">Choose folder to watch…</button>
+    <button type="button" disabled="@(_folder is null)" @onclick="OpenFolder">Open in file manager</button>
+    @if (_error is not null)
+    {
+        <p class="error">@_error</p>
+    }
+</section>
+
+@code {
+    private string _git = "Checking…";
+    private string? _folder;
+    private string _lastChange = "None";
+    private string? _error;
+    private IDisposable? _watch;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await ProcessLauncher.RunAsync(new ProcessRequest("git", "--version"));
+            _git = $"{result.StandardOutput.Trim()} ({ProcessLauncher.FindExecutable("git")})";
+        }
+        catch (FileNotFoundException)
+        {
+            _git = "Not found";
+        }
+    }
+
+    private async Task PickFolderAsync()
+    {
+        _error = null;
+        try
+        {
+            var options = new FolderPickerOptions { Title = "Choose a folder to watch" };
+            var folder = await FolderPicker.PickFolderAsync(options);
+            if (folder is null)
+            {
+                return;
+            }
+
+            _watch?.Dispose();
+            _folder = folder;
+            _lastChange = "None";
+            _watch = FileSystemWatchService.Watch(folder, OnChanged);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void OpenFolder()
+    {
+        _error = null;
+        try
+        {
+            ProcessLauncher.Open(_folder!);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void OnChanged(FileSystemChanges changes)
+    {
+        _lastChange = changes.RescanRequired
+            ? $"Rescan required {changes.Error?.Message}"
+            : $"{changes.Paths.Count} path(s), e.g. {changes.Paths.First()}";
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => _watch?.Dispose();
+}

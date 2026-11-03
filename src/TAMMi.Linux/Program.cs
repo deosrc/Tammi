@@ -1,6 +1,7 @@
 using Microsoft.Extensions.FileProviders;
 using Photino.Blazor;
 using TAMMi.Core;
+using TAMMi.Linux.PlatformServices;
 using TAMMi.UI;
 
 namespace TAMMi.Linux;
@@ -14,6 +15,7 @@ internal static class Program
     {
         var builder = PhotinoBlazorAppBuilder.CreateDefault(CreateFileProvider(), args);
         builder.Services.AddTammiUI();
+        builder.Services.AddLinuxPlatformServices();
         builder.RootComponents.Add<Routes>("#app");
 
         var app = builder.Build();
