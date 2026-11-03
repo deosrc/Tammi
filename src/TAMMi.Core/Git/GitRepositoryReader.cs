@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using LibGit2Sharp;
 
 namespace TAMMi.Core.Git;
@@ -7,6 +8,14 @@ namespace TAMMi.Core.Git;
 /// </summary>
 public sealed class GitRepositoryReader : IGitRepositoryReader
 {
+    private static readonly Lazy<GitLibraryVersion> s_libraryVersion = new(ReadLibraryVersion);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int LibGit2VersionFunction(out int major, out int minor, out int revision);
+
+    /// <inheritdoc />
+    public GitLibraryVersion LibraryVersion => s_libraryVersion.Value;
+
     /// <inheritdoc />
     public RepositoryStatus ReadStatus(string path)
     {
@@ -212,4 +221,33 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
 
     private static string Normalise(string workingDirectory) =>
         Path.TrimEndingDirectorySeparator(Path.GetFullPath(workingDirectory));
+
+    private static GitLibraryVersion ReadLibraryVersion()
+    {
+        LibGit2Sharp.Version version = GlobalSettings.Version;
+        string libGit2SharpVersion = version.InformationalVersion.Split('+')[0];
+
+        // The native library is named after the first 7 characters of the libgit2 commit.
+        string commit = version.LibGit2CommitSha[..Math.Min(7, version.LibGit2CommitSha.Length)];
+        return new GitLibraryVersion(libGit2SharpVersion, ReadLibGit2Version(commit), commit);
+    }
+
+    /// <summary>
+    /// Asks the native library for its version. LibGit2Sharp doesn't expose it, only the commit it was built from.
+    /// </summary>
+    /// <param name="commitShortSha">Names the native library, e.g. <c>git2-5853918</c>.</param>
+    private static string? ReadLibGit2Version(string commitShortSha)
+    {
+        // Load it the way LibGit2Sharp does, so this finds the same file.
+        if (!NativeLibrary.TryLoad($"git2-{commitShortSha}", typeof(Repository).Assembly, null, out IntPtr library)
+            || !NativeLibrary.TryGetExport(library, "git_libgit2_version", out IntPtr export))
+        {
+            return null;
+        }
+
+        var getVersion = Marshal.GetDelegateForFunctionPointer<LibGit2VersionFunction>(export);
+        return getVersion(out int major, out int minor, out int revision) == 0
+            ? $"{major}.{minor}.{revision}"
+            : null;
+    }
 }
