@@ -1,0 +1,241 @@
+@* Step 1 of the Create Workspace flow: find tasks in the connected Task Sources and choose any number of them. *@
+@implements IDisposable
+@using TAMMi.Core.Integrations
+@using TAMMi.Core.Integrations.GitHub
+@using TAMMi.Core.Integrations.Jira
+@using TAMMi.Core.Platform
+@inject IntegrationRegistry Registry
+@inject IProcessLauncher ProcessLauncher
+
+@if (_sources.Count == 0)
+{
+    <p class="placeholder">
+        No connected integrations provide tasks. Connect one in
+        <a href="@AppRoutes.SettingsIntegrations">Settings › Integrations</a>, or go on without tasks.
+    </p>
+}
+else
+{
+    <form class="task-search" @onsubmit="SearchAsync">
+        @if (_sources.Count > 1)
+        {
+            <select class="task-source" aria-label="Task source" value="@_sourceId" @onchange="OnSourceChangedAsync">
+                @foreach (var source in _sources)
+                {
+                    <option value="@source.Id">@source.Name</option>
+                }
+            </select>
+        }
+        else
+        {
+            <span class="task-source-name">
+                @if (ServiceOf(_sources[0]) is { } service)
+                {
+                    <IntegrationIcon Service="service" />
+                }
+                @_sources[0].Name
+            </span>
+        }
+        <input type="search" aria-label="Search tasks" class="task-query" placeholder="@QueryPlaceholder"
+               autocomplete="off" @bind="_query" @bind:event="oninput" />
+        <button type="submit" class="button" disabled="@_searching">Search</button>
+    </form>
+    <p class="settings-help">Leave the search empty to list the tasks assigned to you that aren't done.</p>
+
+    <div class="task-results" aria-live="polite" aria-busy="@(_searching ? "true" : "false")">
+        @if (_searching)
+        {
+            <p class="placeholder">Searching…</p>
+        }
+        else if (_searchError is not null)
+        {
+            <p class="error">@_searchError</p>
+        }
+        else if (_results is { Count: 0 })
+        {
+            <p class="placeholder">No tasks found.</p>
+        }
+        else if (_results is not null)
+        {
+            <ul class="task-list">
+                @foreach (var task in _results)
+                {
+                    var chosen = Draft.ContainsTask(task.Reference);
+                    <li class="task-item @(chosen ? "task-item-chosen" : null)" @key="task.Reference">
+                        <label class="task-choice">
+                            <input type="checkbox" checked="@chosen" @onchange="() => Toggle(task)" />
+                            <span class="task-key">@task.Key</span>
+                            <span class="task-title">@task.Title</span>
+                        </label>
+                        <button type="button" class="button button-secondary button-small"
+                                title="Open @task.Key in the browser" @onclick="() => Open(task)">Open</button>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+<h2>Chosen tasks (@Draft.Tasks.Count)</h2>
+@if (Draft.Tasks.Count == 0)
+{
+    <p class="placeholder">No tasks chosen. A workspace doesn't need tasks: you'll name it in the next step.</p>
+}
+else
+{
+    <ul class="task-list">
+        @foreach (var task in Draft.Tasks)
+        {
+            <li class="task-item" @key="task.Reference">
+                <div class="task-choice">
+                    @if (ServiceOf(Registry.Find(task.Source)) is { } service)
+                    {
+                        <IntegrationIcon Service="service" />
+                    }
+                    <span class="task-key">@task.Key</span>
+                    <span class="task-title">@task.Title</span>
+                </div>
+                <button type="button" class="button button-secondary button-small"
+                        @onclick="() => Remove(task)">Remove</button>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    /// <summary>
+    /// The draft whose tasks this chooses.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public WorkspaceDraft Draft { get; set; } = null!;
+
+    private IReadOnlyList<ITaskIntegration> _sources = [];
+    private string? _sourceId;
+    private string _query = "";
+    private IReadOnlyList<TaskInfo>? _results;
+    private string? _searchError;
+    private bool _searching;
+    private CancellationTokenSource? _search;
+
+    private ITaskIntegration? Source => _sources.FirstOrDefault(source => source.Id == _sourceId);
+
+    private string QueryPlaceholder => Source switch
+    {
+        GitHubIntegration => "GitHub issue search, an issue reference (owner/repo#1) or URL",
+        JiraIntegration => "JQL, an issue key (ABC-123) or URL",
+        _ => "Search",
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Registry.Changed += OnRegistryChanged;
+        _sources = Registry.TaskIntegrations;
+        _sourceId = _sources.FirstOrDefault()?.Id;
+        await SearchAsync();
+    }
+
+    public void Dispose()
+    {
+        Registry.Changed -= OnRegistryChanged;
+        _search?.Cancel();
+    }
+
+    private async Task OnSourceChangedAsync(ChangeEventArgs e)
+    {
+        _sourceId = e.Value?.ToString();
+
+        // Each source has its own query syntax, so a query for one rarely makes sense for another.
+        _query = "";
+        await SearchAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        // The cancelled search disposes of its own token source when it finishes.
+        _search?.Cancel();
+        if (Source is not { } source)
+        {
+            _search = null;
+            _results = null;
+            _searching = false;
+            return;
+        }
+
+        var search = _search = new CancellationTokenSource();
+        _searching = true;
+        _searchError = null;
+        StateHasChanged();
+
+        IReadOnlyList<TaskInfo>? results = null;
+        string? error = null;
+        try
+        {
+            results = await source.SearchTasksAsync(_query, search.Token);
+        }
+        catch (OperationCanceledException) when (search.IsCancellationRequested)
+        {
+            // A newer search, a change of source or leaving the page cancelled it.
+            return;
+        }
+        catch (IntegrationAuthenticationException ex)
+        {
+            error = $"{ex.Message} Check {source.Name} in Settings › Integrations.";
+        }
+        catch (IntegrationException ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            if (_search == search)
+            {
+                _search = null;
+            }
+
+            search.Dispose();
+        }
+
+        if (search.IsCancellationRequested)
+        {
+            // It finished before it saw the cancellation, but a newer search replaces it.
+            return;
+        }
+
+        _results = results;
+        _searchError = error;
+        _searching = false;
+    }
+
+    private void Toggle(TaskInfo task)
+    {
+        if (!Draft.AddTask(task))
+        {
+            Draft.RemoveTask(task.Reference);
+        }
+    }
+
+    private void Remove(TaskInfo task) => Draft.RemoveTask(task.Reference);
+
+    private void Open(TaskInfo task) => ProcessLauncher.Open(task.Url.AbsoluteUri);
+
+    private static IntegrationService? ServiceOf(IIntegration? integration) => integration switch
+    {
+        GitHubIntegration => IntegrationService.GitHub,
+        JiraIntegration => IntegrationService.Jira,
+        _ => null,
+    };
+
+    private void OnRegistryChanged(object? sender, EventArgs e) => _ = InvokeAsync(async () =>
+    {
+        _sources = Registry.TaskIntegrations;
+        if (Source is null)
+        {
+            // The chosen source was removed, or the first one was just connected.
+            _sourceId = _sources.FirstOrDefault()?.Id;
+            _query = "";
+            await SearchAsync();
+        }
+
+        StateHasChanged();
+    });
+}

@@ -565,14 +565,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
     /// Whether a repository folder name is a single folder name that's valid on every platform. A name that's a path
     /// (e.g. <c>../other</c>) would put the worktree, and anything done to it, outside the Workspace Folder.
     /// </summary>
-    private static bool IsValidFolderName(string? name) =>
-        !string.IsNullOrWhiteSpace(name)
-        && name is not ("." or "..")
-        && name == name.Trim()
-        && !name.EndsWith('.')
-        && name.IndexOfAny(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) < 0
-        && name.IndexOfAny(Path.GetInvalidFileNameChars()) < 0
-        && !name.Any(char.IsControl);
+    private static bool IsValidFolderName(string? name) => FolderNames.IsValid(name);
 
     private static MetadataFile ToFile(Workspace workspace) => new(
         workspace.Id,

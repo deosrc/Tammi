@@ -47,9 +47,20 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
    - One workspace can mix tasks from any sources.
    - TAMMi only reads tasks from integrations. It doesn't write back status changes or PR links yet.
    - The task list can be changed after the workspace is created.
+   - The user searches one Task Source at a time, in its own query syntax (see [Integrations](#integrations)). An
+     empty search lists the user's own unfinished tasks. Tasks chosen from several searches and sources are kept
+     together in one list.
 2. **Name and locate the workspace.**
-   - The name defaults to the task name when exactly one task is selected. Otherwise the user enters it.
-   - The parent folder defaults to the **Default Workspace Parent Folder** app setting.
+   - The name defaults to the task's title when exactly one task is selected. Otherwise the user enters it. Until the
+     user edits it, the name follows the selected tasks; clearing it makes it follow them again.
+   - The name is also the Workspace Folder's name, so it must be a folder name that's valid on every platform: no
+     `/ \ : * ? " < > |` or control characters, not `.` or `..`, no trailing full stop, not a name Windows reserves
+     (e.g. `CON` or `NUL`), and at most 255 bytes. Surrounding spaces are removed.
+   - A default name made from a task's title is turned into a valid folder name: characters that aren't allowed become
+     spaces, and a title longer than 80 characters is cut at a word.
+   - The parent folder defaults to the **Default Workspace Parent Folder** app setting. It must be a full path. It
+     doesn't need to exist yet: it's created with the workspace.
+   - The Workspace Folder must not already exist, as a folder or a file.
 3. **Select repositories** from the Repository Catalogue.
    - **Local Repository:** TAMMi creates a Workspace Worktree for it in the Workspace Folder.
    - **Remote-only Repository:** TAMMi first guides the user through cloning it to a local folder.
