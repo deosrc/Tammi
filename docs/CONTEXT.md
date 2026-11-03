@@ -11,6 +11,11 @@ The developer starts from the work to be done (one or more tasks), not from a re
 then builds a workspace around those tasks: a named folder holding the relevant git repositories,
 with a view of their git state, AI agents working on the tasks, and shortcuts into other tools.
 
+## Principles
+
+- **TAMMi never requires changes to repositories.** It works without adding files, config or commits
+  to any repository. Its own files live in the workspace's `.tammi/` folder and in app data.
+
 ## Glossary
 
 | Term | Meaning |
@@ -28,7 +33,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Workspace Worktree** | A `git worktree` of a Local Repository, created inside the Workspace Folder. This is how a repository is included in a workspace. |
 | **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
-| **Agent Definition** | A configured agent CLI (e.g. Claude Code) that TAMMi can start: name, command and arguments. |
+| **Agent Definition** | A configured agent CLI (e.g. Claude Code) that TAMMi can start: name, command, arguments, and how to pass the initial prompt. |
 | **Open in…** | Actions that open the workspace or a repository in an external tool (IDE, terminal, file manager, …). |
 
 ## Core Flow: Creating a Workspace
@@ -57,6 +62,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 <clone folder>/<repo>/              Local Repository (shared, outside any workspace)
 <parent folder>/<workspace name>/
     .tammi/                         Workspace metadata (tasks, repositories, branches, settings)
+                                    and the task context file for agents
     <repo>/                         Workspace Worktree of <clone folder>/<repo>
     <another repo>/                 Workspace Worktree of another Local Repository
 ```
@@ -124,7 +130,7 @@ own branch. It is created automatically when the workspace is created:
 - Integrations (credentials, configuration)
 - Manually added local repositories
 - Tools: the external tools offered under "Open in…"
-- Agents: the Agent Definitions available to start
+- Agents: the Agent Definitions available to start, and the initial prompt template
 
 ## Agents
 
@@ -134,6 +140,10 @@ own branch. It is created automatically when the workspace is created:
   much like an "Open in…" tool.
 - **Working directory:** an agent starts in the Workspace Folder by default, so it can see and change
   every repository. The user can start it in a single Workspace Worktree instead.
+- **Task context:** TAMMi writes the workspace's task details (title, description, links) to a markdown
+  context file in `.tammi/` and keeps it up to date. When an agent starts, TAMMi sends it an
+  **initial prompt** telling it about the context file. The initial prompt is configurable, with a
+  placeholder for the context file's path. Each Agent Definition says how the prompt is passed to its CLI.
 - **Claude Code** is the first built-in Agent Definition. Others (e.g. Codex CLI, Gemini CLI) can be
   added as definitions.
 - **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or
@@ -157,7 +167,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Agents
-- How is a task's context passed to an agent?
 - What agent states exist (e.g. running, waiting for input, idle, finished, errored)? These states appear on both Home and the Workspace View.
 
 ### Home status summary
