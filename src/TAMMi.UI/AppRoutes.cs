@@ -31,6 +31,11 @@ public static class AppRoutes
     /// </summary>
     public const string DevTerminal = "dev/terminal";
 
+    /// <summary>
+    /// A developer page for starting and stopping agents.
+    /// </summary>
+    public const string DevAgent = "dev/agent";
+
     private const string WorkspacePrefix = "workspaces/";
 
     /// <summary>

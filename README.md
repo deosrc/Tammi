@@ -54,4 +54,5 @@ solution filter, including the Windows host, so on Linux run it against the test
 ### Developer pages
 
 Settings → About links to pages for trying parts of the app on their own, such as **Terminal**, which runs the platform's default
-shell in the embedded terminal.
+shell in the embedded terminal, and **Agent**, which starts and stops an Agent Definition (e.g. Claude Code) in a folder
+and shows its state.
