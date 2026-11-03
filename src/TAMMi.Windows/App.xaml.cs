@@ -1,4 +1,4 @@
-using TAMMi.Core;
+using AppInfo = TAMMi.Core.AppInfo;
 
 namespace TAMMi.Windows;
 
