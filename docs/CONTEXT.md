@@ -96,6 +96,9 @@ own branch. It is created automatically when the workspace is created:
 - **Base:** TAMMi fetches each Local Repository, then branches from the remote's default branch
   (e.g. `origin/main`). The user can choose a different base branch for each repository.
 
+**Submodules.** When a Workspace Worktree is created, TAMMi checks out its submodules automatically
+(`git submodule update --init --recursive`).
+
 **Deleting a workspace.**
 1. If any worktree has uncommitted changes or unpushed commits, TAMMi lists them and asks the user to confirm.
 2. TAMMi removes each Workspace Worktree (`git worktree remove`) and then the Workspace Folder.
@@ -145,6 +148,18 @@ own branch. It is created automatically when the workspace is created:
 - Status refresh interval for workspaces that aren't open
 - Terminal shell: executable and arguments (defaults to the platform shell)
 - Agents: the Agent Definitions available to start, and the initial prompt template
+
+## Git
+
+Operations available in the Workspace View:
+- Status and the git graph
+- Fetch, pull and push
+- Stage, unstage and commit
+- View diffs
+
+**Submodules are supported** by all of these. Submodules appear in status, and the operations can be
+applied inside them. Creating and switching branches, stashing, merging, rebasing and history rewrites
+are left to other tools for now.
 
 ## Open in… Tools
 
@@ -218,5 +233,4 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Git
-- Which operations are in scope at first beyond status and graph (fetch, pull, push, commit, branch, checkout)?
 - Shell out to the `git` CLI or use a library such as LibGit2Sharp?
