@@ -115,6 +115,10 @@ own branch. It is created automatically when the workspace is created:
 - A repository counts as **changed** when it has uncommitted changes (staged, unstaged or untracked)
   or unpushed commits, i.e. work that could be lost. Being **behind** the remote is shown separately,
   for information, and doesn't count as changed.
+- **Keeping git status current:**
+  - Workspaces open in a tab watch their worktrees for file changes and update live.
+  - Other workspaces refresh when Home is shown, and on a timer (interval in Settings).
+  - Agent status is always live, because TAMMi runs the agent processes itself.
 - Opening a workspace shows it in a **tab**. Several workspaces can be open at once.
 - Starts the Create Workspace flow.
 
@@ -135,6 +139,7 @@ own branch. It is created automatically when the workspace is created:
 - Integrations (credentials, configuration)
 - Manually added local repositories
 - Tools: the external tools offered under "Open in…"
+- Status refresh interval for workspaces that aren't open
 - Agents: the Agent Definitions available to start, and the initial prompt template
 
 ## Agents
@@ -184,9 +189,6 @@ own branch. It is created automatically when the workspace is created:
 ## Open Questions
 
 Record the decision here when an item is resolved, and move it into the sections above.
-
-### Home status summary
-- How is the status kept current: file system watchers, polling, or refreshing when Home is shown? This matters most for workspaces that aren't open in a tab.
 
 ### Terminal
 - Is there one terminal per workspace, or can the user open several (e.g. one per repository)?
