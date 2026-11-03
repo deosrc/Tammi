@@ -34,6 +34,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 
 1. **Choose tasks.** The user picks tasks first, because they drive the rest of the setup.
    - Tasks come from integrations (GitHub, JIRA) or are entered manually.
+   - One workspace can mix tasks from any sources.
    - The task list can be changed after the workspace is created.
 2. **Name and locate the workspace.**
    - The name defaults to the task name when exactly one task is selected.
@@ -124,7 +125,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Tasks
-- Can one workspace mix tasks from different sources?
 - Is task state synced back to the integration (status changes, linking PRs)?
 - What fields does a manual task have?
 
