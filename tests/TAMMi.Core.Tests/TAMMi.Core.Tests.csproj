@@ -18,6 +18,8 @@
   <ItemGroup>
     <!-- Responses recorded from the GitHub API. -->
     <None Update="Integrations\GitHub\Responses\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Responses faked from the JIRA REST API documentation. -->
+    <None Update="Integrations\Jira\Responses\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

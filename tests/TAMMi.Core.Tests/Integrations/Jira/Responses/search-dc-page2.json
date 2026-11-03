@@ -1,0 +1,18 @@
+{
+  "expand": "schema,names",
+  "startAt": 2,
+  "maxResults": 2,
+  "total": 3,
+  "issues": [
+    {
+      "expand": "operations,versionedRepresentations,editmeta,changelog,renderedFields",
+      "id": "10103",
+      "self": "https://jira.example.com/jira/rest/api/2/issue/10103",
+      "key": "XYZ-3",
+      "fields": {
+        "summary": "Update the onboarding guide",
+        "description": null
+      }
+    }
+  ]
+}

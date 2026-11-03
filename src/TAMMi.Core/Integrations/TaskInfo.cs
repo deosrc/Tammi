@@ -13,7 +13,8 @@ namespace TAMMi.Core.Integrations;
 public sealed record TaskInfo(string Source, string Key, string Title, Uri Url)
 {
     /// <summary>
-    /// The task's description as the service returns it, usually markdown. <see langword="null"/> when it has none.
+    /// The task's description as the service returns it: markdown from GitHub, wiki markup from JIRA.
+    /// <see langword="null"/> when it has none.
     /// </summary>
     public string? Description { get; init; }
 
