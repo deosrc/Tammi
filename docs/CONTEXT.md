@@ -132,6 +132,8 @@ own branch. It is created automatically when the workspace is created:
   through the terminal, just as they would outside TAMMi.
 - Agents are **pluggable**. Each Agent Definition has a name, a command and arguments, and is configured
   much like an "Open in…" tool.
+- **Working directory:** an agent starts in the Workspace Folder by default, so it can see and change
+  every repository. The user can start it in a single Workspace Worktree instead.
 - **Claude Code** is the first built-in Agent Definition. Others (e.g. Codex CLI, Gemini CLI) can be
   added as definitions.
 - **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or
@@ -155,7 +157,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Agents
-- Does each agent run against one repository or the whole workspace folder?
 - How is a task's context passed to an agent?
 - What agent states exist (e.g. running, waiting for input, idle, finished, errored)? These states appear on both Home and the Workspace View.
 
