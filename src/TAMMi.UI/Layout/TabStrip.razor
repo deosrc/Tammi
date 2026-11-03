@@ -1,0 +1,74 @@
+@implements IDisposable
+@inject WorkspaceTabs WorkspaceTabs
+@inject NavigationManager Navigation
+
+<nav class="tab-strip" aria-label="Main">
+    <a class="tab @ActiveClass(AppRoutes.Home)" href="@AppRoutes.Home" aria-current="@AriaCurrent(AppRoutes.Home)">
+        Home
+    </a>
+
+    @foreach (var tab in WorkspaceTabs.Tabs)
+    {
+        var route = AppRoutes.Workspace(tab.WorkspaceId);
+        <div class="tab workspace-tab @ActiveClass(route)" @key="tab.WorkspaceId">
+            <a class="tab-label" href="@route" title="@tab.Name" aria-current="@AriaCurrent(route)">@tab.Name</a>
+            <button type="button" class="tab-close" title="Close @tab.Name" aria-label="Close @tab.Name"
+                    @onclick="() => Close(tab)">
+                &times;
+            </button>
+        </div>
+    }
+</nav>
+
+<a class="tab settings-tab @ActiveClass(AppRoutes.Settings)" href="@AppRoutes.Settings"
+   aria-current="@AriaCurrent(AppRoutes.Settings)">
+    Settings
+</a>
+
+@code {
+    private string _currentPath = AppRoutes.Home;
+
+    protected override void OnInitialized()
+    {
+        _currentPath = CurrentPath();
+        WorkspaceTabs.Changed += OnTabsChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    public void Dispose()
+    {
+        WorkspaceTabs.Changed -= OnTabsChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+
+    private void Close(WorkspaceTab tab)
+    {
+        var wasShown = IsCurrent(AppRoutes.Workspace(tab.WorkspaceId));
+        var next = WorkspaceTabs.Close(tab.WorkspaceId);
+        if (wasShown)
+        {
+            Navigation.NavigateTo(next is null ? AppRoutes.Home : AppRoutes.Workspace(next.WorkspaceId));
+        }
+    }
+
+    private bool IsCurrent(string route) => string.Equals(_currentPath, route, StringComparison.Ordinal);
+
+    private string? ActiveClass(string route) => IsCurrent(route) ? "active" : null;
+
+    private string? AriaCurrent(string route) => IsCurrent(route) ? "page" : null;
+
+    private string CurrentPath()
+    {
+        var path = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var end = path.IndexOfAny(['?', '#']);
+        return (end < 0 ? path : path[..end]).TrimEnd('/');
+    }
+
+    private void OnTabsChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _currentPath = CurrentPath();
+        InvokeAsync(StateHasChanged);
+    }
+}

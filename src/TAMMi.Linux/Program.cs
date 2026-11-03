@@ -11,6 +11,7 @@ internal static class Program
     private static void Main(string[] args)
     {
         var builder = PhotinoBlazorAppBuilder.CreateDefault(CreateFileProvider(), args);
+        builder.Services.AddTammiUI();
         builder.RootComponents.Add<Routes>("#app");
 
         var app = builder.Build();
