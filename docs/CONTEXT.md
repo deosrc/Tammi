@@ -249,6 +249,9 @@ are left to other tools for now.
   data paths) are reached through interfaces in shared code, with an implementation for each host.
 - **App data** lives in `%LOCALAPPDATA%\TAMMi\{Config,Data,Cache}` on Windows, and in the XDG base
   directories on Linux (`~/.config/tammi`, `~/.local/share/tammi`, `~/.cache/tammi` by default).
+- **Window state:** TAMMi opens its window at the size it had when it was last closed, maximised if it was then.
+  The state is kept in `window-state.json` in the Data folder, apart from the settings. If it's missing or can't be
+  read, the window opens at its default size.
 - **Credentials** for integrations live in the platform secret store, never in settings or data files:
   - **Windows:** Windows Credential Manager, as generic credentials named `TAMMi:<key>`, saved for the local
     machine only.
