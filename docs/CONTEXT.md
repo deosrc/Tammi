@@ -41,7 +41,10 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 
 ### Home
 
-- Lists existing workspaces.
+- Lists existing workspaces with a status summary for each, so the user can see what needs
+  attention without opening the workspace:
+  - **Working directory changes** across the workspace's repositories (e.g. uncommitted changes)
+  - **Agent status** for the workspace's AI agents (e.g. running, waiting for input, finished)
 - Opening a workspace shows it in a **tab**. Several workspaces can be open at once.
 - Starts the Create Workspace flow.
 
@@ -98,6 +101,13 @@ Record the decision here when an item is resolved, and move it into the sections
 - Which agents are supported first (e.g. Claude Code, others)? Are they run as CLI processes in an embedded terminal or through an SDK/API?
 - Does each agent run against one repository or the whole workspace folder?
 - How is a task's context passed to an agent?
+
+- What agent states exist (e.g. running, waiting for input, idle, finished, errored)? These states appear on both Home and the Workspace View.
+
+### Home status summary
+- How much detail does Home show? Options: per-repository breakdown, or a workspace-level summary such as "3 repos, 2 with changes".
+- Which git states count as "changes"? Unstaged, staged and untracked files only, or also unpushed commits and being behind the remote?
+- How is the status kept current: file system watchers, polling, or refreshing when Home is shown? This matters most for workspaces that aren't open in a tab.
 
 ### Open in…
 - Which targets are built in (VS Code, Visual Studio, Rider, terminal, file manager)? Can users configure custom commands?
