@@ -46,6 +46,9 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
    - **Remote-only Repository:** TAMMi first guides the user through cloning it to a local folder.
      This turns it into a Local Repository, and TAMMi then creates the worktree as normal. The clone
      lives outside the workspace, so other workspaces can reuse it.
+   - The clone defaults to `<Monitored Folder>/<repo>`, so TAMMi finds it automatically. If there are
+     several Monitored Folders, the user picks one. The user can choose any other folder instead, and
+     the clone is then added as a manually added local repository.
 
 ### Repositories on disk
 
@@ -127,7 +130,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Repositories
-- In the clone step for a Remote-only Repository, where does the clone go by default? A Monitored Folder (so it is discovered automatically) seems a natural fit. Can the user choose any folder?
 - How is a Local Repository matched to an integration repository, so that it doesn't appear twice in the catalogue? By remote URL? What about forks and multiple remotes?
 - What happens if a Local Repository is moved or deleted while workspaces still have worktrees from it?
 
