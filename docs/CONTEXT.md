@@ -62,6 +62,8 @@ own branch. It is created automatically when the workspace is created:
   it uses the workspace name instead.
 - The user can edit the suggested name before the workspace is created.
 - The same branch name is used in every repository in the workspace.
+- **Base:** TAMMi fetches each Local Repository, then branches from the remote's default branch
+  (e.g. `origin/main`). The user can choose a different base branch for each repository.
 
 ## Main Screens
 
@@ -108,7 +110,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Workspace on disk
-- What base does a new worktree branch start from: the default branch of the remote (after a fetch), or the Local Repository's current HEAD?
 - What is a worktree's folder name inside the workspace: the repository name? How are name clashes handled (e.g. two repositories called `api` from different owners)?
 - Where is workspace metadata stored: inside the workspace folder (e.g. `.tammi/`), in central app data, or both?
 - What happens to the folder and branches when a workspace is deleted or archived? Presumably `git worktree remove` for each repository. What if a worktree has uncommitted or unpushed changes?
