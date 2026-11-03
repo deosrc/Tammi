@@ -112,6 +112,9 @@ own branch. It is created automatically when the workspace is created:
   - **Agent status** for the workspace's AI agents (see [agent states](#agents))
 - Each workspace shows a compact summary line (e.g. "2/3 repos changed · 1 agent needs input"). It can
   be expanded to show a breakdown for each repository and agent.
+- A repository counts as **changed** when it has uncommitted changes (staged, unstaged or untracked)
+  or unpushed commits, i.e. work that could be lost. Being **behind** the remote is shown separately,
+  for information, and doesn't count as changed.
 - Opening a workspace shows it in a **tab**. Several workspaces can be open at once.
 - Starts the Create Workspace flow.
 
@@ -183,7 +186,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Home status summary
-- Which git states count as "changes"? Unstaged, staged and untracked files only, or also unpushed commits and being behind the remote?
 - How is the status kept current: file system watchers, polling, or refreshing when Home is shown? This matters most for workspaces that aren't open in a tab.
 
 ### Terminal
