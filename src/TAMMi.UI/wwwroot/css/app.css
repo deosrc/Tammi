@@ -437,6 +437,52 @@ a {
   margin: 0;
 }
 
+/* Editable settings: a label above each field, with help text below it. */
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 720px;
+  margin: 0 0 var(--space-6);
+}
+
+.settings-field label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.settings-field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settings-field input {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.settings-path {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, monospace;
+}
+
+.settings-number {
+  width: 6rem;
+}
+
+.settings-help {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
 .badge {
   padding: 0 var(--space-2);
   border: 1px solid var(--color-border);

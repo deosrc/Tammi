@@ -1,5 +1,7 @@
 @inherits LayoutComponentBase
 @layout MainLayout
+@using TAMMi.Core.Settings
+@inject ISettingsStore SettingsStore
 
 <div class="settings">
     <nav class="settings-nav" aria-label="Settings">
@@ -9,6 +11,11 @@
         }
     </nav>
     <div class="settings-content page">
+        @* Shown on every section until the settings are next saved. *@
+        @if (SettingsStore.LoadProblem is { } loadProblem)
+        {
+            <p class="error">@loadProblem</p>
+        }
         @Body
     </div>
 </div>
