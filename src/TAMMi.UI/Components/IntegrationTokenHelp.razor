@@ -1,0 +1,62 @@
+@using TAMMi.Core.Integrations.Jira
+@using TAMMi.Core.Settings
+
+@* Says which token an integration needs, and where to create one. *@
+<p class="settings-help">
+    @if (ForGitHub)
+    {
+        <text>
+            A fine-grained token with read access to issues and metadata, or a classic token with the
+            <code>repo</code> scope for private repositories.
+        </text>
+        @* The link needs the server, so it waits until a GitHub Enterprise Server URL is entered. *@
+        @if (GitHub is not null)
+        {
+            <a href="@GitHubTokenUrl(GitHub)" @onclick="() => Open.InvokeAsync(GitHubTokenUrl(GitHub))"
+               @onclick:preventDefault>Create a token</a>
+        }
+    }
+    else if (Deployment == JiraDeployment.Cloud)
+    {
+        <text>An API token without scopes, used with your Atlassian account's email address.</text>
+        <a href="@JiraCloudTokenUrl" @onclick="() => Open.InvokeAsync(JiraCloudTokenUrl)"
+           @onclick:preventDefault>Create a token</a>
+    }
+    else if (Deployment == JiraDeployment.DataCenter)
+    {
+        <text>A personal access token (JIRA 8.14 or later). Create one in JIRA from your profile's Personal Access Tokens page.</text>
+    }
+</p>
+
+@code {
+    private const string JiraCloudTokenUrl = "https://id.atlassian.com/manage-profile/security/api-tokens";
+
+    /// <summary>
+    /// Whether the token is for GitHub.
+    /// </summary>
+    [Parameter]
+    public bool ForGitHub { get; set; }
+
+    /// <summary>
+    /// The GitHub integration the token is for, which says where to create one. <see langword="null"/> until its
+    /// server is known.
+    /// </summary>
+    [Parameter]
+    public GitHubIntegrationSettings? GitHub { get; set; }
+
+    /// <summary>
+    /// The deployment of the JIRA site the token is for.
+    /// </summary>
+    [Parameter]
+    public JiraDeployment? Deployment { get; set; }
+
+    /// <summary>
+    /// Opens a link in the browser.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> Open { get; set; }
+
+    private static string GitHubTokenUrl(GitHubIntegrationSettings github) => github.IsGitHubCom
+        ? "https://github.com/settings/personal-access-tokens/new"
+        : $"{github.ApiUrl.GetLeftPart(UriPartial.Authority)}/settings/tokens";
+}
