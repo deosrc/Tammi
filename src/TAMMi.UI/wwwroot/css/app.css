@@ -102,6 +102,17 @@ a {
   color: var(--color-text-muted);
 }
 
+/* Line icons drawn with inline SVG. They take the text colour. */
+.icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .button {
   padding: var(--space-1) var(--space-3);
   border: none;
@@ -219,6 +230,10 @@ a {
 
 .tab-close:hover {
   background: var(--color-border);
+}
+
+.home-tab {
+  padding: 0 var(--space-3);
 }
 
 .settings-tab {

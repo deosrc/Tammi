@@ -3,8 +3,12 @@
 @inject NavigationManager Navigation
 
 <nav class="tab-strip" aria-label="Main">
-    <a class="tab @ActiveClass(AppRoutes.Home)" href="@AppRoutes.Home" aria-current="@AriaCurrent(AppRoutes.Home)">
-        Home
+    <a class="tab home-tab @ActiveClass(AppRoutes.Home)" href="@AppRoutes.Home" title="Home" aria-label="Home"
+       aria-current="@AriaCurrent(AppRoutes.Home)">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M3 10.5 12 3l9 7.5" />
+            <path d="M5 9v11a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9" />
+        </svg>
     </a>
 
     @foreach (var tab in WorkspaceTabs.Tabs)
