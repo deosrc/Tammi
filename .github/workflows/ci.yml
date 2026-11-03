@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+  CONFIGURATION: Release
+
+jobs:
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-windows
+
+      - name: Restore
+        run: dotnet restore TAMMi.slnx
+
+      - name: Build
+        run: dotnet build TAMMi.slnx --no-restore --configuration ${{ env.CONFIGURATION }}
+
+      - name: Test
+        run: dotnet test --solution TAMMi.slnx --no-build --configuration ${{ env.CONFIGURATION }}
+
+  linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # The Windows host can't be built on Linux, so the solution filter leaves it out.
+      - name: Restore
+        run: dotnet restore TAMMi.Linux.slnf
+
+      - name: Build
+        run: dotnet build TAMMi.Linux.slnf --no-restore --configuration ${{ env.CONFIGURATION }}
+
+      # `dotnet test` evaluates every project in a solution filter, including the Windows host, so run the test
+      # project directly.
+      - name: Test
+        run: dotnet test --project tests/TAMMi.Core.Tests --no-build --configuration ${{ env.CONFIGURATION }}
