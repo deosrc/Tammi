@@ -198,9 +198,43 @@ public sealed class RepositoryCatalogue : IRepositoryCatalogue, IDisposable
     }
 
     /// <summary>
-    /// Checks that <paramref name="path"/> can be added as a manually added local repository.
+    /// Checks that <paramref name="path"/> can be added to the manually added local repositories in
+    /// <paramref name="settings"/>. It must be a repository's top folder, and not inside a Monitored Folder: the scan
+    /// already finds those.
     /// </summary>
     /// <returns>What's wrong with it, or <c>null</c> if it can be added.</returns>
+    public static string? CheckNewLocalRepository(string path, GitSettings settings)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        string? monitoredFolder = settings.MonitoredFolders
+            .FirstOrDefault(folder => FileSystemPaths.IsSameOrInside(path, folder));
+        return monitoredFolder is not null
+            ? $"It's in the Monitored Folder '{monitoredFolder}', so it doesn't need adding."
+            : CheckLocalRepository(path);
+    }
+
+    /// <summary>
+    /// Lists the manually added local repositories in <paramref name="settings"/> that are in
+    /// <paramref name="folder"/>, in the order they're in the settings. If <paramref name="folder"/> is added as a
+    /// Monitored Folder, they should be removed from the manually added ones.
+    /// </summary>
+    public static IReadOnlyList<string> FindLocalRepositoriesIn(string folder, GitSettings settings)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(folder);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        return settings.LocalRepositories
+            .Where(repository => FileSystemPaths.IsSameOrInside(repository, folder))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Checks that <paramref name="path"/> is a repository's top folder, so it can be a manually added local
+    /// repository.
+    /// </summary>
+    /// <returns>What's wrong with it, or <c>null</c> if it's fine.</returns>
     public static string? CheckLocalRepository(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);

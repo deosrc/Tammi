@@ -263,6 +263,43 @@ public sealed class RepositoryCatalogueTests : IDisposable
         Assert.NotNull(RepositoryCatalogue.CheckLocalRepository(_repos.PathTo("missing")));
     }
 
+    [Fact]
+    public async Task CheckNewLocalRepository_RejectsRepositoriesInMonitoredFolders()
+    {
+        string inside = await InitAsync(Path.Combine("monitored", "deep", "api"));
+        string outside = await InitAsync(Path.Combine("monitored-other", "web"));
+        var settings = new GitSettings { MonitoredFolders = [Monitored] }.Normalize();
+
+        Assert.Contains(Monitored, RepositoryCatalogue.CheckNewLocalRepository(inside, settings), StringComparison.Ordinal);
+        // A folder whose name starts with the Monitored Folder's isn't in it.
+        Assert.Null(RepositoryCatalogue.CheckNewLocalRepository(outside, settings));
+        Assert.NotNull(RepositoryCatalogue.CheckNewLocalRepository(Path.Combine(outside, "missing"), settings));
+    }
+
+    [Fact]
+    public async Task CheckNewLocalRepository_RejectsMonitoredFolderThatIsARepository()
+    {
+        string repository = await InitAsync("solo");
+        var settings = new GitSettings { MonitoredFolders = [repository] }.Normalize();
+
+        Assert.NotNull(RepositoryCatalogue.CheckNewLocalRepository(repository, settings));
+    }
+
+    [Fact]
+    public void FindLocalRepositoriesIn_ListsTheRepositoriesInTheFolder()
+    {
+        string api = Path.Combine(Monitored, "api");
+        string web = Path.Combine(Monitored, "acme", "web");
+        string other = _repos.PathTo("monitored-other");
+        var settings = new GitSettings { LocalRepositories = [api, other, web, Monitored] }.Normalize();
+
+        Assert.Equal([api, web, Monitored], RepositoryCatalogue.FindLocalRepositoriesIn(Monitored, settings));
+        Assert.Equal(
+            [api],
+            RepositoryCatalogue.FindLocalRepositoriesIn(api + Path.DirectorySeparatorChar, settings));
+        Assert.Empty(RepositoryCatalogue.FindLocalRepositoriesIn(_repos.PathTo("elsewhere"), settings));
+    }
+
     private async Task<string> InitAsync(string relativePath)
     {
         string path = _repos.PathTo(relativePath);

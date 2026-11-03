@@ -77,7 +77,10 @@ listed once.
 - Scanning a Monitored Folder looks up to 5 folders down. It doesn't look inside repositories (so submodules and
   repositories nested in another aren't listed on their own), and it skips linked worktrees, Workspace Folders, hidden
   folders and links to other folders.
-- A manually added repository must be a repository's top folder, and not a worktree.
+- A manually added repository must be a repository's top folder, and not a worktree. It can't be in a Monitored
+  Folder, because the scan already finds it.
+- Adding a Monitored Folder that holds manually added repositories asks the user to confirm, then removes those
+  repositories from the manually added ones.
 - Missing folders and repositories that can't be read are left out of the catalogue and shown on the Settings screen.
 - The catalogue is scanned when it's first needed, when the user asks (Rescan on the Settings screen), when the
   Monitored Folders or manually added repositories change, and when folders appear in or disappear from a Monitored

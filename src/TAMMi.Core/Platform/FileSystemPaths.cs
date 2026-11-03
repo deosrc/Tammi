@@ -22,6 +22,26 @@ public static class FileSystemPaths
     }
 
     /// <summary>
+    /// Whether <paramref name="path"/> is <paramref name="folder"/> or somewhere inside it. Both are normalized
+    /// first (see <see cref="Normalize"/>), but links aren't resolved.
+    /// </summary>
+    public static bool IsSameOrInside(string path, string folder)
+    {
+        path = Normalize(path);
+        folder = Normalize(folder);
+        if (Comparer.Equals(path, folder))
+        {
+            return true;
+        }
+
+        // A root such as "/" or "C:\" already ends with a separator.
+        string prefix = Path.EndsInDirectorySeparator(folder) ? folder : folder + Path.DirectorySeparatorChar;
+        return path.StartsWith(
+            prefix,
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// Normalizes each path (see <see cref="Normalize"/>), and drops blank paths and repeats, keeping the order.
     /// </summary>
     public static IReadOnlyList<string> NormalizeAll(IEnumerable<string?>? paths)

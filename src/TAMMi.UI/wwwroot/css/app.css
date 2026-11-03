@@ -545,6 +545,18 @@ a {
   white-space: nowrap;
 }
 
+/* Asks the user to confirm a settings change that has side effects, in place of the button that started it. */
+.settings-confirm {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+}
+
+.settings-confirm p {
+  margin: 0;
+}
+
 .settings-details {
   margin-top: var(--space-2);
 }

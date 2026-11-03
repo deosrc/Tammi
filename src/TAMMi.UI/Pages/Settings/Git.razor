@@ -48,9 +48,33 @@
                 }
             </ul>
         }
-        <div class="settings-field-row">
-            <button type="button" class="button" @onclick="AddMonitoredFolderAsync">Add folder…</button>
-        </div>
+        @if (_pendingMonitoredFolder is not null)
+        {
+            <div class="settings-confirm" role="alertdialog" aria-labelledby="confirm-monitored-folder">
+                <p id="confirm-monitored-folder">
+                    <span class="settings-list-path">@_pendingMonitoredFolder</span> holds
+                    @(_pendingRemovals.Count == 1 ? "this manually added repository" : "these manually added repositories").
+                    The scan will find @(_pendingRemovals.Count == 1 ? "it" : "them"), so adding the folder removes
+                    @(_pendingRemovals.Count == 1 ? "it" : "them") from the manually added repositories.
+                </p>
+                <ul class="settings-list">
+                    @foreach (var repository in _pendingRemovals)
+                    {
+                        <li class="settings-list-item"><span class="settings-list-path">@repository</span></li>
+                    }
+                </ul>
+                <div class="settings-field-row">
+                    <button type="button" class="button" @onclick="ConfirmMonitoredFolderAsync">Add folder</button>
+                    <button type="button" class="button button-secondary" @onclick="CancelMonitoredFolder">Cancel</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="settings-field-row">
+                <button type="button" class="button" @onclick="AddMonitoredFolderAsync">Add folder…</button>
+            </div>
+        }
     </div>
 
     <div class="settings-field">
@@ -160,6 +184,8 @@
     private int _statusRefreshRevision;
     private string? _addRepositoryError;
     private string? _rescanError;
+    private string? _pendingMonitoredFolder;
+    private IReadOnlyList<string> _pendingRemovals = [];
 
     private GitSettings Current => SettingsStore.Current.Git;
 
@@ -203,11 +229,50 @@
     private async Task AddMonitoredFolderAsync()
     {
         var folder = await FolderPicker.PickFolderAsync(new FolderPickerOptions { Title = "Add a Monitored Folder" });
-        if (folder is not null)
+        if (folder is null)
         {
-            await UpdateGitAsync(git => git with { MonitoredFolders = [.. git.MonitoredFolders, folder] });
+            return;
+        }
+
+        // The manually added repositories in the folder would be found twice, so they're removed, once confirmed.
+        folder = FileSystemPaths.Normalize(folder);
+        var inFolder = RepositoryCatalogue.FindLocalRepositoriesIn(folder, Current);
+        if (inFolder.Count > 0)
+        {
+            _pendingMonitoredFolder = folder;
+            _pendingRemovals = inFolder;
+            return;
+        }
+
+        await AddMonitoredFolderAsync(folder);
+    }
+
+    private async Task ConfirmMonitoredFolderAsync()
+    {
+        if (_pendingMonitoredFolder is { } folder)
+        {
+            CancelMonitoredFolder();
+            await AddMonitoredFolderAsync(folder);
         }
     }
+
+    private void CancelMonitoredFolder()
+    {
+        _pendingMonitoredFolder = null;
+        _pendingRemovals = [];
+    }
+
+    private Task AddMonitoredFolderAsync(string folder) =>
+        UpdateGitAsync(git =>
+        {
+            // Found again from the current settings, in case they changed while the user was deciding.
+            var inFolder = RepositoryCatalogue.FindLocalRepositoriesIn(folder, git);
+            return git with
+            {
+                MonitoredFolders = [.. git.MonitoredFolders, folder],
+                LocalRepositories = git.LocalRepositories.Except(inFolder, FileSystemPaths.Comparer).ToArray(),
+            };
+        });
 
     private Task RemoveMonitoredFolderAsync(string folder) =>
         UpdateGitAsync(git => git with
@@ -223,7 +288,7 @@
             return;
         }
 
-        _addRepositoryError = RepositoryCatalogue.CheckLocalRepository(folder) is { } problem
+        _addRepositoryError = RepositoryCatalogue.CheckNewLocalRepository(folder, Current) is { } problem
             ? $"Couldn't add '{folder}'. {problem}"
             : null;
         if (_addRepositoryError is null)
