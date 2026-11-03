@@ -1,0 +1,10 @@
+namespace TAMMi.UI.Components;
+
+/// <summary>
+/// The services an integration can connect to.
+/// </summary>
+public enum IntegrationService
+{
+    GitHub,
+    Jira,
+}

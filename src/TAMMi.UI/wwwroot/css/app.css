@@ -32,6 +32,7 @@
   --color-error: #cf222e;
   --color-success: #1a7f37;
   --color-warning: #9a6700;
+  --color-jira: #0052cc;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,6 +50,7 @@
     --color-error: #ff7b72;
     --color-success: #3fb950;
     --color-warning: #d29922;
+    --color-jira: #4c9aff;
   }
 }
 
@@ -572,6 +574,38 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2) var(--space-4);
+}
+
+.integration-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Service logos, filled with the text colour. */
+.integration-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.integration-heading .integration-icon {
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+}
+
+/* JIRA's logo is shown in its brand blue, except on buttons, where it takes the button's text colour. */
+.integration-heading .integration-icon-jira {
+  color: var(--color-jira);
+}
+
+.button-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .integration-title {

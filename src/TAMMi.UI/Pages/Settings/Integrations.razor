@@ -30,9 +30,12 @@ else
             var status = IntegrationManager.GetStatus(integration.Id);
             <li class="integration-item" @key="integration.Id">
                 <div class="integration-header">
-                    <div class="integration-title">
-                        <span class="integration-name">@integration.Name</span>
-                        <span class="placeholder">@integration.Detail</span>
+                    <div class="integration-heading">
+                        <IntegrationIcon Service="@(integration.GitHub is not null ? IntegrationService.GitHub : IntegrationService.Jira)" />
+                        <div class="integration-title">
+                            <span class="integration-name">@integration.Name</span>
+                            <span class="placeholder">@integration.Detail</span>
+                        </div>
                     </div>
                     <div class="integration-actions">
                         <button type="button" class="button button-secondary"
@@ -112,11 +115,17 @@ else
 @if (_adding is null)
 {
     <div class="settings-field-row">
-        <button type="button" class="button" @onclick="() => StartAdding(IntegrationKind.GitHub)">Add GitHub</button>
-        <button type="button" class="button" @onclick="() => StartAdding(IntegrationKind.Jira)">Add JIRA</button>
+        <button type="button" class="button button-icon" @onclick="() => StartAdding(IntegrationService.GitHub)">
+            <IntegrationIcon Service="IntegrationService.GitHub" />
+            Add GitHub
+        </button>
+        <button type="button" class="button button-icon" @onclick="() => StartAdding(IntegrationService.Jira)">
+            <IntegrationIcon Service="IntegrationService.Jira" />
+            Add JIRA
+        </button>
     </div>
 }
-else if (_adding == IntegrationKind.GitHub)
+else if (_adding == IntegrationService.GitHub)
 {
     <form class="settings-form integration-add" @onsubmit="AddGitHubAsync">
         <div class="settings-field" role="radiogroup" aria-labelledby="github-server-label">
@@ -214,7 +223,7 @@ else
     private readonly CancellationTokenSource _disposed = new();
 
     // Only one form is open at a time: adding, or authenticating or removing one integration.
-    private IntegrationKind? _adding;
+    private IntegrationService? _adding;
     private string? _authenticatingId;
     private string? _removingId;
     private bool _busy;
@@ -230,12 +239,6 @@ else
 
     private string _authToken = "";
     private string _authEmail = "";
-
-    private enum IntegrationKind
-    {
-        GitHub,
-        Jira,
-    }
 
     private sealed record ConfiguredIntegration(
         string Id,
@@ -313,7 +316,7 @@ else
         }
     }
 
-    private void StartAdding(IntegrationKind kind)
+    private void StartAdding(IntegrationService kind)
     {
         CancelPanel();
         _adding = kind;
