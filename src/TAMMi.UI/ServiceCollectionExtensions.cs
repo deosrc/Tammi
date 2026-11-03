@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using TAMMi.Core.Agents;
+using TAMMi.Core.Catalogue;
 using TAMMi.Core.Git;
 using TAMMi.Core.Integrations;
 using TAMMi.Core.Settings;
@@ -25,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();
         services.AddSingleton<IWorkspaceStore, WorkspaceStore>();
+        services.AddSingleton<IRepositoryCatalogue, RepositoryCatalogue>();
         return services;
     }
 }

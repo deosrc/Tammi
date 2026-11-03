@@ -133,6 +133,24 @@ a {
   filter: brightness(1.1);
 }
 
+/* A less prominent button, e.g. Remove beside each item in a list. */
+.button-secondary {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.button-secondary:hover {
+  background: var(--color-surface-hover);
+  filter: none;
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.6;
+  filter: none;
+}
+
 /* ---------------------------------------------------------------------------------------------------------------
    App shell: app bar with the tab strip, and the page below it
    --------------------------------------------------------------------------------------------------------------- */
@@ -481,6 +499,58 @@ a {
   margin: var(--space-1) 0 0;
   font-size: var(--font-size-small);
   color: var(--color-text-muted);
+}
+
+/* A heading for a field that has no single input to label, e.g. a list of folders. */
+.settings-field-title {
+  margin: 0 0 var(--space-1);
+  font-size: inherit;
+  font-weight: 600;
+}
+
+/* Lists of folders in a setting, each with its status and actions. */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.settings-list-name {
+  font-weight: 600;
+}
+
+.settings-list-path {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, monospace;
+}
+
+.settings-list-status {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.settings-details {
+  margin-top: var(--space-2);
+}
+
+.settings-details summary {
+  cursor: pointer;
 }
 
 .badge {

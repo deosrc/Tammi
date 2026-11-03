@@ -28,4 +28,11 @@ public interface IGitRepositoryReader
     /// <param name="options">Which commits to return.</param>
     /// <exception cref="GitRepositoryNotFoundException">There's no repository at <paramref name="path"/>.</exception>
     IReadOnlyList<CommitInfo> ReadHistory(string path, HistoryOptions? options = null);
+
+    /// <summary>
+    /// Reads the remotes of the repository at <paramref name="path"/>, in name order.
+    /// </summary>
+    /// <param name="path">The repository's working directory.</param>
+    /// <exception cref="GitRepositoryNotFoundException">There's no repository at <paramref name="path"/>.</exception>
+    IReadOnlyList<GitRemote> ReadRemotes(string path);
 }
