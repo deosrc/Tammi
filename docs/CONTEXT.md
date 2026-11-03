@@ -33,7 +33,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Workspace Worktree** | A `git worktree` of a Local Repository, created inside the Workspace Folder. This is how a repository is included in a workspace. |
 | **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
-| **Agent Definition** | A configured agent CLI (e.g. Claude Code) that TAMMi can start: name, command, arguments, and how to pass the initial prompt. |
+| **Agent Definition** | A configured agent CLI (e.g. Claude Code) that TAMMi can start: name, command, arguments, how to pass the initial prompt, and how to resume a session. |
 | **Open in…** | Actions that open the workspace or a repository in an external tool (IDE, terminal, file manager, …). |
 
 ## Core Flow: Creating a Workspace
@@ -176,6 +176,15 @@ own branch. It is created automatically when the workspace is created:
   | Error | The process crashed or exited with a non-zero code | No |
 
   Agents with hooks use Working / Needs input / Idle while running. Agents without hooks show Running.
+- **Lifetime:**
+  - Closing a workspace tab doesn't stop its terminals or agents. They keep running in the background,
+    their status still shows on Home, and reopening the tab reattaches to them.
+  - Closing TAMMi warns if any agents are running, then ends all terminal and agent processes.
+  - **Agent sessions can be resumed across app restarts.** TAMMi records each agent session (e.g. its
+    session ID) in `.tammi/`. Later, the user can return to it using the agent's own resume command
+    (e.g. `claude --resume <session-id>`). Each Agent Definition says how to resume a session and how
+    TAMMi gets the session ID (e.g. by setting it at launch, or reading it from a hook).
+  - Plain terminals aren't restored after a restart.
 
 ## Technical Constraints
 
@@ -193,9 +202,6 @@ own branch. It is created automatically when the workspace is created:
 ## Open Questions
 
 Record the decision here when an item is resolved, and move it into the sections above.
-
-### Terminal
-- Do terminal sessions persist when a workspace tab is closed and reopened, or across app restarts?
 
 ### Open in… / Tools
 - Which tools are built in (VS Code, Visual Studio, Rider, terminal, file manager)? Does TAMMi detect installed tools automatically?
