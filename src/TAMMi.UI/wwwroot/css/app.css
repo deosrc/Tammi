@@ -598,7 +598,8 @@ a {
 }
 
 /* JIRA's logo is shown in its brand blue, except on buttons, where it takes the button's text colour. */
-.integration-heading .integration-icon-jira {
+.integration-heading .integration-icon-jira,
+.menu-item .integration-icon-jira {
   color: var(--color-jira);
 }
 
@@ -606,6 +607,59 @@ a {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* Drop-down menus: a list of actions shown below the button that opens them. */
+.menu-anchor {
+  position: relative;
+  display: inline-block;
+}
+
+/* Catches clicks outside an open menu, to close it. */
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: 11;
+  min-width: 200px;
+  margin: 0;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+  list-style: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--color-surface-hover);
+}
+
+.icon-small {
+  width: 14px;
+  height: 14px;
 }
 
 .integration-title {

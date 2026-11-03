@@ -168,7 +168,8 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
 - **General**
   - Default Workspace Parent Folder (defaults to `Workspaces` in the user's home folder)
-- **Integrations:** the connected integrations, each with its connection status
+- **Integrations:** the connected integrations, each with its connection status, in alphabetical order
+  - A single Add button opens a menu of the integration types (GitHub, JIRA), in alphabetical order.
   - The user adds GitHub (github.com or a GitHub Enterprise Server) and JIRA sites, authenticates them again with a new
     token, tests them and removes them.
   - TAMMi checks a token with the service before saving it, so a rejected token is never saved and an integration is

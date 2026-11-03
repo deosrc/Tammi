@@ -114,15 +114,30 @@ else
 
 @if (_adding is null)
 {
-    <div class="settings-field-row">
-        <button type="button" class="button button-icon" @onclick="() => StartAdding(IntegrationService.GitHub)">
-            <IntegrationIcon Service="IntegrationService.GitHub" />
-            Add GitHub
+    @* Closes on Escape, or on a click anywhere outside the menu. *@
+    <div class="menu-anchor" @onkeydown="OnAddMenuKeyDown">
+        <button type="button" class="button button-icon" aria-haspopup="menu"
+                aria-expanded="@(_addMenuOpen ? "true" : "false")" @onclick="() => _addMenuOpen = !_addMenuOpen">
+            Add integration
+            <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
         </button>
-        <button type="button" class="button button-icon" @onclick="() => StartAdding(IntegrationService.Jira)">
-            <IntegrationIcon Service="IntegrationService.Jira" />
-            Add JIRA
-        </button>
+        @if (_addMenuOpen)
+        {
+            <div class="menu-backdrop" @onclick="() => _addMenuOpen = false"></div>
+            <ul class="menu" role="menu" aria-label="Integration types">
+                @foreach (var (service, name) in AddableServices)
+                {
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem" @onclick="() => StartAdding(service)">
+                            <IntegrationIcon Service="service" />
+                            @name
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
     </div>
 }
 else if (_adding == IntegrationService.GitHub)
@@ -220,7 +235,16 @@ else
 }
 
 @code {
+    // The integration types the Add menu offers, in alphabetical order.
+    private static readonly IReadOnlyList<(IntegrationService Service, string Name)> AddableServices =
+    [
+        .. new[] { (IntegrationService.GitHub, "GitHub"), (IntegrationService.Jira, "JIRA") }
+            .OrderBy(service => service.Item2, StringComparer.CurrentCultureIgnoreCase),
+    ];
+
     private readonly CancellationTokenSource _disposed = new();
+
+    private bool _addMenuOpen;
 
     // Only one form is open at a time: adding, or authenticating or removing one integration.
     private IntegrationService? _adding;
@@ -252,7 +276,7 @@ else
         get
         {
             var settings = SettingsStore.Current.Integrations;
-            return
+            IEnumerable<ConfiguredIntegration> integrations =
             [
                 .. settings.GitHub.Select(github => new ConfiguredIntegration(
                     github.Id, github.Name, github.ApiUrl.AbsoluteUri, github, null)),
@@ -263,6 +287,10 @@ else
                     null,
                     jira)),
             ];
+            return integrations
+            .OrderBy(integration => integration.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(integration => integration.Id, StringComparer.Ordinal)
+            .ToList();
         }
     }
 
@@ -316,8 +344,17 @@ else
         }
     }
 
+    private void OnAddMenuKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _addMenuOpen = false;
+        }
+    }
+
     private void StartAdding(IntegrationService kind)
     {
+        _addMenuOpen = false;
         CancelPanel();
         _adding = kind;
         _addError = null;
