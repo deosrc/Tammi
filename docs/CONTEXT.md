@@ -146,6 +146,13 @@ own branch. It is created automatically when the workspace is created:
 - Terminal shell: executable and arguments (defaults to the platform shell)
 - Agents: the Agent Definitions available to start, and the initial prompt template
 
+## Open in… Tools
+
+- TAMMi has built-in definitions for common tools: VS Code, Visual Studio (Windows only), JetBrains
+  Rider, the system file manager and the system terminal.
+- Only built-in tools detected as installed are shown.
+- Users can add their own tools.
+
 ## Agents
 
 - Agents run as **CLI processes inside the embedded terminal component**. The user interacts with them
@@ -204,7 +211,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Open in… / Tools
-- Which tools are built in (VS Code, Visual Studio, Rider, terminal, file manager)? Does TAMMi detect installed tools automatically?
 - What can be configured for each tool: name, executable path, arguments (e.g. a `{path}` placeholder), icon, enabled/disabled?
 - Can a tool open the whole workspace folder, a single repository, or both?
 
