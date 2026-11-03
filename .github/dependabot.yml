@@ -1,0 +1,26 @@
+version: 2
+
+# Every dependency upgrade, from all ecosystems, goes into one pull request.
+multi-ecosystem-groups:
+  all-dependencies:
+    schedule:
+      interval: weekly
+
+updates:
+  # Central package versions in Directory.Packages.props.
+  - package-ecosystem: nuget
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: all-dependencies
+
+  # The SDK version pinned in global.json.
+  - package-ecosystem: dotnet-sdk
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: all-dependencies
+
+  # Actions used by the workflows in .github/workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: all-dependencies
