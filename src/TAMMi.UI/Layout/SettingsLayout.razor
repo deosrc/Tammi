@@ -1,0 +1,14 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+
+<div class="settings">
+    <nav class="settings-nav" aria-label="Settings">
+        @foreach (var settingsSection in AppRoutes.SettingsSections)
+        {
+            <NavLink class="settings-nav-item" href="@settingsSection.Route" Match="NavLinkMatch.All">@settingsSection.Title</NavLink>
+        }
+    </nav>
+    <div class="settings-content page">
+        @Body
+    </div>
+</div>

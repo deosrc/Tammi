@@ -24,9 +24,13 @@
     }
 </nav>
 
-<a class="tab settings-tab @ActiveClass(AppRoutes.Settings)" href="@AppRoutes.Settings"
-   aria-current="@AriaCurrent(AppRoutes.Settings)">
-    Settings
+<a class="tab settings-tab @(IsInSettings ? "active" : null)" href="@AppRoutes.Settings" title="Settings"
+   aria-label="Settings" aria-current="@(IsInSettings ? "page" : null)">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="6.5" />
+        <circle cx="12" cy="12" r="2.5" />
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" stroke-width="3" />
+    </svg>
 </a>
 
 @code {
@@ -54,6 +58,9 @@
             Navigation.NavigateTo(next is null ? AppRoutes.Home : AppRoutes.Workspace(next.WorkspaceId));
         }
     }
+
+    private bool IsInSettings =>
+        IsCurrent(AppRoutes.Settings) || _currentPath.StartsWith(AppRoutes.Settings + "/", StringComparison.Ordinal);
 
     private bool IsCurrent(string route) => string.Equals(_currentPath, route, StringComparison.Ordinal);
 

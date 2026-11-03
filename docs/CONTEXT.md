@@ -144,14 +144,19 @@ own branch. It is created automatically when the workspace is created:
 
 ### Settings
 
-- Default Workspace Parent Folder
-- Monitored Folder(s)
-- Integrations (credentials, configuration)
-- Manually added local repositories
-- Tools: the external tools offered under "Open in…"
-- Status refresh interval for workspaces that aren't open
-- Terminal shell: executable and arguments (defaults to the platform shell)
-- Agents: the Agent Definitions available to start, and the initial prompt template
+Settings are grouped into sections, listed in a vertical tab list down the left of the screen:
+
+- **General**
+  - Default Workspace Parent Folder
+  - Monitored Folder(s)
+  - Manually added local repositories
+  - Status refresh interval for workspaces that aren't open
+  - Terminal shell: executable and arguments (defaults to the platform shell)
+- **Integrations:** credentials and configuration
+- **Git:** the version of the git install TAMMi uses
+- **Agents:** the Agent Definitions available to start, and the initial prompt template
+- **Tools:** the external tools offered under "Open in…"
+- **About:** the TAMMi version and the git version
 
 ## Git
 
