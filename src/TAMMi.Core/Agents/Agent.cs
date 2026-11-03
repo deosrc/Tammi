@@ -1,3 +1,4 @@
+using System.Text.Json;
 using TAMMi.Core.Platform;
 
 namespace TAMMi.Core.Agents;
@@ -7,12 +8,15 @@ namespace TAMMi.Core.Agents;
 /// </summary>
 /// <remarks>
 /// The agent owns its session: show <see cref="Session"/> in a terminal, and stop the agent to end it.
-/// <see cref="StateChanged"/> is raised on a background thread.
+/// <see cref="StateChanged"/> is raised on a background thread. While the process runs, an agent whose definition has
+/// <see cref="AgentDefinition.Hooks"/> and that was started with a hook registration follows the events its hooks
+/// send. Other agents stay <see cref="AgentState.Running"/>.
 /// </remarks>
 public sealed class Agent : IAsyncDisposable
 {
     private readonly TaskCompletionSource<AgentState> _ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Lock _lock = new();
+    private readonly AgentHookRegistration? _hooks;
     private Task? _stopped;
     private bool _stopRequested;
     private AgentState _state = AgentState.Running;
@@ -21,11 +25,32 @@ public sealed class Agent : IAsyncDisposable
     /// <summary>
     /// Wraps a session that's running an agent, and starts following its process.
     /// </summary>
-    public Agent(AgentDefinition definition, string workingDirectory, IPtySession session)
+    /// <param name="definition">The definition the agent was started from.</param>
+    /// <param name="workingDirectory">The folder the agent was started in.</param>
+    /// <param name="session">The session the agent runs in.</param>
+    /// <param name="hooks">
+    /// Where the agent's hooks send their events, or <c>null</c> if it was started without hooks. The agent takes it
+    /// over, and disposes it once the process has ended.
+    /// </param>
+    public Agent(
+        AgentDefinition definition,
+        string workingDirectory,
+        IPtySession session,
+        AgentHookRegistration? hooks = null)
     {
         Definition = definition ?? throw new ArgumentNullException(nameof(definition));
         WorkingDirectory = workingDirectory ?? throw new ArgumentNullException(nameof(workingDirectory));
         Session = session ?? throw new ArgumentNullException(nameof(session));
+        if (hooks is not null && definition.Hooks is not null)
+        {
+            _hooks = hooks;
+            _hooks.EventReceived += OnHookEvent;
+        }
+        else
+        {
+            hooks?.Dispose();
+        }
+
         _ = FollowProcessAsync();
     }
 
@@ -107,7 +132,7 @@ public sealed class Agent : IAsyncDisposable
             if (_stopped is null)
             {
                 // Set before the process is ended, so its exit is seen as a stop.
-                _stopRequested = _state == AgentState.Running;
+                _stopRequested = _state.IsRunning();
                 _stopped = StopCoreAsync();
             }
 
@@ -145,7 +170,34 @@ public sealed class Agent : IAsyncDisposable
             _state = state = AgentStates.AfterExit(exitCode, _stopRequested);
         }
 
+        if (_hooks is not null)
+        {
+            _hooks.EventReceived -= OnHookEvent;
+            _hooks.Dispose();
+        }
+
         _ended.TrySetResult(state);
+        StateChanged?.Invoke(this);
+    }
+
+    private void OnHookEvent(JsonElement hookEvent)
+    {
+        if (Definition.Hooks?.StateAfter(hookEvent) is not { } next || !next.IsRunning())
+        {
+            return;
+        }
+
+        lock (_lock)
+        {
+            // Once the process has ended, or the user has asked it to stop, its last events no longer count.
+            if (!_state.IsRunning() || _stopRequested || _state == next)
+            {
+                return;
+            }
+
+            _state = next;
+        }
+
         StateChanged?.Invoke(this);
     }
 }

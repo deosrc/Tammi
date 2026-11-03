@@ -65,6 +65,14 @@ public sealed record AgentDefinition
     public IReadOnlyList<string> PromptArguments { get; init; } = [];
 
     /// <summary>
+    /// How the agent reports what it's doing through its hooks, or <c>null</c> if it doesn't. Agents without hooks show
+    /// <see cref="AgentState.Running"/> while their process runs. Only Supported Agents have hooks for now, so it
+    /// isn't kept in the settings file.
+    /// </summary>
+    [JsonIgnore]
+    public AgentHooks? Hooks { get; init; }
+
+    /// <summary>
     /// Whether the agent takes an initial prompt.
     /// </summary>
     [JsonIgnore]
@@ -72,11 +80,13 @@ public sealed record AgentDefinition
 
     /// <summary>
     /// The definition for Claude Code, a Supported Agent (see <see cref="SupportedAgent.ClaudeCode"/>). The initial
-    /// prompt is its positional argument, which starts an interactive session with that prompt.
+    /// prompt is its positional argument, which starts an interactive session with that prompt. Its state comes from
+    /// its hooks (see <see cref="ClaudeCodeHooks"/>).
     /// </summary>
     public static AgentDefinition ClaudeCode { get; } = new("Claude Code", "claude")
     {
         PromptArguments = [PromptPlaceholder],
+        Hooks = ClaudeCodeHooks.Instance,
     };
 
     /// <summary>
@@ -120,6 +130,7 @@ public sealed record AgentDefinition
         other is not null
         && Name == other.Name
         && Command == other.Command
+        && Equals(Hooks, other.Hooks)
         && SequenceEqual(Arguments, other.Arguments)
         && SequenceEqual(PromptArguments, other.PromptArguments);
 

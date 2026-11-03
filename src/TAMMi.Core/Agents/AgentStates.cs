@@ -18,4 +18,11 @@ public static class AgentStates
     /// </param>
     public static AgentState AfterExit(int? exitCode, bool stopped) =>
         stopped || exitCode == 0 ? AgentState.Exited : AgentState.Error;
+
+    /// <summary>
+    /// Whether the agent's process is still running in this state: <see cref="AgentState.Running"/>, or one of the
+    /// states its hooks report.
+    /// </summary>
+    public static bool IsRunning(this AgentState state) =>
+        state is AgentState.Running or AgentState.Working or AgentState.NeedsInput or AgentState.Idle;
 }

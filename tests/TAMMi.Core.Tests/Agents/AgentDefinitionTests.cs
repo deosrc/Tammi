@@ -79,6 +79,15 @@ public class AgentDefinitionTests
     }
 
     [Fact]
+    public void Equals_ComparesHooks()
+    {
+        var definition = new AgentDefinition("Agent", "agent");
+
+        Assert.NotEqual(definition, definition with { Hooks = ClaudeCodeHooks.Instance });
+        Assert.Equal(definition with { Hooks = ClaudeCodeHooks.Instance }, definition with { Hooks = ClaudeCodeHooks.Instance });
+    }
+
+    [Fact]
     public void Equals_ComparesArgumentsByValue()
     {
         var definition = new AgentDefinition("Test", "agent", "-a") { PromptArguments = ["{prompt}"] };

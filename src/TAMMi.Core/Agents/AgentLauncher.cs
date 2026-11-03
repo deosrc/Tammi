@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using TAMMi.Core.Platform;
 
 namespace TAMMi.Core.Agents;
@@ -5,7 +6,12 @@ namespace TAMMi.Core.Agents;
 /// <summary>
 /// Starts agents from their definitions, in the embedded terminal's pseudoterminals.
 /// </summary>
-public sealed class AgentLauncher(IPtyService ptyService)
+/// <param name="ptyService">Starts the agents' processes.</param>
+/// <param name="hookServer">
+/// Where agents with <see cref="AgentDefinition.Hooks"/> report their events, or <c>null</c> to start every agent
+/// without hooks.
+/// </param>
+public sealed class AgentLauncher(IPtyService ptyService, AgentHookServer? hookServer = null)
 {
     /// <summary>
     /// Starts an agent.
@@ -17,6 +23,10 @@ public sealed class AgentLauncher(IPtyService ptyService)
     /// The initial prompt (see <see cref="InitialPrompt"/>), or <c>null</c> for none. It's passed as the definition
     /// says, and left out if the agent doesn't take one.
     /// </param>
+    /// <remarks>
+    /// An agent whose definition has hooks is given them in its arguments and environment, before the definition's own
+    /// arguments. If the hook server can't be started, the agent starts without them.
+    /// </remarks>
     /// <returns>The running agent. Stop it to end its process.</returns>
     /// <exception cref="FileNotFoundException">The agent's command can't be found.</exception>
     /// <exception cref="DirectoryNotFoundException">The working directory doesn't exist.</exception>
@@ -40,10 +50,43 @@ public sealed class AgentLauncher(IPtyService ptyService)
         }
 
         var fullPath = Path.GetFullPath(workingDirectory);
-        var request = new ProcessRequest(definition.Command, definition.BuildArguments(initialPrompt))
+        var arguments = definition.BuildArguments(initialPrompt);
+        var definitionHooks = definition.Hooks;
+        var hooks = definitionHooks is null ? null : TryRegisterHooks();
+        var request = new ProcessRequest(definition.Command, arguments) { WorkingDirectory = fullPath };
+        if (definitionHooks is not null && hooks is not null)
         {
-            WorkingDirectory = fullPath,
-        };
-        return new Agent(definition, fullPath, ptyService.Start(request, size));
+            request = request with
+            {
+                Arguments = [.. definitionHooks.CreateArguments(hooks.Endpoint), .. arguments],
+                Environment = hooks.Endpoint.Environment,
+            };
+        }
+
+        IPtySession session;
+        try
+        {
+            session = ptyService.Start(request, size);
+        }
+        catch
+        {
+            hooks?.Dispose();
+            throw;
+        }
+
+        return new Agent(definition, fullPath, session, hooks);
+    }
+
+    private AgentHookRegistration? TryRegisterHooks()
+    {
+        try
+        {
+            return hookServer?.Register();
+        }
+        catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+        {
+            // Without hooks, the agent still runs, and shows Running.
+            return null;
+        }
     }
 }

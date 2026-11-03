@@ -8,7 +8,7 @@
 @inject ISettingsStore SettingsStore
 
 @* A developer page for starting an Agent Definition in a folder, with or without an initial prompt, stopping it and
-   following its state. *@
+   following its state. Agents with hooks show Working, Needs input and Idle while they run. *@
 <div class="dev-page">
     <header>
         <h1>Agent</h1>
@@ -74,7 +74,7 @@
     private bool _sendInitialPrompt = true;
     private string _contextFile = "";
 
-    private bool IsRunning => _agent?.State == AgentState.Running;
+    private bool IsRunning => _agent?.State.IsRunning() == true;
 
     // The task context file isn't written yet, so any path will do.
     private string DefaultContextFile => Path.Combine(_workingDirectory, ".tammi", "tasks.md");
@@ -146,6 +146,9 @@
     private static string DescribeState(Agent agent) => agent.State switch
     {
         AgentState.Running => $"{agent.Definition.Name} (PID {agent.Session.ProcessId}): Running",
+        AgentState.Working => $"{agent.Definition.Name} (PID {agent.Session.ProcessId}): Working",
+        AgentState.NeedsInput => $"{agent.Definition.Name} (PID {agent.Session.ProcessId}): Needs input",
+        AgentState.Idle => $"{agent.Definition.Name} (PID {agent.Session.ProcessId}): Idle",
         AgentState.Exited when agent.StopRequested => $"{agent.Definition.Name}: Exited (stopped, code {agent.ExitCode})",
         AgentState.Exited => $"{agent.Definition.Name}: Exited (code {agent.ExitCode})",
         _ => $"{agent.Definition.Name}: Error (code {agent.ExitCode?.ToString() ?? "unknown"})",

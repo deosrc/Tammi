@@ -18,4 +18,16 @@ public class AgentStatesTests
     {
         Assert.Equal(expected, AgentStates.AfterExit(exitCode, stopped));
     }
+
+    [Theory]
+    [InlineData(AgentState.Running, true)]
+    [InlineData(AgentState.Working, true)]
+    [InlineData(AgentState.NeedsInput, true)]
+    [InlineData(AgentState.Idle, true)]
+    [InlineData(AgentState.Exited, false)]
+    [InlineData(AgentState.Error, false)]
+    public void IsRunning_IsTrueWhileProcessRuns(AgentState state, bool expected)
+    {
+        Assert.Equal(expected, state.IsRunning());
+    }
 }

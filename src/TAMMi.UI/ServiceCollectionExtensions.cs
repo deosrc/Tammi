@@ -4,6 +4,7 @@ using TAMMi.Core.Catalogue;
 using TAMMi.Core.Credentials;
 using TAMMi.Core.Git;
 using TAMMi.Core.Integrations;
+using TAMMi.Core.Platform;
 using TAMMi.Core.Settings;
 using TAMMi.Core.Terminals;
 using TAMMi.Core.Windowing;
@@ -34,7 +35,10 @@ public static class ServiceCollectionExtensions
             new HttpClient { Timeout = IntegrationRequestTimeout },
             services.GetRequiredService<TimeProvider>()));
         services.AddSingleton(services => services.GetRequiredService<IntegrationManager>().Registry);
-        services.AddSingleton<AgentLauncher>();
+        services.AddSingleton<AgentHookServer>();
+        services.AddSingleton(services => new AgentLauncher(
+            services.GetRequiredService<IPtyService>(),
+            services.GetRequiredService<AgentHookServer>()));
         services.AddSingleton<SupportedAgentChecker>();
         services.AddSingleton<TerminalLauncher>();
         services.AddSingleton<ISettingsStore, SettingsStore>();

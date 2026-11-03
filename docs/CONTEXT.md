@@ -306,6 +306,30 @@ are left to other tools for now.
   | Error | The process crashed, was killed by something other than TAMMi, or exited with a non-zero code | No |
 
   Agents with hooks use Working / Needs input / Idle while running. Agents without hooks show Running.
+- **Hooks:** each Agent Definition says whether its agent has hooks, and how they're supplied and read. Only Supported
+  Agents have them for now. Custom Agents have none, and show Running.
+  - TAMMi runs a small HTTP server on the loopback address (`127.0.0.1`, on a port chosen when it's first needed).
+    Hooks POST each event to it as JSON. Each agent gets its own random token, passed in its environment as
+    `TAMMI_AGENT_HOOK_TOKEN` rather than its arguments, so other users can't read it from the process list. The hooks
+    send it as a bearer token, and events with an unknown token are refused. The token stops working when the agent
+    ends.
+  - TAMMi answers each event with an empty response, so hooks never change what the agent does. If TAMMi can't be
+    reached, the agent carries on without it. If the server can't start, agents start without hooks and show Running.
+  - An agent with hooks shows Running until its first event.
+  - **Claude Code** gets HTTP hooks in its `--settings` argument, which it merges with the hooks in its own settings
+    files. Nothing is written to disk. Its events map to states like this:
+
+    | Event | State |
+    |-------|-------|
+    | `UserPromptSubmit`, `PostToolUse`, `PostToolUseFailure`, `PermissionDenied`, `ElicitationResult` | Working |
+    | `PermissionRequest`, `Elicitation`, `PreToolUse` for `AskUserQuestion` and `ExitPlanMode`, `Notification` for a permission prompt or MCP elicitation | Needs input |
+    | `Stop`, `StopFailure`, `Notification` for `idle_prompt` | Idle |
+
+    Claude Code doesn't report some moments, so the state can lag: before the first prompt (e.g. on its folder trust
+    dialog) it shows Running, after the user answers a permission prompt it shows Needs input until the tool finishes,
+    and after the user interrupts a turn it shows Working until Claude Code reports it idle a minute later. Hooks
+    don't run where Claude Code's settings turn them off (e.g. `disableAllHooks`, managed `allowManagedHooksOnly`, or
+    an `allowedHttpHookUrls` list without TAMMi's URL), and the agent then shows Running.
   Stopping an agent hangs up its terminal and kills the process if it doesn't exit, so the exit code it then
   gets doesn't mean it failed: a stopped agent is Exited, whatever its exit code.
 - **Lifetime:**
