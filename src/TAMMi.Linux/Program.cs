@@ -7,6 +7,8 @@ namespace TAMMi.Linux;
 
 internal static class Program
 {
+    private const int MaxWindowSize = 100_000;
+
     [STAThread]
     private static void Main(string[] args)
     {
@@ -18,6 +20,9 @@ internal static class Program
         app.MainWindow
             .SetTitle(AppInfo.Name)
             .SetMinSize(800, 600)
+            // On Linux, Photino sends the maximum size along with the minimum size. Left unset it's -1, which
+            // stops the window from being resized or maximised, so set a maximum no screen will reach.
+            .SetMaxSize(MaxWindowSize, MaxWindowSize)
             .SetSize(1280, 800)
             .Center();
 
