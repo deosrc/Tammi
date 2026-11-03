@@ -30,10 +30,11 @@
   --color-accent-text: #ffffff;
   --color-focus: #0969da;
   --color-error: #cf222e;
-  --color-warning: #9a6700;
   --color-success: #1a7f37;
   --color-success-bg: #dafbe1;
+  --color-warning: #9a6700;
   --color-error-bg: #ffebe9;
+  --color-jira: #0052cc;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,10 +50,11 @@
     --color-accent-text: #ffffff;
     --color-focus: #4c9aff;
     --color-error: #ff7b72;
-    --color-warning: #d29922;
     --color-success: #3fb950;
     --color-success-bg: #12261e;
+    --color-warning: #d29922;
     --color-error-bg: #2d1416;
+    --color-jira: #4c9aff;
   }
 }
 
@@ -151,7 +153,7 @@ a {
   filter: none;
 }
 
-/* A quieter button, for actions beside a main one. */
+/* A quieter button for secondary actions, e.g. Cancel. */
 .button-secondary {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -161,6 +163,11 @@ a {
 .button-secondary:hover:not(:disabled) {
   background: var(--color-surface-hover);
   filter: none;
+}
+
+/* A button for actions that delete something. */
+.button-danger {
+  background: var(--color-error);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
@@ -603,6 +610,35 @@ a {
   white-space: nowrap;
 }
 
+.settings-text {
+  width: 100%;
+  max-width: 480px;
+}
+
+/* A group of radio buttons, with a label like a field's. */
+.settings-field-label {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.settings-field label.settings-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+  font-weight: normal;
+}
+
+.settings-help.settings-intro {
+  max-width: 720px;
+  margin: 0 0 var(--space-6);
+}
+
+/* Messages in a form take the form's spacing. */
+.settings-form > p {
+  margin: 0;
+}
+
 .settings-help {
   margin: var(--space-1) 0 0;
   font-size: var(--font-size-small);
@@ -633,6 +669,186 @@ a {
   border-color: var(--color-error);
   background: var(--color-error-bg);
   color: var(--color-error);
+}
+
+/* Integrations section of Settings */
+
+.integration-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 900px;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  list-style: none;
+}
+
+.integration-item {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.integration-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.integration-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Service logos, filled with the text colour. */
+.integration-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.integration-heading .integration-icon {
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+}
+
+/* JIRA's logo is shown in its brand blue, except on buttons, where it takes the button's text colour. */
+.integration-heading .integration-icon-jira,
+.menu-item .integration-icon-jira {
+  color: var(--color-jira);
+}
+
+.button-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Drop-down menus: a list of actions shown below the button that opens them. */
+.menu-anchor {
+  position: relative;
+  display: inline-block;
+}
+
+/* Catches clicks outside an open menu, to close it. */
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: 11;
+  min-width: 200px;
+  margin: 0;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+  list-style: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--color-surface-hover);
+}
+
+.icon-small {
+  width: 14px;
+  height: 14px;
+}
+
+.integration-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.integration-name {
+  font-weight: 600;
+}
+
+.integration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.integration-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.integration-message {
+  overflow-wrap: anywhere;
+}
+
+/* The authenticate and remove forms, shown inside an integration's entry. */
+.integration-panel {
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.integration-panel p {
+  margin-top: 0;
+}
+
+.integration-panel.settings-form {
+  gap: var(--space-4);
+}
+
+.integration-add {
+  margin-top: var(--space-4);
+}
+
+.status-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.status-ok {
+  background: var(--color-success);
+}
+
+.status-warning {
+  background: var(--color-warning);
+}
+
+.status-error {
+  background: var(--color-error);
 }
 
 /* Third-party software list on the About page */

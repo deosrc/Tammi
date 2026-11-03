@@ -20,6 +20,11 @@ public sealed record AppSettings
     public GitSettings Git { get; init; } = new();
 
     /// <summary>
+    /// The Integrations section.
+    /// </summary>
+    public IntegrationsSettings Integrations { get; init; } = new();
+
+    /// <summary>
     /// The Agents section.
     /// </summary>
     public AgentSettings Agents { get; init; } = new();
@@ -36,6 +41,7 @@ public sealed record AppSettings
     {
         General = (General ?? new GeneralSettings()).Normalize(),
         Git = (Git ?? new GitSettings()).Normalize(),
+        Integrations = (Integrations ?? new IntegrationsSettings()).Normalize(),
         Agents = (Agents ?? new AgentSettings()).Normalize(),
         Tools = (Tools ?? new ToolSettings()).Normalize(),
     };

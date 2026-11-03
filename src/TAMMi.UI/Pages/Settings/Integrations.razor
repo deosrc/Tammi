@@ -1,6 +1,518 @@
 @page "/settings/integrations"
 @layout SettingsLayout
+@implements IDisposable
+@using TAMMi.Core.Credentials
+@using TAMMi.Core.Integrations
+@using TAMMi.Core.Integrations.GitHub
+@using TAMMi.Core.Integrations.Jira
+@using TAMMi.Core.Platform
+@using TAMMi.Core.Settings
+@inject IntegrationManager IntegrationManager
+@inject ISettingsStore SettingsStore
+@inject IProcessLauncher ProcessLauncher
 
 <h1>Integrations</h1>
 
-<p class="placeholder">Integrations (e.g. GitHub, JIRA), with their credentials and configuration, will appear here.</p>
+<p class="settings-help settings-intro">
+    Integrations provide the tasks and repositories you build workspaces from. @AppInfo.Name only reads from them.
+    Tokens are kept in your system's credential store, never in the settings file.
+</p>
+
+@if (Configured.Count == 0)
+{
+    <p class="placeholder">No integrations are connected yet.</p>
+}
+else
+{
+    <ul class="integration-list">
+        @foreach (var integration in Configured)
+        {
+            var status = IntegrationManager.GetStatus(integration.Id);
+            <li class="integration-item" @key="integration.Id">
+                <div class="integration-header">
+                    <div class="integration-heading">
+                        <IntegrationIcon Service="@(integration.GitHub is not null ? IntegrationService.GitHub : IntegrationService.Jira)" />
+                        <div class="integration-title">
+                            <span class="integration-name">@integration.Name</span>
+                            <span class="placeholder">@integration.Detail</span>
+                        </div>
+                    </div>
+                    <div class="integration-actions">
+                        <button type="button" class="button button-secondary"
+                                disabled="@(status.State == IntegrationConnectionState.Checking || IsBusy(integration.Id))"
+                                @onclick="() => CheckAsync(integration.Id)">Test</button>
+                        <button type="button" class="button button-secondary"
+                                disabled="@IsBusy(integration.Id)"
+                                @onclick="() => StartAuthenticating(integration)">Authenticate…</button>
+                        <button type="button" class="button button-secondary"
+                                disabled="@IsBusy(integration.Id)"
+                                @onclick="() => StartRemoving(integration.Id)">Remove</button>
+                    </div>
+                </div>
+
+                <div class="integration-status" role="status">
+                    <span class="status-dot status-@StatusClass(status.State)" aria-hidden="true"></span>
+                    <span>@StatusText(status)</span>
+                </div>
+                @if (status.Message is { } message)
+                {
+                    <p class="settings-help integration-message">@message</p>
+                }
+
+                @if (_removingId == integration.Id)
+                {
+                    <div class="integration-panel">
+                        <p>Remove @integration.Name? Its token is deleted from the credential store.</p>
+                        <div class="settings-field-row">
+                            <button type="button" class="button button-danger" disabled="@_busy"
+                                    @onclick="() => RemoveAsync(integration.Id)">Remove</button>
+                            <button type="button" class="button button-secondary" disabled="@_busy"
+                                    @onclick="CancelPanel">Cancel</button>
+                        </div>
+                        @if (_panelError is not null)
+                        {
+                            <p class="error">@_panelError</p>
+                        }
+                    </div>
+                }
+                else if (_authenticatingId == integration.Id)
+                {
+                    <form class="integration-panel settings-form" @onsubmit="() => AuthenticateAsync(integration)">
+                        @if (integration.Jira is { Deployment: JiraDeployment.Cloud })
+                        {
+                            <div class="settings-field">
+                                <label for="authenticate-email">Atlassian account email</label>
+                                <input id="authenticate-email" type="email" class="settings-text"
+                                       autocomplete="off" @bind="_authEmail" @bind:event="oninput" />
+                            </div>
+                        }
+                        <div class="settings-field">
+                            <label for="authenticate-token">@TokenLabel(integration)</label>
+                            <input id="authenticate-token" type="password" class="settings-text"
+                                   autocomplete="off" @bind="_authToken" @bind:event="oninput" />
+                            <IntegrationTokenHelp ForGitHub="@(integration.GitHub is not null)" GitHub="integration.GitHub" Deployment="integration.Jira?.Deployment" Open="OpenExternal" />
+                        </div>
+                        <div class="settings-field-row">
+                            <button type="submit" class="button" disabled="@(_busy || !CanAuthenticate(integration))">
+                                @(_busy ? "Checking…" : "Save")
+                            </button>
+                            <button type="button" class="button button-secondary" disabled="@_busy"
+                                    @onclick="CancelPanel">Cancel</button>
+                        </div>
+                        @if (_panelError is not null)
+                        {
+                            <p class="error">@_panelError</p>
+                        }
+                    </form>
+                }
+            </li>
+        }
+    </ul>
+}
+
+<h2>Add an integration</h2>
+
+@if (_adding is null)
+{
+    @* Closes on Escape, or on a click anywhere outside the menu. *@
+    <div class="menu-anchor" @onkeydown="OnAddMenuKeyDown">
+        <button type="button" class="button button-icon" aria-haspopup="menu"
+                aria-expanded="@(_addMenuOpen ? "true" : "false")" @onclick="() => _addMenuOpen = !_addMenuOpen">
+            Add integration
+            <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        @if (_addMenuOpen)
+        {
+            <div class="menu-backdrop" @onclick="() => _addMenuOpen = false"></div>
+            <ul class="menu" role="menu" aria-label="Integration types">
+                @foreach (var (service, name) in AddableServices)
+                {
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem" @onclick="() => StartAdding(service)">
+                            <IntegrationIcon Service="service" />
+                            @name
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+}
+else if (_adding == IntegrationService.GitHub)
+{
+    <form class="settings-form integration-add" @onsubmit="AddGitHubAsync">
+        <div class="settings-field" role="radiogroup" aria-labelledby="github-server-label">
+            <div id="github-server-label" class="settings-field-label">Server</div>
+            <label class="settings-choice">
+                <input type="radio" name="github-server" checked="@(!_gitHubEnterprise)"
+                       @onchange="() => _gitHubEnterprise = false" />
+                github.com
+            </label>
+            <label class="settings-choice">
+                <input type="radio" name="github-server" checked="@_gitHubEnterprise"
+                       @onchange="() => _gitHubEnterprise = true" />
+                GitHub Enterprise Server
+            </label>
+        </div>
+        @if (_gitHubEnterprise)
+        {
+            <div class="settings-field">
+                <label for="github-url">Server URL</label>
+                <input id="github-url" class="settings-text" placeholder="https://github.example.com"
+                       @bind="_gitHubUrl" @bind:event="oninput" />
+                <p class="settings-help">The server's address, or its API URL (e.g. https://github.example.com/api/v3).</p>
+            </div>
+        }
+        <div class="settings-field">
+            <label for="github-token">Personal access token</label>
+            <input id="github-token" type="password" class="settings-text" autocomplete="off"
+                   @bind="_addToken" @bind:event="oninput" />
+            <IntegrationTokenHelp ForGitHub="true" GitHub="PendingGitHub" Open="OpenExternal" />
+        </div>
+        <div>
+            <div class="settings-field-row">
+                <button type="submit" class="button" disabled="@(_busy || !CanAddGitHub)">@(_busy ? "Connecting…" : "Connect")</button>
+                <button type="button" class="button button-secondary" disabled="@_busy" @onclick="CancelAdding">Cancel</button>
+            </div>
+            <p class="settings-help">@AppInfo.Name checks the token with the service before saving it.</p>
+        </div>
+        @if (_addError is not null)
+        {
+            <p class="error">@_addError</p>
+        }
+    </form>
+}
+else
+{
+    <form class="settings-form integration-add" @onsubmit="AddJiraAsync">
+        <div class="settings-field">
+            <label for="jira-url">Site URL</label>
+            <input id="jira-url" class="settings-text" placeholder="https://acme.atlassian.net"
+                   value="@_jiraUrl" @oninput="OnJiraUrlInput" />
+            <p class="settings-help">The address you open JIRA at, e.g. https://acme.atlassian.net or https://jira.example.com.</p>
+        </div>
+        <div class="settings-field" role="radiogroup" aria-labelledby="jira-deployment-label">
+            <div id="jira-deployment-label" class="settings-field-label">Deployment</div>
+            <label class="settings-choice">
+                <input type="radio" name="jira-deployment" checked="@(_jiraDeployment == JiraDeployment.Cloud)"
+                       @onchange="() => _jiraDeployment = JiraDeployment.Cloud" />
+                JIRA Cloud
+            </label>
+            <label class="settings-choice">
+                <input type="radio" name="jira-deployment" checked="@(_jiraDeployment == JiraDeployment.DataCenter)"
+                       @onchange="() => _jiraDeployment = JiraDeployment.DataCenter" />
+                JIRA Server or Data Center
+            </label>
+        </div>
+        @if (_jiraDeployment == JiraDeployment.Cloud)
+        {
+            <div class="settings-field">
+                <label for="jira-email">Atlassian account email</label>
+                <input id="jira-email" type="email" class="settings-text" autocomplete="off"
+                       @bind="_jiraEmail" @bind:event="oninput" />
+            </div>
+        }
+        <div class="settings-field">
+            <label for="jira-token">@(_jiraDeployment == JiraDeployment.Cloud ? "API token" : "Personal access token")</label>
+            <input id="jira-token" type="password" class="settings-text" autocomplete="off"
+                   @bind="_addToken" @bind:event="oninput" />
+            <IntegrationTokenHelp Deployment="_jiraDeployment" Open="OpenExternal" />
+        </div>
+        <div>
+            <div class="settings-field-row">
+                <button type="submit" class="button" disabled="@(_busy || !CanAddJira)">@(_busy ? "Connecting…" : "Connect")</button>
+                <button type="button" class="button button-secondary" disabled="@_busy" @onclick="CancelAdding">Cancel</button>
+            </div>
+            <p class="settings-help">@AppInfo.Name checks the token with the service before saving it.</p>
+        </div>
+        @if (_addError is not null)
+        {
+            <p class="error">@_addError</p>
+        }
+    </form>
+}
+
+@code {
+    // The integration types the Add menu offers, in alphabetical order.
+    private static readonly IReadOnlyList<(IntegrationService Service, string Name)> AddableServices =
+    [
+        .. new[] { (IntegrationService.GitHub, "GitHub"), (IntegrationService.Jira, "JIRA") }
+            .OrderBy(service => service.Item2, StringComparer.CurrentCultureIgnoreCase),
+    ];
+
+    private readonly CancellationTokenSource _disposed = new();
+
+    private bool _addMenuOpen;
+
+    // Only one form is open at a time: adding, or authenticating or removing one integration.
+    private IntegrationService? _adding;
+    private string? _authenticatingId;
+    private string? _removingId;
+    private bool _busy;
+    private string? _addError;
+    private string? _panelError;
+
+    private string _addToken = "";
+    private bool _gitHubEnterprise;
+    private string _gitHubUrl = "";
+    private string _jiraUrl = "";
+    private JiraDeployment _jiraDeployment = JiraDeployment.Cloud;
+    private string _jiraEmail = "";
+
+    private string _authToken = "";
+    private string _authEmail = "";
+
+    private sealed record ConfiguredIntegration(
+        string Id,
+        string Name,
+        string Detail,
+        GitHubIntegrationSettings? GitHub,
+        JiraIntegrationSettings? Jira);
+
+    private IReadOnlyList<ConfiguredIntegration> Configured
+    {
+        get
+        {
+            var settings = SettingsStore.Current.Integrations;
+            IEnumerable<ConfiguredIntegration> integrations =
+            [
+                .. settings.GitHub.Select(github => new ConfiguredIntegration(
+                    github.Id, github.Name, github.ApiUrl.AbsoluteUri, github, null)),
+                .. settings.Jira.Select(jira => new ConfiguredIntegration(
+                    jira.Id,
+                    jira.Name,
+                    jira.Deployment == JiraDeployment.Cloud ? $"JIRA Cloud · {jira.Email}" : "JIRA Server or Data Center",
+                    null,
+                    jira)),
+            ];
+            return integrations
+            .OrderBy(integration => integration.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(integration => integration.Id, StringComparer.Ordinal)
+            .ToList();
+        }
+    }
+
+    private GitHubIntegrationSettings? PendingGitHub =>
+        (_gitHubEnterprise ? GitHubIntegrationSettings.ParseApiUrl(_gitHubUrl) : GitHubIntegrationOptions.GitHubComApiUrl)
+            is { } apiUrl ? GitHubIntegrationSettings.For(apiUrl) : null;
+
+    private JiraIntegrationSettings? PendingJira =>
+        JiraIntegrationSettings.ParseSiteUrl(_jiraUrl) is { } siteUrl
+            ? JiraIntegrationSettings.For(siteUrl, _jiraDeployment, _jiraEmail)
+            : null;
+
+    private bool CanAddGitHub => PendingGitHub is not null && !string.IsNullOrWhiteSpace(_addToken);
+
+    private bool CanAddJira => PendingJira?.IsValid() == true && !string.IsNullOrWhiteSpace(_addToken);
+
+    protected override void OnInitialized()
+    {
+        IntegrationManager.Changed += OnChanged;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // The results arrive through Changed.
+            _ = IntegrationManager.CheckAllAsync(_disposed.Token);
+        }
+    }
+
+    public void Dispose()
+    {
+        IntegrationManager.Changed -= OnChanged;
+        _disposed.Cancel();
+        _disposed.Dispose();
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private bool IsBusy(string id) => _busy && (_authenticatingId == id || _removingId == id);
+
+    private async Task CheckAsync(string id)
+    {
+        try
+        {
+            await IntegrationManager.CheckAsync(id, _disposed.Token);
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or ArgumentException)
+        {
+            // The page closed, or the integration was removed meanwhile.
+        }
+    }
+
+    private void OnAddMenuKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _addMenuOpen = false;
+        }
+    }
+
+    private void StartAdding(IntegrationService kind)
+    {
+        _addMenuOpen = false;
+        CancelPanel();
+        _adding = kind;
+        _addError = null;
+        _addToken = "";
+        _gitHubEnterprise = SettingsStore.Current.Integrations.GitHub.Any(github => github.IsGitHubCom);
+        _gitHubUrl = "";
+        _jiraUrl = "";
+        _jiraDeployment = JiraDeployment.Cloud;
+        _jiraEmail = "";
+    }
+
+    private void CancelAdding()
+    {
+        _adding = null;
+        _addToken = "";
+        _addError = null;
+    }
+
+    private void OnJiraUrlInput(ChangeEventArgs e)
+    {
+        _jiraUrl = e.Value?.ToString() ?? "";
+        if (JiraIntegrationSettings.ParseSiteUrl(_jiraUrl) is { } siteUrl)
+        {
+            _jiraDeployment = JiraIntegrationSettings.GuessDeployment(siteUrl);
+        }
+    }
+
+    private Task AddGitHubAsync() =>
+        PendingGitHub is { } settings
+            ? AddAsync(() => IntegrationManager.AddGitHubAsync(settings, _addToken, _disposed.Token))
+            : Task.CompletedTask;
+
+    private Task AddJiraAsync() =>
+        PendingJira is { } settings
+            ? AddAsync(() => IntegrationManager.AddJiraAsync(settings, _addToken, _disposed.Token))
+            : Task.CompletedTask;
+
+    private async Task AddAsync(Func<Task> add)
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _addError = null;
+        try
+        {
+            await add();
+            CancelAdding();
+        }
+        catch (OperationCanceledException)
+        {
+            // The page closed.
+        }
+        catch (Exception ex) when (IsExpected(ex))
+        {
+            _addError = ErrorMessage(ex);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void StartAuthenticating(ConfiguredIntegration integration)
+    {
+        CancelPanel();
+        _authenticatingId = integration.Id;
+        _authToken = "";
+        _authEmail = integration.Jira?.Email ?? "";
+    }
+
+    private void StartRemoving(string id)
+    {
+        CancelPanel();
+        _removingId = id;
+    }
+
+    private void CancelPanel()
+    {
+        _authenticatingId = null;
+        _removingId = null;
+        _authToken = "";
+        _panelError = null;
+    }
+
+    private bool CanAuthenticate(ConfiguredIntegration integration) =>
+        !string.IsNullOrWhiteSpace(_authToken)
+        && (integration.Jira is not { Deployment: JiraDeployment.Cloud } || !string.IsNullOrWhiteSpace(_authEmail));
+
+    private Task AuthenticateAsync(ConfiguredIntegration integration) =>
+        CanAuthenticate(integration)
+            ? RunPanelAsync(() => IntegrationManager.AuthenticateAsync(
+                integration.Id, _authToken, integration.Jira is null ? null : _authEmail, _disposed.Token))
+            : Task.CompletedTask;
+
+    private Task RemoveAsync(string id) => RunPanelAsync(() => IntegrationManager.RemoveAsync(id, _disposed.Token));
+
+    private async Task RunPanelAsync(Func<Task> action)
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _panelError = null;
+        try
+        {
+            await action();
+            CancelPanel();
+        }
+        catch (OperationCanceledException)
+        {
+            // The page closed.
+        }
+        catch (Exception ex) when (IsExpected(ex))
+        {
+            _panelError = ErrorMessage(ex);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static bool IsExpected(Exception ex) =>
+        ex is IntegrationException or CredentialStoreException or IOException or UnauthorizedAccessException
+            or ArgumentException;
+
+    private static string ErrorMessage(Exception ex) => ex switch
+    {
+        IOException or UnauthorizedAccessException => $"Couldn't save the settings. {ex.Message}",
+        CredentialStoreException => $"Couldn't save the token. {ex.Message}",
+        _ => ex.Message,
+    };
+
+    private static string TokenLabel(ConfiguredIntegration integration) =>
+        integration.Jira is { Deployment: JiraDeployment.Cloud } ? "API token" : "Personal access token";
+
+    private static string StatusText(IntegrationStatus status) => status.State switch
+    {
+        IntegrationConnectionState.Checking => "Checking…",
+        IntegrationConnectionState.Connected => $"Connected as {status.Account}",
+        IntegrationConnectionState.NotAuthenticated => "Not authenticated. Authenticate it to use it.",
+        IntegrationConnectionState.AuthenticationFailed => "Authentication failed",
+        IntegrationConnectionState.Failed => "Couldn't connect",
+        _ => "Not checked",
+    };
+
+    private static string StatusClass(IntegrationConnectionState state) => state switch
+    {
+        IntegrationConnectionState.Connected => "ok",
+        IntegrationConnectionState.NotAuthenticated or IntegrationConnectionState.AuthenticationFailed => "warning",
+        IntegrationConnectionState.Failed => "error",
+        _ => "unknown",
+    };
+
+    private void OpenExternal(string url) => ProcessLauncher.Open(url);
+}

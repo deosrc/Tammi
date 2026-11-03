@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using TAMMi.Core.Agents;
+using TAMMi.Core.Credentials;
 using TAMMi.Core.Git;
 using TAMMi.Core.Integrations;
 using TAMMi.Core.Settings;
@@ -12,6 +13,11 @@ namespace TAMMi.UI;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
+    /// How long an integration waits for its service to respond, e.g. while Settings checks a token.
+    /// </summary>
+    private static readonly TimeSpan IntegrationRequestTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Registers the services used by the shared UI. Each host calls this when it starts.
     /// </summary>
     public static IServiceCollection AddTammiUI(this IServiceCollection services)
@@ -21,7 +27,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGitCli>(_ => new GitCli());
         services.AddSingleton<IGitRepositoryReader, GitRepositoryReader>();
         services.AddSingleton<IGitWorktreeService, GitWorktreeService>();
-        services.AddSingleton<IntegrationRegistry>();
+        services.AddSingleton(services => new IntegrationManager(
+            services.GetRequiredService<ISettingsStore>(),
+            services.GetRequiredService<ICredentialStore>(),
+            new HttpClient { Timeout = IntegrationRequestTimeout },
+            services.GetRequiredService<TimeProvider>()));
+        services.AddSingleton(services => services.GetRequiredService<IntegrationManager>().Registry);
         services.AddSingleton<AgentLauncher>();
         services.AddSingleton<SupportedAgentChecker>();
         services.AddSingleton<TerminalLauncher>();
