@@ -158,6 +158,121 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void Defaults_HaveSupportedAgentsOnlyAndPlatformShell()
+    {
+        var settings = new AppSettings();
+
+        Assert.Empty(settings.Agents.CustomDefinitions);
+        Assert.Equal([AgentDefinition.ClaudeCode], settings.Agents.Definitions);
+        Assert.Null(settings.Tools.TerminalShell);
+        Assert.Empty(settings.Tools.TerminalShellArguments);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesCustomAgentsThatANewStoreLoads()
+    {
+        AgentDefinition[] definitions =
+        [
+            new AgentDefinition("Codex", "codex", "--full-auto") { PromptArguments = ["{prompt}"] },
+            new AgentDefinition("No prompt", "/opt/agent", "a b", "\"quoted\""),
+        ];
+
+        await CreateStore().UpdateAsync(settings => settings with
+        {
+            Agents = settings.Agents with { CustomDefinitions = definitions },
+        }, TestContext.Current.CancellationToken);
+
+        var reloaded = CreateStore().Current.Agents;
+        Assert.Equal(definitions, reloaded.CustomDefinitions);
+        Assert.False(reloaded.CustomDefinitions[1].AcceptsInitialPrompt);
+        Assert.Equal([AgentDefinition.ClaudeCode, .. definitions], reloaded.Definitions);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WritesCustomAgentsOnly_WithoutComputedValues()
+    {
+        await CreateStore().UpdateAsync(settings => settings with
+        {
+            Agents = settings.Agents with { CustomDefinitions = [new AgentDefinition("Custom", "custom")] },
+        }, TestContext.Current.CancellationToken);
+
+        var agents = JsonNode.Parse(File.ReadAllText(SettingsPath))!["agents"]!.AsObject();
+        Assert.Equal(["customDefinitions", "initialPromptTemplate"], agents.Select(p => p.Key));
+        var definition = Assert.Single(agents["customDefinitions"]!.AsArray())!.AsObject();
+        Assert.Equal(["name", "command", "arguments", "promptArguments"], definition.Select(p => p.Key));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_TrimsAgentCommandAndKeepsBlankOne()
+    {
+        var saved = await CreateStore().UpdateAsync(settings => settings with
+        {
+            Agents = settings.Agents with
+            {
+                CustomDefinitions = [new AgentDefinition(" Agent ", "  agent  "), new AgentDefinition("", "")],
+            },
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            [new AgentDefinition(" Agent ", "agent"), new AgentDefinition("", "")],
+            saved.Agents.CustomDefinitions);
+    }
+
+    [Fact]
+    public void Current_WithMissingAgentValues_FillsThemIn()
+    {
+        WriteSettingsFile("""
+            {
+              "version": 1,
+              "agents": {
+                "customDefinitions": [
+                  null,
+                  { "name": "Bare" },
+                  { "command": "agent", "arguments": null, "promptArguments": ["-p", null, "{prompt}"] }
+                ]
+              }
+            }
+            """);
+
+        var store = CreateStore();
+
+        Assert.Null(store.LoadProblem);
+        Assert.Equal(
+            [
+                new AgentDefinition("Bare", ""),
+                new AgentDefinition("", "agent") { PromptArguments = ["-p", "{prompt}"] },
+            ],
+            store.Current.Agents.CustomDefinitions);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesTerminalShellThatANewStoreLoads()
+    {
+        await CreateStore().UpdateAsync(settings => settings with
+        {
+            Tools = settings.Tools with { TerminalShell = " /usr/bin/fish ", TerminalShellArguments = ["-l", "a b"] },
+        }, TestContext.Current.CancellationToken);
+
+        var tools = CreateStore().Current.Tools;
+        Assert.Equal("/usr/bin/fish", tools.TerminalShell);
+        Assert.Equal(["-l", "a b"], tools.TerminalShellArguments);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdateAsync_WithBlankTerminalShell_UsesDefaultShellWithoutArguments(string? shell)
+    {
+        var saved = await CreateStore().UpdateAsync(settings => settings with
+        {
+            Tools = settings.Tools with { TerminalShell = shell, TerminalShellArguments = ["-l"] },
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(new ToolSettings(), saved.Tools);
+    }
+
+    [Fact]
     public async Task UpdateAsync_ConcurrentUpdates_AreAllApplied()
     {
         var store = CreateStore();
@@ -215,6 +330,9 @@ public sealed class SettingsStoreTests : IDisposable
     [InlineData("""{ "version": 1, "git": { "monitoredFolders": null, "localRepositories": null } }""")]
     [InlineData("""{ "version": 1, "agents": null }""")]
     [InlineData("""{ "version": 1, "agents": { "initialPromptTemplate": null } }""")]
+    [InlineData("""{ "version": 1, "agents": { "customDefinitions": null } }""")]
+    [InlineData("""{ "version": 1, "tools": null }""")]
+    [InlineData("""{ "version": 1, "tools": { "terminalShell": null, "terminalShellArguments": null } }""")]
     [InlineData("""{ }""")]
     public void Current_WithMissingOrNullValues_UsesDefaults(string json)
     {

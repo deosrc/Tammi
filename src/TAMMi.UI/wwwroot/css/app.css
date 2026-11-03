@@ -30,10 +30,14 @@
   --color-accent-text: #ffffff;
   --color-focus: #0969da;
   --color-error: #cf222e;
+  --color-success: #1a7f37;
+  --color-success-bg: #dafbe1;
   --color-warning: #9a6700;
   --color-warning-bg: #fff8c5;
   --color-warning-border: #d4a72c;
   --color-warning-text: #ffffff;
+  --color-error-bg: #ffebe9;
+  --color-jira: #0052cc;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,10 +53,14 @@
     --color-accent-text: #ffffff;
     --color-focus: #4c9aff;
     --color-error: #ff7b72;
+    --color-success: #3fb950;
+    --color-success-bg: #12261e;
     --color-warning: #d29922;
     --color-warning-bg: #3b2e0e;
     --color-warning-border: #9e6a03;
     --color-warning-text: #1f2328;
+    --color-error-bg: #2d1416;
+    --color-jira: #4c9aff;
   }
 }
 
@@ -114,6 +122,10 @@ a {
 
 .error {
   color: var(--color-error);
+}
+
+.warning {
+  color: var(--color-warning);
 }
 
 /* A message that needs the user's attention, e.g. a change that waits for them to confirm it. */
@@ -179,28 +191,33 @@ a {
   filter: brightness(1.1);
 }
 
-/* A button that confirms a change with side effects, e.g. in a warning alert. */
-.button-warning {
-  background: var(--color-warning);
-  color: var(--color-warning-text);
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  filter: none;
 }
 
-/* A less prominent button, e.g. Remove beside each item in a list. */
+/* A quieter button for secondary actions, e.g. Cancel. */
 .button-secondary {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
 }
 
-.button-secondary:hover {
+.button-secondary:hover:not(:disabled) {
   background: var(--color-surface-hover);
   filter: none;
 }
 
-.button:disabled {
-  cursor: default;
-  opacity: 0.6;
-  filter: none;
+/* A button for actions that delete something. */
+.button-danger {
+  background: var(--color-error);
+}
+
+/* A button that confirms a change with side effects, e.g. in a warning alert. */
+.button-warning {
+  background: var(--color-warning);
+  color: var(--color-warning-text);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
@@ -528,7 +545,8 @@ a {
   gap: var(--space-2);
 }
 
-.settings-field input {
+.settings-field input,
+.settings-field textarea {
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -545,6 +563,130 @@ a {
 
 .settings-number {
   width: 6rem;
+}
+
+/* Fields that fill the form's width, e.g. one argument on each line. */
+.settings-arguments,
+.settings-template {
+  display: block;
+  width: 100%;
+  resize: vertical;
+}
+
+.settings-arguments {
+  font-family: ui-monospace, monospace;
+}
+
+.settings-field textarea:disabled,
+.settings-field input:disabled {
+  opacity: 0.6;
+}
+
+.settings-field input.invalid {
+  border-color: var(--color-error);
+}
+
+.settings-field .error,
+.settings-field .warning {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-small);
+}
+
+/* A later heading in a settings section, e.g. Initial prompt below Agent Definitions. */
+.settings-content * + h2 {
+  margin-top: var(--space-6);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-6);
+}
+
+/* Agent Definitions on the Agents page: each one is a card, with its fields below its name. */
+.agent-definition-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 720px;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.agent-definition {
+  padding: var(--space-3) var(--space-4) 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.agent-definition .settings-form {
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.agent-definition-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+/* A Supported Agent's details, and a Custom Agent's command previews. */
+.agent-status,
+.agent-command-preview {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-small);
+}
+
+.agent-status dd,
+.agent-command-preview dd {
+  overflow-wrap: anywhere;
+}
+
+.agent-definition > .error,
+.agent-definition > p {
+  margin: 0 0 var(--space-3);
+}
+
+.agent-definition-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-text {
+  width: 100%;
+  max-width: 480px;
+}
+
+/* A group of radio buttons, with a label like a field's. */
+.settings-field-label {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.settings-field label.settings-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+  font-weight: normal;
+}
+
+.settings-help.settings-intro {
+  max-width: 720px;
+  margin: 0 0 var(--space-6);
+}
+
+/* Messages in a form take the form's spacing. */
+.settings-form > p {
+  margin: 0;
 }
 
 .settings-help {
@@ -611,6 +753,204 @@ a {
   border-radius: 999px;
   font-size: var(--font-size-small);
   color: var(--color-text-muted);
+}
+
+/* Status badges, e.g. whether a Supported Agent is ready. They come after .badge so they override its colours. */
+.badge-success,
+.badge-error {
+  font-weight: 600;
+}
+
+.badge-success {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge-error {
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+/* Integrations section of Settings */
+
+.integration-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 900px;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  list-style: none;
+}
+
+.integration-item {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.integration-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.integration-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Service logos, filled with the text colour. */
+.integration-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.integration-heading .integration-icon {
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+}
+
+/* JIRA's logo is shown in its brand blue, except on buttons, where it takes the button's text colour. */
+.integration-heading .integration-icon-jira,
+.menu-item .integration-icon-jira {
+  color: var(--color-jira);
+}
+
+.button-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Drop-down menus: a list of actions shown below the button that opens them. */
+.menu-anchor {
+  position: relative;
+  display: inline-block;
+}
+
+/* Catches clicks outside an open menu, to close it. */
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: 11;
+  min-width: 200px;
+  margin: 0;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+  list-style: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--color-surface-hover);
+}
+
+.icon-small {
+  width: 14px;
+  height: 14px;
+}
+
+.integration-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.integration-name {
+  font-weight: 600;
+}
+
+.integration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.integration-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.integration-message {
+  overflow-wrap: anywhere;
+}
+
+/* The authenticate and remove forms, shown inside an integration's entry. */
+.integration-panel {
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.integration-panel p {
+  margin-top: 0;
+}
+
+.integration-panel.settings-form {
+  gap: var(--space-4);
+}
+
+.integration-add {
+  margin-top: var(--space-4);
+}
+
+.status-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.status-ok {
+  background: var(--color-success);
+}
+
+.status-warning {
+  background: var(--color-warning);
+}
+
+.status-error {
+  background: var(--color-error);
 }
 
 /* Third-party software list on the About page */

@@ -1,10 +1,11 @@
 @page "/dev/terminal"
 @using TAMMi.Core.Platform
+@using TAMMi.Core.Terminals
 @implements IAsyncDisposable
-@inject IPtyService PtyService
+@inject TerminalLauncher TerminalLauncher
 @inject IFolderPicker FolderPicker
 
-@* A developer page for trying the embedded terminal with the platform's default shell. *@
+@* A developer page for trying the embedded terminal with the terminal shell from the settings. *@
 <div class="dev-page">
     <header>
         <h1>Terminal</h1>
@@ -43,15 +44,12 @@
         _error = null;
         await StopAsync();
 
-        var shell = PtyService.GetDefaultShell() with
-        {
-            WorkingDirectory = string.IsNullOrWhiteSpace(_workingDirectory) ? null : _workingDirectory,
-        };
+        var shell = TerminalLauncher.GetShell();
 
         try
         {
             // The Terminal resizes the session to fit as soon as it's shown.
-            _session = PtyService.Start(shell, PtySize.Default);
+            _session = TerminalLauncher.Start(_workingDirectory, PtySize.Default);
             _status = $"{Path.GetFileName(shell.FileName)} (PID {_session.ProcessId}) is running";
         }
         catch (Exception ex) when (ex is IOException or System.Runtime.InteropServices.ExternalException)

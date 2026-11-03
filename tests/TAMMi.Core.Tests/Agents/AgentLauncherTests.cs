@@ -40,6 +40,20 @@ public class AgentLauncherTests
         Assert.Equal(["--flag", "-p", prompt], Assert.Single(pty.Requests).Request.Arguments);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void Start_WithoutCommand_ThrowsSayingWhich(string command)
+    {
+        var pty = new RecordingPtyService();
+
+        var exception = Assert.Throws<ArgumentException>(() => new AgentLauncher(pty).Start(
+            new AgentDefinition("My agent", command), Path.GetTempPath(), PtySize.Default));
+
+        Assert.Contains("My agent", exception.Message);
+        Assert.Empty(pty.Requests);
+    }
+
     [Fact]
     public void Start_WithNullCharacterInPrompt_Throws()
     {
@@ -80,7 +94,7 @@ public class AgentLauncherTests
     {
         Assert.Equal("Claude Code", AgentDefinition.ClaudeCode.Name);
         Assert.Equal("claude", AgentDefinition.ClaudeCode.Command);
-        Assert.Contains(AgentDefinition.ClaudeCode, AgentDefinition.BuiltIn);
+        Assert.Equal([AgentDefinition.PromptPlaceholder], AgentDefinition.ClaudeCode.PromptArguments);
     }
 
     // Real processes on Linux, so the states are checked against real exit codes, signals and hang-ups.
@@ -131,18 +145,5 @@ public class AgentLauncherTests
         var launcher = new AgentLauncher(new LinuxPtyService(new TestProcessLauncher()));
         var definition = new AgentDefinition("Shell", "/bin/sh", "-c", script);
         return launcher.Start(definition, Path.GetTempPath(), PtySize.Default);
-    }
-
-    private sealed class RecordingPtyService : IPtyService
-    {
-        public List<(ProcessRequest Request, PtySize Size)> Requests { get; } = [];
-
-        public ProcessRequest GetDefaultShell() => new("sh");
-
-        public IPtySession Start(ProcessRequest request, PtySize size)
-        {
-            Requests.Add((request, size));
-            return new FakePtySession();
-        }
     }
 }
