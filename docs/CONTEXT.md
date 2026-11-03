@@ -73,6 +73,12 @@ own branch. It is created automatically when the workspace is created:
 - **Base:** TAMMi fetches each Local Repository, then branches from the remote's default branch
   (e.g. `origin/main`). The user can choose a different base branch for each repository.
 
+**Deleting a workspace.**
+1. If any worktree has uncommitted changes or unpushed commits, TAMMi lists them and asks the user to confirm.
+2. TAMMi removes each Workspace Worktree (`git worktree remove`) and then the Workspace Folder.
+3. TAMMi offers to delete the workspace branches from the Local Repositories. Branches that are merged
+   or pushed are selected for deletion by default. Others are kept unless the user selects them.
+
 ## Main Screens
 
 ### Home
@@ -118,7 +124,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Workspace on disk
-- What happens to the folder and branches when a workspace is deleted or archived? Presumably `git worktree remove` for each repository. What if a worktree has uncommitted or unpushed changes?
 
 ### Tasks
 - Can one workspace mix tasks from different sources?
