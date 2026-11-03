@@ -23,6 +23,9 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Repository Catalogue** | The app-level list of known repositories, collected from all repository sources. |
 | **Repository Source** | Where catalogue entries come from: an integration (e.g. GitHub), a local repository added manually, or a **Monitored Folder**. |
 | **Monitored Folder** | A local folder (where repositories are usually cloned) that TAMMi scans for git repositories. |
+| **Local Repository** | A catalogue repository with a clone on disk, outside any workspace. Workspaces create their worktrees from it. |
+| **Remote-only Repository** | A catalogue repository known only through an integration, with no clone on disk yet. It must be cloned, which makes it a Local Repository, before it can be added to a workspace. |
+| **Workspace Worktree** | A `git worktree` of a Local Repository, created inside the Workspace Folder. This is how a repository is included in a workspace. |
 | **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
 | **Open in…** | Actions that open the workspace or a repository in an external tool (IDE, terminal, file manager, …). |
@@ -36,6 +39,22 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
    - The name defaults to the task name when exactly one task is selected.
    - The parent folder defaults to the **Default Workspace Parent Folder** app setting.
 3. **Select repositories** from the Repository Catalogue.
+   - **Local Repository:** TAMMi creates a Workspace Worktree for it in the Workspace Folder.
+   - **Remote-only Repository:** TAMMi first guides the user through cloning it to a local folder.
+     This turns it into a Local Repository, and TAMMi then creates the worktree as normal. The clone
+     lives outside the workspace, so other workspaces can reuse it.
+
+### Repositories on disk
+
+```
+<clone folder>/<repo>/              Local Repository (shared, outside any workspace)
+<parent folder>/<workspace name>/
+    <repo>/                         Workspace Worktree of <clone folder>/<repo>
+    <another repo>/                 Workspace Worktree of another Local Repository
+```
+
+Workspaces never hold full clones. Each repository in a workspace is a worktree of a Local Repository,
+so several workspaces can work on the same repository at once without cloning it again.
 
 ## Main Screens
 
@@ -85,10 +104,11 @@ Record the decision here when an item is resolved, and move it into the sections
   This needs a decision before any UI scaffolding.
 
 ### Workspace on disk
-- How does a repository get into a workspace? Options: a full clone, a `git worktree` from an existing local clone, or a reference/symlink to an existing clone.
-- Is a branch created automatically for each task? If so, what naming convention (e.g. `<task-key>-<slug>`)?
+- Is a branch created automatically for each task? If so, what naming convention (e.g. `<task-key>-<slug>`)? A worktree needs a branch that isn't checked out in another worktree, so every Workspace Worktree needs its own branch (or a detached HEAD).
+- What base does a new worktree branch start from: the default branch of the remote (after a fetch), or the Local Repository's current HEAD?
+- What is a worktree's folder name inside the workspace: the repository name? How are name clashes handled (e.g. two repositories called `api` from different owners)?
 - Where is workspace metadata stored: inside the workspace folder (e.g. `.tammi/`), in central app data, or both?
-- What happens to the folder and branches when a workspace is deleted or archived?
+- What happens to the folder and branches when a workspace is deleted or archived? Presumably `git worktree remove` for each repository. What if a worktree has uncommitted or unpushed changes?
 
 ### Tasks
 - Can one workspace mix tasks from different sources?
@@ -96,14 +116,14 @@ Record the decision here when an item is resolved, and move it into the sections
 - What fields does a manual task have?
 
 ### Repositories
-- Can a repository from an integration be selected before it has been cloned locally? If so, TAMMi clones it on demand. Where to?
-- How are duplicates handled when the same repository appears from several sources?
+- In the clone step for a Remote-only Repository, where does the clone go by default? A Monitored Folder (so it is discovered automatically) seems a natural fit. Can the user choose any folder?
+- How is a Local Repository matched to an integration repository, so that it doesn't appear twice in the catalogue? By remote URL? What about forks and multiple remotes?
+- What happens if a Local Repository is moved or deleted while workspaces still have worktrees from it?
 
 ### Agents
 - Which agents are supported first (e.g. Claude Code, others)? Are they run as CLI processes in an embedded terminal or through an SDK/API?
 - Does each agent run against one repository or the whole workspace folder?
 - How is a task's context passed to an agent?
-
 - What agent states exist (e.g. running, waiting for input, idle, finished, errored)? These states appear on both Home and the Workspace View.
 
 ### Home status summary
