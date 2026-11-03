@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using TAMMi.Core.Agents;
 using TAMMi.Core.Git;
 using TAMMi.Core.Integrations;
+using TAMMi.Core.Settings;
+using TAMMi.Core.Windowing;
 using TAMMi.Core.Workspaces;
 
 namespace TAMMi.UI;
@@ -19,6 +21,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGitRepositoryReader, GitRepositoryReader>();
         services.AddSingleton<IntegrationRegistry>();
         services.AddSingleton<AgentLauncher>();
+        services.AddSingleton<ISettingsStore, SettingsStore>();
+        services.AddSingleton<WindowStateStore>();
         return services;
     }
 }

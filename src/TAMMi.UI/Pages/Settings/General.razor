@@ -1,14 +1,52 @@
 @page "/settings"
 @layout SettingsLayout
+@inherits SettingsSectionBase
+@using TAMMi.Core.Platform
+@using TAMMi.Core.Settings
+@inject IFolderPicker FolderPicker
 
 <h1>General</h1>
 
-<p class="placeholder">These settings will appear here:</p>
+<div class="settings-form">
+    <div class="settings-field">
+        <label for="default-workspace-parent-folder">Default Workspace Parent Folder</label>
+        <div class="settings-field-row">
+            <input id="default-workspace-parent-folder"
+                   class="settings-path"
+                   value="@Current.DefaultWorkspaceParentFolder"
+                   @onchange="OnDefaultWorkspaceParentFolderChanged" />
+            <button type="button" class="button" @onclick="PickDefaultWorkspaceParentFolderAsync">Choose…</button>
+        </div>
+        <p class="settings-help">New workspaces are created in this folder unless you choose another one.</p>
+    </div>
+</div>
 
-<ul class="placeholder">
-    <li>Default Workspace Parent Folder</li>
-    <li>Monitored Folders</li>
-    <li>Manually added local repositories</li>
-    <li>Status refresh interval for workspaces that aren't open</li>
-    <li>Terminal shell</li>
-</ul>
+@if (SaveError is not null)
+{
+    <p class="error">@SaveError</p>
+}
+
+@code {
+    private GeneralSettings Current => SettingsStore.Current.General;
+
+    private Task OnDefaultWorkspaceParentFolderChanged(ChangeEventArgs e) =>
+        UpdateGeneralAsync(general => general with { DefaultWorkspaceParentFolder = e.Value?.ToString() ?? "" });
+
+    private async Task PickDefaultWorkspaceParentFolderAsync()
+    {
+        var folder = await FolderPicker.PickFolderAsync(new FolderPickerOptions
+        {
+            Title = "Choose the Default Workspace Parent Folder",
+            InitialDirectory = Directory.Exists(Current.DefaultWorkspaceParentFolder)
+                ? Current.DefaultWorkspaceParentFolder
+                : null,
+        });
+        if (folder is not null)
+        {
+            await UpdateGeneralAsync(general => general with { DefaultWorkspaceParentFolder = folder });
+        }
+    }
+
+    private Task UpdateGeneralAsync(Func<GeneralSettings, GeneralSettings> update) =>
+        UpdateAsync(settings => settings with { General = update(settings.General) });
+}

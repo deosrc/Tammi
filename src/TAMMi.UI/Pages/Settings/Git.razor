@@ -1,5 +1,7 @@
 @page "/settings/git"
 @layout SettingsLayout
+@inherits SettingsSectionBase
+@using TAMMi.Core.Settings
 
 <h1>Git</h1>
 
@@ -10,4 +12,64 @@
     <dd><LibGit2Version /></dd>
 </dl>
 
-<p class="placeholder">More git settings will appear here.</p>
+<div class="settings-form">
+    <div class="settings-field">
+        <label for="status-refresh-interval">Status refresh interval</label>
+        <div class="settings-field-row">
+            @* Recreated after each change, so the input shows the saved value even when that's unchanged, e.g. after
+               an out-of-range value is clamped back to the current one. *@
+            <input @key="_statusRefreshRevision"
+                   id="status-refresh-interval"
+                   type="number"
+                   class="settings-number"
+                   min="@MinMinutes"
+                   max="@MaxMinutes"
+                   step="1"
+                   value="@StatusRefreshMinutes"
+                   @onchange="OnStatusRefreshIntervalChanged" />
+            <span>minutes</span>
+        </div>
+        <p class="settings-help">
+            How often the git status of workspaces that aren't open in a tab is refreshed
+            (@MinMinutes to @MaxMinutes minutes).
+        </p>
+    </div>
+</div>
+
+@if (SaveError is not null)
+{
+    <p class="error">@SaveError</p>
+}
+
+<p class="placeholder">These settings will appear here:</p>
+
+<ul class="placeholder">
+    <li>Monitored Folders</li>
+    <li>Manually added local repositories</li>
+</ul>
+
+@code {
+    private static readonly int MinMinutes = (int)GitSettings.MinStatusRefreshInterval.TotalMinutes;
+    private static readonly int MaxMinutes = (int)GitSettings.MaxStatusRefreshInterval.TotalMinutes;
+
+    private int _statusRefreshRevision;
+
+    private int StatusRefreshMinutes =>
+        (int)Math.Round(SettingsStore.Current.Git.StatusRefreshInterval.TotalMinutes);
+
+    private Task OnStatusRefreshIntervalChanged(ChangeEventArgs e)
+    {
+        _statusRefreshRevision++;
+
+        // An empty or invalid number keeps the current interval. The settings clamp the value to the allowed range.
+        if (!int.TryParse(e.Value?.ToString(), out var minutes))
+        {
+            return Task.CompletedTask;
+        }
+
+        return UpdateAsync(settings => settings with
+        {
+            Git = settings.Git with { StatusRefreshInterval = TimeSpan.FromMinutes(minutes) },
+        });
+    }
+}
