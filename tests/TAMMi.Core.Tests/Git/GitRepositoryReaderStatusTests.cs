@@ -326,7 +326,7 @@ public sealed class GitRepositoryReaderStatusTests : IDisposable
     public async Task Worktree_ReadsWorktreeState()
     {
         string clone = await CloneAsync();
-        string worktree = _repos.PathTo("workspace/repo");
+        string worktree = Path.Combine(_repos.PathTo("workspace"), "repo");
         await _repos.RunAsync(clone, "worktree", "add", "-b", "task-1", worktree, "origin/main");
         TempRepositories.WriteFile(worktree, "task.txt", "task");
 
