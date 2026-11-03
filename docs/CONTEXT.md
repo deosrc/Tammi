@@ -225,12 +225,16 @@ are left to other tools for now.
 - Platform-specific services (PTY, file system watching, launching processes) are reached through
   interfaces in shared code, with an implementation for each host.
 - Web-based UI components (e.g. xterm.js for the terminal) can be used inside the Blazor UI.
+- **Git access is hybrid:**
+  - **LibGit2Sharp** for fast in-process reads: status, the git graph and history.
+  - **The `git` CLI** for writes (fetch, pull, push, stage, commit) and for worktree and submodule
+    operations. This keeps full compatibility with the user's git config, credential helpers and hooks.
+  - A `git` install is therefore required.
 - The embedded terminal (used for both the Terminal and Agents) needs a PTY (ConPTY on Windows,
   `forkpty` on Linux) behind the platform service interfaces, with xterm.js as the renderer.
 
 ## Open Questions
 
-Record the decision here when an item is resolved, and move it into the sections above.
+None at the moment. Add new questions here. When one is resolved, record the decision in the sections
+above and remove the question.
 
-### Git
-- Shell out to the `git` CLI or use a library such as LibGit2Sharp?
