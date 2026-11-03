@@ -1,0 +1,26 @@
+{
+  "issues": [
+    {
+      "expand": "operations,versionedRepresentations,editmeta,changelog,renderedFields",
+      "id": "10012",
+      "self": "https://acme.atlassian.net/rest/api/2/issue/10012",
+      "key": "ABC-12",
+      "fields": {
+        "summary": "Login fails with an expired session",
+        "description": "Steps to reproduce:\n# Sign in\n# Wait for the session to expire\n# Click *Save*\n\n{code}401 Unauthorized{code}"
+      }
+    },
+    {
+      "expand": "operations,versionedRepresentations,editmeta,changelog,renderedFields",
+      "id": "10009",
+      "self": "https://acme.atlassian.net/rest/api/2/issue/10009",
+      "key": "ABC-9",
+      "fields": {
+        "summary": "Add an export button",
+        "description": null
+      }
+    }
+  ],
+  "nextPageToken": "Ch0jU3RyaW5nJlFVSkQmJlNXNTBaWEpsYzNSbFpBPT0lMjM=",
+  "isLast": false
+}

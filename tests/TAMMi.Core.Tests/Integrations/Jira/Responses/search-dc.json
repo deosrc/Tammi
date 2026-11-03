@@ -1,0 +1,28 @@
+{
+  "expand": "schema,names",
+  "startAt": 0,
+  "maxResults": 2,
+  "total": 3,
+  "issues": [
+    {
+      "expand": "operations,versionedRepresentations,editmeta,changelog,renderedFields",
+      "id": "10012",
+      "self": "https://jira.example.com/jira/rest/api/2/issue/10012",
+      "key": "ABC-12",
+      "fields": {
+        "summary": "Login fails with an expired session",
+        "description": "Steps to reproduce:\n# Sign in"
+      }
+    },
+    {
+      "expand": "operations,versionedRepresentations,editmeta,changelog,renderedFields",
+      "id": "10009",
+      "self": "https://jira.example.com/jira/rest/api/2/issue/10009",
+      "key": "ABC-9",
+      "fields": {
+        "summary": "Add an export button",
+        "description": ""
+      }
+    }
+  ]
+}

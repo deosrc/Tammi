@@ -1,0 +1,15 @@
+{
+  "issues": [
+    {
+      "expand": "operations,versionedRepresentations,editmeta,changelog,renderedFields",
+      "id": "10103",
+      "self": "https://acme.atlassian.net/rest/api/2/issue/10103",
+      "key": "XYZ-3",
+      "fields": {
+        "summary": "Update the onboarding guide",
+        "description": "See the [wiki page|https://acme.atlassian.net/wiki/x/AbC]."
+      }
+    }
+  ],
+  "isLast": true
+}

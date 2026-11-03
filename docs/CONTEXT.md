@@ -263,6 +263,23 @@ are left to other tools for now.
 - **Rate limits:** when GitHub asks TAMMi to wait a few seconds, it waits and retries. For longer waits, the request
   fails and says when to try again.
 
+### JIRA
+
+- Provides **tasks** (issues). It works with JIRA Cloud and with JIRA Server and Data Center, given the site's URL.
+  Each JIRA site is a separate integration.
+- **Authentication:**
+  - **JIRA Cloud:** the Atlassian account's email address (a setting) and an API token (kept in the credential store).
+    API tokens with scopes only work through `api.atlassian.com`, so the token must be one without scopes.
+  - **Server and Data Center:** a personal access token (JIRA 8.14 or later), kept in the credential store. When
+    JIRA wants a CAPTCHA solved after failed logins, TAMMi asks the user to log in to JIRA in a browser.
+- **Task keys** are JIRA's issue keys, e.g. `ABC-123`. A moved issue is read with its new key.
+- **Finding tasks:** with no query, TAMMi lists the user's unfinished issues
+  (`assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC`). A query is JQL. An issue key, or a
+  URL on the site that shows an issue (its page, or a board or search with `selectedIssue`), finds that issue.
+- **Descriptions** are in JIRA wiki markup, as REST API version 2 returns them on every deployment. They aren't
+  converted to markdown.
+- **Rate limits** are handled as for GitHub.
+
 ## Technical Constraints
 
 - **Framework:** .NET MAUI Blazor Hybrid. The UI is written once as Blazor components in a shared
