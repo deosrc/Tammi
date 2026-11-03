@@ -28,6 +28,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Workspace Worktree** | A `git worktree` of a Local Repository, created inside the Workspace Folder. This is how a repository is included in a workspace. |
 | **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
+| **Agent Definition** | A configured agent CLI (e.g. Claude Code) that TAMMi can start: name, command and arguments. |
 | **Open in…** | Actions that open the workspace or a repository in an external tool (IDE, terminal, file manager, …). |
 
 ## Core Flow: Creating a Workspace
@@ -113,7 +114,7 @@ own branch. It is created automatically when the workspace is created:
   - Git status of each repository in the workspace
   - "Open in…" tools
 - **Git operations**, including a git graph view
-- **Agents**: start, interact with and stop AI agents
+- **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
 - **Terminal**: an embedded terminal, opened in the workspace folder
 
 ### Settings
@@ -123,6 +124,18 @@ own branch. It is created automatically when the workspace is created:
 - Integrations (credentials, configuration)
 - Manually added local repositories
 - Tools: the external tools offered under "Open in…"
+- Agents: the Agent Definitions available to start
+
+## Agents
+
+- Agents run as **CLI processes inside the embedded terminal component**. The user interacts with them
+  through the terminal, just as they would outside TAMMi.
+- Agents are **pluggable**. Each Agent Definition has a name, a command and arguments, and is configured
+  much like an "Open in…" tool.
+- **Claude Code** is the first built-in Agent Definition. Others (e.g. Codex CLI, Gemini CLI) can be
+  added as definitions.
+- **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or
+  status events (e.g. Claude Code hooks), TAMMi uses them for richer states such as "waiting for input".
 
 ## Technical Constraints
 
@@ -134,13 +147,14 @@ own branch. It is created automatically when the workspace is created:
 - Platform-specific services (PTY, file system watching, launching processes) are reached through
   interfaces in shared code, with an implementation for each host.
 - Web-based UI components (e.g. xterm.js for the terminal) can be used inside the Blazor UI.
+- The embedded terminal (used for both the Terminal and Agents) needs a PTY (ConPTY on Windows,
+  `forkpty` on Linux) behind the platform service interfaces, with xterm.js as the renderer.
 
 ## Open Questions
 
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Agents
-- Which agents are supported first (e.g. Claude Code, others)? Are they run as CLI processes in an embedded terminal or through an SDK/API?
 - Does each agent run against one repository or the whole workspace folder?
 - How is a task's context passed to an agent?
 - What agent states exist (e.g. running, waiting for input, idle, finished, errored)? These states appear on both Home and the Workspace View.
@@ -154,7 +168,6 @@ Record the decision here when an item is resolved, and move it into the sections
 - Is there one terminal per workspace, or can the user open several (e.g. one per repository)?
 - Which shell is used: the platform default (PowerShell on Windows, `$SHELL` on Linux), or a setting?
 - Do terminal sessions persist when a workspace tab is closed and reopened, or across app restarts?
-- Do CLI-based agents share the same terminal component? Embedding a terminal on Windows and Linux needs a PTY (ConPTY / `forkpty`) and a terminal renderer such as xterm.js.
 
 ### Open in… / Tools
 - Which tools are built in (VS Code, Visual Studio, Rider, terminal, file manager)? Does TAMMi detect installed tools automatically?
