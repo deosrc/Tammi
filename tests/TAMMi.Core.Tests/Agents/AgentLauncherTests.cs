@@ -95,6 +95,114 @@ public class AgentLauncherTests
         Assert.Equal("Claude Code", AgentDefinition.ClaudeCode.Name);
         Assert.Equal("claude", AgentDefinition.ClaudeCode.Command);
         Assert.Equal([AgentDefinition.PromptPlaceholder], AgentDefinition.ClaudeCode.PromptArguments);
+        Assert.Same(ClaudeCodeHooks.Instance, AgentDefinition.ClaudeCode.Hooks);
+    }
+
+    [Fact]
+    public async Task Start_WithHooks_PassesThemBeforeArgumentsAndTokenInEnvironment()
+    {
+        var pty = new RecordingPtyService();
+        await using var server = new AgentHookServer();
+        var definition = AgentDefinition.ClaudeCode with { Arguments = ["--model", "opus"] };
+
+        new AgentLauncher(pty, server).Start(definition, Path.GetTempPath(), PtySize.Default, "Hello");
+
+        var request = Assert.Single(pty.Requests).Request;
+        Assert.Equal("--settings", request.Arguments[0]);
+        Assert.Equal(["--model", "opus", "Hello"], request.Arguments.Skip(2));
+        var token = Assert.IsType<string>(request.Environment[AgentHookEndpoint.TokenVariable]);
+        Assert.DoesNotContain(request.Arguments, argument => argument.Contains(token, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Start_WithoutHookServer_StartsWithoutHooks()
+    {
+        var pty = new RecordingPtyService();
+
+        new AgentLauncher(pty).Start(AgentDefinition.ClaudeCode, Path.GetTempPath(), PtySize.Default, "Hello");
+
+        var request = Assert.Single(pty.Requests).Request;
+        Assert.Equal(["Hello"], request.Arguments);
+        Assert.Empty(request.Environment);
+    }
+
+    [Fact]
+    public async Task Start_WithDisposedHookServer_StartsWithoutHooks()
+    {
+        var pty = new RecordingPtyService();
+        var server = new AgentHookServer();
+        await server.DisposeAsync();
+
+        var agent = new AgentLauncher(pty, server).Start(AgentDefinition.ClaudeCode, Path.GetTempPath(), PtySize.Default);
+
+        Assert.Empty(Assert.Single(pty.Requests).Request.Arguments);
+        Assert.Equal(AgentState.Running, agent.State);
+    }
+
+    [Fact]
+    public async Task Start_DefinitionWithoutHooks_GetsNoHooks()
+    {
+        var pty = new RecordingPtyService();
+        await using var server = new AgentHookServer();
+
+        new AgentLauncher(pty, server).Start(
+            new AgentDefinition("Test", "test-agent", "--flag"), Path.GetTempPath(), PtySize.Default);
+
+        var request = Assert.Single(pty.Requests).Request;
+        Assert.Equal(["--flag"], request.Arguments);
+        Assert.Empty(request.Environment);
+    }
+
+    [Fact]
+    public async Task Start_FollowsHookEventsFromRealProcess()
+    {
+        if (!OperatingSystem.IsLinux() || new TestProcessLauncher().FindExecutable("curl") is null)
+        {
+            Assert.Skip("This test runs a real process with curl in a Linux pseudoterminal.");
+            return;
+        }
+
+        await using var server = new AgentHookServer();
+        var launcher = new AgentLauncher(new LinuxPtyService(new TestProcessLauncher()), server);
+        var definition = new AgentDefinition("Shell", "/bin/sh") { Hooks = new CurlHooks() };
+        await using var agent = launcher.Start(definition, Path.GetTempPath(), PtySize.Default);
+        var idle = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.StateChanged += changed =>
+        {
+            if (changed.State == AgentState.Idle)
+            {
+                idle.TrySetResult();
+            }
+        };
+
+        // Each event is sent once the previous one has been answered, as Claude Code does.
+        await new PtyOutput(agent.Session).ReadUntilAsync("ready");
+        agent.Session.Write("go\n"u8);
+
+        await idle.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        Assert.Equal(AgentState.Idle, agent.State);
+    }
+
+    // Runs a script that sends Claude Code's events with curl, using the endpoint and token it was started with.
+    private sealed class CurlHooks : AgentHooks
+    {
+        public override IReadOnlyList<string> CreateArguments(AgentHookEndpoint endpoint) =>
+        [
+            "-c",
+            """
+            echo ready; read line
+            for e in UserPromptSubmit PermissionRequest PostToolUse Stop; do
+              curl -sf -H "Authorization: Bearer $TAMMI_AGENT_HOOK_TOKEN" -H 'Content-Type: application/json' \
+                --data "{\"hook_event_name\":\"$e\"}" "$1" || exit 1
+            done
+            sleep 60
+            """,
+            "sh",
+            endpoint.Url.AbsoluteUri,
+        ];
+
+        public override AgentState? StateAfter(System.Text.Json.JsonElement hookEvent) =>
+            ClaudeCodeHooks.Instance.StateAfter(hookEvent);
     }
 
     // Real processes on Linux, so the states are checked against real exit codes, signals and hang-ups.
