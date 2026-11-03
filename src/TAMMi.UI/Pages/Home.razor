@@ -1,32 +1,118 @@
 @page "/"
+@implements IDisposable
+@inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceTabs WorkspaceTabs
 @inject NavigationManager Navigation
 
 <div class="page">
-    <h1>Workspaces</h1>
+    <div class="page-header">
+        <h1>Workspaces</h1>
+        <a class="button" href="@AppRoutes.NewWorkspace">New workspace</a>
+    </div>
 
-    <p class="placeholder">These are placeholder workspaces until workspaces can be created.</p>
+    @if (_indexProblem is not null)
+    {
+        <p class="error">@_indexProblem</p>
+    }
 
-    <ul class="workspace-list">
-        @foreach (var workspace in PlaceholderWorkspaces.All)
-        {
-            <li class="workspace-card">
-                <div class="workspace-card-body">
-                    <div class="workspace-name" title="@workspace.Name">@workspace.Name</div>
-                    <div class="workspace-summary">@workspace.Summary</div>
-                </div>
-                <div class="workspace-card-actions">
-                    <button type="button" class="button" @onclick="() => Open(workspace)">Open</button>
-                </div>
-            </li>
-        }
-    </ul>
+    @if (_workspaces is null)
+    {
+        <p class="placeholder">Loading workspaces…</p>
+    }
+    else if (_workspaces.Count == 0)
+    {
+        <p class="placeholder">No workspaces yet. Create one to get started.</p>
+    }
+    else
+    {
+        <ul class="workspace-list">
+            @foreach (var workspace in _workspaces)
+            {
+                var available = workspace.Availability == WorkspaceAvailability.Available;
+                <li class="workspace-card @(available ? null : "workspace-card-unavailable")" @key="workspace.Id">
+                    <div class="workspace-card-body">
+                        <div class="workspace-name" title="@workspace.Name">@workspace.Name</div>
+                        <div class="workspace-folder" title="@workspace.Folder">@workspace.Folder</div>
+                        @if (!available)
+                        {
+                            <div class="workspace-problem warning">
+                                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+                                    <path d="M12 9v4M12 17h.01" />
+                                </svg>
+                                <span>@WorkspaceAvailabilityText.Summary(workspace.Availability)</span>
+                            </div>
+                        }
+                    </div>
+                    <div class="workspace-card-actions">
+                        @* A workspace that can't be read opens a tab with the details of what's wrong instead. *@
+                        <button type="button" class="@(available ? "button" : "button button-secondary")"
+                                @onclick="() => Open(workspace)">
+                            @(available ? "Open" : "Details")
+                        </button>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
 </div>
 
 @code {
-    private void Open(PlaceholderWorkspace workspace)
+    private IReadOnlyList<WorkspaceListing>? _workspaces;
+    private string? _indexProblem;
+    private readonly CancellationTokenSource _disposed = new();
+
+    // Counts loads, so a slow load that finishes after a newer one doesn't replace its result.
+    private int _loadCount;
+
+    protected override async Task OnInitializedAsync()
     {
+        WorkspaceStore.Changed += OnWorkspacesChanged;
+        await LoadAsync();
+    }
+
+    public void Dispose()
+    {
+        WorkspaceStore.Changed -= OnWorkspacesChanged;
+        _disposed.Cancel();
+        _disposed.Dispose();
+    }
+
+    private async Task LoadAsync()
+    {
+        var load = ++_loadCount;
+        IReadOnlyList<WorkspaceListing> workspaces;
+        try
+        {
+            workspaces = await WorkspaceStore.ListAsync(_disposed.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (load == _loadCount)
+        {
+            _workspaces = workspaces;
+            _indexProblem = WorkspaceStore.IndexProblem;
+        }
+    }
+
+    private void Open(WorkspaceListing workspace)
+    {
+        // Opening a workspace that's already open keeps its tab, so this just shows it.
         WorkspaceTabs.Open(workspace.Id, workspace.Name);
         Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id));
     }
+
+    private void OnWorkspacesChanged() => InvokeAsync(async () =>
+    {
+        if (_disposed.IsCancellationRequested)
+        {
+            return;
+        }
+
+        await LoadAsync();
+        StateHasChanged();
+    });
 }

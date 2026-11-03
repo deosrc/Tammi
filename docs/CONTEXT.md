@@ -146,7 +146,12 @@ own branch. It is created automatically when the workspace is created:
   - Workspaces open in a tab watch their worktrees for file changes and update live.
   - Other workspaces refresh when Home is shown, and on a timer (interval in Settings).
   - Agent status is always live, because TAMMi runs the agent processes itself.
-- Opening a workspace shows it in a **tab**. Several workspaces can be open at once.
+- Workspaces are listed in the order they were first saved or added, each with its name and Workspace Folder.
+  A workspace whose folder or metadata is missing, or whose metadata can't be read, can't be opened. Its card says
+  why in a few words ("Workspace folder missing" or "Corrupt"), and its Details button opens a tab with the full
+  reason and the option to delete the workspace.
+- Opening a workspace shows it in a **tab**. Several workspaces can be open at once. Opening a workspace that's
+  already open shows its tab.
 - Starts the Create Workspace flow.
 
 ### Workspace View (tab)

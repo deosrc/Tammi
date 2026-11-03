@@ -127,6 +127,15 @@ public sealed class WorkspaceStore : IWorkspaceStore
     }
 
     /// <inheritdoc />
+    public async Task<WorkspaceListing?> FindAsync(string id, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        return Index.FirstOrDefault(entry => entry.Id == id) is { } entry
+            ? await ListAsync(entry, cancellationToken).ConfigureAwait(false)
+            : null;
+    }
+
+    /// <inheritdoc />
     public Task<Workspace> LoadAsync(string folder, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(folder);
