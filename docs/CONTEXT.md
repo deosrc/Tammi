@@ -64,6 +64,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 - Monitored Folder(s)
 - Integrations (credentials, configuration)
 - Manually added local repositories
+- Tools: the external tools offered under "Open in…"
 
 ## Technical Constraints
 
@@ -116,8 +117,10 @@ Record the decision here when an item is resolved, and move it into the sections
 - Do terminal sessions persist when a workspace tab is closed and reopened, or across app restarts?
 - Do CLI-based agents share the same terminal component? Embedding a terminal on Windows and Linux needs a PTY (ConPTY / `forkpty`) and a terminal renderer such as xterm.js. This links to the Platform decision.
 
-### Open in…
-- Which targets are built in (VS Code, Visual Studio, Rider, terminal, file manager)? Can users configure custom commands?
+### Open in… / Tools
+- Which tools are built in (VS Code, Visual Studio, Rider, terminal, file manager)? Does TAMMi detect installed tools automatically?
+- What can be configured for each tool: name, executable path, arguments (e.g. a `{path}` placeholder), icon, enabled/disabled?
+- Can a tool open the whole workspace folder, a single repository, or both?
 
 ### Git
 - Which operations are in scope at first beyond status and graph (fetch, pull, push, commit, branch, checkout)?
