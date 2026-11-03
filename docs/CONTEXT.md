@@ -152,6 +152,10 @@ own branch. It is created automatically when the workspace is created:
   Rider, the system file manager and the system terminal.
 - Only built-in tools detected as installed are shown.
 - Users can add their own tools.
+- Each tool has: **name**, **executable**, **arguments** (with a `{path}` placeholder for the folder
+  being opened) and **enabled/disabled**.
+- **Visual Studio** opens solutions, not folders. TAMMi finds the `.sln` and `.slnx` files in the
+  workspace's repositories and shows an "Open in…" entry for each one (e.g. "Visual Studio: Api.sln").
 
 ## Agents
 
@@ -211,7 +215,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Open in… / Tools
-- What can be configured for each tool: name, executable path, arguments (e.g. a `{path}` placeholder), icon, enabled/disabled?
 - Can a tool open the whole workspace folder, a single repository, or both?
 
 ### Git
