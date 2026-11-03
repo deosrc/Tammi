@@ -15,8 +15,8 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 
 | Term | Meaning |
 |------|---------|
-| **Task** | A unit of work. It comes from an integration (e.g. a GitHub issue or JIRA ticket) or is defined manually. |
-| **Task Source** | Where a task comes from: an integration or manual entry. |
+| **Task** | A unit of work from an integration (e.g. a GitHub issue or JIRA ticket). TAMMi doesn't support manually defined tasks: a workspace without tasks is described by its name. |
+| **Task Source** | The integration a task comes from. |
 | **Workspace** | A named collection of tasks and repositories in a folder on disk. It is the main unit of work in TAMMi. |
 | **Workspace Folder** | The workspace's location on disk: `<parent folder>/<workspace name>`. |
 | **Repository** | A git repository that can be added to a workspace. |
@@ -33,12 +33,13 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 ## Core Flow: Creating a Workspace
 
 1. **Choose tasks.** The user picks tasks first, because they drive the rest of the setup.
-   - Tasks come from integrations (GitHub, JIRA) or are entered manually.
+   - Tasks come from integrations (GitHub, JIRA).
+   - Tasks are optional. A workspace with no tasks is described by its name alone.
    - One workspace can mix tasks from any sources.
    - TAMMi only reads tasks from integrations. It doesn't write back status changes or PR links yet.
    - The task list can be changed after the workspace is created.
 2. **Name and locate the workspace.**
-   - The name defaults to the task name when exactly one task is selected.
+   - The name defaults to the task name when exactly one task is selected. Otherwise the user enters it.
    - The parent folder defaults to the **Default Workspace Parent Folder** app setting.
 3. **Select repositories** from the Repository Catalogue.
    - **Local Repository:** TAMMi creates a Workspace Worktree for it in the Workspace Folder.
@@ -68,8 +69,8 @@ can change any folder name during setup.
 
 **Branches.** Git won't check out one branch in two worktrees, so each Workspace Worktree gets its
 own branch. It is created automatically when the workspace is created:
-- TAMMi suggests a branch name from the task, e.g. `<task-key>-<slug>`. When there are several tasks,
-  it uses the workspace name instead.
+- TAMMi suggests a branch name from the task, e.g. `<task-key>-<slug>`. When there are no tasks or
+  several tasks, it uses the workspace name instead.
 - The user can edit the suggested name before the workspace is created.
 - The same branch name is used in every repository in the workspace.
 - **Base:** TAMMi fetches each Local Repository, then branches from the remote's default branch
@@ -124,9 +125,6 @@ own branch. It is created automatically when the workspace is created:
 ## Open Questions
 
 Record the decision here when an item is resolved, and move it into the sections above.
-
-### Tasks
-- What fields does a manual task have?
 
 ### Repositories
 - In the clone step for a Remote-only Repository, where does the clone go by default? A Monitored Folder (so it is discovered automatically) seems a natural fit. Can the user choose any folder?
