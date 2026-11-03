@@ -111,6 +111,14 @@ public sealed class ClaudeCodeHooks : AgentHooks
         };
     }
 
+    /// <inheritdoc />
+    /// <remarks>Every event Claude Code sends has the session's ID.</remarks>
+    public override bool ReportsSessionId => true;
+
+    /// <inheritdoc />
+    public override string? SessionIdFrom(JsonElement hookEvent) =>
+        hookEvent.ValueKind == JsonValueKind.Object ? GetString(hookEvent, "session_id") : null;
+
     private static string? GetString(JsonElement element, string name) =>
         element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()

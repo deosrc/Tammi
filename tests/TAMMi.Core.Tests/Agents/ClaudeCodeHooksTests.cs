@@ -108,4 +108,17 @@ public class ClaudeCodeHooksTests
             hooks.GetProperty("PreToolUse")[0].GetProperty("matcher").GetString());
         Assert.False(hooks.GetProperty("PostToolUse")[0].TryGetProperty("matcher", out _));
     }
+
+    [Theory]
+    [InlineData("""{"hook_event_name":"Stop","session_id":"0b1c7a3e-5f7d-4c43-9b25-6f2b1b7a9e10"}""", "0b1c7a3e-5f7d-4c43-9b25-6f2b1b7a9e10")]
+    [InlineData("""{"hook_event_name":"Stop"}""", null)]
+    [InlineData("""{"session_id":42}""", null)]
+    [InlineData("""["session_id"]""", null)]
+    public void SessionIdFrom_ReadsEventsSessionId(string json, string? expected)
+    {
+        using var hookEvent = System.Text.Json.JsonDocument.Parse(json);
+
+        Assert.True(ClaudeCodeHooks.Instance.ReportsSessionId);
+        Assert.Equal(expected, ClaudeCodeHooks.Instance.SessionIdFrom(hookEvent.RootElement));
+    }
 }

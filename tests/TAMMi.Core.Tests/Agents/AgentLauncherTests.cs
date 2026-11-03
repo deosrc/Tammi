@@ -40,6 +40,87 @@ public class AgentLauncherTests
         Assert.Equal(["--flag", "-p", prompt], Assert.Single(pty.Requests).Request.Arguments);
     }
 
+    [Fact]
+    public void Start_WhenAgentCanResume_SetsNewSessionId()
+    {
+        var pty = new RecordingPtyService();
+        var launcher = new AgentLauncher(pty);
+
+        var first = launcher.Start(Resumable, Path.GetTempPath(), PtySize.Default, "do it");
+        var second = launcher.Start(Resumable, Path.GetTempPath(), PtySize.Default);
+
+        Assert.True(AgentSession.IsValidId(first.SessionId));
+        Assert.True(AgentSession.IsValidId(second.SessionId));
+        Assert.NotEqual(first.SessionId, second.SessionId);
+        Assert.Equal(["-a", "--id", first.SessionId!, "do it"], pty.Requests[0].Request.Arguments);
+        Assert.Equal(["-a", "--id", second.SessionId!], pty.Requests[1].Request.Arguments);
+    }
+
+    [Fact]
+    public void Start_WhenAgentCantResume_HasNoSessionId()
+    {
+        var pty = new RecordingPtyService();
+
+        var agent = new AgentLauncher(pty).Start(new AgentDefinition("Test", "agent", "-a"), Path.GetTempPath(), PtySize.Default);
+
+        Assert.Null(agent.SessionId);
+        Assert.Equal(["-a"], Assert.Single(pty.Requests).Request.Arguments);
+    }
+
+    [Fact]
+    public void Start_WhenSessionIdComesFromHooks_HasNoSessionIdYet()
+    {
+        var pty = new RecordingPtyService();
+        var definition = AgentDefinition.ClaudeCode with { SessionIdArguments = [] };
+
+        var agent = new AgentLauncher(pty).Start(definition, Path.GetTempPath(), PtySize.Default, "do it");
+
+        Assert.Null(agent.SessionId);
+        Assert.Equal(["do it"], Assert.Single(pty.Requests).Request.Arguments);
+    }
+
+    [Fact]
+    public void Resume_StartsResumeCommandInSessionsFolder()
+    {
+        var pty = new RecordingPtyService();
+        var directory = Path.GetTempPath();
+        var session = new AgentSession(Guid.NewGuid().ToString(), "Test", directory, DateTimeOffset.UnixEpoch);
+
+        var agent = new AgentLauncher(pty).Resume(Resumable, session, new PtySize(100, 30));
+
+        var request = Assert.Single(pty.Requests);
+        Assert.Equal("agent", request.Request.FileName);
+        Assert.Equal(["-a", "--resume", session.Id], request.Request.Arguments);
+        Assert.Equal(Path.GetFullPath(directory), request.Request.WorkingDirectory);
+        Assert.Equal(new PtySize(100, 30), request.Size);
+        Assert.Equal(session.Id, agent.SessionId);
+        Assert.Same(Resumable, agent.Definition);
+    }
+
+    [Fact]
+    public void Resume_WhenAgentCantResume_Throws()
+    {
+        var pty = new RecordingPtyService();
+        var session = new AgentSession(Guid.NewGuid().ToString(), "Test", Path.GetTempPath(), DateTimeOffset.UnixEpoch);
+
+        Assert.Throws<ArgumentException>(() => new AgentLauncher(pty).Resume(
+            Resumable with { ResumeArguments = [] }, session, PtySize.Default));
+        Assert.Empty(pty.Requests);
+    }
+
+    [Theory]
+    [InlineData("--dangerously-skip-permissions")]
+    [InlineData("not-a-uuid")]
+    [InlineData("")]
+    public void Resume_WithIdTammiCouldntHaveSet_Throws(string id)
+    {
+        var pty = new RecordingPtyService();
+        var session = new AgentSession(id, "Test", Path.GetTempPath(), DateTimeOffset.UnixEpoch);
+
+        Assert.Throws<ArgumentException>(() => new AgentLauncher(pty).Resume(Resumable, session, PtySize.Default));
+        Assert.Empty(pty.Requests);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("  ")]
@@ -105,11 +186,11 @@ public class AgentLauncherTests
         await using var server = new AgentHookServer();
         var definition = AgentDefinition.ClaudeCode with { Arguments = ["--model", "opus"] };
 
-        new AgentLauncher(pty, server).Start(definition, Path.GetTempPath(), PtySize.Default, "Hello");
+        var agent = new AgentLauncher(pty, server).Start(definition, Path.GetTempPath(), PtySize.Default, "Hello");
 
         var request = Assert.Single(pty.Requests).Request;
         Assert.Equal("--settings", request.Arguments[0]);
-        Assert.Equal(["--model", "opus", "Hello"], request.Arguments.Skip(2));
+        Assert.Equal(["--model", "opus", "--session-id", agent.SessionId!, "Hello"], request.Arguments.Skip(2));
         var token = Assert.IsType<string>(request.Environment[AgentHookEndpoint.TokenVariable]);
         Assert.DoesNotContain(request.Arguments, argument => argument.Contains(token, StringComparison.Ordinal));
     }
@@ -119,10 +200,10 @@ public class AgentLauncherTests
     {
         var pty = new RecordingPtyService();
 
-        new AgentLauncher(pty).Start(AgentDefinition.ClaudeCode, Path.GetTempPath(), PtySize.Default, "Hello");
+        var agent = new AgentLauncher(pty).Start(AgentDefinition.ClaudeCode, Path.GetTempPath(), PtySize.Default, "Hello");
 
         var request = Assert.Single(pty.Requests).Request;
-        Assert.Equal(["Hello"], request.Arguments);
+        Assert.Equal(["--session-id", agent.SessionId!, "Hello"], request.Arguments);
         Assert.Empty(request.Environment);
     }
 
@@ -135,7 +216,7 @@ public class AgentLauncherTests
 
         var agent = new AgentLauncher(pty, server).Start(AgentDefinition.ClaudeCode, Path.GetTempPath(), PtySize.Default);
 
-        Assert.Empty(Assert.Single(pty.Requests).Request.Arguments);
+        Assert.Equal(["--session-id", agent.SessionId!], Assert.Single(pty.Requests).Request.Arguments);
         Assert.Equal(AgentState.Running, agent.State);
     }
 
@@ -241,6 +322,13 @@ public class AgentLauncherTests
 
         Assert.Equal(AgentState.Exited, agent.State);
     }
+
+    private static AgentDefinition Resumable { get; } = new("Test", "agent", "-a")
+    {
+        PromptArguments = ["{prompt}"],
+        SessionIdArguments = ["--id", "{sessionId}"],
+        ResumeArguments = ["--resume", "{sessionId}"],
+    };
 
     private static Agent StartShell(string script)
     {

@@ -18,6 +18,12 @@ public sealed record AgentDefinition
     public const string PromptPlaceholder = "{prompt}";
 
     /// <summary>
+    /// The placeholder in <see cref="SessionIdArguments"/> and <see cref="ResumeArguments"/> for the Agent Session's
+    /// ID.
+    /// </summary>
+    public const string SessionIdPlaceholder = "{sessionId}";
+
+    /// <summary>
     /// Creates a definition.
     /// </summary>
     /// <param name="name">The name shown to the user, e.g. "Claude Code".</param>
@@ -73,20 +79,48 @@ public sealed record AgentDefinition
     public AgentHooks? Hooks { get; init; }
 
     /// <summary>
+    /// How TAMMi sets a new Agent Session's ID: arguments added after <see cref="Arguments"/> when the agent starts,
+    /// with <see cref="SessionIdPlaceholder"/> where the ID goes. TAMMi makes up the ID, a UUID, so it can resume the
+    /// session later. For example, <c>["--session-id", "{sessionId}"]</c>. Empty when the agent's session ID can't be
+    /// set at launch: TAMMi then gets it from the agent's hooks, if they report it (see
+    /// <see cref="AgentHooks.ReportsSessionId"/>).
+    /// </summary>
+    public IReadOnlyList<string> SessionIdArguments { get; init; } = [];
+
+    /// <summary>
+    /// How an Agent Session is resumed: arguments added after <see cref="Arguments"/> in place of
+    /// <see cref="SessionIdArguments"/> and the initial prompt, with <see cref="SessionIdPlaceholder"/> where the
+    /// session's ID goes. For example, <c>["--resume", "{sessionId}"]</c>. Empty when the agent's sessions can't be
+    /// resumed.
+    /// </summary>
+    public IReadOnlyList<string> ResumeArguments { get; init; } = [];
+
+    /// <summary>
     /// Whether the agent takes an initial prompt.
     /// </summary>
     [JsonIgnore]
     public bool AcceptsInitialPrompt => PromptArguments.Count > 0;
 
     /// <summary>
+    /// Whether TAMMi can resume the agent's sessions: it says how to resume one, and TAMMi can get a session's ID,
+    /// either by setting it at launch or from the agent's hooks.
+    /// </summary>
+    [JsonIgnore]
+    public bool CanResume =>
+        ResumeArguments.Count > 0 && (SessionIdArguments.Count > 0 || Hooks?.ReportsSessionId == true);
+
+    /// <summary>
     /// The definition for Claude Code, a Supported Agent (see <see cref="SupportedAgent.ClaudeCode"/>). The initial
     /// prompt is its positional argument, which starts an interactive session with that prompt. Its state comes from
-    /// its hooks (see <see cref="ClaudeCodeHooks"/>).
+    /// its hooks (see <see cref="ClaudeCodeHooks"/>). TAMMi sets the session's ID with <c>--session-id</c>, follows it
+    /// through the hooks, and resumes it with <c>--resume</c>.
     /// </summary>
     public static AgentDefinition ClaudeCode { get; } = new("Claude Code", "claude")
     {
         PromptArguments = [PromptPlaceholder],
         Hooks = ClaudeCodeHooks.Instance,
+        SessionIdArguments = ["--session-id", SessionIdPlaceholder],
+        ResumeArguments = ["--resume", SessionIdPlaceholder],
     };
 
     /// <summary>
@@ -95,23 +129,48 @@ public sealed record AgentDefinition
     /// <param name="initialPrompt">
     /// The initial prompt, or <c>null</c> for none. It's left out if the agent doesn't take one.
     /// </param>
+    /// <param name="sessionId">
+    /// The new Agent Session's ID, or <c>null</c> for none. It's left out if the agent's sessions can't be resumed.
+    /// </param>
     /// <returns>
-    /// <see cref="Arguments"/>, followed by <see cref="PromptArguments"/> with the prompt in place of the placeholder
-    /// when there's a prompt. Each argument is passed to the agent as-is, so the prompt needs no quoting.
+    /// <see cref="Arguments"/>, followed by <see cref="SessionIdArguments"/> with the ID in place of the placeholder
+    /// when there's an ID and the agent's sessions can be resumed, and then <see cref="PromptArguments"/> with the
+    /// prompt in place of the placeholder when there's a prompt. Each argument is passed to the agent as-is, so
+    /// neither needs quoting.
     /// </returns>
-    public IReadOnlyList<string> BuildArguments(string? initialPrompt)
+    public IReadOnlyList<string> BuildArguments(string? initialPrompt, string? sessionId = null)
     {
-        if (string.IsNullOrEmpty(initialPrompt) || !AcceptsInitialPrompt)
+        IEnumerable<string> arguments = Arguments;
+        if (!string.IsNullOrEmpty(sessionId) && CanResume)
         {
-            return Arguments;
+            arguments = arguments.Concat(Fill(SessionIdArguments, SessionIdPlaceholder, sessionId));
         }
 
-        return
-        [
-            .. Arguments,
-            .. PromptArguments.Select(argument =>
-                argument.Replace(PromptPlaceholder, initialPrompt, StringComparison.Ordinal)),
-        ];
+        if (!string.IsNullOrEmpty(initialPrompt) && AcceptsInitialPrompt)
+        {
+            arguments = arguments.Concat(Fill(PromptArguments, PromptPlaceholder, initialPrompt));
+        }
+
+        return arguments as IReadOnlyList<string> ?? arguments.ToArray();
+    }
+
+    /// <summary>
+    /// The arguments to resume an Agent Session with.
+    /// </summary>
+    /// <param name="sessionId">The session's ID.</param>
+    /// <returns>
+    /// <see cref="Arguments"/>, followed by <see cref="ResumeArguments"/> with the ID in place of the placeholder.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">The agent's sessions can't be resumed.</exception>
+    public IReadOnlyList<string> BuildResumeArguments(string sessionId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(sessionId);
+        if (!CanResume)
+        {
+            throw new InvalidOperationException($"The agent '{Name}' doesn't say how to resume its sessions.");
+        }
+
+        return [.. Arguments, .. Fill(ResumeArguments, SessionIdPlaceholder, sessionId)];
     }
 
     /// <summary>
@@ -123,6 +182,8 @@ public sealed record AgentDefinition
         Command = Command?.Trim() ?? string.Empty,
         Arguments = Arguments?.Where(argument => argument is not null).ToArray() ?? [],
         PromptArguments = PromptArguments?.Where(argument => argument is not null).ToArray() ?? [],
+        SessionIdArguments = SessionIdArguments?.Where(argument => argument is not null).ToArray() ?? [],
+        ResumeArguments = ResumeArguments?.Where(argument => argument is not null).ToArray() ?? [],
     };
 
     /// <inheritdoc />
@@ -132,10 +193,15 @@ public sealed record AgentDefinition
         && Command == other.Command
         && Equals(Hooks, other.Hooks)
         && SequenceEqual(Arguments, other.Arguments)
-        && SequenceEqual(PromptArguments, other.PromptArguments);
+        && SequenceEqual(PromptArguments, other.PromptArguments)
+        && SequenceEqual(SessionIdArguments, other.SessionIdArguments)
+        && SequenceEqual(ResumeArguments, other.ResumeArguments);
 
     /// <inheritdoc />
     public override int GetHashCode() => HashCode.Combine(Name, Command, Arguments?.Count, PromptArguments?.Count);
+
+    private static IEnumerable<string> Fill(IEnumerable<string> arguments, string placeholder, string value) =>
+        arguments.Select(argument => argument.Replace(placeholder, value, StringComparison.Ordinal));
 
     private static bool SequenceEqual(IReadOnlyList<string>? first, IReadOnlyList<string>? second) =>
         first is null || second is null ? first == second : first.SequenceEqual(second);

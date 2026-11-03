@@ -21,26 +21,32 @@ public sealed class Agent : IAsyncDisposable
     private bool _stopRequested;
     private AgentState _state = AgentState.Running;
     private int? _exitCode;
+    private string? _sessionId;
 
     /// <summary>
     /// Wraps a session that's running an agent, and starts following its process.
     /// </summary>
     /// <param name="definition">The definition the agent was started from.</param>
     /// <param name="workingDirectory">The folder the agent was started in.</param>
-    /// <param name="session">The session the agent runs in.</param>
+    /// <param name="session">The pseudoterminal session the agent runs in.</param>
     /// <param name="hooks">
     /// Where the agent's hooks send their events, or <c>null</c> if it was started without hooks. The agent takes it
     /// over, and disposes it once the process has ended.
+    /// </param>
+    /// <param name="sessionId">
+    /// The Agent Session's ID, if TAMMi set it at launch. Otherwise <c>null</c>, until the agent's hooks report one.
     /// </param>
     public Agent(
         AgentDefinition definition,
         string workingDirectory,
         IPtySession session,
-        AgentHookRegistration? hooks = null)
+        AgentHookRegistration? hooks = null,
+        string? sessionId = null)
     {
         Definition = definition ?? throw new ArgumentNullException(nameof(definition));
         WorkingDirectory = workingDirectory ?? throw new ArgumentNullException(nameof(workingDirectory));
         Session = session ?? throw new ArgumentNullException(nameof(session));
+        _sessionId = sessionId;
         if (hooks is not null && definition.Hooks is not null)
         {
             _hooks = hooks;
@@ -73,6 +79,29 @@ public sealed class Agent : IAsyncDisposable
     /// The pseudoterminal session the agent runs in.
     /// </summary>
     public IPtySession Session { get; }
+
+    /// <summary>
+    /// Raised when <see cref="SessionId"/> changes, on a background thread: when the agent's hooks first report it, or
+    /// report that the agent has moved to another session (e.g. after Claude Code's <c>/clear</c>).
+    /// </summary>
+    public event Action<Agent>? SessionIdChanged;
+
+    /// <summary>
+    /// The ID of the Agent Session the agent is running, which can be resumed with it later (see
+    /// <see cref="AgentLauncher.Resume"/>). It's <c>null</c> until it's known: TAMMi sets it at launch when the Agent
+    /// Definition says how, and the agent's hooks report it when they can. It stays <c>null</c> for agents that can't
+    /// resume sessions.
+    /// </summary>
+    public string? SessionId
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _sessionId;
+            }
+        }
+    }
 
     /// <summary>
     /// The agent's current state.
@@ -151,6 +180,28 @@ public sealed class Agent : IAsyncDisposable
         await Task.WhenAny(Ended, Task.Delay(TimeSpan.FromSeconds(1))).ConfigureAwait(false);
     }
 
+    private void UpdateSessionId(JsonElement hookEvent)
+    {
+        // Only IDs that can be resumed count, so a session that can't be resumed is never recorded.
+        if (!Definition.CanResume || Definition.Hooks?.SessionIdFrom(hookEvent) is not { } id
+            || !AgentSession.IsValidId(id))
+        {
+            return;
+        }
+
+        lock (_lock)
+        {
+            if (string.Equals(_sessionId, id, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _sessionId = id;
+        }
+
+        SessionIdChanged?.Invoke(this);
+    }
+
     private async Task FollowProcessAsync()
     {
         int? exitCode;
@@ -182,6 +233,7 @@ public sealed class Agent : IAsyncDisposable
 
     private void OnHookEvent(JsonElement hookEvent)
     {
+        UpdateSessionId(hookEvent);
         if (Definition.Hooks?.StateAfter(hookEvent) is not { } next || !next.IsRunning())
         {
             return;
