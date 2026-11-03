@@ -1,0 +1,85 @@
+@implements IDisposable
+@inject WorkspaceTabs WorkspaceTabs
+@inject NavigationManager Navigation
+
+<nav class="tab-strip" aria-label="Main">
+    <a class="tab home-tab @ActiveClass(AppRoutes.Home)" href="@AppRoutes.Home" title="Home" aria-label="Home"
+       aria-current="@AriaCurrent(AppRoutes.Home)">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M3 10.5 12 3l9 7.5" />
+            <path d="M5 9v11a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9" />
+        </svg>
+    </a>
+
+    @foreach (var tab in WorkspaceTabs.Tabs)
+    {
+        var route = AppRoutes.Workspace(tab.WorkspaceId);
+        <div class="tab workspace-tab @ActiveClass(route)" @key="tab.WorkspaceId">
+            <a class="tab-label" href="@route" title="@tab.Name" aria-current="@AriaCurrent(route)">@tab.Name</a>
+            <button type="button" class="tab-close" title="Close @tab.Name" aria-label="Close @tab.Name"
+                    @onclick="() => Close(tab)">
+                &times;
+            </button>
+        </div>
+    }
+</nav>
+
+<a class="tab settings-tab @(IsInSettings ? "active" : null)" href="@AppRoutes.Settings" title="Settings"
+   aria-label="Settings" aria-current="@(IsInSettings ? "page" : null)">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="6.5" />
+        <circle cx="12" cy="12" r="2.5" />
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" stroke-width="3" />
+    </svg>
+</a>
+
+@code {
+    private string _currentPath = AppRoutes.Home;
+
+    protected override void OnInitialized()
+    {
+        _currentPath = CurrentPath();
+        WorkspaceTabs.Changed += OnTabsChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    public void Dispose()
+    {
+        WorkspaceTabs.Changed -= OnTabsChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+
+    private void Close(WorkspaceTab tab)
+    {
+        var wasShown = IsCurrent(AppRoutes.Workspace(tab.WorkspaceId));
+        var next = WorkspaceTabs.Close(tab.WorkspaceId);
+        if (wasShown)
+        {
+            Navigation.NavigateTo(next is null ? AppRoutes.Home : AppRoutes.Workspace(next.WorkspaceId));
+        }
+    }
+
+    private bool IsInSettings =>
+        IsCurrent(AppRoutes.Settings) || _currentPath.StartsWith(AppRoutes.Settings + "/", StringComparison.Ordinal);
+
+    private bool IsCurrent(string route) => string.Equals(_currentPath, route, StringComparison.Ordinal);
+
+    private string? ActiveClass(string route) => IsCurrent(route) ? "active" : null;
+
+    private string? AriaCurrent(string route) => IsCurrent(route) ? "page" : null;
+
+    private string CurrentPath()
+    {
+        var path = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var end = path.IndexOfAny(['?', '#']);
+        return (end < 0 ? path : path[..end]).TrimEnd('/');
+    }
+
+    private void OnTabsChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _currentPath = CurrentPath();
+        InvokeAsync(StateHasChanged);
+    }
+}

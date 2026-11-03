@@ -1,22 +1,510 @@
-html,
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background-color: #f7f7f8;
-  color: #1f2328;
+/* ---------------------------------------------------------------------------------------------------------------
+   Theme. Components use these variables rather than literal colours, so the light and dark themes stay in step.
+   --------------------------------------------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: light dark;
+
+  --font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-size: 14px;
+  --font-size-small: 12px;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+
+  --radius: 6px;
+  --app-bar-height: 40px;
+  --side-panel-width: 280px;
+
+  --color-bg: #f7f7f8;
+  --color-surface: #ffffff;
+  --color-surface-hover: #eef0f2;
+  --color-chrome: #e9ebee;
+  --color-border: #d0d7de;
+  --color-text: #1f2328;
+  --color-text-muted: #656d76;
+  --color-accent: #512bd4;
+  --color-accent-text: #ffffff;
+  --color-focus: #0969da;
+  --color-error: #cf222e;
 }
 
-.page {
-  padding: 2rem;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1e1f22;
+    --color-surface: #2b2d31;
+    --color-surface-hover: #35373c;
+    --color-chrome: #17181a;
+    --color-border: #3f4147;
+    --color-text: #e6e7e9;
+    --color-text-muted: #9ba1a8;
+    --color-accent: #8a6cf0;
+    --color-accent-text: #ffffff;
+    --color-focus: #4c9aff;
+    --color-error: #ff7b72;
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+#app {
+  height: 100%;
+}
+
+h1 {
+  margin: 0 0 var(--space-4);
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 h1:focus {
   outline: none;
 }
 
-.placeholder {
-  color: #656d76;
+h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
 }
+
+a {
+  color: var(--color-accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.placeholder {
+  color: var(--color-text-muted);
+}
+
+.error {
+  color: var(--color-error);
+}
+
+/* Line icons drawn with inline SVG. They take the text colour. */
+.icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.button {
+  padding: var(--space-1) var(--space-3);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.button:hover {
+  filter: brightness(1.1);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   App shell: app bar with the tab strip, and the page below it
+   --------------------------------------------------------------------------------------------------------------- */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app-bar {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  height: var(--app-bar-height);
+  background: var(--color-chrome);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-name {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.app-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* A standard page: padded content. The Workspace View fills the whole area instead. */
+.page {
+  padding: var(--space-6);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Tab strip
+   --------------------------------------------------------------------------------------------------------------- */
+
+.tab-strip {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.tab {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding: 0 var(--space-4);
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.tab.active {
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-shadow: inset 0 2px 0 var(--color-accent);
+}
+
+.workspace-tab {
+  gap: var(--space-1);
+  padding-right: var(--space-1);
+}
+
+.tab-label {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: inherit;
+  text-decoration: none;
+}
+
+.tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tab-close:hover {
+  background: var(--color-border);
+}
+
+.home-tab,
+.settings-tab {
+  padding: 0 var(--space-3);
+}
+
+.settings-tab {
+  border-right: none;
+  border-left: 1px solid var(--color-border);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Home
+   --------------------------------------------------------------------------------------------------------------- */
+
+/* Cards fill the width, adding columns as the window grows. */
+.workspace-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workspace-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.workspace-card:hover {
+  border-color: var(--color-accent);
+}
+
+.workspace-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.workspace-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-summary {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Workspace View
+   --------------------------------------------------------------------------------------------------------------- */
+
+.workspace-view {
+  display: flex;
+  height: 100%;
+}
+
+.side-panel {
+  flex: none;
+  width: var(--side-panel-width);
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.side-panel-section {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.side-panel-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+/* Hide the default disclosure triangle (WebKit needs its own selector) and draw a chevron instead. */
+.side-panel-section-header::-webkit-details-marker {
+  display: none;
+}
+
+.side-panel-section-header::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+
+.side-panel-section[open] > .side-panel-section-header::before {
+  transform: rotate(45deg);
+}
+
+.side-panel-section-header:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.side-panel-section-body {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.side-panel-section-body p {
+  margin: 0;
+}
+
+.workspace-main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: var(--space-6);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Settings: a vertical tab list of sections, with the selected section beside it
+   --------------------------------------------------------------------------------------------------------------- */
+
+.settings {
+  display: flex;
+  height: 100%;
+}
+
+.settings-nav {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 200px;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-2);
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.settings-nav-item {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.settings-nav-item:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.settings-nav-item.active {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.settings-content {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+
+/* Read-only label and value pairs, e.g. versions on the About page. */
+.settings-values {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-6);
+  margin: 0 0 var(--space-4);
+}
+
+.settings-values dt {
+  font-weight: 600;
+}
+
+.settings-values dd {
+  margin: 0;
+}
+
+.badge {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+/* Third-party software list on the About page */
+
+.third-party-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 900px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.third-party-item {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.third-party-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.third-party-name {
+  font-weight: 600;
+}
+
+.third-party-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.license-text {
+  margin-top: var(--space-2);
+}
+
+.license-text summary {
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.license-text pre {
+  max-height: 320px;
+  overflow: auto;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Blazor error UI
+   --------------------------------------------------------------------------------------------------------------- */
 
 #blazor-error-ui {
   display: none;
@@ -25,8 +513,8 @@ h1:focus {
   left: 0;
   width: 100%;
   padding: 0.6rem 1.25rem;
-  box-sizing: border-box;
   background: lightyellow;
+  color: #1f2328;
   box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
   z-index: 1000;
 }
@@ -38,72 +526,60 @@ h1:focus {
   cursor: pointer;
 }
 
-.platform-check dl {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.25rem 1rem;
-}
+/* ---------------------------------------------------------------------------------------------------------------
+   Terminal
+   --------------------------------------------------------------------------------------------------------------- */
 
-.platform-check dt {
-  font-weight: 600;
-}
-
-.platform-check dd {
-  margin: 0;
-  font-family: ui-monospace, monospace;
-  overflow-wrap: anywhere;
-}
-
-.platform-check .error {
-  color: #cf222e;
-}
-
+/* The terminal fills this element. Its colours come from the xterm.js theme, which is dark in both app themes. */
 .terminal {
-  box-sizing: border-box;
   min-height: 0;
-  padding: 4px;
+  padding: var(--space-1);
   overflow: hidden;
+  border-radius: var(--radius);
   background-color: #1e1e1e;
 }
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Developer pages
+   --------------------------------------------------------------------------------------------------------------- */
 
 .dev-terminal {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  height: calc(100vh - 4rem);
+  gap: var(--space-3);
+  height: 100%;
+  padding: var(--space-6);
 }
 
 .dev-terminal header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1.5rem;
+  gap: var(--space-2) var(--space-6);
 }
 
 .dev-terminal h1 {
   margin: 0;
-  font-size: 1.25rem;
 }
 
 .dev-terminal form {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .dev-terminal input {
   width: 24rem;
-  margin-left: 0.25rem;
+  margin-left: var(--space-1);
   font-family: ui-monospace, monospace;
 }
 
 .dev-terminal .status {
-  color: #656d76;
+  color: var(--color-text-muted);
 }
 
 .dev-terminal .error {
   margin: 0;
-  color: #cf222e;
 }
 
 .dev-terminal-view {

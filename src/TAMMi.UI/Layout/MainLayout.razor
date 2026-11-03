@@ -1,7 +1,11 @@
 @inherits LayoutComponentBase
 
-<div class="page">
-    <main>
+<div class="app">
+    <header class="app-bar">
+        <span class="app-name">@AppInfo.Name</span>
+        <TabStrip />
+    </header>
+    <main class="app-content">
         @Body
     </main>
 </div>

@@ -21,6 +21,8 @@ env:
 jobs:
   windows:
     name: Windows
+    # Disabled because it is slow. Re-enable it under https://github.com/deosrc/TAMMi/issues/47.
+    if: false
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5

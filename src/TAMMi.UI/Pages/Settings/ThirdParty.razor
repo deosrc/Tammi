@@ -1,0 +1,68 @@
+@page "/settings/about/third-party"
+@layout SettingsLayout
+@using TAMMi.Core.Platform
+@using TAMMi.UI.About
+@inject IProcessLauncher ProcessLauncher
+
+<p><a href="@AppRoutes.About">‹ About</a></p>
+
+<h1>Third-party software</h1>
+
+<p>@AppInfo.Name uses the following third-party software.</p>
+
+<ul class="third-party-list">
+    @foreach (var component in ThirdPartySoftware.All)
+    {
+        <li class="third-party-item">
+            <div class="third-party-header">
+                <span class="third-party-name">@component.Name</span>
+                @if (component.Platforms != ThirdPartyPlatforms.All)
+                {
+                    <span class="badge">@component.Platforms</span>
+                }
+            </div>
+            <div class="placeholder">@component.Description</div>
+            <div class="third-party-links">
+                <span>License: @component.License</span>
+                <a href="@component.ProjectUrl" @onclick="() => OpenExternal(component.ProjectUrl)"
+                   @onclick:preventDefault>Website</a>
+                @if (component.LicenseUrl is { } licenseUrl)
+                {
+                    <a href="@licenseUrl" @onclick="() => OpenExternal(licenseUrl)" @onclick:preventDefault>
+                        Read the license
+                    </a>
+                }
+            </div>
+            @if (component.LicenseFile is { } licenseFile)
+            {
+                <details class="license-text">
+                    <summary>License text</summary>
+                    <pre>@ThirdPartySoftware.ReadLicense(licenseFile)</pre>
+                </details>
+            }
+        </li>
+    }
+</ul>
+
+@if (_error is not null)
+{
+    <p class="error" role="alert">@_error</p>
+}
+
+@code {
+    private string? _error;
+
+    // Links must open in the user's browser: following them would navigate the app's own window away from TAMMi.
+    private void OpenExternal(string url)
+    {
+        _error = null;
+        try
+        {
+            ProcessLauncher.Open(url);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Couldn't open {url}: {ex.Message}";
+        }
+    }
+}

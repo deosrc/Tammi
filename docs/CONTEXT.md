@@ -118,6 +118,10 @@ own branch. It is created automatically when the workspace is created:
 - A repository counts as **changed** when it has uncommitted changes (staged, unstaged or untracked)
   or unpushed commits, i.e. work that could be lost. Being **behind** the remote is shown separately,
   for information, and doesn't count as changed.
+  - **Unpushed commits** are commits on HEAD that aren't on any remote-tracking branch. This doesn't depend on
+    the upstream, so it works for new workspace branches (which track the base branch, or nothing) and for
+    submodules (which usually have a detached HEAD). A repository with no remotes has no unpushed commits.
+  - Changes and unpushed commits inside a submodule make its parent repository changed too.
 - **Keeping git status current:**
   - Workspaces open in a tab watch their worktrees for file changes and update live.
   - Other workspaces refresh when Home is shown, and on a timer (interval in Settings).
@@ -142,14 +146,19 @@ own branch. It is created automatically when the workspace is created:
 
 ### Settings
 
-- Default Workspace Parent Folder
-- Monitored Folder(s)
-- Integrations (credentials, configuration)
-- Manually added local repositories
-- Tools: the external tools offered under "Open in…"
-- Status refresh interval for workspaces that aren't open
-- Terminal shell: executable and arguments (defaults to the platform shell)
-- Agents: the Agent Definitions available to start, and the initial prompt template
+Settings are grouped into sections, listed in a vertical tab list down the left of the screen:
+
+- **General**
+  - Default Workspace Parent Folder
+  - Monitored Folder(s)
+  - Manually added local repositories
+  - Status refresh interval for workspaces that aren't open
+  - Terminal shell: executable and arguments (defaults to the platform shell)
+- **Integrations:** credentials and configuration
+- **Git:** the versions of the git CLI and of libgit2 (used through LibGit2Sharp) that TAMMi uses
+- **Agents:** the Agent Definitions available to start, and the initial prompt template
+- **Tools:** the external tools offered under "Open in…"
+- **About:** the TAMMi version, and the git CLI and libgit2 versions
 
 ## Git
 

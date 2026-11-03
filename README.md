@@ -53,5 +53,5 @@ solution filter, including the Windows host, so on Linux run it against the test
 
 ### Developer pages
 
-Home links to pages for trying parts of the app on their own, such as **Terminal**, which runs the platform's default
+Settings → About links to pages for trying parts of the app on their own, such as **Terminal**, which runs the platform's default
 shell in the embedded terminal.

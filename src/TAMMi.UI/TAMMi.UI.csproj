@@ -13,6 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Third-party license texts, shown on the About page's third-party software list. -->
+    <EmbeddedResource Include="Licenses\*.txt" LogicalName="TAMMi.UI.Licenses.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\TAMMi.Core\TAMMi.Core.csproj" />
   </ItemGroup>
 
