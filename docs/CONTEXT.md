@@ -56,6 +56,13 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 Workspaces never hold full clones. Each repository in a workspace is a worktree of a Local Repository,
 so several workspaces can work on the same repository at once without cloning it again.
 
+**Branches.** Git won't check out one branch in two worktrees, so each Workspace Worktree gets its
+own branch. It is created automatically when the workspace is created:
+- TAMMi suggests a branch name from the task, e.g. `<task-key>-<slug>`. When there are several tasks,
+  it uses the workspace name instead.
+- The user can edit the suggested name before the workspace is created.
+- The same branch name is used in every repository in the workspace.
+
 ## Main Screens
 
 ### Home
@@ -101,7 +108,6 @@ so several workspaces can work on the same repository at once without cloning it
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Workspace on disk
-- Is a branch created automatically for each task? If so, what naming convention (e.g. `<task-key>-<slug>`)? A worktree needs a branch that isn't checked out in another worktree, so every Workspace Worktree needs its own branch (or a detached HEAD).
 - What base does a new worktree branch start from: the default branch of the remote (after a fetch), or the Local Repository's current HEAD?
 - What is a worktree's folder name inside the workspace: the repository name? How are name clashes handled (e.g. two repositories called `api` from different owners)?
 - Where is workspace metadata stored: inside the workspace folder (e.g. `.tammi/`), in central app data, or both?
