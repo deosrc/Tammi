@@ -118,6 +118,10 @@ own branch. It is created automatically when the workspace is created:
 - A repository counts as **changed** when it has uncommitted changes (staged, unstaged or untracked)
   or unpushed commits, i.e. work that could be lost. Being **behind** the remote is shown separately,
   for information, and doesn't count as changed.
+  - **Unpushed commits** are commits on HEAD that aren't on any remote-tracking branch. This doesn't depend on
+    the upstream, so it works for new workspace branches (which track the base branch, or nothing) and for
+    submodules (which usually have a detached HEAD). A repository with no remotes has no unpushed commits.
+  - Changes and unpushed commits inside a submodule make its parent repository changed too.
 - **Keeping git status current:**
   - Workspaces open in a tab watch their worktrees for file changes and update live.
   - Other workspaces refresh when Home is shown, and on a timer (interval in Settings).
