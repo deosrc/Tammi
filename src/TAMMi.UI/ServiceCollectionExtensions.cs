@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using TAMMi.Core.Git;
+using TAMMi.Core.Integrations;
 using TAMMi.Core.Workspaces;
 
 namespace TAMMi.UI;
@@ -15,6 +16,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<WorkspaceTabs>();
         services.AddSingleton<IGitCli>(_ => new GitCli());
         services.AddSingleton<IGitRepositoryReader, GitRepositoryReader>();
+        services.AddSingleton<IntegrationRegistry>();
         return services;
     }
 }

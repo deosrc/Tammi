@@ -235,6 +235,13 @@ are left to other tools for now.
   data paths) are reached through interfaces in shared code, with an implementation for each host.
 - **App data** lives in `%LOCALAPPDATA%\TAMMi\{Config,Data,Cache}` on Windows, and in the XDG base
   directories on Linux (`~/.config/tammi`, `~/.local/share/tammi`, `~/.cache/tammi` by default).
+- **Credentials** for integrations live in the platform secret store, never in settings or data files:
+  - **Windows:** Windows Credential Manager, as generic credentials named `TAMMi:<key>`, saved for the local
+    machine only.
+  - **Linux:** the Secret Service (e.g. GNOME Keyring or KWallet), through libsecret. libsecret is a system
+    library and isn't shipped with TAMMi. When libsecret is missing or no Secret Service is running, TAMMi
+    shows an error saying how to install one, and integrations can't be authenticated.
+  - Each integration has one secret. Values that aren't secret (e.g. a JIRA site URL or user name) are settings.
 - Web-based UI components (e.g. xterm.js for the terminal) can be used inside the Blazor UI.
 - **Git access is hybrid:**
   - **LibGit2Sharp** for fast in-process reads: status, the git graph and history.
