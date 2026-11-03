@@ -519,6 +519,11 @@ a {
   opacity: 0.6;
 }
 
+.settings-field input.invalid {
+  border-color: var(--color-error);
+}
+
+.settings-field .error,
 .settings-field .warning {
   margin: var(--space-1) 0 0;
   font-size: var(--font-size-small);

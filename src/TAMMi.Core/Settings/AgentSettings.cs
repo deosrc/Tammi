@@ -34,6 +34,26 @@ public sealed record AgentSettings
             : InitialPromptTemplate,
     };
 
+    /// <summary>
+    /// Whether the definition at <paramref name="index"/> in <see cref="Definitions"/> has the same name as another
+    /// one, so the user can't tell them apart. Names match when they're the same apart from case and surrounding
+    /// spaces. Blank names don't match anything.
+    /// </summary>
+    public bool HasDuplicateName(int index)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, Definitions.Count);
+
+        var name = Definitions[index].Name?.Trim();
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        return Definitions.Where((_, i) => i != index)
+            .Any(other => string.Equals(other.Name?.Trim(), name, StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <inheritdoc />
     public bool Equals(AgentSettings? other) =>
         other is not null

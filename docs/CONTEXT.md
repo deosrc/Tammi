@@ -177,7 +177,8 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 - **Agents**
   - The Agent Definitions available to start, in the order they're offered. The built-in definitions (Claude Code)
     are there until the user changes the list. The user can add, edit, reorder and remove definitions, including the
-    built-in ones, and add a built-in definition back.
+    built-in ones, and add a built-in definition back. Each definition needs its own name, ignoring case and
+    surrounding spaces. A name that's already used is still saved, but shown as an error until it's changed.
   - The initial prompt template. Clearing it restores the default.
 - **Tools**
   - The external tools offered under "Open in…"

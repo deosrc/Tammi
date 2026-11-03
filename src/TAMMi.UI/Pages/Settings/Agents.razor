@@ -38,8 +38,18 @@
                 <div class="settings-field">
                     <label for="agent-@index-name">Name</label>
                     <input id="agent-@index-name"
+                           class="@(Current.HasDuplicateName(index) ? "invalid" : null)"
                            value="@definition.Name"
+                           aria-invalid="@(Current.HasDuplicateName(index) ? "true" : null)"
+                           aria-describedby="@(Current.HasDuplicateName(index) ? $"agent-{index}-name-error" : null)"
                            @onchange="e => UpdateDefinitionAsync(index, d => d with { Name = Text(e) })" />
+                    @if (Current.HasDuplicateName(index))
+                    {
+                        <p id="agent-@index-name-error" class="error">
+                            Another Agent Definition is called "@definition.Name.Trim()". Give each one its own name, so
+                            you can tell them apart.
+                        </p>
+                    }
                 </div>
 
                 <div class="settings-field">
