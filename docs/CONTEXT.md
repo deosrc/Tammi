@@ -34,6 +34,8 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
 | **Agent Definition** | A configured agent CLI (e.g. Claude Code) that TAMMi can start: name, command, arguments, how to pass the initial prompt, and how to resume a session. |
+| **Supported Agent** | An agent CLI that TAMMi knows how to start, with a built-in Agent Definition (e.g. Claude Code). It's always offered and isn't configured by the user. |
+| **Custom Agent** | An agent CLI the user sets up with their own Agent Definition (e.g. Codex CLI or Gemini CLI). |
 | **Open in…** | Actions that open the workspace or a repository in an external tool (IDE, terminal, file manager, …). |
 
 ## Core Flow: Creating a Workspace
@@ -186,10 +188,24 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
   - Manually added local repositories
   - Status refresh interval for workspaces that aren't open (whole minutes from 1 to 1440, default 5)
   - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that TAMMi uses
-- **Agents:** the Agent Definitions available to start, and the initial prompt template
+- **Agents**
+  - **Supported Agents** are always listed, and can't be edited or removed. Each one shows whether its CLI is ready:
+    TAMMi finds the command and runs it to get its version (e.g. `claude --version`). If that fails, it says why
+    (not found, failed with an error, or didn't finish) and links to the agent's install guide. The user can check
+    again after installing it.
+  - **Custom Agents** are added, edited, reordered and removed by the user. Each one has a name, command, arguments
+    and initial prompt arguments, and shows the command line it starts with. Each agent needs its own name, ignoring
+    case and surrounding spaces, including the Supported Agents' names. A name that's already used is still saved,
+    but shown as an error until it's changed.
+  - Agents are offered in that order: the Supported Agents, then the Custom Agents.
+  - The initial prompt template. Clearing it restores the default.
 - **Tools**
   - The external tools offered under "Open in…"
-  - Terminal shell: executable and arguments (defaults to the platform shell)
+  - Terminal shell: executable and arguments. Leaving the executable empty uses the platform shell, with its own
+    arguments. Changes apply to terminals started afterwards.
+
+Lists of arguments (for the terminal shell and Custom Agents) are edited one argument per line, so they need no
+quoting. Blank lines are ignored.
 - **About:** the TAMMi version, and the git CLI and libgit2 versions
 
 Changes are saved as soon as they're made. The settings live in `settings.json` in the app's Config folder (see
@@ -230,8 +246,8 @@ are left to other tools for now.
 
 - Agents run as **CLI processes inside the embedded terminal component**. The user interacts with them
   through the terminal, just as they would outside TAMMi.
-- Agents are **pluggable**. Each Agent Definition has a name, a command and arguments, and is configured
-  much like an "Open in…" tool.
+- Agents are **pluggable**. Each Agent Definition has a name, a command and arguments. Supported Agents have
+  built-in definitions; Custom Agents are configured much like an "Open in…" tool.
 - **Working directory:** an agent starts in the Workspace Folder by default, so it can see and change
   every repository. The user can start it in a single Workspace Worktree instead.
 - **Task context:** TAMMi writes the workspace's task details (title, description, links) to a markdown
@@ -240,16 +256,17 @@ are left to other tools for now.
   placeholder for the context file's path. Each Agent Definition says how the prompt is passed to its CLI.
   - The template's placeholder is `{contextFile}`, replaced with the file's full path. The rest of the template is
     sent as it is.
-  - An Agent Definition passes the prompt with **prompt arguments**: arguments added after its own, with `{prompt}`
-    where the prompt goes (e.g. `{prompt}` as a positional argument, or `--prompt {prompt}`). A definition without
-    prompt arguments doesn't take an initial prompt, and starts without one. Claude Code takes it as its positional
-    argument.
+  - An Agent Definition has two lists of arguments. Its **arguments** are passed every time it starts. Its
+    **initial prompt arguments** are added after them only when there's a prompt to send, with `{prompt}` where the
+    prompt goes: `{prompt}` alone passes it as a positional argument, and `--prompt` then `{prompt}` as an option's
+    value, so the option is left out with the prompt. A definition without initial prompt arguments doesn't take an
+    initial prompt, and starts without one. Claude Code takes it as its positional argument.
   - The prompt is always passed as one argument, exactly as written. On Windows, a CLI that's a batch file (e.g.
     `claude.cmd`, installed with npm) runs through `cmd.exe`, so TAMMi also escapes `cmd.exe`'s special characters.
     `cmd.exe` can't pass on line breaks, so a template with several lines can't be sent to a batch file: starting
     the agent fails and says why. The default template is a single line.
-- **Claude Code** is the first built-in Agent Definition. Others (e.g. Codex CLI, Gemini CLI) can be
-  added as definitions.
+- **Claude Code** is the first Supported Agent. Others (e.g. Codex CLI, Gemini CLI) can be added as Custom Agents,
+  and may become Supported Agents later.
 - **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or
   status events (e.g. Claude Code hooks), TAMMi uses them for richer states. In keeping with the
   principles, hooks are supplied when TAMMi launches the agent (e.g. through CLI arguments), never by

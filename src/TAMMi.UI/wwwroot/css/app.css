@@ -31,7 +31,9 @@
   --color-focus: #0969da;
   --color-error: #cf222e;
   --color-success: #1a7f37;
+  --color-success-bg: #dafbe1;
   --color-warning: #9a6700;
+  --color-error-bg: #ffebe9;
   --color-jira: #0052cc;
 }
 
@@ -49,7 +51,9 @@
     --color-focus: #4c9aff;
     --color-error: #ff7b72;
     --color-success: #3fb950;
+    --color-success-bg: #12261e;
     --color-warning: #d29922;
+    --color-error-bg: #2d1416;
     --color-jira: #4c9aff;
   }
 }
@@ -114,6 +118,10 @@ a {
   color: var(--color-error);
 }
 
+.warning {
+  color: var(--color-warning);
+}
+
 /* Line icons drawn with inline SVG. They take the text colour. */
 .icon {
   width: 18px;
@@ -152,7 +160,7 @@ a {
   color: var(--color-text);
 }
 
-.button-secondary:hover {
+.button-secondary:hover:not(:disabled) {
   background: var(--color-surface-hover);
   filter: none;
 }
@@ -487,7 +495,8 @@ a {
   gap: var(--space-2);
 }
 
-.settings-field input {
+.settings-field input,
+.settings-field textarea {
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -504,6 +513,101 @@ a {
 
 .settings-number {
   width: 6rem;
+}
+
+/* Fields that fill the form's width, e.g. one argument on each line. */
+.settings-arguments,
+.settings-template {
+  display: block;
+  width: 100%;
+  resize: vertical;
+}
+
+.settings-arguments {
+  font-family: ui-monospace, monospace;
+}
+
+.settings-field textarea:disabled,
+.settings-field input:disabled {
+  opacity: 0.6;
+}
+
+.settings-field input.invalid {
+  border-color: var(--color-error);
+}
+
+.settings-field .error,
+.settings-field .warning {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-small);
+}
+
+/* A later heading in a settings section, e.g. Initial prompt below Agent Definitions. */
+.settings-content * + h2 {
+  margin-top: var(--space-6);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-6);
+}
+
+/* Agent Definitions on the Agents page: each one is a card, with its fields below its name. */
+.agent-definition-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 720px;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.agent-definition {
+  padding: var(--space-3) var(--space-4) 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.agent-definition .settings-form {
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.agent-definition-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+/* A Supported Agent's details, and a Custom Agent's command previews. */
+.agent-status,
+.agent-command-preview {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-small);
+}
+
+.agent-status dd,
+.agent-command-preview dd {
+  overflow-wrap: anywhere;
+}
+
+.agent-definition > .error,
+.agent-definition > p {
+  margin: 0 0 var(--space-3);
+}
+
+.agent-definition-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-text {
@@ -547,6 +651,24 @@ a {
   border-radius: 999px;
   font-size: var(--font-size-small);
   color: var(--color-text-muted);
+}
+
+/* Status badges, e.g. whether a Supported Agent is ready. They come after .badge so they override its colours. */
+.badge-success,
+.badge-error {
+  font-weight: 600;
+}
+
+.badge-success {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge-error {
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
+  color: var(--color-error);
 }
 
 /* Integrations section of Settings */

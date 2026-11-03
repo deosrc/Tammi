@@ -30,6 +30,11 @@ public sealed record AppSettings
     public AgentSettings Agents { get; init; } = new();
 
     /// <summary>
+    /// The Tools section.
+    /// </summary>
+    public ToolSettings Tools { get; init; } = new();
+
+    /// <summary>
     /// Replaces missing and out-of-range values with valid ones.
     /// </summary>
     public AppSettings Normalize() => this with
@@ -38,5 +43,6 @@ public sealed record AppSettings
         Git = (Git ?? new GitSettings()).Normalize(),
         Integrations = (Integrations ?? new IntegrationsSettings()).Normalize(),
         Agents = (Agents ?? new AgentSettings()).Normalize(),
+        Tools = (Tools ?? new ToolSettings()).Normalize(),
     };
 }

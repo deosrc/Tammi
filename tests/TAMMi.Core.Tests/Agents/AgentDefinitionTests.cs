@@ -77,4 +77,16 @@ public class AgentDefinitionTests
         Assert.True(AgentDefinition.ClaudeCode.AcceptsInitialPrompt);
         Assert.Equal(["Read tasks.md"], AgentDefinition.ClaudeCode.BuildArguments("Read tasks.md"));
     }
+
+    [Fact]
+    public void Equals_ComparesArgumentsByValue()
+    {
+        var definition = new AgentDefinition("Test", "agent", "-a") { PromptArguments = ["{prompt}"] };
+
+        Assert.Equal(definition, new AgentDefinition("Test", "agent", ["-a"]) { PromptArguments = ["{prompt}"] });
+        Assert.Equal(definition.GetHashCode(), new AgentDefinition("Test", "agent", "-a") { PromptArguments = ["{prompt}"] }.GetHashCode());
+        Assert.NotEqual(definition, definition with { Arguments = ["-b"] });
+        Assert.NotEqual(definition, definition with { PromptArguments = [] });
+        Assert.NotEqual(definition, definition with { Command = "other" });
+    }
 }
