@@ -132,6 +132,8 @@ own branch. It is created automatically when the workspace is created:
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
 - **Terminals**: any number of embedded terminals, shown as tabs alongside agent sessions. A new
   terminal opens in the workspace folder by default, or the user can open one in a specific repository.
+  The shell defaults to PowerShell on Windows (`pwsh` if installed) and `$SHELL` on Linux, and can be
+  changed in Settings.
 
 ### Settings
 
@@ -141,6 +143,7 @@ own branch. It is created automatically when the workspace is created:
 - Manually added local repositories
 - Tools: the external tools offered under "Open in…"
 - Status refresh interval for workspaces that aren't open
+- Terminal shell: executable and arguments (defaults to the platform shell)
 - Agents: the Agent Definitions available to start, and the initial prompt template
 
 ## Agents
@@ -192,7 +195,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Terminal
-- Which shell is used: the platform default (PowerShell on Windows, `$SHELL` on Linux), or a setting?
 - Do terminal sessions persist when a workspace tab is closed and reopened, or across app restarts?
 
 ### Open in… / Tools
