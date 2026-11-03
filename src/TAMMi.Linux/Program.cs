@@ -1,8 +1,11 @@
+using System.Runtime.Versioning;
 using Microsoft.Extensions.FileProviders;
 using Photino.Blazor;
 using TAMMi.Core;
 using TAMMi.Linux.PlatformServices;
 using TAMMi.UI;
+
+[assembly: SupportedOSPlatform("linux")]
 
 namespace TAMMi.Linux;
 

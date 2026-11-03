@@ -141,6 +141,8 @@ own branch. It is created automatically when the workspace is created:
   terminal opens in the workspace folder by default, or the user can open one in a specific repository.
   The shell defaults to PowerShell on Windows (`pwsh` if installed) and `$SHELL` on Linux, and can be
   changed in Settings.
+  - **Copy and paste:** Ctrl+Shift+C and Ctrl+Shift+V on every platform. On Windows, as in Windows Terminal,
+    Ctrl+C also copies when text is selected (otherwise it interrupts the process) and Ctrl+V pastes.
 
 ### Settings
 
@@ -210,10 +212,12 @@ are left to other tools for now.
   | Needs input | The agent is waiting on the user (e.g. a question or permission prompt) | Yes |
   | Idle | The agent has finished its turn | Yes |
   | Running | The process is running, but finer detail isn't available | No |
-  | Exited | The process ended normally | No |
-  | Error | The process crashed or exited with a non-zero code | No |
+  | Exited | The process ended normally, or the user stopped it | No |
+  | Error | The process crashed, was killed by something other than TAMMi, or exited with a non-zero code | No |
 
   Agents with hooks use Working / Needs input / Idle while running. Agents without hooks show Running.
+  Stopping an agent hangs up its terminal and kills the process if it doesn't exit, so the exit code it then
+  gets doesn't mean it failed: a stopped agent is Exited, whatever its exit code.
 - **Lifetime:**
   - Closing a workspace tab doesn't stop its terminals or agents. They keep running in the background,
     their status still shows on Home, and reopening the tab reattaches to them.
@@ -248,8 +252,13 @@ are left to other tools for now.
   - **The `git` CLI** for writes (fetch, pull, push, stage, commit) and for worktree and submodule
     operations. This keeps full compatibility with the user's git config, credential helpers and hooks.
   - A `git` install is therefore required.
-- The embedded terminal (used for both the Terminal and Agents) needs a PTY (ConPTY on Windows,
-  `forkpty` on Linux) behind the platform service interfaces, with xterm.js as the renderer.
+- The embedded terminal (used for both the Terminal and Agents) needs a PTY behind the platform service
+  interfaces, with xterm.js as the renderer:
+  - **Windows:** ConPTY (Windows 10 1809 or later).
+  - **Linux:** a `/dev/ptmx` pseudoterminal. The process is started with `posix_spawn` rather than `forkpty`,
+    because a .NET process can't safely run code in a forked child before `exec`. `posix_spawn` starts the new
+    session and opens the terminal without any code in the child. This needs glibc 2.29 or later.
+  - xterm.js is vendored in the UI library (`wwwroot/lib/xterm`), so the app needs no network access or npm build.
 
 ## Open Questions
 

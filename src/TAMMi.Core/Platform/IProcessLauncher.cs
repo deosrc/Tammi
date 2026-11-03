@@ -4,7 +4,7 @@ namespace TAMMi.Core.Platform;
 /// Starts external processes: command-line tools such as <c>git</c>, and desktop tools for "Open in…".
 /// </summary>
 /// <remarks>
-/// Agents and terminals don't use this service, because they need a PTY.
+/// Agents and terminals don't use this service, because they need a PTY. They use <see cref="IPtyService"/>.
 /// </remarks>
 public interface IProcessLauncher
 {

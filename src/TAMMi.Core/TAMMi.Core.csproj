@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <!-- For the source-generated P/Invoke into the platform secret stores. -->
+    <!-- The pseudoterminal services and the platform secret stores call native APIs with pointers. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 

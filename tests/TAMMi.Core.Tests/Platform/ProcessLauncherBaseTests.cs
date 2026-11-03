@@ -70,16 +70,4 @@ public class ProcessLauncherBaseTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => _launcher.RunAsync(new ProcessRequest("git", "--version"), cancellation.Token));
     }
-
-    private sealed class TestProcessLauncher : ProcessLauncherBase
-    {
-        private readonly ExecutableResolver _resolver = new(
-            Environment.GetEnvironmentVariable("PATH"),
-            OperatingSystem.IsWindows() ? [".exe"] : [""],
-            File.Exists);
-
-        public override string? FindExecutable(string name) => _resolver.Resolve(name);
-
-        public override void Open(string target) => throw new NotSupportedException();
-    }
 }

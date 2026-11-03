@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using TAMMi.Core.Credentials;
 using TAMMi.Core.Platform;
+using TAMMi.Core.Platform.Pty;
 
 namespace TAMMi.Windows.PlatformServices;
 
@@ -17,6 +18,7 @@ internal static class PlatformServiceCollectionExtensions
         services.AddSingleton<IFileSystemWatchService, FileSystemWatchService>();
         services.AddSingleton<ICredentialStore, WindowsCredentialStore>();
         services.AddSingleton<IFolderPicker, WindowsFolderPicker>();
+        services.AddSingleton<IPtyService, WindowsPtyService>();
         return services;
     }
 }
