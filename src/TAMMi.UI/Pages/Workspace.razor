@@ -11,20 +11,18 @@
 }
 else
 {
-    <div class="workspace-view">
+    @* Keyed by workspace, so switching tabs doesn't carry one workspace's collapsed sections over to another. *@
+    <div class="workspace-view" @key="_tab.WorkspaceId">
         <aside class="side-panel">
-            <section>
-                <h2>Agents</h2>
+            <SidePanelSection Title="Agents">
                 <p class="placeholder">No agents running.</p>
-            </section>
-            <section>
-                <h2>Repositories</h2>
+            </SidePanelSection>
+            <SidePanelSection Title="Repositories">
                 <p class="placeholder">Git status will appear here.</p>
-            </section>
-            <section>
-                <h2>Open in…</h2>
+            </SidePanelSection>
+            <SidePanelSection Title="Open in…">
                 <p class="placeholder">Tools will appear here.</p>
-            </section>
+            </SidePanelSection>
         </aside>
         <div class="workspace-main">
             <h1>@_tab.Name</h1>

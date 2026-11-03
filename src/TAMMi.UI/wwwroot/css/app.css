@@ -291,16 +291,58 @@ a {
   flex: none;
   width: var(--side-panel-width);
   overflow-y: auto;
-  padding: var(--space-4);
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
-.side-panel section + section {
-  margin-top: var(--space-6);
+.side-panel-section {
+  border-bottom: 1px solid var(--color-border);
 }
 
-.side-panel p {
+.side-panel-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+/* Hide the default disclosure triangle (WebKit needs its own selector) and draw a chevron instead. */
+.side-panel-section-header::-webkit-details-marker {
+  display: none;
+}
+
+.side-panel-section-header::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+
+.side-panel-section[open] > .side-panel-section-header::before {
+  transform: rotate(45deg);
+}
+
+.side-panel-section-header:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.side-panel-section-body {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.side-panel-section-body p {
   margin: 0;
 }
 

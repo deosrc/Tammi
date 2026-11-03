@@ -1,0 +1,16 @@
+@* A collapsible section of the Workspace View's side panel. Sections start expanded. *@
+
+<details class="side-panel-section" open>
+    <summary class="side-panel-section-header">@Title</summary>
+    <div class="side-panel-section-body">
+        @ChildContent
+    </div>
+</details>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}
