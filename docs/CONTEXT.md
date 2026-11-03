@@ -82,8 +82,18 @@ or clone the repository again. `git worktree repair` doesn't fix the worktree's 
 git data are relative paths, so TAMMi relinks them itself. Moving a Workspace Folder breaks its worktrees in the
 same way, and is repaired the same way.
 
-**Metadata.** Each workspace describes itself in its `.tammi/` folder. The app's data folder keeps only
-an index of known workspace paths, which Home uses to list workspaces.
+**Metadata.** Each workspace describes itself in `.tammi/workspace.json`: an ID that never changes, its name, its
+tasks (source and key) and, for each repository, the worktree's folder name, the Local Repository's path, the branch
+and the base it was created from. The file doesn't hold the Workspace Folder's own path, so a moved workspace still
+reads correctly. The app's data folder keeps only an index of known workspaces (`workspaces.json`: each one's ID,
+name and folder), which Home uses to list workspaces.
+- Both files are versioned and migrated like `settings.json`.
+- A workspace whose folder or metadata is missing (moved or deleted) is still listed, by its last known name. If it was
+  moved, the user can add it again from its new folder, which updates its index entry. A workspace whose metadata
+  can't be read is listed as unreadable.
+- If the index can't be read, no workspaces are listed and TAMMi keeps a copy of it as `workspaces.invalid.json`.
+- A repository's folder name must be a single folder name, never a path, so nothing TAMMi does to a worktree can reach
+  outside the Workspace Folder.
 
 **Folder names.** A Workspace Worktree's folder defaults to the repository name (e.g. `api`). If two
 repositories in the workspace have the same name, TAMMi prefixes the owner (e.g. `acme-api`). The user
