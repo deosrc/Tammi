@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Photino.Blazor;
+using TAMMi.Core.Credentials;
 using TAMMi.Core.Platform;
 using TAMMi.Core.Platform.Pty;
 
@@ -16,6 +17,7 @@ internal static class PlatformServiceCollectionExtensions
         services.AddSingleton<IAppPaths, XdgAppPaths>();
         services.AddSingleton<IProcessLauncher, LinuxProcessLauncher>();
         services.AddSingleton<IFileSystemWatchService, FileSystemWatchService>();
+        services.AddSingleton<ICredentialStore, LibSecretCredentialStore>();
         services.AddSingleton<IPtyService, LinuxPtyService>();
         services.AddSingleton<IFolderPicker>(provider =>
             new PhotinoFolderPicker(provider.GetRequiredService<PhotinoBlazorApp>().MainWindow));
