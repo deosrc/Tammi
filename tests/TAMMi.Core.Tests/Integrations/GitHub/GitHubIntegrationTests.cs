@@ -1,0 +1,478 @@
+using System.Net;
+using System.Text.Json.Nodes;
+using Microsoft.Extensions.Time.Testing;
+using TAMMi.Core.Integrations;
+using TAMMi.Core.Integrations.GitHub;
+using TAMMi.Core.Tests.Credentials;
+
+namespace TAMMi.Core.Tests.Integrations.GitHub;
+
+public class GitHubIntegrationTests : IDisposable
+{
+    private const string Token = "github_pat_test";
+
+    private static readonly string DefaultSearchPath = SearchPath(
+        "is:issue is:open assignee:@me archived:false", sort: "&sort=updated&order=desc");
+
+    private readonly InMemoryCredentialStore _store = new();
+    private readonly FakeGitHubApi _api = new();
+    private readonly HttpClient _httpClient;
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 11, 3, 12, 0, 0, TimeSpan.Zero));
+
+    public GitHubIntegrationTests()
+    {
+        _httpClient = new HttpClient(_api);
+    }
+
+    private static CancellationToken CancellationToken => TestContext.Current.CancellationToken;
+
+    public void Dispose()
+    {
+        _httpClient.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    [Fact]
+    public async Task Requests_AreAuthenticatedWithTheStoredToken()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("user", FakeGitHubApi.Recorded("user.json"));
+
+        GitHubUser user = await github.GetAuthenticatedUserAsync(CancellationToken);
+
+        Assert.Equal("deosrc", user.Login);
+        RecordedRequest request = Assert.Single(_api.Requests);
+        Assert.Equal(HttpMethod.Get, request.Method);
+        Assert.Equal($"Bearer {Token}", request.Authorization);
+        Assert.Equal("application/vnd.github+json", request.Headers["Accept"]);
+        Assert.Equal("2022-11-28", request.Headers["X-GitHub-Api-Version"]);
+        Assert.StartsWith("TAMMi/", request.Headers["User-Agent"]);
+    }
+
+    [Fact]
+    public async Task Credentials_AreStoredUnderTheIntegrationId()
+    {
+        GitHubIntegration github = Create(new GitHubIntegrationOptions { Id = "github-work" });
+
+        await github.Credentials.SaveAsync(Token, CancellationToken);
+
+        Assert.Equal("github-work", github.Id);
+        Assert.Equal(Token, _store.Secrets["integration:github-work"]);
+    }
+
+    [Fact]
+    public async Task Calls_ThrowAuthenticationException_WithoutSendingARequest_WhenNotAuthenticated()
+    {
+        GitHubIntegration github = Create();
+
+        var exception = await Assert.ThrowsAsync<IntegrationAuthenticationException>(
+            () => github.SearchTasksAsync(null, CancellationToken));
+
+        Assert.Equal("github", exception.IntegrationId);
+        Assert.Empty(_api.Requests);
+    }
+
+    [Fact]
+    public async Task Calls_ThrowAuthenticationException_WhenTheTokenIsRejected()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("user/repos?sort=full_name&per_page=100",
+            """{"message":"Bad credentials","documentation_url":"https://docs.github.com/rest","status":"401"}""",
+            HttpStatusCode.Unauthorized);
+
+        var exception = await Assert.ThrowsAsync<IntegrationAuthenticationException>(
+            () => github.GetRepositoriesAsync(CancellationToken));
+
+        Assert.Equal("github", exception.IntegrationId);
+        Assert.Contains("Settings", exception.Message);
+    }
+
+    [Fact]
+    public async Task SearchTasksAsync_ListsTheUsersOpenIssues_WhenThereIsNoQuery()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond(DefaultSearchPath, FakeGitHubApi.Recorded("search.json"));
+
+        IReadOnlyList<TaskInfo> tasks = await github.SearchTasksAsync(null, CancellationToken);
+
+        Assert.Equal(["deosrc/Condement#1", "deosrc/Condement#2", "deosrc/Condement#3"], tasks.Select(t => t.Key));
+        RecordedRequest request = Assert.Single(_api.Requests);
+        Assert.Equal("is:issue is:open assignee:@me archived:false", request.Query("q"));
+        Assert.Equal("updated", request.Query("sort"));
+    }
+
+    [Fact]
+    public async Task SearchTasksAsync_ReadsIssuesAsTasks()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond(DefaultSearchPath, FakeGitHubApi.Recorded("search.json"));
+
+        IReadOnlyList<TaskInfo> tasks = await github.SearchTasksAsync("", CancellationToken);
+
+        TaskInfo task = tasks[2];
+        Assert.Equal(new TaskReference("github", "deosrc/Condement#3"), task.Reference);
+        Assert.Equal("Add Remote Desktop support", task.Title);
+        Assert.Equal(new Uri("https://github.com/deosrc/Condement/issues/3"), task.Url);
+        Assert.StartsWith("Using remote desktop should avoid", task.Description);
+        Assert.Null(tasks[0].Description);
+    }
+
+    [Fact]
+    public async Task SearchTasksAsync_SearchesIssuesWithTheQuery()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond(SearchPath("is:issue repo:deosrc/Condement label:bug"), FakeGitHubApi.Recorded("search.json"));
+
+        IReadOnlyList<TaskInfo> tasks = await github.SearchTasksAsync(
+            "  repo:deosrc/Condement label:bug ", CancellationToken);
+
+        Assert.Equal(3, tasks.Count);
+        RecordedRequest request = Assert.Single(_api.Requests);
+        Assert.Equal("is:issue repo:deosrc/Condement label:bug", request.Query("q"));
+        Assert.Null(request.Query("sort"));
+    }
+
+    [Fact]
+    public async Task SearchTasksAsync_LeavesOutPullRequests()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        var results = new JsonObject
+        {
+            ["total_count"] = 2,
+            ["incomplete_results"] = false,
+            ["items"] = new JsonArray(
+                JsonNode.Parse(FakeGitHubApi.Recorded("pull-request.json")),
+                JsonNode.Parse(FakeGitHubApi.Recorded("issue.json"))),
+        };
+        _api.Respond(DefaultSearchPath, results.ToJsonString());
+
+        IReadOnlyList<TaskInfo> tasks = await github.SearchTasksAsync(null, CancellationToken);
+
+        Assert.Equal(["deosrc/Condement#3"], tasks.Select(task => task.Key));
+    }
+
+    [Fact]
+    public async Task SearchTasksAsync_FollowsPages_UpToTheMaximumResults()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync(
+            new GitHubIntegrationOptions { PageSize = 3, MaxSearchResults = 5 });
+        string first = SearchPath("is:issue repo:deosrc/Condement", perPage: 3);
+        string second = first + "&page=2";
+        _api.Respond(first, FakeGitHubApi.Recorded("search.json"), HttpStatusCode.OK,
+                ("Link", $"<{FakeGitHubApi.Url(second)}>; rel=\"next\", <{FakeGitHubApi.Url(first)}&page=7>; rel=last"))
+            .Respond(second, FakeGitHubApi.Recorded("search-page2.json"), HttpStatusCode.OK,
+                ("Link", $"<{FakeGitHubApi.Url(first)}&page=3>; rel=\"next\""));
+
+        IReadOnlyList<TaskInfo> tasks = await github.SearchTasksAsync("repo:deosrc/Condement", CancellationToken);
+
+        Assert.Equal(
+            ["deosrc/Condement#1", "deosrc/Condement#2", "deosrc/Condement#3", "deosrc/Condement#4",
+                "deosrc/Condement#5"],
+            tasks.Select(task => task.Key));
+        Assert.Equal(2, _api.Requests.Count);
+    }
+
+    [Fact]
+    public async Task SearchTasksAsync_AsksForOnlyTheResultsItNeeds()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync(
+            new GitHubIntegrationOptions { MaxSearchResults = 20 });
+        _api.Respond(SearchPath("is:issue bug", perPage: 20), FakeGitHubApi.Recorded("search.json"));
+
+        await github.SearchTasksAsync("bug", CancellationToken);
+
+        Assert.Equal("20", Assert.Single(_api.Requests).Query("per_page"));
+    }
+
+    [Theory]
+    [InlineData("deosrc/Condement#3")]
+    [InlineData(" https://github.com/deosrc/Condement/issues/3#issuecomment-1 ")]
+    public async Task SearchTasksAsync_FindsAnIssueByKeyOrUrl(string query)
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("repos/deosrc/Condement/issues/3", FakeGitHubApi.Recorded("issue.json"));
+
+        IReadOnlyList<TaskInfo> tasks = await github.SearchTasksAsync(query, CancellationToken);
+
+        Assert.Equal("deosrc/Condement#3", Assert.Single(tasks).Key);
+    }
+
+    [Fact]
+    public async Task SearchTasksAsync_ReturnsNothing_ForTheKeyOfAMissingIssue()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("repos/deosrc/Condement/issues/9999", FakeGitHubApi.Recorded("not-found.json"),
+            HttpStatusCode.NotFound);
+
+        Assert.Empty(await github.SearchTasksAsync("deosrc/Condement#9999", CancellationToken));
+    }
+
+    [Fact]
+    public async Task SearchTasksAsync_ThrowsWithGitHubsMessage_ForAnInvalidQuery()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond(SearchPath("is:issue repo:nope-nope-zz/zz"), FakeGitHubApi.Recorded("invalid-query.json"),
+            HttpStatusCode.UnprocessableEntity);
+
+        var exception = await Assert.ThrowsAsync<IntegrationException>(
+            () => github.SearchTasksAsync("repo:nope-nope-zz/zz", CancellationToken));
+
+        Assert.Equal(
+            "GitHub returned an error (422 Unprocessable Entity): Validation Failed. The listed users and repositories "
+            + "cannot be searched either because the resources do not exist or you do not have permission to view "
+            + "them.",
+            exception.Message);
+    }
+
+    [Fact]
+    public async Task GetTaskAsync_ReadsTheIssue()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("repos/deosrc/Condement/issues/3", FakeGitHubApi.Recorded("issue.json"));
+
+        TaskInfo? task = await github.GetTaskAsync("deosrc/Condement#3", CancellationToken);
+
+        Assert.NotNull(task);
+        Assert.Equal("Add Remote Desktop support", task.Title);
+        Assert.Equal("github", task.Source);
+    }
+
+    [Fact]
+    public async Task GetTaskAsync_ReturnsNull_ForAPullRequest()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("repos/deosrc/Condement/issues/15", FakeGitHubApi.Recorded("pull-request.json"));
+
+        Assert.Null(await github.GetTaskAsync("deosrc/Condement#15", CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.Gone)]
+    public async Task GetTaskAsync_ReturnsNull_WhenTheIssueIsMissing(HttpStatusCode status)
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("repos/deosrc/Condement/issues/9999", FakeGitHubApi.Recorded("not-found.json"), status);
+
+        Assert.Null(await github.GetTaskAsync("deosrc/Condement#9999", CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetTaskAsync_Throws_ForAKeyThatIsntAGitHubIssue()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => github.GetTaskAsync("ABC-123", CancellationToken));
+        Assert.Empty(_api.Requests);
+    }
+
+    [Fact]
+    public async Task GetRepositoriesAsync_ReadsEveryPage()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        const string first = "user/repos?sort=full_name&per_page=100";
+        const string second = first + "&page=2";
+        _api.Respond(first, FakeGitHubApi.Recorded("repos.json"), HttpStatusCode.OK,
+                ("Link", $"<{FakeGitHubApi.Url(second)}>; rel=\"next\", <{FakeGitHubApi.Url(second)}>; rel=\"last\""))
+            .Respond(second, FakeGitHubApi.Recorded("repos-page2.json"), HttpStatusCode.OK,
+                ("Link", $"<{FakeGitHubApi.Url(first)}>; rel=\"prev\", <{FakeGitHubApi.Url(first)}>; rel=\"first\""));
+
+        IReadOnlyList<IntegrationRepository> repositories = await github.GetRepositoriesAsync(CancellationToken);
+
+        Assert.Equal(
+            ["deosrc/ansible", "deosrc/ansible-community.healthchecksio", "deosrc/ansible-role-1password",
+                "deosrc/ansible-role-syncthing"],
+            repositories.Select(repository => repository.FullName));
+        IntegrationRepository ansible = repositories[0];
+        Assert.Equal("github", ansible.Source);
+        Assert.Equal(["https://github.com/deosrc/ansible.git", "git@github.com:deosrc/ansible.git"],
+            ansible.CloneUrls);
+        Assert.Equal(new Uri("https://github.com/deosrc/ansible"), ansible.Url);
+        Assert.Equal(2, _api.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Paging_Throws_WhenTheNextPageIsOnAnotherHost()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("user/repos?sort=full_name&per_page=100", FakeGitHubApi.Recorded("repos.json"),
+            HttpStatusCode.OK, ("Link", "<https://evil.example/user/repos?page=2>; rel=\"next\""));
+
+        var exception = await Assert.ThrowsAsync<IntegrationException>(
+            () => github.GetRepositoriesAsync(CancellationToken));
+
+        Assert.Contains("evil.example", exception.Message);
+        Assert.Single(_api.Requests);
+    }
+
+    [Fact]
+    public async Task RateLimit_IsWaitedOut_WhenItResetsSoon()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("user", RateLimitBody, HttpStatusCode.Forbidden,
+                ("x-ratelimit-remaining", "0"),
+                ("x-ratelimit-reset", _time.GetUtcNow().AddSeconds(5).ToUnixTimeSeconds().ToString()))
+            .Respond("user", FakeGitHubApi.Recorded("user.json"));
+
+        Task<GitHubUser> call = github.GetAuthenticatedUserAsync(CancellationToken);
+        await AdvanceUntilAsync(() => call.IsCompleted || _api.Requests.Count > 1, TimeSpan.FromSeconds(1));
+
+        Assert.Equal("deosrc", (await call).Login);
+        Assert.Equal(2, _api.Requests.Count);
+        Assert.True(_time.GetUtcNow() >= new DateTimeOffset(2026, 11, 3, 12, 0, 5, TimeSpan.Zero));
+    }
+
+    [Fact]
+    public async Task RateLimit_Throws_WhenItResetsLaterThanTheMaximumWait()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        DateTimeOffset reset = _time.GetUtcNow().AddMinutes(40);
+        _api.Respond(DefaultSearchPath, RateLimitBody, HttpStatusCode.Forbidden,
+            ("x-ratelimit-remaining", "0"), ("x-ratelimit-reset", reset.ToUnixTimeSeconds().ToString()));
+
+        var exception = await Assert.ThrowsAsync<IntegrationRateLimitException>(
+            () => github.SearchTasksAsync(null, CancellationToken));
+
+        Assert.Equal(reset, exception.RetryAt);
+        Assert.Equal("github", exception.IntegrationId);
+        Assert.Single(_api.Requests);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Forbidden, "120", 120)]
+    [InlineData(HttpStatusCode.TooManyRequests, "30", 30)]
+    [InlineData(HttpStatusCode.TooManyRequests, null, 60)]
+    [InlineData(HttpStatusCode.Forbidden, null, 60)]
+    public async Task SecondaryRateLimit_UsesRetryAfter_OrWaitsAMinute(
+        HttpStatusCode status,
+        string? retryAfter,
+        int expectedSeconds)
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("user", SecondaryRateLimitBody, status,
+            retryAfter is null ? [] : [("Retry-After", retryAfter)]);
+
+        var exception = await Assert.ThrowsAsync<IntegrationRateLimitException>(
+            () => github.GetAuthenticatedUserAsync(CancellationToken));
+
+        Assert.Equal(_time.GetUtcNow().AddSeconds(expectedSeconds), exception.RetryAt);
+    }
+
+    [Fact]
+    public async Task RateLimit_GivesUp_AfterRetryingAFewTimes()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("user", SecondaryRateLimitBody, HttpStatusCode.TooManyRequests, ("Retry-After", "0"));
+
+        await Assert.ThrowsAsync<IntegrationRateLimitException>(
+            () => github.GetAuthenticatedUserAsync(CancellationToken));
+
+        Assert.Equal(4, _api.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Forbidden_ThatIsntARateLimit_ThrowsWithGitHubsMessage()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("repos/acme/api/issues/1",
+            """{"message":"Resource protected by organization SAML enforcement.","status":"403"}""",
+            HttpStatusCode.Forbidden);
+
+        var exception = await Assert.ThrowsAsync<IntegrationException>(
+            () => github.GetTaskAsync("acme/api#1", CancellationToken));
+
+        Assert.IsNotType<IntegrationRateLimitException>(exception);
+        Assert.Contains("SAML enforcement", exception.Message);
+        Assert.Single(_api.Requests);
+    }
+
+    [Fact]
+    public async Task NetworkFailure_ThrowsIntegrationException()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Fail("user");
+
+        var exception = await Assert.ThrowsAsync<IntegrationException>(
+            () => github.GetAuthenticatedUserAsync(CancellationToken));
+
+        Assert.IsType<HttpRequestException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task UnreadableResponse_ThrowsIntegrationException()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond("user", "<html>Unicorn!</html>");
+
+        await Assert.ThrowsAsync<IntegrationException>(() => github.GetAuthenticatedUserAsync(CancellationToken));
+    }
+
+    [Fact]
+    public async Task EnterpriseServer_UsesItsApiUrl_AndItsHostForIssueUrls()
+    {
+        using var handler = new RecordingHandler();
+        using var httpClient = new HttpClient(handler);
+        var github = new GitHubIntegration(
+            new GitHubIntegrationOptions { ApiUrl = new Uri("https://github.example.com/api/v3") },
+            _store, httpClient, _time);
+        await github.Credentials.SaveAsync(Token, CancellationToken);
+
+        await github.SearchTasksAsync("https://github.example.com/acme/api/issues/7", CancellationToken);
+
+        Assert.Equal(new Uri("https://github.example.com/api/v3/repos/acme/api/issues/7"), handler.LastUrl);
+    }
+
+    [Fact]
+    public void Constructor_Throws_ForAPageSizeGitHubDoesntAllow()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Create(new GitHubIntegrationOptions { PageSize = 101 }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Create(new GitHubIntegrationOptions { PageSize = 0 }));
+    }
+
+    private const string RateLimitBody =
+        """{"message":"API rate limit exceeded for user ID 1.","documentation_url":"https://docs.github.com/rest"}""";
+
+    private const string SecondaryRateLimitBody =
+        """{"message":"You have exceeded a secondary rate limit. Please wait a few minutes before you try again."}""";
+
+    private static string SearchPath(string query, int perPage = 100, string sort = "") =>
+        $"search/issues?q={Uri.EscapeDataString(query)}{sort}&per_page={perPage}";
+
+    private GitHubIntegration Create(GitHubIntegrationOptions? options = null) =>
+        new(options ?? new GitHubIntegrationOptions(), _store, _httpClient, _time);
+
+    private async Task<GitHubIntegration> CreateAuthenticatedAsync(GitHubIntegrationOptions? options = null)
+    {
+        GitHubIntegration github = Create(options);
+        await github.Credentials.SaveAsync(Token, CancellationToken);
+        return github;
+    }
+
+    /// <summary>
+    /// Moves the fake clock on until <paramref name="done"/>, giving the call under test time to run in between.
+    /// </summary>
+    private async Task AdvanceUntilAsync(Func<bool> done, TimeSpan step)
+    {
+        for (int i = 0; i < 100 && !done(); i++)
+        {
+            await Task.Delay(10, CancellationToken);
+            _time.Advance(step);
+        }
+    }
+
+    /// <summary>
+    /// Records the URL of each request and answers with a 404.
+    /// </summary>
+    private sealed class RecordingHandler : HttpMessageHandler
+    {
+        public Uri? LastUrl { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            LastUrl = request.RequestUri;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+    }
+}

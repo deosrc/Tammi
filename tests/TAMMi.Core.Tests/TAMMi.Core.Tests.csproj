@@ -16,6 +16,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Responses recorded from the GitHub API. -->
+    <None Update="Integrations\GitHub\Responses\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\TAMMi.Core\TAMMi.Core.csproj" />
   </ItemGroup>
 

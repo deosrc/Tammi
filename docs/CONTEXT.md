@@ -228,6 +228,23 @@ are left to other tools for now.
     TAMMi gets the session ID (e.g. by setting it at launch, or reading it from a hook).
   - Plain terminals aren't restored after a restart.
 
+## Integrations
+
+### GitHub
+
+- Provides **tasks** (issues) and **repositories**. It works with github.com and with GitHub Enterprise Server,
+  given its API URL.
+- **Authentication:** a personal access token (fine-grained, or classic with the `repo` scope for private
+  repositories), kept in the credential store. Fine-grained tokens need read access to issues and metadata.
+- **Task keys** are GitHub's issue references, `owner/repo#number`. Pull requests aren't tasks.
+- **Finding tasks:** with no query, TAMMi lists the user's open issues (`is:open assignee:@me archived:false`),
+  most recently updated first. A query uses GitHub's issue search syntax. A task key or an issue's URL finds that
+  issue.
+- **Repositories** are those the user owns, collaborates on or reaches through an organisation. Each has its HTTPS and
+  SSH clone URLs.
+- **Rate limits:** when GitHub asks TAMMi to wait a few seconds, it waits and retries. For longer waits, the request
+  fails and says when to try again.
+
 ## Technical Constraints
 
 - **Framework:** .NET MAUI Blazor Hybrid. The UI is written once as Blazor components in a shared
