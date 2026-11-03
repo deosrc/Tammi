@@ -64,6 +64,30 @@ internal sealed class TempRepositories : IDisposable
     }
 
     /// <summary>
+    /// Creates a bare repository <c>app</c> whose <c>main</c> has the remote <c>lib</c> as a submodule at <c>lib</c>.
+    /// With <paramref name="nested"/>, <c>lib</c> has the remote <c>core</c> as a submodule at <c>core</c>.
+    /// </summary>
+    public async Task<string> CreateRemoteWithSubmoduleAsync(bool nested = false)
+    {
+        string libRemote = await CreateRemoteAsync("lib");
+        if (nested)
+        {
+            string coreRemote = await CreateRemoteAsync("core");
+            string libSeed = PathTo("lib-seed");
+            await RunAsync(libSeed, "submodule", "add", coreRemote, "core");
+            await RunAsync(libSeed, "commit", "-m", "Add core submodule");
+            await RunAsync(libSeed, "push");
+        }
+
+        string appRemote = await CreateRemoteAsync("app");
+        string appSeed = PathTo("app-seed");
+        await RunAsync(appSeed, "submodule", "add", libRemote, "lib");
+        await RunAsync(appSeed, "commit", "-m", "Add lib submodule");
+        await RunAsync(appSeed, "push");
+        return appRemote;
+    }
+
+    /// <summary>
     /// Clones <paramref name="remote"/> into a new folder and returns its path.
     /// </summary>
     public async Task<string> CloneAsync(string remote, string name, params string[] extraArguments)
@@ -94,14 +118,19 @@ internal sealed class TempRepositories : IDisposable
 
     public string PathTo(string name) => Path.Combine(Root, name);
 
-    public void Dispose()
+    /// <summary>
+    /// Deletes a folder holding git files.
+    /// </summary>
+    public static void DeleteFolder(string path)
     {
         // Git makes object files read-only, which stops Directory.Delete on Windows.
-        foreach (string file in Directory.EnumerateFiles(Root, "*", SearchOption.AllDirectories))
+        foreach (string file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
         {
             File.SetAttributes(file, FileAttributes.Normal);
         }
 
-        Directory.Delete(Root, recursive: true);
+        Directory.Delete(path, recursive: true);
     }
+
+    public void Dispose() => DeleteFolder(Root);
 }

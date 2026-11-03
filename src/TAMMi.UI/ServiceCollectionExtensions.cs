@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<WorkspaceTabs>();
         services.AddSingleton<IGitCli>(_ => new GitCli());
         services.AddSingleton<IGitRepositoryReader, GitRepositoryReader>();
+        services.AddSingleton<IGitWorktreeService, GitWorktreeService>();
         services.AddSingleton<IntegrationRegistry>();
         services.AddSingleton<AgentLauncher>();
         services.AddSingleton<ISettingsStore, SettingsStore>();

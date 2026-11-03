@@ -118,19 +118,7 @@ public sealed class GitRepositoryReaderSubmoduleTests : IDisposable
     [Fact]
     public async Task NestedSubmodule_ChangesPropagateToTopLevel()
     {
-        string coreRemote = await _repos.CreateRemoteAsync("core");
-        string libRemote = await _repos.CreateRemoteAsync("lib");
-        string libSeed = _repos.PathTo("lib-seed");
-        await _repos.RunAsync(libSeed, "submodule", "add", coreRemote, "core");
-        await _repos.RunAsync(libSeed, "commit", "-m", "Add core");
-        await _repos.RunAsync(libSeed, "push");
-
-        string appRemote = await _repos.CreateRemoteAsync("app");
-        string appSeed = _repos.PathTo("app-seed");
-        await _repos.RunAsync(appSeed, "submodule", "add", libRemote, "lib");
-        await _repos.RunAsync(appSeed, "commit", "-m", "Add lib");
-        await _repos.RunAsync(appSeed, "push");
-
+        string appRemote = await _repos.CreateRemoteWithSubmoduleAsync(nested: true);
         string app = await _repos.CloneAsync(appRemote, "app", "--recurse-submodules");
         TempRepositories.WriteFile(Path.Combine(app, "lib", "core"), "new.txt", "new");
 
@@ -143,16 +131,7 @@ public sealed class GitRepositoryReaderSubmoduleTests : IDisposable
         Assert.True(status.IsChanged);
     }
 
-    private async Task<string> CreateAppRemoteWithSubmoduleAsync()
-    {
-        string libRemote = await _repos.CreateRemoteAsync("lib");
-        string appRemote = await _repos.CreateRemoteAsync("app");
-        string appSeed = _repos.PathTo("app-seed");
-        await _repos.RunAsync(appSeed, "submodule", "add", libRemote, "lib");
-        await _repos.RunAsync(appSeed, "commit", "-m", "Add lib submodule");
-        await _repos.RunAsync(appSeed, "push");
-        return appRemote;
-    }
+    private Task<string> CreateAppRemoteWithSubmoduleAsync() => _repos.CreateRemoteWithSubmoduleAsync();
 
     private async Task<string> CloneAppWithSubmoduleAsync()
     {
