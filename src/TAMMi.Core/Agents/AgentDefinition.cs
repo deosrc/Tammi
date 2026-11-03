@@ -1,19 +1,36 @@
+using System.Text.Json.Serialization;
+
 namespace TAMMi.Core.Agents;
 
 /// <summary>
 /// An Agent Definition: a configured agent CLI that TAMMi can start.
 /// </summary>
-/// <param name="Name">The name shown to the user, e.g. "Claude Code".</param>
-/// <param name="Command">
-/// The executable's name or path. Names are found on the search path, as a shell would find them.
-/// </param>
-/// <param name="Arguments">The arguments, each passed to the agent as-is.</param>
-public sealed record AgentDefinition(string Name, string Command, IReadOnlyList<string> Arguments)
+/// <remarks>
+/// Definitions are kept in the settings file and edited on the Settings screen. Two definitions are equal when their
+/// values are, including their arguments.
+/// </remarks>
+public sealed record AgentDefinition
 {
     /// <summary>
     /// The placeholder in <see cref="PromptArguments"/> for the initial prompt.
     /// </summary>
     public const string PromptPlaceholder = "{prompt}";
+
+    /// <summary>
+    /// Creates a definition.
+    /// </summary>
+    /// <param name="name">The name shown to the user, e.g. "Claude Code".</param>
+    /// <param name="command">
+    /// The executable's name or path. Names are found on the search path, as a shell would find them.
+    /// </param>
+    /// <param name="arguments">The arguments, each passed to the agent as-is.</param>
+    [JsonConstructor]
+    public AgentDefinition(string name, string command, IReadOnlyList<string> arguments)
+    {
+        Name = name;
+        Command = command;
+        Arguments = arguments;
+    }
 
     /// <summary>
     /// Creates a definition from a command and its arguments.
@@ -22,6 +39,21 @@ public sealed record AgentDefinition(string Name, string Command, IReadOnlyList<
         : this(name, command, (IReadOnlyList<string>)arguments)
     {
     }
+
+    /// <summary>
+    /// The name shown to the user, e.g. "Claude Code".
+    /// </summary>
+    public string Name { get; init; }
+
+    /// <summary>
+    /// The executable's name or path. Names are found on the search path, as a shell would find them.
+    /// </summary>
+    public string Command { get; init; }
+
+    /// <summary>
+    /// The arguments, each passed to the agent as-is.
+    /// </summary>
+    public IReadOnlyList<string> Arguments { get; init; }
 
     /// <summary>
     /// How the initial prompt is passed to the CLI: arguments added after <see cref="Arguments"/>, with
@@ -34,6 +66,7 @@ public sealed record AgentDefinition(string Name, string Command, IReadOnlyList<
     /// <summary>
     /// Whether the agent takes an initial prompt.
     /// </summary>
+    [JsonIgnore]
     public bool AcceptsInitialPrompt => PromptArguments.Count > 0;
 
     /// <summary>
@@ -46,7 +79,8 @@ public sealed record AgentDefinition(string Name, string Command, IReadOnlyList<
     };
 
     /// <summary>
-    /// The built-in definitions, in the order they're offered.
+    /// The built-in definitions, in the order they're offered. They're the definitions in the settings until the user
+    /// changes them.
     /// </summary>
     public static IReadOnlyList<AgentDefinition> BuiltIn { get; } = [ClaudeCode];
 
@@ -74,4 +108,29 @@ public sealed record AgentDefinition(string Name, string Command, IReadOnlyList<
                 argument.Replace(PromptPlaceholder, initialPrompt, StringComparison.Ordinal)),
         ];
     }
+
+    /// <summary>
+    /// Replaces missing values (e.g. from a settings file written by hand) with empty ones, and trims the command.
+    /// </summary>
+    public AgentDefinition Normalize() => this with
+    {
+        Name = Name ?? string.Empty,
+        Command = Command?.Trim() ?? string.Empty,
+        Arguments = Arguments?.Where(argument => argument is not null).ToArray() ?? [],
+        PromptArguments = PromptArguments?.Where(argument => argument is not null).ToArray() ?? [],
+    };
+
+    /// <inheritdoc />
+    public bool Equals(AgentDefinition? other) =>
+        other is not null
+        && Name == other.Name
+        && Command == other.Command
+        && SequenceEqual(Arguments, other.Arguments)
+        && SequenceEqual(PromptArguments, other.PromptArguments);
+
+    /// <inheritdoc />
+    public override int GetHashCode() => HashCode.Combine(Name, Command, Arguments?.Count, PromptArguments?.Count);
+
+    private static bool SequenceEqual(IReadOnlyList<string>? first, IReadOnlyList<string>? second) =>
+        first is null || second is null ? first == second : first.SequenceEqual(second);
 }

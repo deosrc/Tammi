@@ -21,13 +21,19 @@ public sealed class AgentLauncher(IPtyService ptyService)
     /// <exception cref="FileNotFoundException">The agent's command can't be found.</exception>
     /// <exception cref="DirectoryNotFoundException">The working directory doesn't exist.</exception>
     /// <exception cref="ArgumentException">
-    /// The prompt has a null character, or it has a line break and the agent's command is a Windows batch file, which
+    /// The definition has no command, or the prompt has a null character, or it has a line break and the agent's command is a Windows batch file, which
     /// can't be given one.
     /// </exception>
     public Agent Start(AgentDefinition definition, string workingDirectory, PtySize size, string? initialPrompt = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
+        if (string.IsNullOrWhiteSpace(definition.Command))
+        {
+            throw new ArgumentException(
+                $"The Agent Definition '{definition.Name}' has no command. Set one in Settings.", nameof(definition));
+        }
+
         if (initialPrompt?.Contains('\0', StringComparison.Ordinal) == true)
         {
             throw new ArgumentException("The initial prompt can't contain a null character.", nameof(initialPrompt));

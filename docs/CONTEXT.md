@@ -174,10 +174,18 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
   - Manually added local repositories
   - Status refresh interval for workspaces that aren't open (whole minutes from 1 to 1440, default 5)
   - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that TAMMi uses
-- **Agents:** the Agent Definitions available to start, and the initial prompt template
+- **Agents**
+  - The Agent Definitions available to start, in the order they're offered. The built-in definitions (Claude Code)
+    are there until the user changes the list. The user can add, edit, reorder and remove definitions, including the
+    built-in ones, and add a built-in definition back.
+  - The initial prompt template. Clearing it restores the default.
 - **Tools**
   - The external tools offered under "Open in…"
-  - Terminal shell: executable and arguments (defaults to the platform shell)
+  - Terminal shell: executable and arguments. Leaving the executable empty uses the platform shell, with its own
+    arguments. Changes apply to terminals started afterwards.
+
+Lists of arguments (for the terminal shell and Agent Definitions) are edited one argument per line, so they need no
+quoting. Blank lines are ignored.
 - **About:** the TAMMi version, and the git CLI and libgit2 versions
 
 Changes are saved as soon as they're made. The settings live in `settings.json` in the app's Config folder (see

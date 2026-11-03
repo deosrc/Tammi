@@ -1,6 +1,206 @@
 @page "/settings/agents"
 @layout SettingsLayout
+@inherits SettingsSectionBase
+@using TAMMi.Core.Agents
+@using TAMMi.Core.Settings
 
 <h1>Agents</h1>
 
-<p class="placeholder">The Agent Definitions available to start, and the initial prompt template, will appear here.</p>
+<h2>Agent Definitions</h2>
+
+<p class="settings-help">
+    The agent CLIs that can be started in a workspace, in the order they're offered. Changes apply to agents started
+    afterwards.
+</p>
+
+@if (Definitions.Count == 0)
+{
+    <p class="placeholder">There are no Agent Definitions, so no agents can be started. Add one below.</p>
+}
+
+<ul class="agent-definition-list">
+    @for (var i = 0; i < Definitions.Count; i++)
+    {
+        var index = i;
+        var definition = Definitions[index];
+        <li class="agent-definition">
+            <div class="agent-definition-header">
+                <span class="agent-definition-name">@(string.IsNullOrWhiteSpace(definition.Name) ? "Unnamed agent" : definition.Name)</span>
+                <button type="button" class="button button-secondary" disabled="@(index == 0)" @onclick="() => MoveAsync(index, -1)"
+                        title="Move up" aria-label="Move @definition.Name up">↑</button>
+                <button type="button" class="button button-secondary" disabled="@(index == Definitions.Count - 1)"
+                        @onclick="() => MoveAsync(index, 1)" title="Move down"
+                        aria-label="Move @definition.Name down">↓</button>
+                <button type="button" class="button button-secondary" @onclick="() => RemoveAsync(index)">Remove</button>
+            </div>
+
+            <div class="settings-form">
+                <div class="settings-field">
+                    <label for="agent-@index-name">Name</label>
+                    <input id="agent-@index-name"
+                           value="@definition.Name"
+                           @onchange="e => UpdateDefinitionAsync(index, d => d with { Name = Text(e) })" />
+                </div>
+
+                <div class="settings-field">
+                    <label for="agent-@index-command">Command</label>
+                    <input id="agent-@index-command"
+                           class="settings-path"
+                           value="@definition.Command"
+                           @onchange="e => UpdateDefinitionAsync(index, d => d with { Command = Text(e) })" />
+                    <p class="settings-help">The executable: a name on the search path, or a full path.</p>
+                    @if (string.IsNullOrWhiteSpace(definition.Command))
+                    {
+                        <p class="warning">This agent can't be started until it has a command.</p>
+                    }
+                </div>
+
+                <div class="settings-field">
+                    <label for="agent-@index-arguments">Arguments</label>
+                    <textarea id="agent-@index-arguments"
+                              class="settings-arguments"
+                              rows="2"
+                              value="@ArgumentLines.Format(definition.Arguments)"
+                              @onchange="e => UpdateDefinitionAsync(index, d => d with { Arguments = ArgumentLines.Parse(Text(e)) })"></textarea>
+                    <p class="settings-help">One argument on each line, passed as it is, without quotes.</p>
+                </div>
+
+                <div class="settings-field">
+                    <label for="agent-@index-prompt-arguments">Prompt arguments</label>
+                    <textarea id="agent-@index-prompt-arguments"
+                              class="settings-arguments"
+                              rows="2"
+                              value="@ArgumentLines.Format(definition.PromptArguments)"
+                              @onchange="e => UpdateDefinitionAsync(index, d => d with { PromptArguments = ArgumentLines.Parse(Text(e)) })"></textarea>
+                    <p class="settings-help">
+                        How the initial prompt is passed: arguments added after the others, one on each line, with
+                        <code>@AgentDefinition.PromptPlaceholder</code> where the prompt goes. For example,
+                        <code>@AgentDefinition.PromptPlaceholder</code> alone passes it as a positional argument.
+                        Leave it empty if the agent doesn't take an initial prompt.
+                    </p>
+                    @if (definition.AcceptsInitialPrompt && !HasPromptPlaceholder(definition))
+                    {
+                        <p class="warning">
+                            None of the prompt arguments has <code>@AgentDefinition.PromptPlaceholder</code>, so the
+                            prompt won't be passed.
+                        </p>
+                    }
+                </div>
+            </div>
+        </li>
+    }
+</ul>
+
+<div class="settings-actions">
+    <button type="button" class="button" @onclick="AddDefinitionAsync">Add definition</button>
+    @foreach (var builtIn in AgentDefinition.BuiltIn)
+    {
+        <button type="button" class="button button-secondary" @onclick="() => AddAsync(builtIn)">Add @builtIn.Name</button>
+    }
+</div>
+
+<h2>Initial prompt</h2>
+
+<div class="settings-form">
+    <div class="settings-field">
+        <label for="initial-prompt-template">Template</label>
+        @* Recreated after each change, so it shows the saved value even when that's unchanged, e.g. when a cleared
+           template goes back to the default. *@
+        <textarea @key="_templateRevision"
+                  id="initial-prompt-template"
+                  class="settings-template"
+                  rows="4"
+                  value="@Current.InitialPromptTemplate"
+                  @onchange="OnTemplateChanged"></textarea>
+        <p class="settings-help">
+            Sent to an agent when it starts, to tell it about the workspace's task context file.
+            <code>@InitialPrompt.ContextFilePlaceholder</code> is replaced with the file's full path, and the rest is sent
+            as it is. Leave it empty to use the default.
+        </p>
+        @if (!Current.InitialPromptTemplate.Contains(InitialPrompt.ContextFilePlaceholder, StringComparison.Ordinal))
+        {
+            <p class="warning">
+                The template doesn't have <code>@InitialPrompt.ContextFilePlaceholder</code>, so agents won't be told
+                where the context file is.
+            </p>
+        }
+        @if (Current.InitialPromptTemplate.AsSpan().ContainsAny('\r', '\n'))
+        {
+            <p class="warning">
+                On Windows, agents whose command is a batch file (e.g. <code>claude.cmd</code>) can't be given a prompt
+                with several lines, so they won't start. Keep the template on one line to start them.
+            </p>
+        }
+        <div class="settings-field-row">
+            <button type="button" class="button button-secondary"
+                    disabled="@(Current.InitialPromptTemplate == InitialPrompt.DefaultTemplate)"
+                    @onclick="RestoreDefaultTemplateAsync">Restore default</button>
+        </div>
+    </div>
+</div>
+
+@if (SaveError is not null)
+{
+    <p class="error">@SaveError</p>
+}
+
+@code {
+    private int _templateRevision;
+
+    private AgentSettings Current => SettingsStore.Current.Agents;
+
+    private IReadOnlyList<AgentDefinition> Definitions => Current.Definitions;
+
+    private static string Text(ChangeEventArgs e) => e.Value?.ToString() ?? "";
+
+    private static bool HasPromptPlaceholder(AgentDefinition definition) =>
+        definition.PromptArguments.Any(argument =>
+            argument.Contains(AgentDefinition.PromptPlaceholder, StringComparison.Ordinal));
+
+    private Task AddDefinitionAsync() => AddAsync(new AgentDefinition("New agent", ""));
+
+    private Task AddAsync(AgentDefinition definition) =>
+        UpdateDefinitionsAsync(definitions => [.. definitions, definition]);
+
+    private Task RemoveAsync(int index) =>
+        UpdateDefinitionsAsync(definitions => index < definitions.Count
+            ? [.. definitions.Take(index), .. definitions.Skip(index + 1)]
+            : definitions);
+
+    private Task MoveAsync(int index, int offset) =>
+        UpdateDefinitionsAsync(definitions =>
+        {
+            var target = index + offset;
+            if (index >= definitions.Count || target < 0 || target >= definitions.Count)
+            {
+                return definitions;
+            }
+
+            var moved = definitions.ToList();
+            (moved[index], moved[target]) = (moved[target], moved[index]);
+            return moved;
+        });
+
+    private Task UpdateDefinitionAsync(int index, Func<AgentDefinition, AgentDefinition> update) =>
+        UpdateDefinitionsAsync(definitions => index < definitions.Count
+            ? [.. definitions.Take(index), update(definitions[index]), .. definitions.Skip(index + 1)]
+            : definitions);
+
+    private Task UpdateDefinitionsAsync(Func<IReadOnlyList<AgentDefinition>, IReadOnlyList<AgentDefinition>> update) =>
+        UpdateAgentsAsync(agents => agents with { Definitions = update(agents.Definitions) });
+
+    private Task OnTemplateChanged(ChangeEventArgs e)
+    {
+        _templateRevision++;
+        return UpdateAgentsAsync(agents => agents with { InitialPromptTemplate = Text(e) });
+    }
+
+    private Task RestoreDefaultTemplateAsync()
+    {
+        _templateRevision++;
+        return UpdateAgentsAsync(agents => agents with { InitialPromptTemplate = InitialPrompt.DefaultTemplate });
+    }
+
+    private Task UpdateAgentsAsync(Func<AgentSettings, AgentSettings> update) =>
+        UpdateAsync(settings => settings with { Agents = update(settings.Agents) });
+}

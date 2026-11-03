@@ -30,6 +30,7 @@
   --color-accent-text: #ffffff;
   --color-focus: #0969da;
   --color-error: #cf222e;
+  --color-warning: #9a6700;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,6 +46,7 @@
     --color-accent-text: #ffffff;
     --color-focus: #4c9aff;
     --color-error: #ff7b72;
+    --color-warning: #d29922;
   }
 }
 
@@ -108,6 +110,10 @@ a {
   color: var(--color-error);
 }
 
+.warning {
+  color: var(--color-warning);
+}
+
 /* Line icons drawn with inline SVG. They take the text colour. */
 .icon {
   width: 18px;
@@ -131,6 +137,24 @@ a {
 
 .button:hover {
   filter: brightness(1.1);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  filter: none;
+}
+
+/* A quieter button, for actions beside a main one. */
+.button-secondary {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.button-secondary:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  filter: none;
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
@@ -458,7 +482,8 @@ a {
   gap: var(--space-2);
 }
 
-.settings-field input {
+.settings-field input,
+.settings-field textarea {
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -475,6 +500,79 @@ a {
 
 .settings-number {
   width: 6rem;
+}
+
+/* Fields that fill the form's width, e.g. one argument on each line. */
+.settings-arguments,
+.settings-template {
+  display: block;
+  width: 100%;
+  resize: vertical;
+}
+
+.settings-arguments {
+  font-family: ui-monospace, monospace;
+}
+
+.settings-field textarea:disabled,
+.settings-field input:disabled {
+  opacity: 0.6;
+}
+
+.settings-field .warning {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-small);
+}
+
+/* A later heading in a settings section, e.g. Initial prompt below Agent Definitions. */
+.settings-content * + h2 {
+  margin-top: var(--space-6);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-6);
+}
+
+/* Agent Definitions on the Agents page: each one is a card, with its fields below its name. */
+.agent-definition-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 720px;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.agent-definition {
+  padding: var(--space-3) var(--space-4) 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.agent-definition .settings-form {
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.agent-definition-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.agent-definition-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-help {

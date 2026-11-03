@@ -1,11 +1,70 @@
 @page "/settings/tools"
 @layout SettingsLayout
+@inherits SettingsSectionBase
+@using TAMMi.Core.Platform
+@using TAMMi.Core.Settings
+@inject IPtyService PtyService
 
 <h1>Tools</h1>
 
-<p class="placeholder">These settings will appear here:</p>
+<h2>Terminal shell</h2>
 
-<ul class="placeholder">
-    <li>The external tools offered under "Open in…"</li>
-    <li>Terminal shell</li>
-</ul>
+<div class="settings-form">
+    <div class="settings-field">
+        <label for="terminal-shell">Executable</label>
+        @* Recreated after each change, so it shows the saved value even when that's unchanged, e.g. after spaces are
+           trimmed. *@
+        <input @key="_shellRevision"
+               id="terminal-shell"
+               class="settings-path"
+               value="@Current.TerminalShell"
+               placeholder="@DefaultShell.FileName"
+               @onchange="OnTerminalShellChanged" />
+        <p class="settings-help">
+            The shell that new terminals run: a name on the search path, or a full path. Leave it empty to use the
+            platform's default shell (@DefaultShell.FileName).
+        </p>
+    </div>
+
+    <div class="settings-field">
+        <label for="terminal-shell-arguments">Arguments</label>
+        <textarea id="terminal-shell-arguments"
+                  class="settings-arguments"
+                  rows="3"
+                  disabled="@(Current.TerminalShell is null)"
+                  placeholder="@(Current.TerminalShell is null ? ArgumentLines.Format(DefaultShell.Arguments) : null)"
+                  value="@ArgumentLines.Format(Current.TerminalShellArguments)"
+                  @onchange="OnTerminalShellArgumentsChanged"></textarea>
+        <p class="settings-help">
+            One argument on each line, passed as it is, without quotes. The default shell uses its own arguments.
+        </p>
+    </div>
+</div>
+
+@if (SaveError is not null)
+{
+    <p class="error">@SaveError</p>
+}
+
+<p class="placeholder">The external tools offered under "Open in…" will appear here.</p>
+
+@code {
+    private ProcessRequest? _defaultShell;
+    private int _shellRevision;
+
+    private ToolSettings Current => SettingsStore.Current.Tools;
+
+    private ProcessRequest DefaultShell => _defaultShell ??= PtyService.GetDefaultShell();
+
+    private Task OnTerminalShellChanged(ChangeEventArgs e)
+    {
+        _shellRevision++;
+        return UpdateToolsAsync(tools => tools with { TerminalShell = e.Value?.ToString() });
+    }
+
+    private Task OnTerminalShellArgumentsChanged(ChangeEventArgs e) =>
+        UpdateToolsAsync(tools => tools with { TerminalShellArguments = ArgumentLines.Parse(e.Value?.ToString()) });
+
+    private Task UpdateToolsAsync(Func<ToolSettings, ToolSettings> update) =>
+        UpdateAsync(settings => settings with { Tools = update(settings.Tools) });
+}

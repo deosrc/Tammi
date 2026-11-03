@@ -3,6 +3,7 @@ using TAMMi.Core.Agents;
 using TAMMi.Core.Git;
 using TAMMi.Core.Integrations;
 using TAMMi.Core.Settings;
+using TAMMi.Core.Terminals;
 using TAMMi.Core.Windowing;
 using TAMMi.Core.Workspaces;
 
@@ -22,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGitWorktreeService, GitWorktreeService>();
         services.AddSingleton<IntegrationRegistry>();
         services.AddSingleton<AgentLauncher>();
+        services.AddSingleton<TerminalLauncher>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();
         services.AddSingleton<IWorkspaceStore, WorkspaceStore>();
