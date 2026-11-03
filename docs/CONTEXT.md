@@ -130,7 +130,8 @@ own branch. It is created automatically when the workspace is created:
   - "Open in…" tools
 - **Git operations**, including a git graph view
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
-- **Terminal**: an embedded terminal, opened in the workspace folder
+- **Terminals**: any number of embedded terminals, shown as tabs alongside agent sessions. A new
+  terminal opens in the workspace folder by default, or the user can open one in a specific repository.
 
 ### Settings
 
@@ -191,7 +192,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Terminal
-- Is there one terminal per workspace, or can the user open several (e.g. one per repository)?
 - Which shell is used: the platform default (PowerShell on Windows, `$SHELL` on Linux), or a setting?
 - Do terminal sessions persist when a workspace tab is closed and reopened, or across app restarts?
 
