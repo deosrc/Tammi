@@ -30,6 +30,10 @@
   --color-accent-text: #ffffff;
   --color-focus: #0969da;
   --color-error: #cf222e;
+  --color-warning: #9a6700;
+  --color-warning-bg: #fff8c5;
+  --color-warning-border: #d4a72c;
+  --color-warning-text: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,6 +49,10 @@
     --color-accent-text: #ffffff;
     --color-focus: #4c9aff;
     --color-error: #ff7b72;
+    --color-warning: #d29922;
+    --color-warning-bg: #3b2e0e;
+    --color-warning-border: #9e6a03;
+    --color-warning-text: #1f2328;
   }
 }
 
@@ -108,6 +116,44 @@ a {
   color: var(--color-error);
 }
 
+/* A message that needs the user's attention, e.g. a change that waits for them to confirm it. */
+.alert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.alert p {
+  margin: 0;
+}
+
+.alert .settings-list {
+  margin: 0;
+}
+
+.alert-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.alert-warning {
+  border-color: var(--color-warning-border);
+  border-left-width: 4px;
+  background: var(--color-warning-bg);
+}
+
+.alert-warning .alert-title {
+  color: var(--color-warning);
+}
+
 /* Line icons drawn with inline SVG. They take the text colour. */
 .icon {
   width: 18px;
@@ -131,6 +177,12 @@ a {
 
 .button:hover {
   filter: brightness(1.1);
+}
+
+/* A button that confirms a change with side effects, e.g. in a warning alert. */
+.button-warning {
+  background: var(--color-warning);
+  color: var(--color-warning-text);
 }
 
 /* A less prominent button, e.g. Remove beside each item in a list. */
@@ -543,18 +595,6 @@ a {
   font-size: var(--font-size-small);
   color: var(--color-text-muted);
   white-space: nowrap;
-}
-
-/* Asks the user to confirm a settings change that has side effects, in place of the button that started it. */
-.settings-confirm {
-  margin-top: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-accent);
-  border-radius: var(--radius);
-}
-
-.settings-confirm p {
-  margin: 0;
 }
 
 .settings-details {

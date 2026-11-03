@@ -50,12 +50,21 @@
         }
         @if (_pendingMonitoredFolder is not null)
         {
-            <div class="settings-confirm" role="alertdialog" aria-labelledby="confirm-monitored-folder">
-                <p id="confirm-monitored-folder">
+            <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-monitored-folder-title" aria-describedby="confirm-monitored-folder-text">
+                <h3 id="confirm-monitored-folder-title" class="alert-title">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                    Folder Conflict
+                </h3>
+                <p id="confirm-monitored-folder-text">
                     <span class="settings-list-path">@_pendingMonitoredFolder</span> holds
                     @(_pendingRemovals.Count == 1 ? "this manually added repository" : "these manually added repositories").
                     The scan will find @(_pendingRemovals.Count == 1 ? "it" : "them"), so adding the folder removes
-                    @(_pendingRemovals.Count == 1 ? "it" : "them") from the manually added repositories.
+                    @(_pendingRemovals.Count == 1 ? "it" : "them") from the manually added repositories. The folder
+                    isn't added until you confirm.
                 </p>
                 <ul class="settings-list">
                     @foreach (var repository in _pendingRemovals)
@@ -64,7 +73,7 @@
                     }
                 </ul>
                 <div class="settings-field-row">
-                    <button type="button" class="button" @onclick="ConfirmMonitoredFolderAsync">Add folder</button>
+                    <button type="button" class="button button-warning" @onclick="ConfirmMonitoredFolderAsync">Replace with the monitored folder</button>
                     <button type="button" class="button button-secondary" @onclick="CancelMonitoredFolder">Cancel</button>
                 </div>
             </div>
