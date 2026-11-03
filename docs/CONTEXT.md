@@ -153,7 +153,10 @@ own branch. It is created automatically when the workspace is created:
 - Only built-in tools detected as installed are shown.
 - Users can add their own tools.
 - Each tool has: **name**, **executable**, **arguments** (with a `{path}` placeholder for the folder
-  being opened) and **enabled/disabled**.
+  being opened), **enabled/disabled** and **scope**.
+- **Scope** sets what a tool can open: the workspace folder, a single repository, or both. Workspace
+  tools appear in the side panel's tools section. Repository tools appear on each repository's entry
+  in the git status section.
 - **Visual Studio** opens solutions, not folders. TAMMi finds the `.sln` and `.slnx` files in the
   workspace's repositories and shows an "Open in…" entry for each one (e.g. "Visual Studio: Api.sln").
 
@@ -213,9 +216,6 @@ own branch. It is created automatically when the workspace is created:
 ## Open Questions
 
 Record the decision here when an item is resolved, and move it into the sections above.
-
-### Open in… / Tools
-- Can a tool open the whole workspace folder, a single repository, or both?
 
 ### Git
 - Which operations are in scope at first beyond status and graph (fetch, pull, push, commit, branch, checkout)?
