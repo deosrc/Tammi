@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using TAMMi.Windows.PlatformServices;
 
 namespace TAMMi.Windows;
 
@@ -10,6 +11,7 @@ public static class MauiProgram
         builder.UseMauiApp<App>();
 
         builder.Services.AddMauiBlazorWebView();
+        builder.Services.AddWindowsPlatformServices();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

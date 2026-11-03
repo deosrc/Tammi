@@ -37,3 +37,23 @@ h1:focus {
   top: 0.5rem;
   cursor: pointer;
 }
+
+.platform-check dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+}
+
+.platform-check dt {
+  font-weight: 600;
+}
+
+.platform-check dd {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
+.platform-check .error {
+  color: #cf222e;
+}

@@ -226,8 +226,10 @@ are left to other tools for now.
   - **Windows:** a .NET MAUI app hosting the UI in a `BlazorWebView`
   - **Linux:** a Photino.Blazor app hosting the same UI, because .NET MAUI doesn't officially support Linux desktop
 - **Platforms:** Windows and Linux at minimum, with other platforms possible later
-- Platform-specific services (PTY, file system watching, launching processes) are reached through
-  interfaces in shared code, with an implementation for each host.
+- Platform-specific services (PTY, file system watching, launching processes, the folder picker and app
+  data paths) are reached through interfaces in shared code, with an implementation for each host.
+- **App data** lives in `%LOCALAPPDATA%\TAMMi\{Config,Data,Cache}` on Windows, and in the XDG base
+  directories on Linux (`~/.config/tammi`, `~/.local/share/tammi`, `~/.cache/tammi` by default).
 - Web-based UI components (e.g. xterm.js for the terminal) can be used inside the Blazor UI.
 - **Git access is hybrid:**
   - **LibGit2Sharp** for fast in-process reads: status, the git graph and history.
