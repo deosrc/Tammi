@@ -24,7 +24,7 @@ public static class RepositoryScanner
     /// How many folders below the Monitored Folder the scan looks, e.g. 3 finds
     /// <c>&lt;folder&gt;/github/acme/api</c>.
     /// </summary>
-    public const int MaxDepth = 5;
+    public const int MaxDepth = 20;
 
     private const string GitName = ".git";
 

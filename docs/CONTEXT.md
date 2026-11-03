@@ -74,7 +74,7 @@ so several workspaces can work on the same repository at once without cloning it
 added local repositories in the Git settings. A repository found by both, or in two overlapping Monitored Folders, is
 listed once.
 - A folder is a repository when it has a `.git` folder, or a `.git` file that doesn't belong to a linked worktree.
-- Scanning a Monitored Folder looks up to 5 folders down. It doesn't look inside repositories (so submodules and
+- Scanning a Monitored Folder looks up to 20 folders down. It doesn't look inside repositories (so submodules and
   repositories nested in another aren't listed on their own), and it skips linked worktrees, Workspace Folders, hidden
   folders and links to other folders.
 - A manually added repository must be a repository's top folder, and not a worktree. It can't be in a Monitored
