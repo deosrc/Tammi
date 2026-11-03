@@ -20,11 +20,17 @@ public sealed record AppSettings
     public GitSettings Git { get; init; } = new();
 
     /// <summary>
+    /// The Agents section.
+    /// </summary>
+    public AgentSettings Agents { get; init; } = new();
+
+    /// <summary>
     /// Replaces missing and out-of-range values with valid ones.
     /// </summary>
     public AppSettings Normalize() => this with
     {
         General = (General ?? new GeneralSettings()).Normalize(),
         Git = (Git ?? new GitSettings()).Normalize(),
+        Agents = (Agents ?? new AgentSettings()).Normalize(),
     };
 }

@@ -216,6 +216,16 @@ are left to other tools for now.
   context file in `.tammi/` and keeps it up to date. When an agent starts, TAMMi sends it an
   **initial prompt** telling it about the context file. The initial prompt is configurable, with a
   placeholder for the context file's path. Each Agent Definition says how the prompt is passed to its CLI.
+  - The template's placeholder is `{contextFile}`, replaced with the file's full path. The rest of the template is
+    sent as it is.
+  - An Agent Definition passes the prompt with **prompt arguments**: arguments added after its own, with `{prompt}`
+    where the prompt goes (e.g. `{prompt}` as a positional argument, or `--prompt {prompt}`). A definition without
+    prompt arguments doesn't take an initial prompt, and starts without one. Claude Code takes it as its positional
+    argument.
+  - The prompt is always passed as one argument, exactly as written. On Windows, a CLI that's a batch file (e.g.
+    `claude.cmd`, installed with npm) runs through `cmd.exe`, so TAMMi also escapes `cmd.exe`'s special characters.
+    `cmd.exe` can't pass on line breaks, so a template with several lines can't be sent to a batch file: starting
+    the agent fails and says why. The default template is a single line.
 - **Claude Code** is the first built-in Agent Definition. Others (e.g. Codex CLI, Gemini CLI) can be
   added as definitions.
 - **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or

@@ -48,6 +48,12 @@ internal sealed class WindowsPtySession : PtySession
 
     public static unsafe WindowsPtySession Start(PtyStartInfo startInfo)
     {
+        // Built first, because a batch file's arguments are checked.
+        var (applicationName, commandLineText) = WindowsCommandLine.Create(
+            startInfo.FileName,
+            startInfo.Arguments,
+            Environment.SystemDirectory);
+
         SafeFileHandle? inputRead = null;
         SafeFileHandle? inputWrite = null;
         SafeFileHandle? outputRead = null;
@@ -96,7 +102,7 @@ internal sealed class WindowsPtySession : PtySession
             };
 
             // CreateProcessW can change the command line, so it needs a writable copy.
-            var commandLine = (WindowsCommandLine.Build(startInfo.FileName, startInfo.Arguments) + '\0').ToCharArray();
+            var commandLine = (commandLineText + '\0').ToCharArray();
             var environment = BuildEnvironmentBlock(startInfo.Environment).ToCharArray();
 
             ProcessInformation processInformation;
@@ -104,7 +110,7 @@ internal sealed class WindowsPtySession : PtySession
             fixed (char* environmentPointer = environment)
             {
                 if (!CreateProcess(
-                    startInfo.FileName,
+                    applicationName,
                     commandLinePointer,
                     0,
                     0,
