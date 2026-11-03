@@ -63,6 +63,11 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 Workspaces never hold full clones. Each repository in a workspace is a worktree of a Local Repository,
 so several workspaces can work on the same repository at once without cloning it again.
 
+**Matching clones to integration repositories.** A local clone and an integration repository are the
+same catalogue entry when any of the clone's remotes matches the integration repository's URL. URLs are
+normalised before comparing, so HTTPS and SSH forms match. A clone of a fork with an `upstream` remote
+therefore counts as a Local Repository for both the fork and the upstream repository.
+
 **Metadata.** Each workspace describes itself in its `.tammi/` folder. The app's data folder keeps only
 an index of known workspace paths, which Home uses to list workspaces.
 
@@ -130,7 +135,6 @@ own branch. It is created automatically when the workspace is created:
 Record the decision here when an item is resolved, and move it into the sections above.
 
 ### Repositories
-- How is a Local Repository matched to an integration repository, so that it doesn't appear twice in the catalogue? By remote URL? What about forks and multiple remotes?
 - What happens if a Local Repository is moved or deleted while workspaces still have worktrees from it?
 
 ### Agents
