@@ -137,6 +137,8 @@ own branch. It is created automatically when the workspace is created:
   terminal opens in the workspace folder by default, or the user can open one in a specific repository.
   The shell defaults to PowerShell on Windows (`pwsh` if installed) and `$SHELL` on Linux, and can be
   changed in Settings.
+  - **Copy and paste:** Ctrl+Shift+C and Ctrl+Shift+V on every platform. On Windows, as in Windows Terminal,
+    Ctrl+C also copies when text is selected (otherwise it interrupts the process) and Ctrl+V pastes.
 
 ### Settings
 
@@ -232,8 +234,13 @@ are left to other tools for now.
   - **The `git` CLI** for writes (fetch, pull, push, stage, commit) and for worktree and submodule
     operations. This keeps full compatibility with the user's git config, credential helpers and hooks.
   - A `git` install is therefore required.
-- The embedded terminal (used for both the Terminal and Agents) needs a PTY (ConPTY on Windows,
-  `forkpty` on Linux) behind the platform service interfaces, with xterm.js as the renderer.
+- The embedded terminal (used for both the Terminal and Agents) needs a PTY behind the platform service
+  interfaces, with xterm.js as the renderer:
+  - **Windows:** ConPTY (Windows 10 1809 or later).
+  - **Linux:** a `/dev/ptmx` pseudoterminal. The process is started with `posix_spawn` rather than `forkpty`,
+    because a .NET process can't safely run code in a forked child before `exec`. `posix_spawn` starts the new
+    session and opens the terminal without any code in the child. This needs glibc 2.29 or later.
+  - xterm.js is vendored in the UI library (`wwwroot/lib/xterm`), so the app needs no network access or npm build.
 
 ## Open Questions
 

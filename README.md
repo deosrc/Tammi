@@ -27,7 +27,8 @@ for each platform:
 - `git`
 - **Windows:** the MAUI workload (`dotnet workload install maui-windows`) and the
   [WebView2 runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (included with Windows 11)
-- **Linux:** GTK 3 and WebKitGTK 4.1 (e.g. `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0` on Debian/Ubuntu)
+- **Linux:** GTK 3 and WebKitGTK 4.1 (e.g. `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0` on Debian/Ubuntu),
+  and glibc 2.29 or later for the embedded terminal
 
 ### Windows
 
@@ -49,3 +50,8 @@ dotnet run --project src/TAMMi.Linux
 
 `dotnet test` runs on Microsoft.Testing.Platform (set in `global.json`). It evaluates every project in a solution or
 solution filter, including the Windows host, so on Linux run it against the test project instead.
+
+### Developer pages
+
+Home links to pages for trying parts of the app on their own, such as **Terminal**, which runs the platform's default
+shell in the embedded terminal.
