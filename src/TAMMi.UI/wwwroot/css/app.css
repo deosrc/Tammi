@@ -184,6 +184,7 @@ a {
   background: var(--color-accent);
   color: var(--color-accent-text);
   font: inherit;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -256,6 +257,19 @@ a {
 /* A standard page: padded content. The Workspace View fills the whole area instead. */
 .page {
   padding: var(--space-6);
+}
+
+/* A page's heading with its main actions beside it. */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.page-header h1 {
+  margin: 0;
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
@@ -381,10 +395,66 @@ a {
   white-space: nowrap;
 }
 
-.workspace-summary {
+.workspace-folder {
   margin-top: var(--space-1);
+  overflow: hidden;
   font-size: var(--font-size-small);
   color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-problem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}
+
+.workspace-problem .icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.workspace-problem span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-card-unavailable:hover {
+  border-color: var(--color-border);
+}
+
+/* The tab of a workspace that can't be read: what's wrong with it, and what can be done. */
+.workspace-details-problem {
+  max-width: 80ch;
+  overflow-wrap: anywhere;
+}
+
+.workspace-details-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+.workspace-details-facts dt {
+  color: var(--color-text-muted);
+}
+
+.workspace-details-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.workspace-details-actions {
+  display: flex;
+  gap: var(--space-2);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------

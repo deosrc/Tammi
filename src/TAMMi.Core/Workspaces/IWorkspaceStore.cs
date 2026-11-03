@@ -27,6 +27,12 @@ public interface IWorkspaceStore
     Task<IReadOnlyList<WorkspaceListing>> ListAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists one known workspace, as <see cref="ListAsync"/> does, reading its metadata.
+    /// </summary>
+    /// <returns>The workspace's listing, or <see langword="null"/> if it isn't in the index.</returns>
+    Task<WorkspaceListing?> FindAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Reads the workspace in a Workspace Folder. It doesn't need to be in the index.
     /// </summary>
     /// <exception cref="WorkspaceNotFoundException">The folder, or the metadata in it, is missing.</exception>

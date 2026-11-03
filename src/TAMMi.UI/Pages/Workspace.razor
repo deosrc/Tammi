@@ -1,12 +1,38 @@
 @page "/workspaces/{WorkspaceId}"
 @implements IDisposable
 @inject WorkspaceTabs WorkspaceTabs
+@inject IWorkspaceStore WorkspaceStore
 
 @if (_tab is null)
 {
     <div class="page">
         <h1>Workspace not open</h1>
         <p>Open this workspace from <a href="@AppRoutes.Home">Home</a>.</p>
+    </div>
+}
+else if (!IsLoaded)
+{
+    @* Render neither view until the workspace has been read, so a workspace that can't be read doesn't show the
+       Workspace View for a moment first. *@
+}
+else if (_listing is { Availability: not WorkspaceAvailability.Available } listing)
+{
+    @* A workspace that can't be read: say what's wrong instead of showing the Workspace View. *@
+    <div class="page workspace-details">
+        <h1>@listing.Name</h1>
+        <p class="warning"><strong>@WorkspaceAvailabilityText.Summary(listing.Availability)</strong></p>
+        <p class="workspace-details-problem">@listing.Problem</p>
+        <dl class="workspace-details-facts">
+            <dt>Workspace Folder</dt>
+            <dd>@listing.Folder</dd>
+        </dl>
+        <div class="workspace-details-actions">
+            @* Deleting a workspace comes with the Delete Workspace flow (#27). *@
+            <button type="button" class="button button-danger" disabled
+                    title="Deleting workspaces isn't available yet">
+                Delete workspace
+            </button>
+        </div>
     </div>
 }
 else
@@ -32,20 +58,73 @@ else
 }
 
 @code {
+    private readonly CancellationTokenSource _disposed = new();
     private WorkspaceTab? _tab;
+    private WorkspaceListing? _listing;
+    private string? _loadedWorkspaceId;
+
+    // Counts loads, so a slow load that finishes after a newer one (e.g. for another tab) doesn't replace its result.
+    private int _loadCount;
 
     [Parameter]
     public string WorkspaceId { get; set; } = "";
 
-    protected override void OnInitialized() => WorkspaceTabs.Changed += OnTabsChanged;
+    protected override void OnInitialized()
+    {
+        WorkspaceTabs.Changed += OnTabsChanged;
+        WorkspaceStore.Changed += OnWorkspacesChanged;
+    }
 
-    protected override void OnParametersSet() => _tab = WorkspaceTabs.Find(WorkspaceId);
+    private bool IsLoaded => _loadedWorkspaceId == WorkspaceId;
 
-    public void Dispose() => WorkspaceTabs.Changed -= OnTabsChanged;
+    protected override async Task OnParametersSetAsync()
+    {
+        _tab = WorkspaceTabs.Find(WorkspaceId);
+        await LoadAsync();
+    }
+
+    public void Dispose()
+    {
+        WorkspaceTabs.Changed -= OnTabsChanged;
+        WorkspaceStore.Changed -= OnWorkspacesChanged;
+        _disposed.Cancel();
+        _disposed.Dispose();
+    }
+
+    private async Task LoadAsync()
+    {
+        var load = ++_loadCount;
+        WorkspaceListing? listing;
+        try
+        {
+            listing = await WorkspaceStore.FindAsync(WorkspaceId, _disposed.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (load == _loadCount)
+        {
+            _listing = listing;
+            _loadedWorkspaceId = WorkspaceId;
+        }
+    }
 
     private void OnTabsChanged() => InvokeAsync(() =>
     {
         _tab = WorkspaceTabs.Find(WorkspaceId);
+        StateHasChanged();
+    });
+
+    private void OnWorkspacesChanged() => InvokeAsync(async () =>
+    {
+        if (_disposed.IsCancellationRequested)
+        {
+            return;
+        }
+
+        await LoadAsync();
         StateHasChanged();
     });
 }

@@ -332,6 +332,42 @@ public sealed class WorkspaceStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task FindAsync_ReturnsTheWorkspacesListing()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(CreateWorkspace("Other"), Token);
+        var workspace = await store.SaveAsync(CreateWorkspace("Fix login"), Token);
+
+        var listing = await CreateStore().FindAsync(workspace.Id, Token);
+
+        Assert.NotNull(listing);
+        AssertAvailable(workspace, listing);
+    }
+
+    [Fact]
+    public async Task FindAsync_WithDeletedFolder_ReturnsItAsMissing()
+    {
+        var store = CreateStore();
+        var workspace = await store.SaveAsync(CreateWorkspace("Fix login"), Token);
+        Directory.Delete(workspace.Folder, recursive: true);
+
+        var listing = await store.FindAsync(workspace.Id, Token);
+
+        Assert.NotNull(listing);
+        Assert.Equal(WorkspaceAvailability.Missing, listing.Availability);
+        Assert.Equal("Fix login", listing.Name);
+    }
+
+    [Fact]
+    public async Task FindAsync_WithUnknownId_ReturnsNull()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(CreateWorkspace("Fix login"), Token);
+
+        Assert.Null(await store.FindAsync("unknown", Token));
+    }
+
+    [Fact]
     public async Task ListAsync_WithDeletedMetadata_ListsItAsMissing()
     {
         var store = CreateStore();

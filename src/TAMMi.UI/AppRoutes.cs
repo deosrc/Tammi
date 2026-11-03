@@ -36,6 +36,11 @@ public static class AppRoutes
     /// </summary>
     public const string DevAgent = "dev/agent";
 
+    /// <summary>
+    /// The Create Workspace flow. It isn't under <c>workspaces/</c>, so it can't clash with a workspace's tab.
+    /// </summary>
+    public const string NewWorkspace = "new-workspace";
+
     private const string WorkspacePrefix = "workspaces/";
 
     /// <summary>
