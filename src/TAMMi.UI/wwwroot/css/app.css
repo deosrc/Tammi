@@ -31,6 +31,9 @@
   --color-focus: #0969da;
   --color-error: #cf222e;
   --color-warning: #9a6700;
+  --color-success: #1a7f37;
+  --color-success-bg: #dafbe1;
+  --color-error-bg: #ffebe9;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,6 +50,9 @@
     --color-focus: #4c9aff;
     --color-error: #ff7b72;
     --color-warning: #d29922;
+    --color-success: #3fb950;
+    --color-success-bg: #12261e;
+    --color-error-bg: #2d1416;
   }
 }
 
@@ -571,6 +577,23 @@ a {
   margin-bottom: var(--space-3);
 }
 
+/* A Supported Agent's details, and a Custom Agent's command previews. */
+.agent-status,
+.agent-command-preview {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-small);
+}
+
+.agent-status dd,
+.agent-command-preview dd {
+  overflow-wrap: anywhere;
+}
+
+.agent-definition > .error,
+.agent-definition > p {
+  margin: 0 0 var(--space-3);
+}
+
 .agent-definition-name {
   flex: 1;
   min-width: 0;
@@ -592,6 +615,24 @@ a {
   border-radius: 999px;
   font-size: var(--font-size-small);
   color: var(--color-text-muted);
+}
+
+/* Status badges, e.g. whether a Supported Agent is ready. They come after .badge so they override its colours. */
+.badge-success,
+.badge-error {
+  font-weight: 600;
+}
+
+.badge-success {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge-error {
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
+  color: var(--color-error);
 }
 
 /* Third-party software list on the About page */

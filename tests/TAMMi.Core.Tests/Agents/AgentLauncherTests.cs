@@ -94,7 +94,7 @@ public class AgentLauncherTests
     {
         Assert.Equal("Claude Code", AgentDefinition.ClaudeCode.Name);
         Assert.Equal("claude", AgentDefinition.ClaudeCode.Command);
-        Assert.Contains(AgentDefinition.ClaudeCode, AgentDefinition.BuiltIn);
+        Assert.Equal([AgentDefinition.PromptPlaceholder], AgentDefinition.ClaudeCode.PromptArguments);
     }
 
     // Real processes on Linux, so the states are checked against real exit codes, signals and hang-ups.

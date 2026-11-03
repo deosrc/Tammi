@@ -6,8 +6,9 @@ namespace TAMMi.Core.Agents;
 /// An Agent Definition: a configured agent CLI that TAMMi can start.
 /// </summary>
 /// <remarks>
-/// Definitions are kept in the settings file and edited on the Settings screen. Two definitions are equal when their
-/// values are, including their arguments.
+/// Supported Agents have built-in definitions (see <see cref="SupportedAgent"/>). Custom Agents' definitions are kept in
+/// the settings file and edited on the Settings screen. Two definitions are equal when their values are, including
+/// their arguments.
 /// </remarks>
 public sealed record AgentDefinition
 {
@@ -70,19 +71,13 @@ public sealed record AgentDefinition
     public bool AcceptsInitialPrompt => PromptArguments.Count > 0;
 
     /// <summary>
-    /// The built-in definition for Claude Code. The initial prompt is its positional argument, which starts an
-    /// interactive session with that prompt.
+    /// The definition for Claude Code, a Supported Agent (see <see cref="SupportedAgent.ClaudeCode"/>). The initial
+    /// prompt is its positional argument, which starts an interactive session with that prompt.
     /// </summary>
     public static AgentDefinition ClaudeCode { get; } = new("Claude Code", "claude")
     {
         PromptArguments = [PromptPlaceholder],
     };
-
-    /// <summary>
-    /// The built-in definitions, in the order they're offered. They're the definitions in the settings until the user
-    /// changes them.
-    /// </summary>
-    public static IReadOnlyList<AgentDefinition> BuiltIn { get; } = [ClaudeCode];
 
     /// <summary>
     /// The arguments to start the agent with.

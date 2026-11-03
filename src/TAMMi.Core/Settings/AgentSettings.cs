@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using TAMMi.Core.Agents;
 
 namespace TAMMi.Core.Settings;
@@ -8,10 +9,10 @@ namespace TAMMi.Core.Settings;
 public sealed record AgentSettings
 {
     /// <summary>
-    /// The Agent Definitions that can be started, in the order they're offered. Until the user changes them, these are
-    /// the built-in definitions (see <see cref="AgentDefinition.BuiltIn"/>). The user can remove every definition.
+    /// The Custom Agents: Agent Definitions the user has added, in the order they're offered after the Supported
+    /// Agents.
     /// </summary>
-    public IReadOnlyList<AgentDefinition> Definitions { get; init; } = AgentDefinition.BuiltIn;
+    public IReadOnlyList<AgentDefinition> CustomDefinitions { get; init; } = [];
 
     /// <summary>
     /// The template for the initial prompt sent to agents when they start, with
@@ -20,37 +21,44 @@ public sealed record AgentSettings
     public string InitialPromptTemplate { get; init; } = InitialPrompt.DefaultTemplate;
 
     /// <summary>
-    /// Replaces missing definitions with the built-in ones and a missing template with the default, and fills in
-    /// missing values in each definition.
+    /// Every Agent Definition that can be started, in the order they're offered: the Supported Agents (see
+    /// <see cref="SupportedAgent.All"/>), then the Custom Agents.
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyList<AgentDefinition> Definitions =>
+        [.. SupportedAgent.All.Select(agent => agent.Definition), .. CustomDefinitions];
+
+    /// <summary>
+    /// Fills in missing values in each Custom Agent, and replaces a missing template with the default.
     /// </summary>
     public AgentSettings Normalize() => this with
     {
-        Definitions = Definitions is null
-            ? AgentDefinition.BuiltIn
-            : Definitions.Where(definition => definition is not null).Select(definition => definition.Normalize())
-                .ToArray(),
+        CustomDefinitions = CustomDefinitions?.Where(definition => definition is not null)
+            .Select(definition => definition.Normalize())
+            .ToArray() ?? [],
         InitialPromptTemplate = string.IsNullOrWhiteSpace(InitialPromptTemplate)
             ? InitialPrompt.DefaultTemplate
             : InitialPromptTemplate,
     };
 
     /// <summary>
-    /// Whether the definition at <paramref name="index"/> in <see cref="Definitions"/> has the same name as another
-    /// one, so the user can't tell them apart. Names match when they're the same apart from case and surrounding
-    /// spaces. Blank names don't match anything.
+    /// Whether the Custom Agent at <paramref name="index"/> in <see cref="CustomDefinitions"/> has the same name as a
+    /// Supported Agent or another Custom Agent, so the user can't tell them apart. Names match when they're the same
+    /// apart from case and surrounding spaces. Blank names don't match anything.
     /// </summary>
     public bool HasDuplicateName(int index)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(index);
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, Definitions.Count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, CustomDefinitions.Count);
 
-        var name = Definitions[index].Name?.Trim();
+        var name = CustomDefinitions[index].Name?.Trim();
         if (string.IsNullOrEmpty(name))
         {
             return false;
         }
 
-        return Definitions.Where((_, i) => i != index)
+        return SupportedAgent.All.Select(agent => agent.Definition)
+            .Concat(CustomDefinitions.Where((_, i) => i != index))
             .Any(other => string.Equals(other.Name?.Trim(), name, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -58,10 +66,10 @@ public sealed record AgentSettings
     public bool Equals(AgentSettings? other) =>
         other is not null
         && InitialPromptTemplate == other.InitialPromptTemplate
-        && (Definitions is null || other.Definitions is null
-            ? Definitions == other.Definitions
-            : Definitions.SequenceEqual(other.Definitions));
+        && (CustomDefinitions is null || other.CustomDefinitions is null
+            ? CustomDefinitions == other.CustomDefinitions
+            : CustomDefinitions.SequenceEqual(other.CustomDefinitions));
 
     /// <inheritdoc />
-    public override int GetHashCode() => HashCode.Combine(InitialPromptTemplate, Definitions?.Count);
+    public override int GetHashCode() => HashCode.Combine(InitialPromptTemplate, CustomDefinitions?.Count);
 }

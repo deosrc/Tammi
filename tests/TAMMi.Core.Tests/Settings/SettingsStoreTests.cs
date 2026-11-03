@@ -158,53 +158,47 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void Defaults_HaveBuiltInAgentDefinitionsAndPlatformShell()
+    public void Defaults_HaveSupportedAgentsOnlyAndPlatformShell()
     {
         var settings = new AppSettings();
 
-        Assert.Equal(AgentDefinition.BuiltIn, settings.Agents.Definitions);
-        Assert.Contains(AgentDefinition.ClaudeCode, settings.Agents.Definitions);
+        Assert.Empty(settings.Agents.CustomDefinitions);
+        Assert.Equal([AgentDefinition.ClaudeCode], settings.Agents.Definitions);
         Assert.Null(settings.Tools.TerminalShell);
         Assert.Empty(settings.Tools.TerminalShellArguments);
     }
 
     [Fact]
-    public async Task UpdateAsync_SavesAgentDefinitionsThatANewStoreLoads()
+    public async Task UpdateAsync_SavesCustomAgentsThatANewStoreLoads()
     {
         AgentDefinition[] definitions =
         [
             new AgentDefinition("Codex", "codex", "--full-auto") { PromptArguments = ["{prompt}"] },
-            AgentDefinition.ClaudeCode,
             new AgentDefinition("No prompt", "/opt/agent", "a b", "\"quoted\""),
         ];
 
         await CreateStore().UpdateAsync(settings => settings with
         {
-            Agents = settings.Agents with { Definitions = definitions },
+            Agents = settings.Agents with { CustomDefinitions = definitions },
         }, TestContext.Current.CancellationToken);
 
-        var reloaded = CreateStore().Current.Agents.Definitions;
-        Assert.Equal(definitions, reloaded);
-        Assert.False(reloaded[2].AcceptsInitialPrompt);
+        var reloaded = CreateStore().Current.Agents;
+        Assert.Equal(definitions, reloaded.CustomDefinitions);
+        Assert.False(reloaded.CustomDefinitions[1].AcceptsInitialPrompt);
+        Assert.Equal([AgentDefinition.ClaudeCode, .. definitions], reloaded.Definitions);
     }
 
     [Fact]
-    public async Task UpdateAsync_WithNoAgentDefinitions_KeepsNone()
+    public async Task UpdateAsync_WritesCustomAgentsOnly_WithoutComputedValues()
     {
         await CreateStore().UpdateAsync(settings => settings with
         {
-            Agents = settings.Agents with { Definitions = [] },
+            Agents = settings.Agents with { CustomDefinitions = [new AgentDefinition("Custom", "custom")] },
         }, TestContext.Current.CancellationToken);
 
-        Assert.Empty(CreateStore().Current.Agents.Definitions);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_WritesAgentDefinitionsWithoutComputedValues()
-    {
-        await CreateStore().UpdateAsync(settings => settings, TestContext.Current.CancellationToken);
-
-        var definition = JsonNode.Parse(File.ReadAllText(SettingsPath))!["agents"]!["definitions"]![0]!.AsObject();
+        var agents = JsonNode.Parse(File.ReadAllText(SettingsPath))!["agents"]!.AsObject();
+        Assert.Equal(["customDefinitions", "initialPromptTemplate"], agents.Select(p => p.Key));
+        var definition = Assert.Single(agents["customDefinitions"]!.AsArray())!.AsObject();
         Assert.Equal(["name", "command", "arguments", "promptArguments"], definition.Select(p => p.Key));
     }
 
@@ -215,11 +209,13 @@ public sealed class SettingsStoreTests : IDisposable
         {
             Agents = settings.Agents with
             {
-                Definitions = [new AgentDefinition(" Agent ", "  agent  "), new AgentDefinition("", "")],
+                CustomDefinitions = [new AgentDefinition(" Agent ", "  agent  "), new AgentDefinition("", "")],
             },
         }, TestContext.Current.CancellationToken);
 
-        Assert.Equal([new AgentDefinition(" Agent ", "agent"), new AgentDefinition("", "")], saved.Agents.Definitions);
+        Assert.Equal(
+            [new AgentDefinition(" Agent ", "agent"), new AgentDefinition("", "")],
+            saved.Agents.CustomDefinitions);
     }
 
     [Fact]
@@ -229,7 +225,7 @@ public sealed class SettingsStoreTests : IDisposable
             {
               "version": 1,
               "agents": {
-                "definitions": [
+                "customDefinitions": [
                   null,
                   { "name": "Bare" },
                   { "command": "agent", "arguments": null, "promptArguments": ["-p", null, "{prompt}"] }
@@ -246,7 +242,7 @@ public sealed class SettingsStoreTests : IDisposable
                 new AgentDefinition("Bare", ""),
                 new AgentDefinition("", "agent") { PromptArguments = ["-p", "{prompt}"] },
             ],
-            store.Current.Agents.Definitions);
+            store.Current.Agents.CustomDefinitions);
     }
 
     [Fact]
@@ -333,7 +329,7 @@ public sealed class SettingsStoreTests : IDisposable
     [InlineData("""{ "version": 1, "git": null }""")]
     [InlineData("""{ "version": 1, "agents": null }""")]
     [InlineData("""{ "version": 1, "agents": { "initialPromptTemplate": null } }""")]
-    [InlineData("""{ "version": 1, "agents": { "definitions": null } }""")]
+    [InlineData("""{ "version": 1, "agents": { "customDefinitions": null } }""")]
     [InlineData("""{ "version": 1, "tools": null }""")]
     [InlineData("""{ "version": 1, "tools": { "terminalShell": null, "terminalShellArguments": null } }""")]
     [InlineData("""{ }""")]

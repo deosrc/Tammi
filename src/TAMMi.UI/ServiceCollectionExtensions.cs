@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGitWorktreeService, GitWorktreeService>();
         services.AddSingleton<IntegrationRegistry>();
         services.AddSingleton<AgentLauncher>();
+        services.AddSingleton<SupportedAgentChecker>();
         services.AddSingleton<TerminalLauncher>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();
