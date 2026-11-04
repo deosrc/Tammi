@@ -1,4 +1,4 @@
-using TAMMi.Core.Terminals;
+using TAMMi.Core.Workspaces;
 
 namespace TAMMi.UI.Workspaces;
 
@@ -8,25 +8,25 @@ namespace TAMMi.UI.Workspaces;
 /// </summary>
 public sealed class WorkspaceViewState
 {
-    private readonly Dictionary<string, WorkspaceTerminal> _shownTerminals = [];
+    private readonly Dictionary<string, IWorkspaceProcess> _shown = [];
 
     /// <summary>
-    /// The terminal a workspace's view was showing, or <c>null</c> if it wasn't showing one.
+    /// The terminal or agent a workspace's view was showing, or <c>null</c> if it was showing the dashboard.
     /// </summary>
-    public WorkspaceTerminal? GetShownTerminal(string workspaceId) => _shownTerminals.GetValueOrDefault(workspaceId);
+    public IWorkspaceProcess? GetShown(string workspaceId) => _shown.GetValueOrDefault(workspaceId);
 
     /// <summary>
-    /// Sets the terminal a workspace's view shows.
+    /// Sets the terminal or agent a workspace's view shows, or <c>null</c> for the dashboard.
     /// </summary>
-    public void SetShownTerminal(string workspaceId, WorkspaceTerminal? terminal)
+    public void SetShown(string workspaceId, IWorkspaceProcess? process)
     {
-        if (terminal is null)
+        if (process is null)
         {
-            _shownTerminals.Remove(workspaceId);
+            _shown.Remove(workspaceId);
         }
         else
         {
-            _shownTerminals[workspaceId] = terminal;
+            _shown[workspaceId] = process;
         }
     }
 }

@@ -1,4 +1,5 @@
 using TAMMi.Core.Platform;
+using TAMMi.Core.Workspaces;
 
 namespace TAMMi.Core.Terminals;
 
@@ -8,7 +9,7 @@ namespace TAMMi.Core.Terminals;
 /// <remarks>
 /// It keeps running whether or not the workspace's tab is open. Close it with <see cref="WorkspaceTerminals"/>.
 /// </remarks>
-public sealed class WorkspaceTerminal
+public sealed class WorkspaceTerminal : IWorkspaceProcess
 {
     internal WorkspaceTerminal(string workspaceId, string name, string workingDirectory, IPtySession pty)
     {
@@ -16,6 +17,7 @@ public sealed class WorkspaceTerminal
         Name = name;
         WorkingDirectory = workingDirectory;
         Session = new TerminalSession(pty);
+        StartOrder = WorkspaceProcessOrder.Next();
     }
 
     /// <summary>
@@ -42,4 +44,7 @@ public sealed class WorkspaceTerminal
     /// Whether the shell has exited.
     /// </summary>
     public bool HasExited => Session.Pty.Exited.IsCompleted;
+
+    /// <inheritdoc />
+    public long StartOrder { get; }
 }

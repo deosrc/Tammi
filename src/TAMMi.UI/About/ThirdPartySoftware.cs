@@ -28,7 +28,7 @@ public static class ThirdPartySoftware
         new("Photino", "Photino.Blazor, Photino.NET and Photino.Native: the Linux host window",
             ThirdPartyPlatforms.Linux, "Apache-2.0",
             "https://github.com/tryphotino", LicenseFile: "photino.txt"),
-        new("Simple Icons", "The GitHub and JIRA logos. The logos are trademarks of their owners.",
+        new("Simple Icons", "The GitHub, JIRA and Claude logos. The logos are trademarks of their owners.",
             ThirdPartyPlatforms.All, "CC0-1.0", "https://simpleicons.org", LicenseFile: "simple-icons.txt"),
         new("WebView2", "Hosts the UI on Windows", ThirdPartyPlatforms.Windows, "BSD-style (Microsoft)",
             "https://aka.ms/webview", LicenseFile: "webview2.txt"),

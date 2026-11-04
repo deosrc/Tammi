@@ -44,6 +44,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SupportedAgentChecker>();
         services.AddSingleton<TerminalLauncher>();
         services.AddSingleton<WorkspaceTerminals>();
+        services.AddSingleton<WorkspaceAgents>();
         services.AddSingleton<WorkspaceViewState>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();

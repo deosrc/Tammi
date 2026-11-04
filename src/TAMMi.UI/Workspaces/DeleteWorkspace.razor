@@ -1,8 +1,10 @@
 @implements IDisposable
+@using TAMMi.Core.Agents
 @using TAMMi.Core.Terminals
 @inject WorkspaceDeleter Deleter
 @inject WorkspaceTabs WorkspaceTabs
 @inject WorkspaceTerminals Terminals
+@inject WorkspaceAgents Agents
 
 @* The Delete Workspace flow: check for work that would be lost, confirm, delete, then offer to delete the branches. *@
 <div class="delete-workspace">
@@ -175,12 +177,18 @@
 
     protected override Task OnInitializedAsync() => PlanAsync();
 
-    private RenderFragment? TerminalsNotice => Terminals.For(WorkspaceId).Count switch
+    private RenderFragment? TerminalsNotice => (Terminals.For(WorkspaceId).Count, Agents.For(WorkspaceId).Count) switch
     {
-        0 => null,
-        1 => @<p>Its open terminal will be closed.</p>,
-        var count => @<p>Its @count open terminals will be closed.</p>,
+        (0, 0) => null,
+        (1, 0) => @<p>Its open terminal will be closed.</p>,
+        (var terminals, 0) => @<p>Its @terminals open terminals will be closed.</p>,
+        (0, 1) => @<p>Its open agent will be stopped and closed.</p>,
+        (0, var agents) => @<p>Its @agents open agents will be stopped and closed.</p>,
+        (var terminals, var agents) =>
+            @<p>Its @Count(terminals, "open terminal") and @Count(agents, "agent") will be closed.</p>,
     };
+
+    private static string Count(int count, string noun) => count == 1 ? $"{count} {noun}" : $"{count} {noun}s";
 
     public void Dispose()
     {
@@ -233,9 +241,9 @@
         IReadOnlyList<WorkspaceBranch> branches;
         try
         {
-            // The terminals end first, so no shell is still using the folders being deleted. Nothing here is cancelled
-            // if the flow is closed, e.g. by showing another tab, so it doesn't stop half-way.
-            await Terminals.CloseAllAsync(WorkspaceId);
+            // The terminals and agents end first, so no process is still using the folders being deleted. Nothing
+            // here is cancelled if the flow is closed, e.g. by showing another tab, so it doesn't stop half-way.
+            await Task.WhenAll(Terminals.CloseAllAsync(WorkspaceId), Agents.CloseAllAsync(WorkspaceId));
             branches = await Deleter.DeleteAsync(_plan!, CancellationToken.None);
         }
         catch (Exception ex)

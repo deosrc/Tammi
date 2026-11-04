@@ -1,8 +1,12 @@
 @page "/workspaces/{WorkspaceId}"
 @implements IDisposable
+@using TAMMi.Core.Agents
+@using TAMMi.Core.Settings
 @using TAMMi.Core.Terminals
 @inject WorkspaceTabs WorkspaceTabs
 @inject WorkspaceTerminals Terminals
+@inject WorkspaceAgents Agents
+@inject ISettingsStore SettingsStore
 @inject WorkspaceViewState ViewState
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceGitStatusMonitors GitStatusMonitors
@@ -84,7 +88,10 @@ else
                     </ChildContent>
                 </SidePanelSection>
                 <SidePanelSection Title="Agents">
-                    <p class="placeholder">No agents running.</p>
+                    @if (_listing?.Workspace is { } agentsWorkspace)
+                    {
+                        <WorkspaceAgentsSection Workspace="agentsWorkspace" Shown="_shown" OnShow="ShowProcess" />
+                    }
                 </SidePanelSection>
                 <SidePanelSection Title="Repositories">
                     @if (_gitStatus is null || _gitStatus.Repositories.Count == 0)
@@ -136,9 +143,9 @@ else
             @* The first tab is the dashboard and the last opens the New menu, so they're always there. *@
             <div class="session-tabs">
                 <div class="session-tab-list" role="tablist" aria-label="Workspace">
-                    <div class="session-tab session-tab-dashboard @(_shownTerminal is null ? "active" : null)">
+                    <div class="session-tab session-tab-dashboard @(_shown is null ? "active" : null)">
                         <button type="button" class="session-tab-label session-tab-icon" role="tab"
-                                aria-selected="@(_shownTerminal is null ? "true" : "false")" title="Dashboard"
+                                aria-selected="@(_shown is null ? "true" : "false")" title="Dashboard"
                                 aria-label="Dashboard" @onclick="ShowDashboard">
                             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <rect x="3" y="3" width="7" height="9" rx="1" />
@@ -148,21 +155,29 @@ else
                             </svg>
                         </button>
                     </div>
-                    @foreach (var terminal in _terminals)
+                    @foreach (var process in _processes)
                     {
-                        var shown = ReferenceEquals(terminal, _shownTerminal);
-                        <div class="session-tab @(shown ? "active" : null)" @key="terminal">
+                        var shown = ReferenceEquals(process, _shown);
+                        <div class="session-tab @(shown ? "active" : null)" @key="process">
                             <button type="button" class="session-tab-label" role="tab"
-                                    aria-selected="@(shown ? "true" : "false")" title="@terminal.WorkingDirectory"
-                                    @onclick="() => ShowTerminal(terminal)">
-                                <span class="tab-label-text">@terminal.Name</span>
-                                @if (terminal.HasExited)
+                                    aria-selected="@(shown ? "true" : "false")" title="@process.WorkingDirectory"
+                                    @onclick="() => ShowProcess(process)">
+                                @if (process is WorkspaceAgent agent)
                                 {
-                                    <span class="session-tab-status">Exited</span>
+                                    @* Agents' tabs show their state, so one that needs the user stands out. *@
+                                    <span class="agent-state-dot @AgentStateText.ToneClass(agent.State)"
+                                          title="@AgentStateText.Label(agent.State)"></span>
+                                }
+                                <span class="tab-label-text">@process.Name</span>
+                                @if (process.HasExited)
+                                {
+                                    <span class="session-tab-status">
+                                        @(process is WorkspaceAgent { State: AgentState.Error } ? "Error" : "Exited")
+                                    </span>
                                 }
                             </button>
-                            <button type="button" class="tab-close" title="Close @terminal.Name"
-                                    aria-label="Close @terminal.Name" @onclick="() => CloseTerminalAsync(terminal)">
+                            <button type="button" class="tab-close" title="Close @process.Name"
+                                    aria-label="Close @process.Name" @onclick="() => CloseProcessAsync(process)">
                                 &times;
                             </button>
                         </div>
@@ -182,48 +197,34 @@ else
                     {
                         <div class="menu-backdrop" @onclick="CloseNewMenu"></div>
                         <ul class="menu" role="menu" aria-label="New">
-                            <li role="none" class="menu-submenu-anchor" @onmouseenter="() => _terminalMenuOpen = true">
-                                <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
-                                        aria-expanded="@(_terminalMenuOpen ? "true" : "false")"
-                                        @onclick="() => _terminalMenuOpen = !_terminalMenuOpen">
-                                    Terminal
-                                    <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true"
-                                         focusable="false">
-                                        <polyline points="9 6 15 12 9 18"></polyline>
-                                    </svg>
-                                </button>
-                                @if (_terminalMenuOpen)
-                                {
-                                    <ul class="menu menu-submenu" role="menu" aria-label="Terminal">
-                                        <li role="none">
-                                            <button type="button" class="menu-item" role="menuitem"
-                                                    @onclick="() => StartTerminal(null)">
-                                                Workspace
-                                            </button>
-                                        </li>
-                                        @foreach (var repository in _listing?.Workspace?.Repositories ?? [])
-                                        {
-                                            <li role="none" @key="repository.FolderName">
-                                                <button type="button" class="menu-item" role="menuitem"
-                                                        @onclick="() => StartTerminal(repository)">
-                                                    Repository: @repository.FolderName
-                                                </button>
-                                            </li>
-                                        }
-                                    </ul>
-                                }
-                            </li>
+                            @NewMenuItem(TerminalSubmenu, "Terminal", TerminalIcon, StartTerminal)
+                            @if (AgentDefinitions.Count > 0)
+                            {
+                                <li role="separator" class="menu-separator"></li>
+                            }
+                            @for (var i = 0; i < AgentDefinitions.Count; i++)
+                            {
+                                var definition = AgentDefinitions[i];
+                                var name = string.IsNullOrWhiteSpace(definition.Name)
+                                    ? WorkspaceAgents.DefaultName
+                                    : definition.Name;
+                                @NewMenuItem(
+                                    $"agent-{i}",
+                                    name,
+                                    @<AgentIcon Definition="definition" />,
+                                    repository => StartAgentAsync(definition, repository))
+                            }
                         </ul>
                     }
                 </div>
             </div>
-            @if (_terminalError is not null)
+            @if (_startError is not null)
             {
-                <p class="error workspace-main-error">@_terminalError</p>
+                <p class="error workspace-main-error">@_startError</p>
             }
-            @if (_shownTerminal is not null)
+            @if (_shown is not null)
             {
-                <Terminal @key="_shownTerminal" Session="_shownTerminal.Session" Class="workspace-terminal" />
+                <Terminal @key="_shown" Session="_shown.Session" Class="workspace-terminal" />
             }
             else
             {
@@ -243,11 +244,17 @@ else
     private string? _loadedWorkspaceId;
     private bool _deleting;
     private bool _manageMenuOpen;
+    private const string TerminalSubmenu = "terminal";
+
     private bool _newMenuOpen;
-    private bool _terminalMenuOpen;
-    private string? _terminalError;
-    private IReadOnlyList<WorkspaceTerminal> _terminals = [];
-    private WorkspaceTerminal? _shownTerminal;
+
+    // The New menu's open submenu: TerminalSubmenu, or "agent-<index>" for an Agent Definition.
+    private string? _openSubmenu;
+    private string? _startError;
+
+    // The workspace's terminals and agents, in the order they started.
+    private IReadOnlyList<IWorkspaceProcess> _processes = [];
+    private IWorkspaceProcess? _shown;
     private string _deletingName = "";
 
     // Keeps running while the tab is open, so it isn't disposed with the page.
@@ -266,8 +273,11 @@ else
     {
         WorkspaceTabs.Changed += OnTabsChanged;
         WorkspaceStore.Changed += OnWorkspacesChanged;
-        Terminals.Changed += OnTerminalsChanged;
+        Terminals.Changed += OnProcessesChanged;
+        Agents.Changed += OnProcessesChanged;
     }
+
+    private IReadOnlyList<AgentDefinition> AgentDefinitions => SettingsStore.Current.Agents.Definitions;
 
     private bool IsLoaded => _loadedWorkspaceId == WorkspaceId;
 
@@ -279,11 +289,11 @@ else
             _deleting = false;
             _manageMenuOpen = false;
             CloseNewMenu();
-            _terminalError = null;
+            _startError = null;
         }
 
         _tab = WorkspaceTabs.Find(WorkspaceId);
-        UpdateTerminals();
+        UpdateProcesses();
         await LoadAsync();
     }
 
@@ -291,7 +301,8 @@ else
     {
         WorkspaceTabs.Changed -= OnTabsChanged;
         WorkspaceStore.Changed -= OnWorkspacesChanged;
-        Terminals.Changed -= OnTerminalsChanged;
+        Terminals.Changed -= OnProcessesChanged;
+        Agents.Changed -= OnProcessesChanged;
         SetGitStatus(null);
         SetTasks(null);
         _disposed.Cancel();
@@ -381,34 +392,34 @@ else
         }
     });
 
-    private void UpdateTerminals()
+    private void UpdateProcesses()
     {
-        _terminals = Terminals.For(WorkspaceId);
+        _processes = [.. Terminals.For(WorkspaceId).Concat<IWorkspaceProcess>(Agents.For(WorkspaceId))
+            .OrderBy(process => process.StartOrder)];
 
-        // Show the terminal the view was showing last time, or the dashboard if it wasn't showing one or that terminal
+        // Show the terminal or agent the view was showing last time, or the dashboard if it wasn't showing one or it
         // has been closed.
-        _shownTerminal = ViewState.GetShownTerminal(WorkspaceId) is { } shown && _terminals.Contains(shown)
-            ? shown
-            : null;
-        ViewState.SetShownTerminal(WorkspaceId, _shownTerminal);
+        _shown = ViewState.GetShown(WorkspaceId) is { } shown && _processes.Contains(shown) ? shown : null;
+        ViewState.SetShown(WorkspaceId, _shown);
     }
 
     private void ShowDashboard()
     {
-        ViewState.SetShownTerminal(WorkspaceId, null);
-        _shownTerminal = null;
+        ViewState.SetShown(WorkspaceId, null);
+        _shown = null;
     }
 
-    private void ShowTerminal(WorkspaceTerminal terminal)
+    private void ShowProcess(IWorkspaceProcess process)
     {
-        ViewState.SetShownTerminal(WorkspaceId, terminal);
-        _shownTerminal = terminal;
+        ViewState.SetShown(WorkspaceId, process);
+        _shown = process;
+        UpdateProcesses();
     }
 
     private void StartTerminal(WorkspaceRepository? repository)
     {
         CloseNewMenu();
-        _terminalError = null;
+        _startError = null;
         if (_listing?.Workspace is not { } workspace)
         {
             return;
@@ -416,41 +427,142 @@ else
 
         try
         {
-            ShowTerminal(Terminals.Start(workspace, repository));
+            ShowProcess(Terminals.Start(workspace, repository));
         }
         catch (Exception ex) when (ex is IOException or System.Runtime.InteropServices.ExternalException)
         {
-            _terminalError = $"Couldn't start a terminal. {ex.Message}";
+            _startError = $"Couldn't start a terminal. {ex.Message}";
         }
 
-        UpdateTerminals();
+        UpdateProcesses();
     }
 
-    private async Task CloseTerminalAsync(WorkspaceTerminal terminal)
+    private async Task StartAgentAsync(AgentDefinition definition, WorkspaceRepository? repository)
     {
-        if (ReferenceEquals(terminal, _shownTerminal))
+        CloseNewMenu();
+        _startError = null;
+        if (_listing?.Workspace is not { } workspace)
         {
-            // Show the next terminal, or the previous one if it was the last, or else the dashboard.
-            var index = _terminals.ToList().IndexOf(terminal);
-            var next = index + 1 < _terminals.Count ? _terminals[index + 1] : index > 0 ? _terminals[index - 1] : null;
-            ViewState.SetShownTerminal(WorkspaceId, next);
+            return;
         }
 
-        var closing = Terminals.CloseAsync(terminal);
-        UpdateTerminals();
+        try
+        {
+            ShowProcess(await Agents.StartAsync(workspace, definition, repository));
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException
+            or System.Runtime.InteropServices.ExternalException)
+        {
+            _startError = $"Couldn't start {definition.Name}. {ex.Message}";
+        }
+
+        UpdateProcesses();
+    }
+
+    private async Task CloseProcessAsync(IWorkspaceProcess process)
+    {
+        if (ReferenceEquals(process, _shown))
+        {
+            // Show the next tab, or the previous one if it was the last, or else the dashboard.
+            var index = _processes.ToList().IndexOf(process);
+            var next = index + 1 < _processes.Count ? _processes[index + 1] : index > 0 ? _processes[index - 1] : null;
+            ViewState.SetShown(WorkspaceId, next);
+        }
+
+        // Closing an agent's tab stops it. Its session can still be resumed.
+        var closing = process switch
+        {
+            WorkspaceAgent agent => Agents.CloseAsync(agent),
+            WorkspaceTerminal terminal => Terminals.CloseAsync(terminal),
+            _ => Task.CompletedTask,
+        };
+        UpdateProcesses();
         await closing;
     }
+
+    // The New menu's icons: what each item starts, and where. Agents have theirs from AgentIcon.
+    private static readonly RenderFragment TerminalIcon =
+        @<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <polyline points="7 9 10 12 7 15" />
+            <path d="M12 15h5" />
+        </svg>;
+
+    private static readonly RenderFragment WorkspaceFolderIcon =
+        @<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+        </svg>;
+
+    private static readonly RenderFragment RepositoryIcon =
+        @<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="6" cy="5" r="2" />
+            <circle cx="6" cy="19" r="2" />
+            <circle cx="18" cy="7" r="2" />
+            <path d="M6 7v10M18 9a5 5 0 0 1-5 5h-2a5 5 0 0 0-5 3" />
+        </svg>;
+
+    // An item of the New menu with a submenu of where to start it: the Workspace Folder or one of its repositories.
+    private RenderFragment NewMenuItem(
+        string key,
+        string label,
+        RenderFragment icon,
+        Func<WorkspaceRepository?, Task> start) => __builder =>
+    {
+        var open = _openSubmenu == key;
+        <li role="none" class="menu-submenu-anchor" @key="key" @onmouseenter="() => _openSubmenu = key">
+            <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
+                    aria-expanded="@(open ? "true" : "false")" @onclick="() => _openSubmenu = open ? null : key">
+                @icon
+                <span class="tab-label-text">@label</span>
+                <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <polyline points="9 6 15 12 9 18"></polyline>
+                </svg>
+            </button>
+            @if (open)
+            {
+                <ul class="menu menu-submenu" role="menu" aria-label="@label">
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem" @onclick="() => start(null)">
+                            @WorkspaceFolderIcon
+                            Workspace
+                        </button>
+                    </li>
+                    @foreach (var repository in _listing?.Workspace?.Repositories ?? [])
+                    {
+                        <li role="none" @key="repository.FolderName">
+                            <button type="button" class="menu-item" role="menuitem"
+                                    @onclick="() => start(repository)">
+                                @RepositoryIcon
+                                Repository: @repository.FolderName
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        </li>
+    };
+
+    private RenderFragment NewMenuItem(
+        string key,
+        string label,
+        RenderFragment icon,
+        Action<WorkspaceRepository?> start) =>
+        NewMenuItem(key, label, icon, repository =>
+        {
+            start(repository);
+            return Task.CompletedTask;
+        });
 
     private void ToggleNewMenu()
     {
         _newMenuOpen = !_newMenuOpen;
-        _terminalMenuOpen = false;
+        _openSubmenu = null;
     }
 
     private void CloseNewMenu()
     {
         _newMenuOpen = false;
-        _terminalMenuOpen = false;
+        _openSubmenu = null;
     }
 
     private void OnNewMenuKeyDown(KeyboardEventArgs e)
@@ -461,14 +573,14 @@ else
         }
     }
 
-    private void OnTerminalsChanged(string workspaceId) => InvokeAsync(() =>
+    private void OnProcessesChanged(string workspaceId) => InvokeAsync(() =>
     {
         if (_disposed.IsCancellationRequested || workspaceId != WorkspaceId)
         {
             return;
         }
 
-        UpdateTerminals();
+        UpdateProcesses();
         StateHasChanged();
     });
 

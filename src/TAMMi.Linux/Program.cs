@@ -4,10 +4,12 @@ using Microsoft.Extensions.FileProviders;
 using Photino.Blazor;
 using Photino.NET;
 using TAMMi.Core;
+using TAMMi.Core.Agents;
 using TAMMi.Core.Terminals;
 using TAMMi.Core.Windowing;
 using TAMMi.Linux.PlatformServices;
 using TAMMi.UI;
+using TAMMi.UI.Workspaces;
 
 [assembly: SupportedOSPlatform("linux")]
 
@@ -41,6 +43,8 @@ internal static class Program
             .SetMaximized(windowState.IsMaximized)
             .Center();
         var windowStateTracker = TrackWindowState(app.MainWindow, windowState);
+        var agents = app.Services.GetRequiredService<WorkspaceAgents>();
+        app.MainWindow.RegisterWindowClosingHandler((_, _) => !ConfirmClose(app.MainWindow, agents));
 
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             app.MainWindow.ShowMessage("Unhandled error", e.ExceptionObject.ToString());
@@ -49,7 +53,24 @@ internal static class Program
 
         // Run returns once the window has closed.
         windowStateStore.Save(windowStateTracker.Current);
-        app.Services.GetRequiredService<WorkspaceTerminals>().DisposeAsync().AsTask().GetAwaiter().GetResult();
+        Task.WhenAll(
+            app.Services.GetRequiredService<WorkspaceTerminals>().DisposeAsync().AsTask(),
+            agents.DisposeAsync().AsTask()).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Asks the user whether to close TAMMi, if any agents are running.
+    /// </summary>
+    /// <returns>Whether the window should close.</returns>
+    private static bool ConfirmClose(PhotinoWindow window, WorkspaceAgents agents)
+    {
+        var running = agents.CountRunning();
+        return running == 0
+            || window.ShowMessage(
+                AppCloseWarning.Title,
+                AppCloseWarning.Message(running),
+                PhotinoDialogButtons.YesNo,
+                PhotinoDialogIcon.Warning) == PhotinoDialogResult.Yes;
     }
 
     private static WindowStateTracker TrackWindowState(PhotinoWindow window, WindowState initial)
