@@ -3,6 +3,10 @@
 @using TAMMi.Core.Settings
 @inject ISettingsStore SettingsStore
 @inject IFolderPicker FolderPicker
+@inject WorkspaceCreator Creator
+@inject WorkspaceTabs WorkspaceTabs
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <div class="page wizard">
     <h1>New workspace</h1>
@@ -107,23 +111,100 @@
                         }
                     </dd>
                 </dl>
-                <p class="placeholder">Choosing repositories and creating the workspace will appear here.</p>
+
+                @if (_created is not null)
+                {
+                    <p>The workspace <strong>@_created.Workspace.Name</strong> was created.</p>
+                    @foreach (var warning in _created.Warnings)
+                    {
+                        <p class="warning">@warning</p>
+                    }
+                }
+                else if (_creating)
+                {
+                    <div class="workspace-creation" aria-live="polite">
+                        <progress max="@(_progress?.TotalSteps ?? 1)" value="@(_progress?.CompletedSteps ?? 0)"></progress>
+                        <p>@(_progress?.Message ?? "Checking…")</p>
+                    </div>
+                }
+                else
+                {
+                    <RepositoryPicker Draft="_draft" Changed="StateHasChanged" />
+                }
+
+                @if (_failure is not null)
+                {
+                    <div class="workspace-creation-failure" role="alert">
+                        @if (_failure.Problems.Count > 0)
+                        {
+                            <p class="error">The workspace can't be created:</p>
+                            <ul>
+                                @foreach (var problem in _failure.Problems)
+                                {
+                                    <li class="error">@problem</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p class="error">@_failure.Message</p>
+                        }
+                        @if (_failure.CleanupProblems.Count == 0)
+                        {
+                            @if (_failure.InnerException is not null)
+                            {
+                                <p class="settings-help">Everything created for it has been removed again.</p>
+                            }
+                        }
+                        else
+                        {
+                            <p class="error">Some of what was created couldn't be removed again:</p>
+                            <ul>
+                                @foreach (var problem in _failure.CleanupProblems)
+                                {
+                                    <li class="error">@problem</li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                }
             </section>
             break;
     }
 
     <div class="wizard-actions">
-        <a class="button button-secondary" href="@AppRoutes.Home">Cancel</a>
-        <div class="wizard-actions-end">
-            @if (_step > WizardStep.Tasks)
-            {
-                <button type="button" class="button button-secondary" @onclick="Back">Back</button>
-            }
-            @if (_step < WizardStep.Repositories)
-            {
-                <button type="button" class="button" disabled="@(!CanGoNext)" @onclick="Next">Next</button>
-            }
-        </div>
+        @if (_created is not null)
+        {
+            <a class="button button-secondary" href="@AppRoutes.Home">Home</a>
+            <div class="wizard-actions-end">
+                <button type="button" class="button" @onclick="OpenCreated">Open workspace</button>
+            </div>
+        }
+        else if (_creating)
+        {
+            <button type="button" class="button button-secondary" disabled="@_cancelling" @onclick="CancelCreating">
+                @(_cancelling ? "Cancelling…" : "Cancel")
+            </button>
+        }
+        else
+        {
+            <a class="button button-secondary" href="@AppRoutes.Home">Cancel</a>
+            <div class="wizard-actions-end">
+                @if (_step > WizardStep.Tasks)
+                {
+                    <button type="button" class="button button-secondary" @onclick="Back">Back</button>
+                }
+                @if (_step < WizardStep.Repositories)
+                {
+                    <button type="button" class="button" disabled="@(!CanGoNext)" @onclick="Next">Next</button>
+                }
+                else
+                {
+                    <button type="button" class="button" disabled="@(!_draft.IsRepositoriesValid)"
+                            @onclick="CreateAsync">Create workspace</button>
+                }
+            </div>
+        }
     </div>
 </div>
 
@@ -144,6 +225,12 @@
 
     private WorkspaceDraft _draft = null!;
     private WizardStep _step = WizardStep.Tasks;
+    private bool _creating;
+    private bool _cancelling;
+    private CancellationTokenSource? _creation;
+    private WorkspaceCreationProgress? _progress;
+    private WorkspaceCreationException? _failure;
+    private WorkspaceCreationResult? _created;
 
     // The location is checked against the disk again on Next, since a render's result can be out of date.
     private bool CanGoNext => _step != WizardStep.NameAndLocation || _draft.IsLocationValid;
@@ -162,7 +249,74 @@
         }
     }
 
-    private void Back() => _step--;
+    private void Back()
+    {
+        _failure = null;
+        _step--;
+    }
+
+    public void Dispose()
+    {
+        // Leaving the page while creating stops it, and removes what was created.
+        _creation?.Cancel();
+    }
+
+    private async Task CreateAsync()
+    {
+        if (!_draft.IsLocationValid)
+        {
+            // Something appeared at the Workspace Folder since the last step.
+            _step = WizardStep.NameAndLocation;
+            return;
+        }
+
+        _failure = null;
+        _progress = null;
+        _creating = true;
+        _cancelling = false;
+        using var creation = _creation = new CancellationTokenSource();
+        var progress = new Progress<WorkspaceCreationProgress>(update =>
+        {
+            _progress = update;
+            StateHasChanged();
+        });
+        try
+        {
+            _created = await Creator.CreateAsync(_draft.ToCreationRequest(), progress, creation.Token);
+            if (_created.Warnings.Count == 0)
+            {
+                OpenCreated();
+            }
+        }
+        catch (WorkspaceCreationException ex)
+        {
+            _failure = ex;
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled by the user, or by leaving the page. Nothing is left on disk.
+        }
+        finally
+        {
+            _creation = null;
+            _creating = false;
+        }
+    }
+
+    private void CancelCreating()
+    {
+        _cancelling = true;
+        _creation?.Cancel();
+    }
+
+    private void OpenCreated()
+    {
+        if (_created?.Workspace is { } workspace)
+        {
+            WorkspaceTabs.Open(workspace.Id, workspace.Name);
+            Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id));
+        }
+    }
 
     private async Task PickParentFolderAsync()
     {

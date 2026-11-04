@@ -86,6 +86,21 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
    - The clone defaults to `<Monitored Folder>/<repo>`, so TAMMi finds it automatically. If there are
      several Monitored Folders, the user picks one. The user can choose any other folder instead, and
      the clone is then added as a manually added local repository.
+   - Choosing a repository fetches it, to find the remote's default branch (see [Branches](#repositories-on-disk)).
+     A repository that can't be fetched still offers the branches fetched before, and one with no remotes needs its
+     base branch chosen.
+   - A workspace can be created without repositories.
+4. **Create the workspace.** TAMMi checks everything first (the Workspace Folder is still free, the branch name is
+   valid and doesn't exist in any of the repositories, each base branch exists, the folder names are valid and
+   different), so nothing is created when a check fails. It then creates the Workspace Folder (and its parent
+   folders), fetches each repository again and creates its worktree and submodules, and writes the metadata and index
+   entry last, showing each step as it goes.
+   - A repository that can't be fetched now is still created, from the last fetched base, with a warning.
+   - If a step fails, or the user cancels (or leaves the page), TAMMi removes everything it created: the worktrees,
+     their new branches, the Workspace Folder and any parent folders it created that are still empty. Anything it
+     couldn't remove is listed. Since the metadata is written last, a workspace that's only partly created is never
+     listed on Home.
+   - The new workspace then opens in a tab, unless there were warnings, which are shown first.
 
 ### Repositories on disk
 
@@ -146,15 +161,26 @@ name and folder), which Home uses to list workspaces.
 **Folder names.** A Workspace Worktree's folder defaults to the repository name (e.g. `api`). If two
 repositories in the workspace have the same name, TAMMi prefixes the owner (e.g. `acme-api`). The user
 can change any folder name during setup.
+- The owner comes from the URL of the remote that's fetched (`origin`, or the first remote if there's no `origin`),
+  e.g. `acme` for `git@github.com:acme/api.git`. A repository with no remotes uses the name of the folder it's in.
+- Names are compared ignoring case, as on Windows. A name the user chose counts as taken, and so does `.tammi`. If the
+  owner doesn't tell two repositories apart, a number is added (e.g. `api-2`).
+- Folder names follow the repositories chosen until the user edits them, like the workspace's name.
 
 **Branches.** Git won't check out one branch in two worktrees, so each Workspace Worktree gets its
 own branch. It is created automatically when the workspace is created:
 - TAMMi suggests a branch name from the task, e.g. `<task-key>-<slug>`. When there are no tasks or
   several tasks, it uses the workspace name instead.
+  - The task key is its reference as in the suggested workspace name, as written, so a JIRA key stays uppercase and
+    JIRA links the branch to the issue. The slug is the title (or the workspace name) in lowercase words joined by
+    hyphens, without punctuation. So `ABC-123` "Add some feature" suggests `ABC-123-add-some-feature`, and
+    `acme/api#42` "Fix login" suggests `api-42-fix-login`. It's cut at a word to at most 80 characters.
+  - It follows the tasks and the workspace name until the user edits it.
 - The user can edit the suggested name before the workspace is created.
 - The same branch name is used in every repository in the workspace.
 - **Base:** TAMMi fetches each Local Repository, then branches from the remote's default branch
-  (e.g. `origin/main`). The user can choose a different base branch for each repository.
+  (e.g. `origin/main`). The user can choose a different base branch for each repository, from its remote-tracking
+  and local branches or by entering any commit-ish.
 - The new branch doesn't track its base, so pushing it publishes it under its own name rather than to the base.
 
 **Submodules.** When a Workspace Worktree is created, TAMMi checks out its submodules automatically

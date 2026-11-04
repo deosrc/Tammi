@@ -42,6 +42,64 @@ public sealed class GitWorktreeService(IGitCli git, IGitRepositoryReader reader)
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> ListBranchesAsync(
+        string repositoryPath,
+        CancellationToken cancellationToken = default)
+    {
+        const string localRefsPrefix = "refs/heads/";
+
+        // Each line is "<full name>\0<symref target>", and the target is empty unless the reference is symbolic.
+        GitCommandResult result = await git.RunAsync(
+            repositoryPath,
+            ["for-each-ref", "--format=%(refname)%00%(symref)", RemoteRefsPrefix, localRefsPrefix],
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        var remote = new List<string>();
+        var local = new List<string>();
+        foreach (string line in result.OutputLines)
+        {
+            string[] parts = line.Split('\0', 2);
+            if (parts.Length == 2 && parts[1].Length > 0)
+            {
+                continue;
+            }
+
+            if (parts[0].StartsWith(RemoteRefsPrefix, StringComparison.Ordinal))
+            {
+                remote.Add(parts[0][RemoteRefsPrefix.Length..]);
+            }
+            else if (parts[0].StartsWith(localRefsPrefix, StringComparison.Ordinal))
+            {
+                local.Add(parts[0][localRefsPrefix.Length..]);
+            }
+        }
+
+        remote.Sort(StringComparer.Ordinal);
+        local.Sort(StringComparer.Ordinal);
+        return [.. remote, .. local];
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> CommitExistsAsync(
+        string repositoryPath,
+        string commitish,
+        CancellationToken cancellationToken = default)
+    {
+        // A leading dash would be read as an option.
+        if (string.IsNullOrWhiteSpace(commitish) || commitish.StartsWith('-'))
+        {
+            return false;
+        }
+
+        GitCommandResult result = await git.RunAsync(
+            repositoryPath,
+            ["rev-parse", "--verify", "--quiet", $"{commitish}^{{commit}}"],
+            s_noThrow,
+            cancellationToken).ConfigureAwait(false);
+        return result.Succeeded;
+    }
+
+    /// <inheritdoc />
     public async Task<bool> IsValidBranchNameAsync(string branchName, CancellationToken cancellationToken = default)
     {
         // A leading dash would be read as an option.

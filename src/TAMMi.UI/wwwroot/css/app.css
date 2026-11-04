@@ -689,6 +689,94 @@ label.task-choice {
   white-space: nowrap;
 }
 
+/* Choosing repositories */
+
+.repository-picker {
+  margin-top: var(--space-6);
+}
+
+.repository-picker h3 {
+  margin: 0 0 var(--space-2);
+}
+
+.repository-picker-catalogue {
+  margin-bottom: var(--space-6);
+}
+
+.repository-filter {
+  width: 100%;
+  margin-bottom: var(--space-2);
+}
+
+.repository-name {
+  flex: none;
+  font-weight: 600;
+}
+
+.repository-path {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.chosen-repositories {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chosen-repository {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.chosen-repository-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.chosen-repository-heading .repository-path {
+  flex: 1;
+}
+
+.chosen-repository-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.chosen-repository-fields .settings-field {
+  margin: 0;
+}
+
+.chosen-repository-fields .settings-text {
+  width: 100%;
+}
+
+.workspace-creation progress {
+  width: 100%;
+}
+
+@media (min-width: 1200px) {
+  .repository-picker {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+
+  .repository-picker-catalogue {
+    margin-bottom: 0;
+  }
+}
+
 /* ---------------------------------------------------------------------------------------------------------------
    Workspace View
    --------------------------------------------------------------------------------------------------------------- */
