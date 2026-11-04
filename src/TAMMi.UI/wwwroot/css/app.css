@@ -525,6 +525,102 @@ a {
   margin: 0;
 }
 
+/* The side panel's git status section: an entry for each repository, with its submodules nested inside it. */
+.git-status-list,
+.git-status-submodules {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.git-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.git-status-submodules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-border);
+}
+
+.git-status-heading,
+.git-status-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.git-status-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-status-submodule .git-status-name {
+  font-weight: normal;
+}
+
+.git-status-badge {
+  flex: none;
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--color-surface-hover);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.git-status-badge-changed {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.git-status-head,
+.git-status-summary,
+.git-status-submodule .placeholder {
+  font-size: var(--font-size-small);
+}
+
+.git-status-branch {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-status-ahead-behind {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+  margin-left: auto;
+  color: var(--color-text-muted);
+}
+
+.git-status-summary {
+  color: var(--color-warning);
+}
+
+.git-status-problem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-small);
+}
+
+.git-status-problem .icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
 .workspace-main {
   flex: 1;
   min-width: 0;

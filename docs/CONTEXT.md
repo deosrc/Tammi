@@ -178,6 +178,18 @@ own branch. It is created automatically when the workspace is created:
   - Running agents
   - Git status of each repository in the workspace
   - "Open in…" tools
+- **Git status section:** an entry for each repository, in the workspace's order, with:
+  - whether it's **changed** (as on Home) or clean
+  - its branch (or the commit, when HEAD is detached), and how far it's ahead of and behind its upstream, when it
+    tracks one
+  - how many uncommitted changes and unpushed commits it has
+  - its submodules, nested under it, each with the same details, or "Not checked out"
+  - a broken worktree says what's wrong (e.g. "Local Repository moved or deleted") instead
+- **Live updates:** while a workspace's tab is open (even when another tab is shown), TAMMi watches each worktree's
+  folder and its git data in the Local Repository: the worktree's git directory (index, HEAD and its submodules' git
+  directories), the Local Repository's refs and the entries directly in its `.git` folder (e.g. `packed-refs`). So
+  editing, staging, committing and fetching all update the status, whichever tool does them. Only the repository that
+  changed is read again. Closing the tab stops watching.
 - **Git operations**, including a git graph view
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
 - **Terminals**: any number of embedded terminals, shown as tabs alongside agent sessions. A new

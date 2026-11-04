@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject WorkspaceTabs WorkspaceTabs
 @inject IWorkspaceStore WorkspaceStore
+@inject WorkspaceGitStatusMonitors GitStatusMonitors
 
 @if (_tab is null)
 {
@@ -43,8 +44,21 @@ else
             <SidePanelSection Title="Agents">
                 <p class="placeholder">No agents running.</p>
             </SidePanelSection>
-            <SidePanelSection Title="Repositories">
-                <p class="placeholder">Git status will appear here.</p>
+            <SidePanelSection Title="Git status">
+                @if (_gitStatus is null || _gitStatus.Repositories.Count == 0)
+                {
+                    <p class="placeholder">No repositories in this workspace.</p>
+                }
+                else
+                {
+                    <ul class="git-status-list">
+                        @foreach (var repository in _gitStatus.Repositories)
+                        {
+                            <WorkspaceRepositoryGitStatus @key="repository.Repository.FolderName"
+                                                          Repository="repository" />
+                        }
+                    </ul>
+                }
             </SidePanelSection>
             <SidePanelSection Title="Open in…">
                 <p class="placeholder">Tools will appear here.</p>
@@ -62,6 +76,9 @@ else
     private WorkspaceTab? _tab;
     private WorkspaceListing? _listing;
     private string? _loadedWorkspaceId;
+
+    // Keeps running while the tab is open, so it isn't disposed with the page.
+    private WorkspaceGitStatusMonitor? _gitStatus;
 
     // Counts loads, so a slow load that finishes after a newer one (e.g. for another tab) doesn't replace its result.
     private int _loadCount;
@@ -87,6 +104,7 @@ else
     {
         WorkspaceTabs.Changed -= OnTabsChanged;
         WorkspaceStore.Changed -= OnWorkspacesChanged;
+        SetGitStatus(null);
         _disposed.Cancel();
         _disposed.Dispose();
     }
@@ -108,12 +126,49 @@ else
         {
             _listing = listing;
             _loadedWorkspaceId = WorkspaceId;
+            UpdateGitStatus();
         }
     }
+
+    private void UpdateGitStatus()
+    {
+        // The monitor only runs while the workspace is open in a tab.
+        SetGitStatus(_listing?.Workspace is { } workspace && WorkspaceTabs.Find(workspace.Id) is not null
+            ? GitStatusMonitors.Start(workspace)
+            : null);
+    }
+
+    private void SetGitStatus(WorkspaceGitStatusMonitor? monitor)
+    {
+        if (ReferenceEquals(monitor, _gitStatus))
+        {
+            return;
+        }
+
+        if (_gitStatus is not null)
+        {
+            _gitStatus.Changed -= OnGitStatusChanged;
+        }
+
+        _gitStatus = monitor;
+        if (_gitStatus is not null)
+        {
+            _gitStatus.Changed += OnGitStatusChanged;
+        }
+    }
+
+    private void OnGitStatusChanged() => InvokeAsync(() =>
+    {
+        if (!_disposed.IsCancellationRequested)
+        {
+            StateHasChanged();
+        }
+    });
 
     private void OnTabsChanged() => InvokeAsync(() =>
     {
         _tab = WorkspaceTabs.Find(WorkspaceId);
+        UpdateGitStatus();
         StateHasChanged();
     });
 
