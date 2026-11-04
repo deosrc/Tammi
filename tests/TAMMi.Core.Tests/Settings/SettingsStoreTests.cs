@@ -68,6 +68,58 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void Defaults_SuggestLowercaseHyphenatedNamesWithTheTaskReference()
+    {
+        Assert.Equal(
+            new WorkspaceNameFormat
+            {
+                Separator = WorkspaceNameSeparator.Hyphens,
+                Case = WorkspaceNameCase.Lowercase,
+                IncludeTaskReference = true,
+            },
+            new AppSettings().General.WorkspaceNameFormat);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesTheWorkspaceNameFormat_ByName()
+    {
+        var format = new WorkspaceNameFormat
+        {
+            Separator = WorkspaceNameSeparator.Spaces,
+            Case = WorkspaceNameCase.AsWritten,
+            IncludeTaskReference = false,
+        };
+
+        await CreateStore().UpdateAsync(
+            settings => settings with { General = settings.General with { WorkspaceNameFormat = format } },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(format, CreateStore().Current.General.WorkspaceNameFormat);
+        string json = File.ReadAllText(SettingsPath);
+        Assert.Contains("\"Spaces\"", json);
+        Assert.Contains("\"AsWritten\"", json);
+    }
+
+    [Fact]
+    public void Load_WithoutAWorkspaceNameFormat_UsesTheDefault()
+    {
+        WriteSettingsFile("""{"version":1,"general":{"defaultWorkspaceParentFolder":"/tmp"}}""");
+
+        Assert.Equal(new WorkspaceNameFormat(), CreateStore().Current.General.WorkspaceNameFormat);
+    }
+
+    [Fact]
+    public void Load_WithAnUnknownWorkspaceNameFormatNumber_UsesTheDefault()
+    {
+        WriteSettingsFile("""{"version":1,"general":{"workspaceNameFormat":{"separator":9,"case":9}}}""");
+
+        WorkspaceNameFormat format = CreateStore().Current.General.WorkspaceNameFormat;
+
+        Assert.Equal(WorkspaceNameSeparator.Hyphens, format.Separator);
+        Assert.Equal(WorkspaceNameCase.Lowercase, format.Case);
+    }
+
+    [Fact]
     public async Task UpdateAsync_WritesVersionFirst()
     {
         var store = CreateStore();

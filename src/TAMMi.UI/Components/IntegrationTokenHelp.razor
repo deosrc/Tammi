@@ -1,3 +1,4 @@
+@using TAMMi.Core.Integrations.GitHub
 @using TAMMi.Core.Integrations.Jira
 @using TAMMi.Core.Settings
 
@@ -6,8 +7,10 @@
     @if (ForGitHub)
     {
         <text>
-            A fine-grained token with read access to issues and metadata, or a classic token with the
-            <code>repo</code> scope for private repositories.
+            A fine-grained token with read access to issues, contents and metadata on the repositories to include, or
+            a classic token with the <code>repo</code> scope for private repositories. GitHub's search only finds
+            private issues when a fine-grained token can read contents too. On github.com, the link below fills in
+            these permissions: choose the token's owner and its repositories (All repositories is simplest).
         </text>
         @* The link needs the server, so it waits until a GitHub Enterprise Server URL is entered. *@
         @if (GitHub is not null)
@@ -56,7 +59,9 @@
     [Parameter]
     public EventCallback<string> Open { get; set; }
 
+    // github.com's link fills in the token's name and permissions. Enterprise Servers before 3.20 can't fill them in,
+    // and may not have fine-grained tokens at all, so they get their token settings page.
     private static string GitHubTokenUrl(GitHubIntegrationSettings github) => github.IsGitHubCom
-        ? "https://github.com/settings/personal-access-tokens/new"
+        ? GitHubTokenTemplate.GitHubComUrl.AbsoluteUri
         : $"{github.ApiUrl.GetLeftPart(UriPartial.Authority)}/settings/tokens";
 }

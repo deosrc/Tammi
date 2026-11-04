@@ -17,7 +17,8 @@ internal sealed record GitHubIssue(
     string? Body,
     string HtmlUrl,
     string RepositoryUrl,
-    JsonElement? PullRequest)
+    JsonElement? PullRequest,
+    DateTimeOffset? UpdatedAt = null)
 {
     /// <summary>
     /// GitHub's issue endpoints also return pull requests, which have a <c>pull_request</c> property.
@@ -32,9 +33,15 @@ internal sealed record GitHubRepository(
     GitHubAccount Owner,
     string HtmlUrl,
     string CloneUrl,
-    string SshUrl);
+    string SshUrl,
+    bool Private = false);
 
-internal sealed record GitHubAccount(string Login);
+/// <param name="Login">The user or organisation name.</param>
+/// <param name="Type"><c>User</c> or <c>Organization</c>.</param>
+internal sealed record GitHubAccount(string Login, string? Type = null)
+{
+    public bool IsOrganization => string.Equals(Type, "Organization", StringComparison.OrdinalIgnoreCase);
+}
 
 /// <remarks>
 /// Each of <see cref="Errors"/> is usually an object with a <c>message</c>, but can be a plain string.

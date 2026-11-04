@@ -19,6 +19,12 @@ public sealed record TaskInfo(string Source, string Key, string Title, Uri Url)
     public string? Description { get; init; }
 
     /// <summary>
+    /// When the task last changed, or <see langword="null"/> if the service didn't say. Tasks from several sources
+    /// are listed most recently updated first.
+    /// </summary>
+    public DateTimeOffset? Updated { get; init; }
+
+    /// <summary>
     /// Identifies the task across all integrations.
     /// </summary>
     public TaskReference Reference => new(Source, Key);

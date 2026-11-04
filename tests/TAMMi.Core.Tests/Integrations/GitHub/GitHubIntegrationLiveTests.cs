@@ -25,7 +25,7 @@ public sealed class GitHubIntegrationLiveTests : IDisposable
 
         GitHubUser user = await github.GetAuthenticatedUserAsync(CancellationToken);
         IReadOnlyList<IntegrationRepository> repositories = await github.GetRepositoriesAsync(CancellationToken);
-        IReadOnlyList<TaskInfo> assigned = await github.SearchTasksAsync(null, CancellationToken);
+        IReadOnlyList<TaskInfo> assigned = await github.GetAssignedTasksAsync(CancellationToken);
 
         TestContext.Current.SendDiagnosticMessage(
             $"{user.Login}: {repositories.Count} repositories, {assigned.Count} assigned issues");
@@ -35,15 +35,15 @@ public sealed class GitHubIntegrationLiveTests : IDisposable
     }
 
     [Fact]
-    public async Task FindsAPublicIssueBySearchAndByKey()
+    public async Task SearchesTheUsersOwnIssues_AndFindsAPublicIssueByKey()
     {
         GitHubIntegration github = await CreateAsync();
 
-        IReadOnlyList<TaskInfo> found = await github.SearchTasksAsync(
-            "repo:deosrc/Condement \"Add Remote Desktop support\"", CancellationToken);
+        // The search runs, scoped to the user's repositories, whether or not it finds anything.
+        IReadOnlyList<TaskInfo> found = await github.SearchTasksAsync("the", CancellationToken);
         TaskInfo? byKey = await github.GetTaskAsync("deosrc/Condement#3", CancellationToken);
 
-        Assert.Contains(found, task => task.Key == "deosrc/Condement#3");
+        TestContext.Current.SendDiagnosticMessage($"{found.Count} issues found by text");
         Assert.Equal("Add Remote Desktop support", byKey?.Title);
         Assert.Null(await github.GetTaskAsync("deosrc/Condement#15", CancellationToken));
     }

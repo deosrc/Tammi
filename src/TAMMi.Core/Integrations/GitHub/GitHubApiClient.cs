@@ -54,6 +54,23 @@ internal sealed partial class GitHubApiClient(
     }
 
     /// <summary>
+    /// Requests a resource only to find out whether the token may read it.
+    /// </summary>
+    /// <param name="path">The path relative to the API URL, with any query string.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>
+    /// The response's status. It doesn't throw for an error status, except when GitHub rejects the token or a rate
+    /// limit is reached.
+    /// </returns>
+    public async Task<HttpStatusCode> GetStatusAsync(string path, CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = (await SendAsync(
+            new Uri(_apiUrl, path), allowNotFound: false, cancellationToken, returnFailures: true)
+            .ConfigureAwait(false))!;
+        return response.StatusCode;
+    }
+
+    /// <summary>
     /// Reads every page of a list, following GitHub's <c>Link</c> header.
     /// </summary>
     /// <param name="path">The path of the first page, relative to the API URL, with any query string.</param>
@@ -86,7 +103,8 @@ internal sealed partial class GitHubApiClient(
     private async Task<HttpResponseMessage?> SendAsync(
         Uri url,
         bool allowNotFound,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool returnFailures = false)
     {
         string token = await credentials.GetRequiredAsync(cancellationToken).ConfigureAwait(false);
         for (int attempt = 0; ; attempt++)
@@ -97,7 +115,8 @@ internal sealed partial class GitHubApiClient(
                 return response;
             }
 
-            using (response)
+            bool keep = false;
+            try
             {
                 if (allowNotFound && response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
                 {
@@ -115,6 +134,12 @@ internal sealed partial class GitHubApiClient(
 
                 if (RateLimitRetryAt(response, body) is not { } retryAt)
                 {
+                    if (returnFailures)
+                    {
+                        keep = true;
+                        return response;
+                    }
+
                     throw Error(response, body);
                 }
 
@@ -130,6 +155,13 @@ internal sealed partial class GitHubApiClient(
                 if (wait > TimeSpan.Zero)
                 {
                     await Task.Delay(wait, timeProvider, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                if (!keep)
+                {
+                    response.Dispose();
                 }
             }
         }
