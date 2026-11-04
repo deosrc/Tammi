@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Tammi.Core.Credentials;
-using Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Credentials;
+using Deosrc.Tammi.Core.Integrations;
 
-namespace Tammi.Core.Tests.Integrations;
+namespace Deosrc.Tammi.Core.Tests.Integrations;
 
 /// <summary>
 /// An integration that provides tasks and repositories from memory. Like a real integration, it needs a token in the

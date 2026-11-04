@@ -1,6 +1,6 @@
-using Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace Tammi.Core.Tests.Platform;
+namespace Deosrc.Tammi.Core.Tests.Platform;
 
 public class ExecutableResolverTests
 {

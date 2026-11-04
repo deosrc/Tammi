@@ -1,8 +1,8 @@
-using Tammi.Core.Integrations;
-using Tammi.Core.Settings;
-using Tammi.Core.Workspaces;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace Tammi.Core.Tests.Workspaces;
+namespace Deosrc.Tammi.Core.Tests.Workspaces;
 
 public sealed class WorkspaceNamesTests
 {

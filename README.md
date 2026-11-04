@@ -33,7 +33,7 @@ for each platform:
 ### Windows
 
 ```shell
-dotnet build Tammi.slnx
+dotnet build Deosrc.Tammi.slnx
 dotnet test
 dotnet run --project src/Deosrc.Tammi.Windows
 ```

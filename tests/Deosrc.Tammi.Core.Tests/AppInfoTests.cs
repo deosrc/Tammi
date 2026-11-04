@@ -1,4 +1,4 @@
-namespace Tammi.Core.Tests;
+namespace Deosrc.Tammi.Core.Tests;
 
 public class AppInfoTests
 {

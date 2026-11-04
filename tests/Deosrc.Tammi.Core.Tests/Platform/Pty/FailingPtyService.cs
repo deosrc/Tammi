@@ -1,6 +1,6 @@
-using Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace Tammi.Core.Tests.Platform.Pty;
+namespace Deosrc.Tammi.Core.Tests.Platform.Pty;
 
 /// <summary>
 /// A pseudoterminal service that can't start anything: each start throws the given exception.

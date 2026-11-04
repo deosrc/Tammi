@@ -1,7 +1,7 @@
-using Tammi.Core.Integrations;
-using Tammi.Core.Workspaces;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace Tammi.Core.Tests.Workspaces;
+namespace Deosrc.Tammi.Core.Tests.Workspaces;
 
 public sealed class TaskContextFileTests : IDisposable
 {

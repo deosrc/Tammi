@@ -1,9 +1,9 @@
-using Tammi.Core.Catalogue;
-using Tammi.Core.Git;
-using Tammi.Core.Integrations;
-using Tammi.Core.Workspaces;
+using Deosrc.Tammi.Core.Catalogue;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace Tammi.Core.Tests.Workspaces;
+namespace Deosrc.Tammi.Core.Tests.Workspaces;
 
 /// <summary>
 /// The repository step of <see cref="WorkspaceDraft"/>: the chosen repositories' folder names and the branch name.

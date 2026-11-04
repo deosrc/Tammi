@@ -1,6 +1,6 @@
-using Tammi.Core.Git;
+using Deosrc.Tammi.Core.Git;
 
-namespace Tammi.Core.Tests.Git;
+namespace Deosrc.Tammi.Core.Tests.Git;
 
 /// <summary>
 /// A temporary folder for building git repositories in tests. Git runs with its own global config, so the

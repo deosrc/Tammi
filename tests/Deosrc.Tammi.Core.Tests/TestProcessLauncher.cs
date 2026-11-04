@@ -1,6 +1,6 @@
-using Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace Tammi.Core.Tests;
+namespace Deosrc.Tammi.Core.Tests;
 
 /// <summary>
 /// A process launcher that finds executables on <c>PATH</c>, for tests that run real processes.

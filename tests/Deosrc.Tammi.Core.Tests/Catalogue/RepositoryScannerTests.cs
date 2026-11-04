@@ -1,8 +1,8 @@
-using Tammi.Core.Catalogue;
-using Tammi.Core.Tests.Git;
-using Tammi.Core.Workspaces;
+using Deosrc.Tammi.Core.Catalogue;
+using Deosrc.Tammi.Core.Tests.Git;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace Tammi.Core.Tests.Catalogue;
+namespace Deosrc.Tammi.Core.Tests.Catalogue;
 
 public sealed class RepositoryScannerTests : IDisposable
 {

@@ -1,7 +1,7 @@
-using Tammi.Core.Integrations;
-using Tammi.Core.Tests.Credentials;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Tests.Credentials;
 
-namespace Tammi.Core.Tests.Integrations;
+namespace Deosrc.Tammi.Core.Tests.Integrations;
 
 public class IntegrationCredentialsTests
 {

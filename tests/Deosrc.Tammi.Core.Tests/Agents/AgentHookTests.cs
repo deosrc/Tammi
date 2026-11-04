@@ -1,7 +1,7 @@
 using System.Text.Json;
-using Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Agents;
 
-namespace Tammi.Core.Tests.Agents;
+namespace Deosrc.Tammi.Core.Tests.Agents;
 
 /// <summary>
 /// How an agent follows the events its hooks send.

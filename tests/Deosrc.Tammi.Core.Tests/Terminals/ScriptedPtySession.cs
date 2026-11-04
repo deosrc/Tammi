@@ -1,8 +1,8 @@
 using System.Text;
 using System.Threading.Channels;
-using Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace Tammi.Core.Tests.Terminals;
+namespace Deosrc.Tammi.Core.Tests.Terminals;
 
 /// <summary>
 /// A session with no process behind it, whose output the test writes.

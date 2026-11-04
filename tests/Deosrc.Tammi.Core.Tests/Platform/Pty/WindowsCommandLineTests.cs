@@ -1,6 +1,6 @@
-using Tammi.Core.Platform.Pty;
+using Deosrc.Tammi.Core.Platform.Pty;
 
-namespace Tammi.Core.Tests.Platform.Pty;
+namespace Deosrc.Tammi.Core.Tests.Platform.Pty;
 
 public class WindowsCommandLineTests
 {
@@ -77,7 +77,7 @@ public class WindowsCommandLineTests
     [Fact]
     public void BuildForBatchFile_EscapesDefaultPromptAndPath()
     {
-        var prompt = Tammi.Core.Agents.InitialPrompt.Expand(
+        var prompt = Deosrc.Tammi.Core.Agents.InitialPrompt.Expand(
             "Read `{contextFile}` & go!", @"C:\Users\Jo\100% done\.tammi\tasks.md");
 
         Assert.Equal(

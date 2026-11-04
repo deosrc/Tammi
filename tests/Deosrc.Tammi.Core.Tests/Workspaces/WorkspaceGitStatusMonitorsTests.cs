@@ -1,9 +1,9 @@
-using Tammi.Core.Git;
-using Tammi.Core.Tests.Catalogue;
-using Tammi.Core.Tests.Git;
-using Tammi.Core.Workspaces;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Tests.Catalogue;
+using Deosrc.Tammi.Core.Tests.Git;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace Tammi.Core.Tests.Workspaces;
+namespace Deosrc.Tammi.Core.Tests.Workspaces;
 
 public sealed class WorkspaceGitStatusMonitorsTests : IDisposable
 {

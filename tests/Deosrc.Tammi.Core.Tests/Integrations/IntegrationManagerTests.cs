@@ -1,16 +1,16 @@
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.Time.Testing;
-using Tammi.Core.Credentials;
-using Tammi.Core.Integrations;
-using Tammi.Core.Integrations.GitHub;
-using Tammi.Core.Integrations.Jira;
-using Tammi.Core.Settings;
-using Tammi.Core.Tests.Credentials;
-using Tammi.Core.Tests.Integrations.GitHub;
-using Tammi.Core.Tests.Integrations.Jira;
+using Deosrc.Tammi.Core.Credentials;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Integrations.GitHub;
+using Deosrc.Tammi.Core.Integrations.Jira;
+using Deosrc.Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Tests.Credentials;
+using Deosrc.Tammi.Core.Tests.Integrations.GitHub;
+using Deosrc.Tammi.Core.Tests.Integrations.Jira;
 
-namespace Tammi.Core.Tests.Integrations;
+namespace Deosrc.Tammi.Core.Tests.Integrations;
 
 public sealed class IntegrationManagerTests : IDisposable
 {

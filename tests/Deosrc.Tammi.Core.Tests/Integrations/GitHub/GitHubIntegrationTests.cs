@@ -1,11 +1,11 @@
 using System.Net;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Time.Testing;
-using Tammi.Core.Integrations;
-using Tammi.Core.Integrations.GitHub;
-using Tammi.Core.Tests.Credentials;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Integrations.GitHub;
+using Deosrc.Tammi.Core.Tests.Credentials;
 
-namespace Tammi.Core.Tests.Integrations.GitHub;
+namespace Deosrc.Tammi.Core.Tests.Integrations.GitHub;
 
 public class GitHubIntegrationTests : IDisposable
 {

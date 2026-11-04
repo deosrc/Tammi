@@ -1,6 +1,6 @@
-using Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Agents;
 
-namespace Tammi.Core.Tests.Agents;
+namespace Deosrc.Tammi.Core.Tests.Agents;
 
 public class AgentDefinitionTests
 {

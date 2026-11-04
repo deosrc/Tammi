@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using Tammi.Core.Agents;
-using Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Platform;
 
-namespace Tammi.Core.Tests.Agents;
+namespace Deosrc.Tammi.Core.Tests.Agents;
 
 public class SupportedAgentCheckerTests
 {

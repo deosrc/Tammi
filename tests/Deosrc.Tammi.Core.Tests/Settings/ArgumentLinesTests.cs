@@ -1,6 +1,6 @@
-using Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Settings;
 
-namespace Tammi.Core.Tests.Settings;
+namespace Deosrc.Tammi.Core.Tests.Settings;
 
 public class ArgumentLinesTests
 {

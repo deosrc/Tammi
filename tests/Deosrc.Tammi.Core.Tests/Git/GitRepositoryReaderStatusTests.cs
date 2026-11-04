@@ -1,6 +1,6 @@
-using Tammi.Core.Git;
+using Deosrc.Tammi.Core.Git;
 
-namespace Tammi.Core.Tests.Git;
+namespace Deosrc.Tammi.Core.Tests.Git;
 
 public sealed class GitRepositoryReaderStatusTests : IDisposable
 {

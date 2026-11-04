@@ -1,6 +1,6 @@
-using Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace Tammi.Core.Tests.Catalogue;
+namespace Deosrc.Tammi.Core.Tests.Catalogue;
 
 /// <summary>
 /// An <see cref="IFileSystemWatchService"/> whose watches report changes only when a test raises them.

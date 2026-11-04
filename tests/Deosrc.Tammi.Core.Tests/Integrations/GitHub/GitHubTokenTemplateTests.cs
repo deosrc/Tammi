@@ -1,7 +1,7 @@
 using System.Web;
-using Tammi.Core.Integrations.GitHub;
+using Deosrc.Tammi.Core.Integrations.GitHub;
 
-namespace Tammi.Core.Tests.Integrations.GitHub;
+namespace Deosrc.Tammi.Core.Tests.Integrations.GitHub;
 
 public sealed class GitHubTokenTemplateTests
 {

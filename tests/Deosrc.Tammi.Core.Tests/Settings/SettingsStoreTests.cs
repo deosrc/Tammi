@@ -1,9 +1,9 @@
 using System.Text.Json.Nodes;
-using Tammi.Core.Agents;
-using Tammi.Core.Platform;
-using Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Settings;
 
-namespace Tammi.Core.Tests.Settings;
+namespace Deosrc.Tammi.Core.Tests.Settings;
 
 public sealed class SettingsStoreTests : IDisposable
 {

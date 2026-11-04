@@ -1,6 +1,6 @@
-using Tammi.Core.Workspaces;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace Tammi.Core.Tests.Workspaces;
+namespace Deosrc.Tammi.Core.Tests.Workspaces;
 
 public sealed class WorktreeFolderNamesTests
 {

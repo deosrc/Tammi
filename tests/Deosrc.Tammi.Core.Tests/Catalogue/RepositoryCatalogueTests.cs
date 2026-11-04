@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Time.Testing;
-using Tammi.Core.Catalogue;
-using Tammi.Core.Git;
-using Tammi.Core.Settings;
-using Tammi.Core.Tests.Git;
+using Deosrc.Tammi.Core.Catalogue;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Tests.Git;
 
-namespace Tammi.Core.Tests.Catalogue;
+namespace Deosrc.Tammi.Core.Tests.Catalogue;
 
 public sealed class RepositoryCatalogueTests : IDisposable
 {

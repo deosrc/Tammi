@@ -1,7 +1,7 @@
 using System.Text;
-using Tammi.Core.Terminals;
+using Deosrc.Tammi.Core.Terminals;
 
-namespace Tammi.Core.Tests.Terminals;
+namespace Deosrc.Tammi.Core.Tests.Terminals;
 
 public class TerminalSessionTests
 {

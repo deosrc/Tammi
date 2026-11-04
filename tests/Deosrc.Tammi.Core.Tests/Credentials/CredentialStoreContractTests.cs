@@ -1,6 +1,6 @@
-using Tammi.Core.Credentials;
+using Deosrc.Tammi.Core.Credentials;
 
-namespace Tammi.Core.Tests.Credentials;
+namespace Deosrc.Tammi.Core.Tests.Credentials;
 
 /// <summary>
 /// Saves, reads and deletes real secrets in the platform secret store, under random keys that are deleted afterwards.

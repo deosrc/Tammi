@@ -1,6 +1,6 @@
-using Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace Tammi.Core.Tests.Agents;
+namespace Deosrc.Tammi.Core.Tests.Agents;
 
 /// <summary>
 /// A session with no process behind it. The test says when the "process" exits.

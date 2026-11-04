@@ -1,8 +1,8 @@
-using Tammi.Core.Integrations;
-using Tammi.Core.Integrations.GitHub;
-using Tammi.Core.Tests.Credentials;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Integrations.GitHub;
+using Deosrc.Tammi.Core.Tests.Credentials;
 
-namespace Tammi.Core.Tests.Integrations.GitHub;
+namespace Deosrc.Tammi.Core.Tests.Integrations.GitHub;
 
 /// <summary>
 /// Checks the integration against the real GitHub API. They only run when <c>TAMMI_GITHUB_TOKEN</c> holds an access

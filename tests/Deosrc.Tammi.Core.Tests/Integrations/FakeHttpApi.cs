@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text;
 
-namespace Tammi.Core.Tests.Integrations;
+namespace Deosrc.Tammi.Core.Tests.Integrations;
 
 /// <summary>
 /// Answers an integration's API requests with recorded or faked responses, and records the requests.

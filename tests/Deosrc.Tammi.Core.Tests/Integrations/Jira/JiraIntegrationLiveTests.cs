@@ -1,8 +1,8 @@
-using Tammi.Core.Integrations;
-using Tammi.Core.Integrations.Jira;
-using Tammi.Core.Tests.Credentials;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Integrations.Jira;
+using Deosrc.Tammi.Core.Tests.Credentials;
 
-namespace Tammi.Core.Tests.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Tests.Integrations.Jira;
 
 /// <summary>
 /// Checks the integration against a real JIRA site. They only run when <c>TAMMI_JIRA_URL</c> and

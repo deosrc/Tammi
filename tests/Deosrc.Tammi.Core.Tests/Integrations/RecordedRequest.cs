@@ -1,4 +1,4 @@
-namespace Tammi.Core.Tests.Integrations;
+namespace Deosrc.Tammi.Core.Tests.Integrations;
 
 /// <summary>
 /// A request a <see cref="FakeHttpApi"/> received.

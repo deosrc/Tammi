@@ -1,7 +1,7 @@
 using System.Runtime.Versioning;
-using Tammi.Core.Credentials;
+using Deosrc.Tammi.Core.Credentials;
 
-namespace Tammi.Core.Tests.Credentials;
+namespace Deosrc.Tammi.Core.Tests.Credentials;
 
 [SupportedOSPlatform("windows")]
 public sealed class WindowsCredentialStoreTests : CredentialStoreContractTests
