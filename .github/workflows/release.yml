@@ -144,10 +144,12 @@ jobs:
       # Kept on manual runs without a tag too, so they can be downloaded and tried.
       - name: Upload workflow artifact
         if: steps.switch.outputs.enabled == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.package.outputs.file }}
           path: ${{ steps.package.outputs.file }}
+          # The file is already an archive, so upload it as-is rather than zipping it again. The artifact takes the
+          # file's name.
+          archive: false
 
       - name: Attach to release
         if: steps.switch.outputs.enabled == 'true' && steps.tag.outputs.tag != ''
