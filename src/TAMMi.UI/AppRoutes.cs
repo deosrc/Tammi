@@ -29,11 +29,6 @@ public static class AppRoutes
     public const string ThirdPartySoftware = About + "/third-party";
 
     /// <summary>
-    /// A developer page for trying the embedded terminal.
-    /// </summary>
-    public const string DevTerminal = "dev/terminal";
-
-    /// <summary>
     /// A developer page for starting and stopping agents.
     /// </summary>
     public const string DevAgent = "dev/agent";

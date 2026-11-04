@@ -14,9 +14,16 @@ internal sealed class RecordingPtyService : IPtyService
 
     public ProcessRequest GetDefaultShell() => DefaultShell;
 
+    /// <summary>
+    /// The sessions it has started, in the order they were started.
+    /// </summary>
+    public List<FakePtySession> Sessions { get; } = [];
+
     public IPtySession Start(ProcessRequest request, PtySize size)
     {
         Requests.Add((request, size));
-        return new FakePtySession();
+        var session = new FakePtySession();
+        Sessions.Add(session);
+        return session;
     }
 }

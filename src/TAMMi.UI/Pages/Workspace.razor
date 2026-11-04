@@ -1,6 +1,9 @@
 @page "/workspaces/{WorkspaceId}"
 @implements IDisposable
+@using TAMMi.Core.Terminals
 @inject WorkspaceTabs WorkspaceTabs
+@inject WorkspaceTerminals Terminals
+@inject WorkspaceViewState ViewState
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceGitStatusMonitors GitStatusMonitors
 @inject NavigationManager Navigation
@@ -99,8 +102,81 @@ else
             </div>
         </aside>
         <div class="workspace-main">
-            <h1>@_tab.Name</h1>
-            <p class="placeholder">Git operations, agents and terminals will appear here.</p>
+            <div class="session-tabs">
+                @if (_terminals.Count > 0)
+                {
+                    <div class="session-tab-list" role="tablist" aria-label="Terminals">
+                        @foreach (var terminal in _terminals)
+                        {
+                            var shown = ReferenceEquals(terminal, _shownTerminal);
+                            <div class="session-tab @(shown ? "active" : null)" @key="terminal">
+                                <button type="button" class="session-tab-label" role="tab"
+                                        aria-selected="@(shown ? "true" : "false")" title="@terminal.WorkingDirectory"
+                                        @onclick="() => ShowTerminal(terminal)">
+                                    <span class="tab-label-text">@terminal.Name</span>
+                                    @if (terminal.HasExited)
+                                    {
+                                        <span class="session-tab-status">Exited</span>
+                                    }
+                                </button>
+                                <button type="button" class="tab-close" title="Close @terminal.Name"
+                                        aria-label="Close @terminal.Name" @onclick="() => CloseTerminalAsync(terminal)">
+                                    &times;
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+                @* Closes on Escape, or on a click anywhere outside the menu. *@
+                <div class="menu-anchor" @onkeydown="OnTerminalMenuKeyDown">
+                    <button type="button" class="button button-secondary button-icon" aria-haspopup="menu"
+                            aria-expanded="@(_terminalMenuOpen ? "true" : "false")"
+                            @onclick="() => _terminalMenuOpen = !_terminalMenuOpen">
+                        New terminal
+                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                    @if (_terminalMenuOpen)
+                    {
+                        <div class="menu-backdrop" @onclick="() => _terminalMenuOpen = false"></div>
+                        <ul class="menu" role="menu" aria-label="New terminal">
+                            <li role="none">
+                                <button type="button" class="menu-item" role="menuitem" @onclick="() => StartTerminal(null)">
+                                    Workspace Folder
+                                </button>
+                            </li>
+                            @foreach (var repository in _listing?.Workspace?.Repositories ?? [])
+                            {
+                                <li role="none" @key="repository.FolderName">
+                                    <button type="button" class="menu-item" role="menuitem"
+                                            @onclick="() => StartTerminal(repository)">
+                                        @repository.FolderName
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+            @if (_terminalError is not null)
+            {
+                <p class="error workspace-main-error">@_terminalError</p>
+            }
+            @if (_shownTerminal is not null)
+            {
+                <Terminal @key="_shownTerminal" Session="_shownTerminal.Session" Class="workspace-terminal" />
+            }
+            else
+            {
+                <div class="workspace-main-empty">
+                    <h1>@_tab.Name</h1>
+                    <p class="placeholder">
+                        Git operations and agents will appear here. Open a terminal with New terminal, in the Workspace
+                        Folder or one of its repositories.
+                    </p>
+                </div>
+            }
         </div>
     </div>
 }
@@ -112,6 +188,10 @@ else
     private string? _loadedWorkspaceId;
     private bool _deleting;
     private bool _manageMenuOpen;
+    private bool _terminalMenuOpen;
+    private string? _terminalError;
+    private IReadOnlyList<WorkspaceTerminal> _terminals = [];
+    private WorkspaceTerminal? _shownTerminal;
     private string _deletingName = "";
 
     // Keeps running while the tab is open, so it isn't disposed with the page.
@@ -127,6 +207,7 @@ else
     {
         WorkspaceTabs.Changed += OnTabsChanged;
         WorkspaceStore.Changed += OnWorkspacesChanged;
+        Terminals.Changed += OnTerminalsChanged;
     }
 
     private bool IsLoaded => _loadedWorkspaceId == WorkspaceId;
@@ -138,9 +219,12 @@ else
             // Another tab is shown in this page, so the flow and menu for the previous one are closed.
             _deleting = false;
             _manageMenuOpen = false;
+            _terminalMenuOpen = false;
+            _terminalError = null;
         }
 
         _tab = WorkspaceTabs.Find(WorkspaceId);
+        UpdateTerminals();
         await LoadAsync();
     }
 
@@ -148,6 +232,7 @@ else
     {
         WorkspaceTabs.Changed -= OnTabsChanged;
         WorkspaceStore.Changed -= OnWorkspacesChanged;
+        Terminals.Changed -= OnTerminalsChanged;
         SetGitStatus(null);
         _disposed.Cancel();
         _disposed.Dispose();
@@ -209,6 +294,78 @@ else
         {
             StateHasChanged();
         }
+    });
+
+    private void UpdateTerminals()
+    {
+        _terminals = Terminals.For(WorkspaceId);
+
+        // Show the terminal the view was showing last time, or the newest one if that's been closed.
+        _shownTerminal = ViewState.GetShownTerminal(WorkspaceId) is { } shown && _terminals.Contains(shown)
+            ? shown
+            : _terminals.LastOrDefault();
+        ViewState.SetShownTerminal(WorkspaceId, _shownTerminal);
+    }
+
+    private void ShowTerminal(WorkspaceTerminal terminal)
+    {
+        ViewState.SetShownTerminal(WorkspaceId, terminal);
+        _shownTerminal = terminal;
+    }
+
+    private void StartTerminal(WorkspaceRepository? repository)
+    {
+        _terminalMenuOpen = false;
+        _terminalError = null;
+        if (_listing?.Workspace is not { } workspace)
+        {
+            return;
+        }
+
+        try
+        {
+            ShowTerminal(Terminals.Start(workspace, repository));
+        }
+        catch (Exception ex) when (ex is IOException or System.Runtime.InteropServices.ExternalException)
+        {
+            _terminalError = $"Couldn't start a terminal. {ex.Message}";
+        }
+
+        UpdateTerminals();
+    }
+
+    private async Task CloseTerminalAsync(WorkspaceTerminal terminal)
+    {
+        if (ReferenceEquals(terminal, _shownTerminal))
+        {
+            // Show the next terminal, or the previous one if it was the last.
+            var index = _terminals.ToList().IndexOf(terminal);
+            var next = index + 1 < _terminals.Count ? _terminals[index + 1] : index > 0 ? _terminals[index - 1] : null;
+            ViewState.SetShownTerminal(WorkspaceId, next);
+        }
+
+        var closing = Terminals.CloseAsync(terminal);
+        UpdateTerminals();
+        await closing;
+    }
+
+    private void OnTerminalMenuKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _terminalMenuOpen = false;
+        }
+    }
+
+    private void OnTerminalsChanged(string workspaceId) => InvokeAsync(() =>
+    {
+        if (_disposed.IsCancellationRequested || workspaceId != WorkspaceId)
+        {
+            return;
+        }
+
+        UpdateTerminals();
+        StateHasChanged();
     });
 
     private void OnManageMenuKeyDown(KeyboardEventArgs e)

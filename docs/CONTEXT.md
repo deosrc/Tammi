@@ -237,6 +237,13 @@ own branch. It is created automatically when the workspace is created:
   terminal opens in the workspace folder by default, or the user can open one in a specific repository.
   The shell defaults to PowerShell on Windows (`pwsh` if installed) and `$SHELL` on Linux, and can be
   changed in Settings.
+  - A terminal is named "Terminal" when it's in the Workspace Folder, or after the repository's folder (e.g. `api`).
+    A name already used by one of the workspace's open terminals gets the first free number (e.g. "Terminal 2").
+  - Closing a terminal's tab ends its shell. A terminal whose shell has exited stays, marked as exited, until its tab
+    is closed.
+  - Terminals keep running when the workspace's tab closes (see [Lifetime](#agents)). Each one keeps its latest
+    1 MiB of output, so reopening the tab shows it again, and the view shows the terminal it was showing.
+  - Deleting a workspace closes its terminals first.
   - **Copy and paste:** Ctrl+Shift+C and Ctrl+Shift+V on every platform. On Windows, as in Windows Terminal,
     Ctrl+C also copies when text is selected (otherwise it interrupts the process) and Ctrl+V pastes.
 
