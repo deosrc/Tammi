@@ -1,10 +1,19 @@
 using TAMMi.Core.Integrations;
+using TAMMi.Core.Settings;
 using TAMMi.Core.Workspaces;
 
 namespace TAMMi.Core.Tests.Workspaces;
 
 public sealed class WorkspaceDraftTests : IDisposable
 {
+    // Names suggested from the title alone, as written, so the tests can check which task they follow.
+    private static readonly WorkspaceNameFormat TitleOnly = new()
+    {
+        Separator = WorkspaceNameSeparator.Spaces,
+        Case = WorkspaceNameCase.AsWritten,
+        IncludeTaskReference = false,
+    };
+
     private readonly string _root = Path.Combine(Path.GetTempPath(), "tammi-tests", Guid.NewGuid().ToString("N"));
 
     public WorkspaceDraftTests()
@@ -23,7 +32,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void Constructor_StartsWithParentFolderAndNoTasksOrName()
     {
-        var draft = new WorkspaceDraft(_root);
+        var draft = new WorkspaceDraft(_root, TitleOnly);
 
         Assert.Equal(_root, draft.ParentFolder);
         Assert.Empty(draft.Tasks);
@@ -34,7 +43,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void AddTask_WithOneTask_DefaultsNameToItsTitle()
     {
-        var draft = new WorkspaceDraft(_root);
+        var draft = new WorkspaceDraft(_root, TitleOnly);
 
         draft.AddTask(Task("github", "acme/api#1", "Fix login"));
 
@@ -43,9 +52,19 @@ public sealed class WorkspaceDraftTests : IDisposable
     }
 
     [Fact]
-    public void AddTask_WithSecondTask_ClearsDefaultName()
+    public void AddTask_WithoutAFormat_SuggestsTheDefaultFormat()
     {
         var draft = new WorkspaceDraft(_root);
+
+        draft.AddTask(Task("jira", "JIRA-123", "Add some feature"));
+
+        Assert.Equal("jira-123-add-some-feature", draft.Name);
+    }
+
+    [Fact]
+    public void AddTask_WithSecondTask_ClearsDefaultName()
+    {
+        var draft = new WorkspaceDraft(_root, TitleOnly);
         draft.AddTask(Task("github", "acme/api#1", "Fix login"));
 
         draft.AddTask(Task("jira", "ABC-2", "Add logout"));
@@ -56,7 +75,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void RemoveTask_BackToOneTask_DefaultsNameToItsTitle()
     {
-        var draft = new WorkspaceDraft(_root);
+        var draft = new WorkspaceDraft(_root, TitleOnly);
         draft.AddTask(Task("github", "acme/api#1", "Fix login"));
         draft.AddTask(Task("jira", "ABC-2", "Add logout"));
 
@@ -68,7 +87,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void AddTask_AfterNameEdited_KeepsName()
     {
-        var draft = new WorkspaceDraft(_root);
+        var draft = new WorkspaceDraft(_root, TitleOnly);
         draft.AddTask(Task("github", "acme/api#1", "Fix login"));
         draft.Name = "Login work";
 
@@ -82,7 +101,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void Name_Cleared_FollowsTasksAgainWhenTheyChange()
     {
-        var draft = new WorkspaceDraft(_root);
+        var draft = new WorkspaceDraft(_root, TitleOnly);
         draft.AddTask(Task("github", "acme/api#1", "Fix login"));
         draft.Name = "Login work";
 
@@ -101,7 +120,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void AddTask_AlreadyChosen_IsIgnored()
     {
-        var draft = new WorkspaceDraft(_root);
+        var draft = new WorkspaceDraft(_root, TitleOnly);
         draft.AddTask(Task("github", "acme/api#1", "Fix login"));
 
         Assert.False(draft.AddTask(Task("github", "acme/api#1", "Fix login (renamed)")));
@@ -113,7 +132,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void AddTask_SameKeyFromAnotherSource_IsAdded()
     {
-        var draft = new WorkspaceDraft(_root);
+        var draft = new WorkspaceDraft(_root, TitleOnly);
         draft.AddTask(Task("jira-a.example", "ABC-1", "One"));
 
         Assert.True(draft.AddTask(Task("jira-b.example", "ABC-1", "Other")));
@@ -125,7 +144,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void RemoveTask_NotChosen_ReturnsFalse()
     {
-        Assert.False(new WorkspaceDraft(_root).RemoveTask(new TaskReference("github", "acme/api#1")));
+        Assert.False(new WorkspaceDraft(_root, TitleOnly).RemoveTask(new TaskReference("github", "acme/api#1")));
     }
 
     [Fact]
@@ -143,7 +162,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void Folder_WithInvalidName_IsNullAndReportsName()
     {
-        var draft = new WorkspaceDraft(_root) { Name = "a/b" };
+        var draft = new WorkspaceDraft(_root, TitleOnly) { Name = "a/b" };
 
         Assert.Null(draft.Folder);
         Assert.NotNull(draft.NameProblem);
@@ -154,7 +173,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void NameProblem_WithoutName_AsksForOne()
     {
-        var draft = new WorkspaceDraft(_root);
+        var draft = new WorkspaceDraft(_root, TitleOnly);
 
         Assert.NotNull(draft.NameProblem);
         Assert.False(draft.IsLocationValid);
@@ -198,7 +217,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void ParentFolderIsNew_WithExistingFolder_IsFalse()
     {
-        Assert.False(new WorkspaceDraft(_root).ParentFolderIsNew);
+        Assert.False(new WorkspaceDraft(_root, TitleOnly).ParentFolderIsNew);
     }
 
     [Fact]
@@ -206,7 +225,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     {
         Directory.CreateDirectory(Path.Combine(_root, "Fix login"));
 
-        var draft = new WorkspaceDraft(_root) { Name = "Fix login" };
+        var draft = new WorkspaceDraft(_root, TitleOnly) { Name = "Fix login" };
 
         Assert.NotNull(draft.FolderProblem);
         Assert.False(draft.IsLocationValid);
@@ -217,7 +236,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     {
         File.WriteAllText(Path.Combine(_root, "Fix login"), "");
 
-        var draft = new WorkspaceDraft(_root) { Name = "Fix login" };
+        var draft = new WorkspaceDraft(_root, TitleOnly) { Name = "Fix login" };
 
         Assert.NotNull(draft.FolderProblem);
         Assert.False(draft.IsLocationValid);
@@ -226,7 +245,7 @@ public sealed class WorkspaceDraftTests : IDisposable
     [Fact]
     public void FolderProblem_SeesFolderCreatedAfterCheck()
     {
-        var draft = new WorkspaceDraft(_root) { Name = "Fix login" };
+        var draft = new WorkspaceDraft(_root, TitleOnly) { Name = "Fix login" };
         Assert.True(draft.IsLocationValid);
 
         Directory.CreateDirectory(Path.Combine(_root, "Fix login"));

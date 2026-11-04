@@ -60,13 +60,21 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
      with their results.
    - Tasks chosen from several searches and sources are kept together in one list.
 2. **Name and locate the workspace.**
-   - The name defaults to the task's title when exactly one task is selected. Otherwise the user enters it. Until the
-     user edits it, the name follows the selected tasks; clearing it makes it follow them again.
+   - When exactly one task is selected, the name defaults to one made from the task, in the **Suggested workspace
+     name** format from the General settings. Otherwise the user enters it. Until the user edits it, the name follows
+     the selected tasks; clearing it makes it follow them again.
    - The name is also the Workspace Folder's name, so it must be a folder name that's valid on every platform: no
      `/ \ : * ? " < > |` or control characters, not `.` or `..`, no trailing full stop, not a name Windows reserves
      (e.g. `CON` or `NUL`), and at most 255 bytes. Surrounding spaces are removed.
-   - A default name made from a task's title is turned into a valid folder name: characters that aren't allowed become
-     spaces, and a title longer than 80 characters is cut at a word.
+   - The suggested name is the task's title, after its reference unless that's turned off. A GitHub issue's reference
+     is its repository and number (`acme/api#42` gives `api#42`), and a JIRA issue's is its key. The format sets:
+     - **Separator:** hyphens (the default) or underscores between words, leaving out punctuation (apostrophes are
+       dropped, so "don't" stays one word), or spaces, keeping punctuation except characters a folder name can't have.
+     - **Case:** lowercase (the default), uppercase, or as written.
+     - **Task reference:** whether the name starts with it (the default).
+
+     So by default, `JIRA-123` "Add some feature" suggests `jira-123-add-some-feature`. A name longer than 80
+     characters is cut at a word, keeping the reference.
    - The parent folder defaults to the **Default Workspace Parent Folder** app setting. It must be a full path. It
      doesn't need to exist yet: it's created with the workspace.
    - The Workspace Folder must not already exist, as a folder or a file.
@@ -222,6 +230,8 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
 - **General**
   - Default Workspace Parent Folder (defaults to `Workspaces` in the user's home folder)
+  - Suggested workspace name: separator, case and whether to start with the task's reference (see
+    [Name and locate the workspace](#core-flow-creating-a-workspace)), with examples of the names it suggests
 - **Integrations:** the connected integrations, each with its connection status, in alphabetical order
   - A single Add button opens a menu of the integration types (GitHub, JIRA), in alphabetical order.
   - The user adds GitHub (github.com or a GitHub Enterprise Server) and JIRA sites, authenticates them again with a new

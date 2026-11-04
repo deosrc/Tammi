@@ -19,10 +19,16 @@ public sealed record GeneralSettings
     public string DefaultWorkspaceParentFolder { get; init; } = DefaultDefaultWorkspaceParentFolder;
 
     /// <summary>
-    /// Replaces a missing folder with the default.
+    /// How the workspace name suggested from a task is written.
+    /// </summary>
+    public WorkspaceNameFormat WorkspaceNameFormat { get; init; } = new();
+
+    /// <summary>
+    /// Replaces a missing folder or name format with the default.
     /// </summary>
     public GeneralSettings Normalize() => this with
     {
+        WorkspaceNameFormat = (WorkspaceNameFormat ?? new WorkspaceNameFormat()).Normalize(),
         DefaultWorkspaceParentFolder = string.IsNullOrWhiteSpace(DefaultWorkspaceParentFolder)
             ? DefaultDefaultWorkspaceParentFolder
             : DefaultWorkspaceParentFolder.Trim(),

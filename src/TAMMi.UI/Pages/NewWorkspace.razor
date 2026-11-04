@@ -44,7 +44,9 @@
                         }
                         else if (!_draft.IsNameEdited && _draft.Tasks.Count == 1)
                         {
-                            <p class="settings-help">From the task's title.</p>
+                            <p class="settings-help">
+                                From the task, in the format set in <a href="@AppRoutes.Settings">Settings › General</a>.
+                            </p>
                         }
                     </div>
 
@@ -148,7 +150,8 @@
 
     protected override void OnInitialized()
     {
-        _draft = new WorkspaceDraft(SettingsStore.Current.General.DefaultWorkspaceParentFolder);
+        var general = SettingsStore.Current.General;
+        _draft = new WorkspaceDraft(general.DefaultWorkspaceParentFolder, general.WorkspaceNameFormat);
     }
 
     private void Next()

@@ -1,4 +1,5 @@
 using TAMMi.Core.Integrations;
+using TAMMi.Core.Settings;
 
 namespace TAMMi.Core.Workspaces;
 
@@ -17,15 +18,18 @@ namespace TAMMi.Core.Workspaces;
 public sealed class WorkspaceDraft
 {
     private readonly List<TaskInfo> _tasks = [];
+    private readonly WorkspaceNameFormat _nameFormat;
     private string _name = string.Empty;
 
     /// <param name="parentFolder">
     /// The parent folder to start with, usually the Default Workspace Parent Folder setting.
     /// </param>
-    public WorkspaceDraft(string parentFolder)
+    /// <param name="nameFormat">How the suggested name is written. The default when <see langword="null"/>.</param>
+    public WorkspaceDraft(string parentFolder, WorkspaceNameFormat? nameFormat = null)
     {
         ArgumentNullException.ThrowIfNull(parentFolder);
         ParentFolder = parentFolder;
+        _nameFormat = nameFormat ?? new WorkspaceNameFormat();
     }
 
     /// <summary>
@@ -55,7 +59,7 @@ public sealed class WorkspaceDraft
     /// <summary>
     /// The name suggested for the chosen tasks, or <see langword="null"/> if there's none.
     /// </summary>
-    public string? SuggestedName => WorkspaceNames.Suggest(_tasks);
+    public string? SuggestedName => WorkspaceNames.Suggest(_tasks, _nameFormat);
 
     /// <summary>
     /// The folder the Workspace Folder is created in, as entered.
