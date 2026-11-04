@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Deosrc.Tammi.Core.Credentials;
+using Microsoft.Extensions.Logging;
 
 namespace Deosrc.Tammi.Core.Integrations.Jira;
 
@@ -36,6 +37,7 @@ public sealed class JiraIntegration : ITaskIntegration
     private readonly JiraIntegrationOptions _options;
     private readonly JiraApiClient _api;
     private readonly Uri _siteUrl;
+    private readonly ILogger _logger;
 
     /// <param name="options">How to connect to the site.</param>
     /// <param name="credentialStore">Where the token is kept.</param>
@@ -48,11 +50,13 @@ public sealed class JiraIntegration : ITaskIntegration
         JiraIntegrationOptions options,
         ICredentialStore credentialStore,
         HttpClient httpClient,
+        ILogger logger,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(credentialStore);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentOutOfRangeException.ThrowIfLessThan(options.PageSize, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(options.PageSize, 100);
@@ -68,6 +72,7 @@ public sealed class JiraIntegration : ITaskIntegration
         }
 
         _options = options;
+        _logger = logger;
         _siteUrl = JiraApiClient.SiteUrl(options.SiteUrl);
         Credentials = new IntegrationCredentials(credentialStore, options.Id);
         _api = new JiraApiClient(options, Credentials, httpClient, timeProvider);
@@ -150,6 +155,7 @@ public sealed class JiraIntegration : ITaskIntegration
             }
         }
 
+        _logger.LogInformation("Found {Count} tasks for JQL '{Jql}' at {Url}.", tasks.Count, jql, _siteUrl);
         return tasks;
     }
 
