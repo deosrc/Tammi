@@ -10,8 +10,9 @@ namespace TAMMi.Core.Integrations.GitHub;
 /// <remarks>
 /// <para>
 /// It authenticates with an access token kept in the credential store through <see cref="Credentials"/>: a
-/// fine-grained or classic personal access token. Fine-grained tokens need read access to issues and metadata on the
-/// repositories to include. Classic tokens need the <c>repo</c> scope for private repositories.
+/// fine-grained or classic personal access token. Fine-grained tokens need read access to issues, contents and
+/// metadata on the repositories to include: without contents, GitHub's issue search leaves out private repositories'
+/// issues. Classic tokens need the <c>repo</c> scope for private repositories.
 /// </para>
 /// <para>
 /// Task keys have the form <c>owner/repo#number</c>. Pull requests aren't tasks, so they're left out. Text searches

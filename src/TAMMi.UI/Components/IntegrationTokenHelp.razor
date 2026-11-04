@@ -6,8 +6,9 @@
     @if (ForGitHub)
     {
         <text>
-            A fine-grained token with read access to issues and metadata, or a classic token with the
-            <code>repo</code> scope for private repositories.
+            A fine-grained token with read access to issues, contents and metadata on the repositories to include, or
+            a classic token with the <code>repo</code> scope for private repositories. GitHub's search only finds
+            private issues when a fine-grained token can read contents too.
         </text>
         @* The link needs the server, so it waits until a GitHub Enterprise Server URL is entered. *@
         @if (GitHub is not null)

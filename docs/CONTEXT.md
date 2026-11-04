@@ -396,7 +396,10 @@ are left to other tools for now.
 - Provides **tasks** (issues) and **repositories**. It works with github.com and with GitHub Enterprise Server,
   given its API URL.
 - **Authentication:** a personal access token (fine-grained, or classic with the `repo` scope for private
-  repositories), kept in the credential store. Fine-grained tokens need read access to issues and metadata.
+  repositories), kept in the credential store. Fine-grained tokens need read access to issues, contents and metadata
+  on the repositories to include: GitHub's issue search leaves out private repositories' issues unless the token can
+  read their contents. A fine-grained token belongs to one account or organisation, so an organisation's private
+  repositories need a token owned by that organisation (or a classic token).
 - **Task keys** are GitHub's issue references, `owner/repo#number`. Pull requests aren't tasks.
 - **Finding tasks:**
   - **Assigned:** the user's open issues (`is:open assignee:@me archived:false`). GitHub has no in-progress state, so
