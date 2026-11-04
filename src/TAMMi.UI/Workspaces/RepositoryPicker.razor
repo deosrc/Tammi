@@ -88,6 +88,12 @@
                             <span class="task-title repository-path" title="@repository.Repository.Path">
                                 @DisplayPath(repository.Repository)
                             </span>
+                            @if (repository.ChosenForTasks.Count > 0)
+                            {
+                                <span class="badge" title="Chosen because the task belongs to this repository">
+                                    For @string.Join(", ", repository.ChosenForTasks.Select(task => task.Key))
+                                </span>
+                            }
                             <button type="button" class="button button-secondary button-small"
                                     @onclick="() => Draft.RemoveRepository(repository.Repository)">Remove</button>
                         </div>
@@ -187,6 +193,14 @@
         }
         catch (OperationCanceledException)
         {
+            return;
+        }
+
+        var added = Draft.ChooseTaskRepositories(_snapshot.Repositories);
+        if (added.Count > 0)
+        {
+            StateHasChanged();
+            await Task.WhenAll(added.Select(LoadAsync));
         }
     }
 
@@ -241,9 +255,17 @@
             return;
         }
 
+        await LoadAsync(chosen);
+    }
+
+    /// <summary>
+    /// Fetches a chosen repository and finds its base branch.
+    /// </summary>
+    private async Task LoadAsync(WorkspaceDraftRepository repository)
+    {
         try
         {
-            await chosen.LoadAsync(Worktrees, _disposed.Token);
+            await repository.LoadAsync(Worktrees, _disposed.Token);
         }
         catch (OperationCanceledException)
         {

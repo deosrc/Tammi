@@ -1,5 +1,6 @@
 using TAMMi.Core.Catalogue;
 using TAMMi.Core.Git;
+using TAMMi.Core.Integrations;
 
 namespace TAMMi.Core.Workspaces;
 
@@ -16,13 +17,13 @@ public sealed class WorkspaceDraftRepository
     private readonly WorkspaceDraft _draft;
     private string _folderName = string.Empty;
     private string _baseBranch = string.Empty;
+    private readonly HashSet<TaskReference> _chosenForTasks = [];
 
     internal WorkspaceDraftRepository(WorkspaceDraft draft, CatalogueRepository repository)
     {
         _draft = draft;
         Repository = repository;
-        Remote = repository.Remotes.FirstOrDefault(remote => remote.Name == GitWorktreeService.DefaultRemote)
-            ?? repository.Remotes.FirstOrDefault();
+        Remote = ChooseRemote(repository);
         Owner = GitRemoteUrls.GetOwner(Remote?.Url)
             ?? Path.GetFileName(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(repository.Path)));
     }
@@ -37,6 +38,11 @@ public sealed class WorkspaceDraftRepository
     /// no <c>origin</c>. <see langword="null"/> if the repository has no remotes.
     /// </summary>
     public GitRemote? Remote { get; }
+
+    /// <summary>
+    /// The tasks this repository was chosen for automatically, because they belong to it. Empty if the user chose it.
+    /// </summary>
+    public IReadOnlyCollection<TaskReference> ChosenForTasks => _chosenForTasks;
 
     /// <summary>
     /// The owner put in front of the folder name when it clashes: from <see cref="Remote"/>'s URL, or the name of the
@@ -181,6 +187,15 @@ public sealed class WorkspaceDraftRepository
             IsLoading = false;
         }
     }
+
+    internal void AddChosenForTask(TaskReference task) => _chosenForTasks.Add(task);
+
+    /// <summary>
+    /// The remote a repository is fetched from: <c>origin</c>, or its first remote if there's no <c>origin</c>.
+    /// </summary>
+    internal static GitRemote? ChooseRemote(CatalogueRepository repository) =>
+        repository.Remotes.FirstOrDefault(remote => remote.Name == GitWorktreeService.DefaultRemote)
+            ?? repository.Remotes.FirstOrDefault();
 
     /// <summary>
     /// Sets the suggested folder name, unless the user entered one.

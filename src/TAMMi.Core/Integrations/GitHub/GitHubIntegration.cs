@@ -342,6 +342,19 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
         {
             Description = string.IsNullOrEmpty(issue.Body) ? null : issue.Body,
             Updated = issue.UpdatedAt,
+            RepositoryUrl = GetRepositoryUrl(url),
         };
+    }
+
+    /// <summary>
+    /// The repository's web page from an issue's, e.g. <c>https://github.com/acme/api</c> from
+    /// <c>https://github.com/acme/api/issues/42</c>. It's on the same host as the issue, so it suits Enterprise Servers
+    /// too.
+    /// </summary>
+    private static Uri? GetRepositoryUrl(Uri issueUrl)
+    {
+        string path = issueUrl.AbsolutePath.TrimEnd('/');
+        int issues = path.LastIndexOf("/issues/", StringComparison.Ordinal);
+        return issues > 0 ? new Uri(issueUrl, path[..issues]) : null;
     }
 }

@@ -33,4 +33,32 @@ public sealed class GitRemoteUrlsTests
     {
         Assert.Null(GitRemoteUrls.GetOwner(url));
     }
+
+    [Theory]
+    [InlineData("https://github.com/acme/api.git")]
+    [InlineData("https://github.com/acme/api")]
+    [InlineData("https://github.com/Acme/API/")]
+    [InlineData("https://user:token@github.com/acme/api.git")]
+    [InlineData("git@github.com:acme/api.git")]
+    [InlineData("git@github.com:acme/api")]
+    [InlineData("ssh://git@github.com/acme/api.git")]
+    [InlineData("ssh://git@github.com:22/acme/api.git")]
+    public void IsSameRepository_SameHostAndPath_Matches(string url)
+    {
+        Assert.True(GitRemoteUrls.IsSameRepository(url, "https://github.com/acme/api"));
+    }
+
+    [Theory]
+    [InlineData("https://github.com/acme/web.git")]
+    [InlineData("https://github.com/other/api.git")]
+    [InlineData("https://gitlab.com/acme/api.git")]
+    [InlineData("git@github.example.com:acme/api.git")]
+    [InlineData("/srv/git/acme/api.git")]
+    [InlineData("file:///github.com/acme/api.git")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void IsSameRepository_Different_DoesNotMatch(string? url)
+    {
+        Assert.False(GitRemoteUrls.IsSameRepository(url, "https://github.com/acme/api"));
+    }
 }

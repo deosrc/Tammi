@@ -1,4 +1,5 @@
 using TAMMi.Core.Catalogue;
+using TAMMi.Core.Git;
 using TAMMi.Core.Integrations;
 using TAMMi.Core.Settings;
 
@@ -25,6 +26,7 @@ public sealed class WorkspaceDraft
 {
     private readonly List<TaskInfo> _tasks = [];
     private readonly List<WorkspaceDraftRepository> _repositories = [];
+    private readonly HashSet<TaskReference> _tasksWithRepositoriesChosen = [];
     private static readonly StringComparer PathComparer =
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
@@ -176,6 +178,75 @@ public sealed class WorkspaceDraft
         _repositories.Add(chosen);
         FollowFolderNameSuggestions();
         return chosen;
+    }
+
+    /// <summary>
+    /// Chooses the repositories the tasks belong to (see <see cref="TaskInfo.RepositoryUrl"/>), and removes those it
+    /// chose for tasks that are no longer chosen. Call it when the repository step is shown.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A task's repository is the Local Repository with a remote matching its URL. When several clones match, the one
+    /// whose fetched remote matches is preferred. Nothing is added when one of them is already chosen.
+    /// </para>
+    /// <para>
+    /// Each task's repository is chosen only once, so a repository the user removes stays removed.
+    /// </para>
+    /// </remarks>
+    /// <param name="catalogue">The Repository Catalogue's repositories.</param>
+    /// <returns>The repositories it chose, so their base branches can be loaded.</returns>
+    public IReadOnlyList<WorkspaceDraftRepository> ChooseTaskRepositories(IReadOnlyList<CatalogueRepository> catalogue)
+    {
+        ArgumentNullException.ThrowIfNull(catalogue);
+
+        // Repositories chosen only for tasks that have since been removed.
+        _tasksWithRepositoriesChosen.RemoveWhere(task => !ContainsTask(task));
+        bool removed = _repositories.RemoveAll(repository =>
+            repository.ChosenForTasks.Count > 0 && !repository.ChosenForTasks.Any(ContainsTask)) > 0;
+
+        var added = new List<WorkspaceDraftRepository>();
+        foreach (var task in _tasks)
+        {
+            if (task.RepositoryUrl is not { } url || !_tasksWithRepositoriesChosen.Add(task.Reference))
+            {
+                continue;
+            }
+
+            var matches = catalogue
+                .Where(repository => repository.Remotes.Any(remote => GitRemoteUrls.IsSameRepository(remote.Url, url.ToString())))
+                .ToList();
+            if (_repositories.Find(chosen => matches.Exists(match => PathComparer.Equals(match.Path, chosen.Repository.Path)))
+                is { } alreadyChosen)
+            {
+                if (alreadyChosen.ChosenForTasks.Count > 0)
+                {
+                    alreadyChosen.AddChosenForTask(task.Reference);
+                }
+
+                continue;
+            }
+
+            if (matches.Count == 0)
+            {
+                continue;
+            }
+
+            var match = matches.Find(repository =>
+                    WorkspaceDraftRepository.ChooseRemote(repository) is { } remote
+                    && GitRemoteUrls.IsSameRepository(remote.Url, url.ToString()))
+                ?? matches[0];
+            var chosen = new WorkspaceDraftRepository(this, match);
+            chosen.AddChosenForTask(task.Reference);
+            _repositories.Add(chosen);
+            added.Add(chosen);
+        }
+
+        if (removed || added.Count > 0)
+        {
+            FollowFolderNameSuggestions();
+        }
+
+        return added;
     }
 
     /// <summary>

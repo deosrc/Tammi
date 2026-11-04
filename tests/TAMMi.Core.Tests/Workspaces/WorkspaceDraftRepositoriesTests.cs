@@ -238,6 +238,146 @@ public sealed class WorkspaceDraftRepositoriesTests
         Assert.Equal(new WorkspaceCreationRepository("server", api.Repository.Path, "origin/develop", "origin"), repository);
     }
 
+    [Fact]
+    public void ChooseTaskRepositories_ChoosesCloneWithMatchingRemote()
+    {
+        var draft = NewDraft();
+        draft.AddTask(GitHubTask("acme", "api", 42));
+        var catalogue = new[] { Repository("acme", "web"), Repository("acme", "api"), Repository("other", "api") };
+
+        var added = draft.ChooseTaskRepositories(catalogue);
+
+        var api = Assert.Single(added);
+        Assert.Same(catalogue[1], api.Repository);
+        Assert.Equal([new TaskReference("github", "acme/api#42")], api.ChosenForTasks);
+        Assert.Equal([api], draft.Repositories);
+        Assert.Equal("api", api.FolderName);
+    }
+
+    [Fact]
+    public void ChooseTaskRepositories_NoMatchOrNoRepository_ChoosesNothing()
+    {
+        var draft = NewDraft();
+        draft.AddTask(GitHubTask("acme", "missing", 1));
+        draft.AddTask(Task("ABC-1", "A JIRA issue"));
+
+        Assert.Empty(draft.ChooseTaskRepositories([Repository("acme", "api")]));
+        Assert.Empty(draft.Repositories);
+    }
+
+    [Fact]
+    public void ChooseTaskRepositories_TwoTasksInOneRepository_ChoosesItOnce()
+    {
+        var draft = NewDraft();
+        draft.AddTask(GitHubTask("acme", "api", 1));
+        draft.AddTask(GitHubTask("acme", "api", 2));
+
+        var api = Assert.Single(draft.ChooseTaskRepositories([Repository("acme", "api")]));
+
+        Assert.Equal(2, api.ChosenForTasks.Count);
+    }
+
+    [Fact]
+    public void ChooseTaskRepositories_TasksInSeveralRepositories_ChoosesEach()
+    {
+        var draft = NewDraft();
+        draft.AddTask(GitHubTask("acme", "api", 1));
+        draft.AddTask(GitHubTask("other", "api", 2));
+
+        draft.ChooseTaskRepositories([Repository("acme", "api"), Repository("other", "api")]);
+
+        Assert.Equal(["acme-api", "other-api"], draft.Repositories.Select(repository => repository.FolderName));
+    }
+
+    [Fact]
+    public void ChooseTaskRepositories_PrefersCloneWhoseFetchedRemoteMatches()
+    {
+        var draft = NewDraft();
+        draft.AddTask(GitHubTask("acme", "api", 1));
+        // A clone of a fork, with the repository as its upstream, and a clone of the repository itself.
+        var fork = new CatalogueRepository
+        {
+            Path = Path.Combine(Root, "forks", "api"),
+            Remotes =
+            [
+                new GitRemote("origin", "git@github.com:me/api.git"),
+                new GitRemote("upstream", "https://github.com/acme/api.git"),
+            ],
+        };
+        var clone = Repository("acme", "api");
+
+        var chosen = Assert.Single(draft.ChooseTaskRepositories([fork, clone]));
+
+        Assert.Same(clone, chosen.Repository);
+    }
+
+    [Fact]
+    public void ChooseTaskRepositories_AlreadyChosen_AddsNothing()
+    {
+        var draft = NewDraft();
+        var api = Repository("acme", "api");
+        var chosen = draft.AddRepository(api)!;
+        draft.AddTask(GitHubTask("acme", "api", 1));
+
+        Assert.Empty(draft.ChooseTaskRepositories([api]));
+        Assert.Equal([chosen], draft.Repositories);
+        Assert.Empty(chosen.ChosenForTasks);
+    }
+
+    [Fact]
+    public void ChooseTaskRepositories_RemovedByUser_IsNotChosenAgain()
+    {
+        var draft = NewDraft();
+        var api = Repository("acme", "api");
+        draft.AddTask(GitHubTask("acme", "api", 1));
+        draft.ChooseTaskRepositories([api]);
+
+        draft.RemoveRepository(api);
+
+        Assert.Empty(draft.ChooseTaskRepositories([api]));
+        Assert.Empty(draft.Repositories);
+    }
+
+    [Fact]
+    public void ChooseTaskRepositories_TaskRemoved_RemovesRepositoryChosenForIt()
+    {
+        var draft = NewDraft();
+        var api = Repository("acme", "api");
+        var web = Repository("acme", "web");
+        var apiTask = GitHubTask("acme", "api", 1);
+        draft.AddTask(apiTask);
+        draft.AddTask(GitHubTask("acme", "web", 2));
+        draft.ChooseTaskRepositories([api, web]);
+        var other = draft.AddRepository(Repository("other", "lib"))!;
+
+        draft.RemoveTask(apiTask.Reference);
+        draft.ChooseTaskRepositories([api, web]);
+
+        Assert.Equal([web, other.Repository], draft.Repositories.Select(repository => repository.Repository));
+    }
+
+    [Fact]
+    public void ChooseTaskRepositories_TaskRemovedAndAddedAgain_ChoosesAgain()
+    {
+        var draft = NewDraft();
+        var api = Repository("acme", "api");
+        var task = GitHubTask("acme", "api", 1);
+        draft.AddTask(task);
+        draft.ChooseTaskRepositories([api]);
+        draft.RemoveTask(task.Reference);
+        draft.ChooseTaskRepositories([api]);
+
+        draft.AddTask(task);
+
+        Assert.Single(draft.ChooseTaskRepositories([api]));
+    }
+
+    private static TaskInfo GitHubTask(string owner, string repository, int number) =>
+        new("github", $"{owner}/{repository}#{number}", "Issue", new Uri($"https://github.com/{owner}/{repository}/issues/{number}"))
+        {
+            RepositoryUrl = new Uri($"https://github.com/{owner}/{repository}"),
+        };
+
     private static WorkspaceDraft NewDraft() => new(Root);
 
     private static CatalogueRepository Repository(string owner, string name) => new()

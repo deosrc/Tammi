@@ -113,6 +113,7 @@ public class GitHubIntegrationTests : IDisposable
         Assert.Equal(new TaskReference("github", "deosrc/Condement#3"), task.Reference);
         Assert.Equal("Add Remote Desktop support", task.Title);
         Assert.Equal(new Uri("https://github.com/deosrc/Condement/issues/3"), task.Url);
+        Assert.Equal(new Uri("https://github.com/deosrc/Condement"), task.RepositoryUrl);
         Assert.StartsWith("Using remote desktop should avoid", task.Description);
         Assert.NotNull(task.Updated);
         Assert.Null(tasks[0].Description);

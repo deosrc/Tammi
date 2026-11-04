@@ -24,6 +24,87 @@ public static class GitRemoteUrls
     }
 
     /// <summary>
+    /// Whether a remote URL points at the repository at <paramref name="repositoryUrl"/> (e.g. its web page or another
+    /// clone URL). The host and path are compared, ignoring case, the scheme, user, port and a trailing <c>.git</c>, so
+    /// <c>git@github.com:acme/api.git</c> matches <c>https://github.com/acme/api</c>.
+    /// </summary>
+    public static bool IsSameRepository(string? url, string? repositoryUrl) =>
+        Normalise(url) is { } normalised
+        && string.Equals(normalised, Normalise(repositoryUrl), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Returns <c>host/path</c> for a URL with a host, without a trailing <c>/</c> or <c>.git</c>, or
+    /// <see langword="null"/> for a local path.
+    /// </summary>
+    private static string? Normalise(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        url = url.Trim();
+        string? host = GetHost(url);
+        if (string.IsNullOrEmpty(host))
+        {
+            return null;
+        }
+
+        string path = GetPath(url).Replace('\\', '/').Trim('/');
+        if (path.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+        {
+            path = path[..^".git".Length];
+        }
+
+        return path.Length == 0 ? null : $"{host}/{path}";
+    }
+
+    /// <summary>
+    /// The host of a URL, without the user or port, or <see langword="null"/> for a local path.
+    /// </summary>
+    private static string? GetHost(string url)
+    {
+        string authority;
+        int scheme = url.IndexOf("://", StringComparison.Ordinal);
+        if (scheme > 0)
+        {
+            if (url[..scheme].Equals("file", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            string rest = url[(scheme + 3)..];
+            int slash = rest.IndexOf('/');
+            authority = slash < 0 ? rest : rest[..slash];
+        }
+        else
+        {
+            int colon = url.IndexOf(':');
+            int firstSlash = url.IndexOfAny(['/', '\\']);
+            if (colon <= 1 || (firstSlash >= 0 && firstSlash < colon))
+            {
+                return null;
+            }
+
+            authority = url[..colon];
+        }
+
+        int at = authority.LastIndexOf('@');
+        if (at >= 0)
+        {
+            authority = authority[(at + 1)..];
+        }
+
+        int port = authority.LastIndexOf(':');
+        if (port >= 0 && !authority.EndsWith(']'))
+        {
+            authority = authority[..port];
+        }
+
+        return authority;
+    }
+
+    /// <summary>
     /// The path part of a remote URL, without a query or fragment.
     /// </summary>
     private static string GetPath(string url)

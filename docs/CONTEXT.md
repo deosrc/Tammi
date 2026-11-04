@@ -86,6 +86,16 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
    - The clone defaults to `<Monitored Folder>/<repo>`, so TAMMi finds it automatically. If there are
      several Monitored Folders, the user picks one. The user can choose any other folder instead, and
      the clone is then added as a manually added local repository.
+   - **Task repositories are chosen automatically.** A task that belongs to a repository (e.g. a GitHub issue) chooses
+     the Local Repository with a remote matching that repository's URL. URLs are compared by host and path, ignoring
+     case, the scheme, the user, the port and a trailing `.git`, so HTTPS and SSH remotes both match. When several
+     clones match (e.g. a clone of a fork with an `upstream` remote, and a clone of the repository itself), the one
+     whose fetched remote matches is chosen.
+     - It happens when the repository step opens, once for each task: a repository the user removes isn't chosen
+       again. A repository that's already chosen isn't chosen twice.
+     - Removing a task removes the repositories that were chosen only for it.
+     - A task whose repository has no clone yet chooses nothing. (Offering to clone it is part of Remote-only
+       Repositories.)
    - Choosing a repository fetches it, to find the remote's default branch (see [Branches](#repositories-on-disk)).
      A repository that can't be fetched still offers the branches fetched before, and one with no remotes needs its
      base branch chosen.
