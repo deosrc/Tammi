@@ -10,6 +10,9 @@ namespace TAMMi.Core.Git;
 /// </summary>
 public sealed partial class GitCli(GitCliOptions? options = null) : IGitCli
 {
+    // How long a cancelled command waits for its killed git process to end.
+    private static readonly TimeSpan KillTimeout = TimeSpan.FromSeconds(5);
+
     private readonly GitCliOptions _options = options ?? new GitCliOptions();
 
     /// <inheritdoc />
@@ -116,7 +119,7 @@ public sealed partial class GitCli(GitCliOptions? options = null) : IGitCli
         }
         catch (OperationCanceledException)
         {
-            Kill(process);
+            await KillAsync(process).ConfigureAwait(false);
             throw;
         }
 
@@ -135,7 +138,7 @@ public sealed partial class GitCli(GitCliOptions? options = null) : IGitCli
         return result;
     }
 
-    private static void Kill(Process process)
+    private static async Task KillAsync(Process process)
     {
         try
         {
@@ -144,6 +147,19 @@ public sealed partial class GitCli(GitCliOptions? options = null) : IGitCli
         catch (InvalidOperationException)
         {
             // Already exited.
+            return;
+        }
+
+        // Kill doesn't wait for the process to end. Until it has, Windows won't let the caller delete or move the
+        // working directory, e.g. to clean up after cancelling. The wait is bounded so a process that won't die can't
+        // hang the caller.
+        try
+        {
+            await process.WaitForExitAsync(CancellationToken.None).WaitAsync(KillTimeout).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            // Give up waiting: the caller asked to cancel.
         }
     }
 
