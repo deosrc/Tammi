@@ -21,7 +21,10 @@
     }
     else if (Deployment == JiraDeployment.Cloud)
     {
-        <text>An API token without scopes, used with your Atlassian account's email address.</text>
+        <text>
+            An API token, used with your Atlassian account's email address. A token with scopes needs the JIRA scopes
+            <code>read:jira-work</code> and <code>read:jira-user</code>. A token without scopes needs nothing more.
+        </text>
         <a href="@JiraCloudTokenUrl" @onclick="() => Open.InvokeAsync(JiraCloudTokenUrl)"
            @onclick:preventDefault>Create a token</a>
     }

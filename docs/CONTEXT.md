@@ -551,7 +551,10 @@ are left to other tools for now.
   Each JIRA site is a separate integration.
 - **Authentication:**
   - **JIRA Cloud:** the Atlassian account's email address (a setting) and an API token (kept in the credential store).
-    API tokens with scopes only work through `api.atlassian.com`, so the token must be one without scopes.
+    The token can be one without scopes, or one with the JIRA scopes `read:jira-work` and `read:jira-user`. Tokens
+    with scopes only work through Atlassian's API gateway (`api.atlassian.com/ex/jira/<cloud ID>`), so when the site
+    rejects a token, TAMMi reads the site's cloud ID (`_edge/tenant_info`) and tries the gateway, then keeps using
+    whichever worked. When the gateway says a scope is missing, TAMMi names the scopes it needs.
   - **Server and Data Center:** a personal access token (JIRA 8.14 or later), kept in the credential store. When
     JIRA wants a CAPTCHA solved after failed logins, TAMMi asks the user to log in to JIRA in a browser.
 - **Task keys** are JIRA's issue keys, e.g. `ABC-123`. A moved issue is read with its new key.

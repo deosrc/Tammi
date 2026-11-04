@@ -14,6 +14,11 @@ public class JiraIntegrationTests : IDisposable
     private const string DataCenterSiteUrl = "https://jira.example.com/jira/";
     private const string IssuePath = "issue/ABC-12?fields=summary,description,updated,status";
 
+    private const string TenantInfoUrl = "https://acme.atlassian.net/_edge/tenant_info";
+    private const string TenantInfo = """{"cloudId":"a436116f-02ce-4520-8fbb-7301462a1674"}""";
+    private const string GatewayApiUrl =
+        "https://api.atlassian.com/ex/jira/a436116f-02ce-4520-8fbb-7301462a1674/rest/api/2/";
+
     private static readonly string LoginJql = JiraIntegration.TextJql("login");
 
     private static readonly string DefaultSearchPath = CloudSearchPath(JiraIntegration.AssignedJql);
@@ -105,13 +110,114 @@ public class JiraIntegrationTests : IDisposable
         JiraIntegration jira = await CreateAuthenticatedAsync();
         _api.Respond(DefaultSearchPath, "Client must be authenticated to access this resource.",
             HttpStatusCode.Unauthorized);
+        _api.Respond(TenantInfoUrl, TenantInfo);
+        _api.Respond(GatewayApiUrl + DefaultSearchPath, """{"code":401,"message":"Unauthorized"}""",
+            HttpStatusCode.Unauthorized);
 
         var exception = await Assert.ThrowsAsync<IntegrationAuthenticationException>(
             () => jira.GetAssignedTasksAsync(CancellationToken));
 
         Assert.Equal("jira-acme", exception.IntegrationId);
         Assert.Contains("email address and API token", exception.Message);
+        Assert.Contains("read:jira-work and read:jira-user", exception.Message);
         Assert.Contains("Settings", exception.Message);
+    }
+
+    [Fact]
+    public async Task Cloud_ThrowsAuthenticationException_WhenTheSiteDoesntSayItsCloudId()
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond("myself", "", HttpStatusCode.Unauthorized);
+        _api.Respond(TenantInfoUrl, "", HttpStatusCode.NotFound);
+
+        var exception = await Assert.ThrowsAsync<IntegrationAuthenticationException>(
+            () => jira.GetAuthenticatedUserAsync(CancellationToken));
+
+        Assert.Contains("email address and API token", exception.Message);
+        Assert.Equal(2, _api.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Cloud_UsesTheApiGateway_ForATokenWithScopes()
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond("myself", "", HttpStatusCode.Unauthorized);
+        _api.Respond(TenantInfoUrl, TenantInfo);
+        _api.Respond(GatewayApiUrl + "myself", FakeJiraApi.Response("myself.json"));
+        _api.Respond(GatewayApiUrl + IssuePath, FakeJiraApi.Response("issue.json"));
+
+        JiraUser user = await jira.GetAuthenticatedUserAsync(CancellationToken);
+        TaskInfo? task = await jira.GetTaskAsync("ABC-12", CancellationToken);
+
+        Assert.Equal("Mia Krystof", user.DisplayName);
+        Assert.Equal(new Uri("https://acme.atlassian.net/browse/ABC-12"), task?.Url);
+        Assert.Equal(
+            [
+                "https://acme.atlassian.net/rest/api/2/myself",
+                "https://acme.atlassian.net/_edge/tenant_info",
+                GatewayApiUrl + "myself",
+                GatewayApiUrl + IssuePath,
+            ],
+            _api.Requests.Select(request => request.Url.AbsoluteUri));
+        Assert.Null(_api.Requests[1].Authorization);
+        Assert.Equal(_api.Requests[0].Authorization, _api.Requests[2].Authorization);
+    }
+
+    [Fact]
+    public async Task Cloud_GoesBackToTheSite_WhenTheGatewayRejectsANewToken()
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond("myself", "", HttpStatusCode.Unauthorized);
+        _api.Respond("myself", FakeJiraApi.Response("myself.json"));
+        _api.Respond(TenantInfoUrl, TenantInfo);
+        _api.Respond(GatewayApiUrl + "myself", FakeJiraApi.Response("myself.json"));
+        _api.Respond(GatewayApiUrl + "myself", "", HttpStatusCode.Unauthorized);
+
+        await jira.GetAuthenticatedUserAsync(CancellationToken);
+        await jira.GetAuthenticatedUserAsync(CancellationToken);
+        await jira.GetAuthenticatedUserAsync(CancellationToken);
+
+        Assert.Equal(
+            [
+                "https://acme.atlassian.net/rest/api/2/myself",
+                "https://acme.atlassian.net/_edge/tenant_info",
+                GatewayApiUrl + "myself",
+                GatewayApiUrl + "myself",
+                "https://acme.atlassian.net/rest/api/2/myself",
+                "https://acme.atlassian.net/rest/api/2/myself",
+            ],
+            _api.Requests.Select(request => request.Url.AbsoluteUri));
+    }
+
+    [Fact]
+    public async Task Cloud_SaysWhichScopesAreNeeded_WhenATokenLacksThem()
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond("myself", "", HttpStatusCode.Unauthorized);
+        _api.Respond(TenantInfoUrl, TenantInfo);
+        _api.Respond(GatewayApiUrl + "myself", """{"code":401,"message":"Unauthorized; scope does not match"}""",
+            HttpStatusCode.Unauthorized);
+
+        var exception = await Assert.ThrowsAsync<IntegrationAuthenticationException>(
+            () => jira.GetAuthenticatedUserAsync(CancellationToken));
+
+        Assert.Contains("doesn't have the scopes", exception.Message);
+        Assert.Contains("read:jira-work and read:jira-user", exception.Message);
+    }
+
+    [Fact]
+    public async Task DataCenter_ThrowsAuthenticationException_WhenTheTokenIsRejected()
+    {
+        using var api = new FakeJiraApi(DataCenterSiteUrl);
+        using var httpClient = new HttpClient(api);
+        JiraIntegration jira = await CreateAuthenticatedAsync(DataCenterOptions(), httpClient);
+        api.Respond("myself", "", HttpStatusCode.Unauthorized);
+
+        var exception = await Assert.ThrowsAsync<IntegrationAuthenticationException>(
+            () => jira.GetAuthenticatedUserAsync(CancellationToken));
+
+        Assert.Contains("personal access token", exception.Message);
+        Assert.Single(api.Requests);
     }
 
     [Fact]

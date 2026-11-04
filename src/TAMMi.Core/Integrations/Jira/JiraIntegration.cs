@@ -11,7 +11,8 @@ namespace TAMMi.Core.Integrations.Jira;
 /// <remarks>
 /// <para>
 /// The secret in <see cref="Credentials"/> is an API token for JIRA Cloud, used with
-/// <see cref="JiraIntegrationOptions.Email"/>, or a personal access token for Server and Data Center.
+/// <see cref="JiraIntegrationOptions.Email"/>, or a personal access token for Server and Data Center. A JIRA Cloud
+/// token can be one with scopes (<see cref="CloudScopes"/>), which is used through Atlassian's API gateway.
 /// </para>
 /// <para>
 /// Task keys are JIRA's issue keys, e.g. <c>ABC-123</c>. Descriptions are in JIRA wiki markup, as REST API
@@ -25,6 +26,12 @@ public sealed class JiraIntegration : ITaskIntegration
     /// done), most recently updated first.
     /// </summary>
     public const string AssignedJql = "assignee = currentUser() AND statusCategory = \"To Do\" ORDER BY updated DESC";
+
+    /// <summary>
+    /// The scopes a JIRA Cloud API token with scopes needs: to read issues, and to read the user it belongs to. A
+    /// token without scopes can do whatever the user can.
+    /// </summary>
+    public const string CloudScopes = "read:jira-work and read:jira-user";
 
     private readonly JiraIntegrationOptions _options;
     private readonly JiraApiClient _api;
