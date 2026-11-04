@@ -50,9 +50,3 @@ dotnet run --project src/TAMMi.Linux
 
 `dotnet test` runs on Microsoft.Testing.Platform (set in `global.json`). It evaluates every project in a solution or
 solution filter, including the Windows host, so on Linux run it against the test project instead.
-
-### Developer pages
-
-Settings → About links to pages for trying parts of the app on their own, such as **Terminal**, which runs the platform's default
-shell in the embedded terminal, and **Agent**, which starts and stops an Agent Definition (e.g. Claude Code) in a folder
-and shows its state.
