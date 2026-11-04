@@ -9,6 +9,7 @@ using TAMMi.Core.Settings;
 using TAMMi.Core.Terminals;
 using TAMMi.Core.Windowing;
 using TAMMi.Core.Workspaces;
+using TAMMi.UI.Workspaces;
 
 namespace TAMMi.UI;
 
@@ -42,6 +43,8 @@ public static class ServiceCollectionExtensions
             services.GetRequiredService<AgentHookServer>()));
         services.AddSingleton<SupportedAgentChecker>();
         services.AddSingleton<TerminalLauncher>();
+        services.AddSingleton<WorkspaceTerminals>();
+        services.AddSingleton<WorkspaceViewState>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();
         services.AddSingleton<IWorkspaceStore, WorkspaceStore>();

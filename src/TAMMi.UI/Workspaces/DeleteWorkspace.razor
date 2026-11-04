@@ -1,6 +1,8 @@
 @implements IDisposable
+@using TAMMi.Core.Terminals
 @inject WorkspaceDeleter Deleter
 @inject WorkspaceTabs WorkspaceTabs
+@inject WorkspaceTerminals Terminals
 
 @* The Delete Workspace flow: check for work that would be lost, confirm, delete, then offer to delete the branches. *@
 <div class="delete-workspace">
@@ -24,6 +26,7 @@
                 Its folder isn't this workspace's any more, so it's left alone. Deleting the workspace only removes it
                 from the list of workspaces.
             </p>
+            @TerminalsNotice
             <div class="workspace-details-actions">
                 <button type="button" class="button button-danger" @onclick="DeleteAsync">Remove from list</button>
                 <button type="button" class="button button-secondary" @onclick="OnCancel">Cancel</button>
@@ -32,6 +35,7 @@
 
         case Step.Confirm when _plan is { } plan:
             <p>@WorktreeDeletionText.DescribeRemoval(plan) You can choose which branches to delete next.</p>
+            @TerminalsNotice
             @if (!plan.MetadataRead)
             {
                 <p class="warning">
@@ -171,6 +175,13 @@
 
     protected override Task OnInitializedAsync() => PlanAsync();
 
+    private RenderFragment? TerminalsNotice => Terminals.For(WorkspaceId).Count switch
+    {
+        0 => null,
+        1 => @<p>Its open terminal will be closed.</p>,
+        var count => @<p>Its @count open terminals will be closed.</p>,
+    };
+
     public void Dispose()
     {
         _isDisposed = true;
@@ -222,7 +233,9 @@
         IReadOnlyList<WorkspaceBranch> branches;
         try
         {
-            // Not cancelled if the flow is closed, e.g. by showing another tab, so it doesn't stop half-way.
+            // The terminals end first, so no shell is still using the folders being deleted. Nothing here is cancelled
+            // if the flow is closed, e.g. by showing another tab, so it doesn't stop half-way.
+            await Terminals.CloseAllAsync(WorkspaceId);
             branches = await Deleter.DeleteAsync(_plan!, CancellationToken.None);
         }
         catch (Exception ex)

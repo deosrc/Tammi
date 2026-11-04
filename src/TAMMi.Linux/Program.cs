@@ -4,6 +4,7 @@ using Microsoft.Extensions.FileProviders;
 using Photino.Blazor;
 using Photino.NET;
 using TAMMi.Core;
+using TAMMi.Core.Terminals;
 using TAMMi.Core.Windowing;
 using TAMMi.Linux.PlatformServices;
 using TAMMi.UI;
@@ -48,6 +49,7 @@ internal static class Program
 
         // Run returns once the window has closed.
         windowStateStore.Save(windowStateTracker.Current);
+        app.Services.GetRequiredService<WorkspaceTerminals>().DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 
     private static WindowStateTracker TrackWindowState(PhotinoWindow window, WindowState initial)

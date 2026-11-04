@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
+using TAMMi.Core.Terminals;
 using TAMMi.Core.Windowing;
 using TAMMi.UI;
 using TAMMi.Windows.PlatformServices;
@@ -17,9 +18,14 @@ public static class MauiProgram
         builder.Services.AddTammiUI();
         builder.Services.AddWindowsPlatformServices();
         builder.ConfigureLifecycleEvents(events => events.AddWindows(windows => windows.OnWindowCreated(window =>
-            WindowStatePersistence.Attach(
-                window,
-                IPlatformApplication.Current!.Services.GetRequiredService<WindowStateStore>()))));
+        {
+            var services = IPlatformApplication.Current!.Services;
+            WindowStatePersistence.Attach(window, services.GetRequiredService<WindowStateStore>());
+
+            // All terminals end when the app closes. They're ended off the UI thread, which is waiting for them.
+            var terminals = services.GetRequiredService<WorkspaceTerminals>();
+            window.Closed += (_, _) => Task.Run(() => terminals.DisposeAsync().AsTask()).GetAwaiter().GetResult();
+        })));
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

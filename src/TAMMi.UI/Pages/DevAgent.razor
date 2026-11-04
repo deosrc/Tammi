@@ -2,6 +2,7 @@
 @using TAMMi.Core.Agents
 @using TAMMi.Core.Platform
 @using TAMMi.Core.Settings
+@using TAMMi.Core.Terminals
 @implements IAsyncDisposable
 @inject AgentLauncher AgentLauncher
 @inject IFolderPicker FolderPicker
@@ -95,9 +96,9 @@
         </details>
     }
 
-    @if (_agent is not null)
+    @if (_terminal is not null)
     {
-        <Terminal @key="_agent" Session="_agent.Session" Class="dev-page-terminal" />
+        <Terminal @key="_terminal" Session="_terminal" Class="dev-page-terminal" />
     }
 </div>
 
@@ -113,6 +114,7 @@
     private int _definitionIndex;
     private string _workingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     private Agent? _agent;
+    private TerminalSession? _terminal;
     private bool _stopping;
     private string? _error;
     private bool _sendInitialPrompt = true;
@@ -157,6 +159,7 @@
             agent.StateChanged += OnStateChanged;
             agent.SessionIdChanged += OnSessionIdChanged;
             _agent = agent;
+            _terminal = new TerminalSession(agent.Session);
         }
         catch (Exception ex) when (ex is IOException or ArgumentException
             or System.Runtime.InteropServices.ExternalException)
@@ -185,6 +188,7 @@
             agent.StateChanged += OnStateChanged;
             agent.SessionIdChanged += OnSessionIdChanged;
             _agent = agent;
+            _terminal = new TerminalSession(agent.Session);
         }
         catch (Exception ex) when (ex is IOException or ArgumentException
             or System.Runtime.InteropServices.ExternalException)
@@ -285,6 +289,7 @@
         {
             var agent = _agent;
             _agent = null;
+            _terminal = null;
             agent.StateChanged -= OnStateChanged;
             agent.SessionIdChanged -= OnSessionIdChanged;
             await agent.DisposeAsync();

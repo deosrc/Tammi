@@ -939,11 +939,115 @@ label.task-choice {
   height: 14px;
 }
 
+/* The main area: a row of session tabs, with the shown session filling the rest. */
 .workspace-main {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
+}
+
+.workspace-main-empty {
+  flex: 1;
   overflow: auto;
   padding: var(--space-6);
+}
+
+.workspace-main-error {
+  margin: var(--space-2) var(--space-3) 0;
+}
+
+/* A second row of tabs, set apart from the app's tab strip by a small divider. */
+.session-tabs {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  height: 36px;
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.session-tab-list {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.session-tab {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding-right: var(--space-1);
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.session-tab:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.session-tab.active {
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-shadow: inset 0 2px 0 var(--color-accent);
+}
+
+/* Like a workspace tab, the label fills the tab, so clicking anywhere on it but the close button shows it. */
+.session-tab-label {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: var(--space-2);
+  max-width: 220px;
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* A tab that shows only an icon: the dashboard, and the tab that opens the New menu. */
+.session-tab-icon {
+  padding: 0 var(--space-3);
+}
+
+/* The dashboard can't be closed, so it has no close button to leave room for. */
+.session-tab-dashboard {
+  padding-right: 0;
+}
+
+/* More specific than .menu-anchor, which comes later and would make it inline-block, so the button fills the tab
+   row's height like the other tabs. */
+.session-tabs > .session-tab-new {
+  display: flex;
+  flex: none;
+}
+
+.session-tab-new > .session-tab-label {
+  color: var(--color-text-muted);
+}
+
+.session-tab-new > .session-tab-label:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.session-tab-status {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+/* The shown terminal fills the rest of the main area, with a small gap around it. */
+.workspace-terminal {
+  flex: 1;
+  margin: var(--space-2);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
@@ -1436,6 +1540,21 @@ label.task-choice {
 .menu-anchor-wide > .menu {
   right: 0;
   min-width: 0;
+}
+
+/* A menu item that opens a submenu beside it. */
+.menu-submenu-anchor {
+  position: relative;
+}
+
+.menu-submenu {
+  top: calc(-1 * var(--space-1) - 1px);
+  left: calc(100% + var(--space-1));
+}
+
+/* Pushes an icon, e.g. a submenu's arrow, to the end of a menu item. */
+.menu-item-end {
+  margin-left: auto;
 }
 
 /* A menu that opens above its button, e.g. at the bottom of the window. */

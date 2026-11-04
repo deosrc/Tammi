@@ -1,12 +1,14 @@
 @using System.Text
 @using TAMMi.Core.Platform
+@using TAMMi.Core.Terminals
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 
 @*
     An embedded terminal: shows a pseudoterminal session with xterm.js and sends it the user's input. The terminal
-    fills this element, and the session's size follows it. The component doesn't own the session: whoever started
-    it disposes it. To show a different session, give the component a new @key.
+    fills this element, and the session's size follows it. It starts by showing the session's kept output, so a
+    session shown again after its terminal was closed picks up where it was. The component doesn't own the session:
+    whoever started it disposes it. To show a different session, give the component a new @key.
 *@
 <div @ref="_element" class="terminal @Class"></div>
 
@@ -18,13 +20,13 @@
     private DotNetObjectReference<Terminal>? _self;
     private IJSObjectReference? _module;
     private IJSObjectReference? _terminal;
-    private IPtySession? _attached;
+    private TerminalSession? _attached;
 
     /// <summary>
     /// The session to show.
     /// </summary>
     [Parameter, EditorRequired]
-    public IPtySession Session { get; set; } = null!;
+    public TerminalSession Session { get; set; } = null!;
 
     /// <summary>
     /// CSS classes for the terminal's element, which should be given a size.
@@ -65,6 +67,7 @@
         }
 
         _attached = Session;
+        var reader = Session.OpenReader();
         _self = DotNetObjectReference.Create(this);
         _module = await JS.InvokeAsync<IJSObjectReference>(
             "import",
@@ -76,23 +79,23 @@
 
         // The terminal has been fitted to the element, so the session can start at the right size.
         var size = await _terminal.InvokeAsync<TerminalSize>("getSize");
-        Session.Resize(new PtySize(size.Columns, size.Rows));
+        Session.Pty.Resize(new PtySize(size.Columns, size.Rows));
         await _terminal.InvokeVoidAsync("focus");
 
-        _ = ShowOutputAsync(_disposed.Token);
+        _ = ShowOutputAsync(reader, _disposed.Token);
     }
 
     [JSInvokable]
-    public void OnInput(string data) => Session.Write(Encoding.UTF8.GetBytes(data));
+    public void OnInput(string data) => Session.Pty.Write(Encoding.UTF8.GetBytes(data));
 
     /// <summary>
     /// Input that isn't text, e.g. some mouse reports. Each character is one byte.
     /// </summary>
     [JSInvokable]
-    public void OnBinaryInput(string data) => Session.Write(Encoding.Latin1.GetBytes(data));
+    public void OnBinaryInput(string data) => Session.Pty.Write(Encoding.Latin1.GetBytes(data));
 
     [JSInvokable]
-    public void OnResize(int columns, int rows) => Session.Resize(new PtySize(columns, rows));
+    public void OnResize(int columns, int rows) => Session.Pty.Resize(new PtySize(columns, rows));
 
     public async ValueTask DisposeAsync()
     {
@@ -119,20 +122,20 @@
         _disposed.Dispose();
     }
 
-    private async Task ShowOutputAsync(CancellationToken cancellationToken)
+    private async Task ShowOutputAsync(TerminalOutputReader reader, CancellationToken cancellationToken)
     {
         var buffer = new byte[OutputBufferSize];
         try
         {
-            // Each write waits until xterm.js has processed it, so a process with a lot of output is held back to
-            // what the terminal can show, instead of piling up in the web view.
+            // Each write waits until xterm.js has processed it, so output doesn't pile up in the web view. A terminal
+            // that falls far behind skips to the latest output the session has kept.
             int count;
-            while ((count = await Session.ReadAsync(buffer, cancellationToken)) > 0)
+            while ((count = await reader.ReadAsync(buffer, cancellationToken)) > 0)
             {
                 await _terminal!.InvokeVoidAsync("write", cancellationToken, buffer.AsSpan(0, count).ToArray());
             }
 
-            var exitCode = await Session.Exited.WaitAsync(cancellationToken);
+            var exitCode = await Session.Pty.Exited.WaitAsync(cancellationToken);
             await _terminal!.InvokeVoidAsync(
                 "write",
                 cancellationToken,
