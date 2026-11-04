@@ -15,6 +15,12 @@ public sealed record IntegrationStatus(
     string? Message = null)
 {
     /// <summary>
+    /// Something about a connected integration the user should fix, e.g. a token that can't see everything TAMMi
+    /// needs. The integration still works.
+    /// </summary>
+    public string? Warning { get; init; }
+
+    /// <summary>
     /// The status of an integration that hasn't been checked yet.
     /// </summary>
     public static IntegrationStatus NotChecked { get; } = new(IntegrationConnectionState.NotChecked);

@@ -58,6 +58,10 @@ else
                 {
                     <p class="settings-help integration-message">@message</p>
                 }
+                @if (status.Warning is { } warning)
+                {
+                    <p class="warning integration-message">@warning</p>
+                }
 
                 @if (_removingId == integration.Id)
                 {

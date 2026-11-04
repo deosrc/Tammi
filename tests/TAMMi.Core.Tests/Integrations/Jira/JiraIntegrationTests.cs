@@ -12,9 +12,11 @@ public class JiraIntegrationTests : IDisposable
     private const string Token = "ATATT3xFfGF0test";
     private const string Email = "mia@example.com";
     private const string DataCenterSiteUrl = "https://jira.example.com/jira/";
-    private const string IssuePath = "issue/ABC-12?fields=summary,description";
+    private const string IssuePath = "issue/ABC-12?fields=summary,description,updated";
 
-    private static readonly string DefaultSearchPath = CloudSearchPath(JiraIntegration.DefaultJql);
+    private static readonly string LoginJql = JiraIntegration.TextJql("login");
+
+    private static readonly string DefaultSearchPath = CloudSearchPath(JiraIntegration.AssignedJql);
 
     private readonly InMemoryCredentialStore _store = new();
     private readonly FakeJiraApi _api = new();
@@ -91,7 +93,7 @@ public class JiraIntegrationTests : IDisposable
         JiraIntegration jira = Create();
 
         var exception = await Assert.ThrowsAsync<IntegrationAuthenticationException>(
-            () => jira.SearchTasksAsync(null, CancellationToken));
+            () => jira.GetAssignedTasksAsync(CancellationToken));
 
         Assert.Equal("jira-acme", exception.IntegrationId);
         Assert.Empty(_api.Requests);
@@ -105,7 +107,7 @@ public class JiraIntegrationTests : IDisposable
             HttpStatusCode.Unauthorized);
 
         var exception = await Assert.ThrowsAsync<IntegrationAuthenticationException>(
-            () => jira.SearchTasksAsync(null, CancellationToken));
+            () => jira.GetAssignedTasksAsync(CancellationToken));
 
         Assert.Equal("jira-acme", exception.IntegrationId);
         Assert.Contains("email address and API token", exception.Message);
@@ -128,64 +130,83 @@ public class JiraIntegrationTests : IDisposable
         Assert.Contains("CAPTCHA", exception.Message);
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("  ")]
-    public async Task SearchTasksAsync_ListsTheUsersUnfinishedIssues_WhenThereIsNoQuery(string? query)
+    [Fact]
+    public async Task GetAssignedTasksAsync_ListsTheUsersIssuesThatAreStillToDo()
     {
         JiraIntegration jira = await CreateAuthenticatedAsync();
         _api.Respond(DefaultSearchPath, FakeJiraApi.Response("search-cloud-page2.json"));
 
-        IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync(query, CancellationToken);
+        IReadOnlyList<TaskInfo> tasks = await jira.GetAssignedTasksAsync(CancellationToken);
 
         Assert.Equal(["XYZ-3"], tasks.Select(task => task.Key));
         RecordedRequest request = Assert.Single(_api.Requests);
         Assert.Equal("/rest/api/2/search/jql", request.Url.AbsolutePath);
-        Assert.Equal("assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC",
+        Assert.Equal("assignee = currentUser() AND statusCategory = \"To Do\" ORDER BY updated DESC",
             request.Query("jql"));
-        Assert.Equal("summary,description", request.Query("fields"));
+        Assert.Equal("summary,description,updated", request.Query("fields"));
     }
 
     [Fact]
-    public async Task SearchTasksAsync_ReadsIssuesAsTasks()
+    public async Task GetAssignedTasksAsync_ReadsIssuesAsTasks()
     {
         JiraIntegration jira = await CreateAuthenticatedAsync(CloudOptions() with { MaxSearchResults = 2 });
-        _api.Respond(CloudSearchPath(JiraIntegration.DefaultJql, maxResults: 2),
+        _api.Respond(CloudSearchPath(JiraIntegration.AssignedJql, maxResults: 2),
             FakeJiraApi.Response("search-cloud.json"));
 
-        IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync(null, CancellationToken);
+        IReadOnlyList<TaskInfo> tasks = await jira.GetAssignedTasksAsync(CancellationToken);
 
         TaskInfo task = tasks[0];
         Assert.Equal(new TaskReference("jira-acme", "ABC-12"), task.Reference);
         Assert.Equal("Login fails with an expired session", task.Title);
         Assert.Equal(new Uri("https://acme.atlassian.net/browse/ABC-12"), task.Url);
         Assert.StartsWith("Steps to reproduce:\n# Sign in", task.Description);
+        Assert.Equal(new DateTimeOffset(2026, 11, 1, 9, 30, 0, TimeSpan.FromHours(1)), task.Updated);
         Assert.Null(tasks[1].Description);
+        Assert.Null(tasks[1].Updated);
     }
 
     [Fact]
-    public async Task SearchTasksAsync_SearchesWithTheJqlQuery()
+    public async Task SearchTasksAsync_SearchesTheTextOfIssues()
     {
         JiraIntegration jira = await CreateAuthenticatedAsync();
-        const string jql = "project = ABC AND status = \"In Progress\"";
-        _api.Respond(CloudSearchPath(jql), FakeJiraApi.Response("search-cloud-page2.json"));
+        _api.Respond(CloudSearchPath(JiraIntegration.TextJql("expired session")),
+            FakeJiraApi.Response("search-cloud-page2.json"));
 
-        await jira.SearchTasksAsync($"  {jql} ", CancellationToken);
+        await jira.SearchTasksAsync("  expired session ", CancellationToken);
 
-        Assert.Equal(jql, Assert.Single(_api.Requests).Query("jql"));
+        Assert.Equal("text ~ \"expired session\" ORDER BY updated DESC", Assert.Single(_api.Requests).Query("jql"));
+    }
+
+    [Theory]
+    [InlineData("login", "login")]
+    [InlineData("  fix   login  ", "fix login")]
+    [InlineData("say \"hi\" (now)", "say hi now")]
+    [InlineData("a\\b c:d -e +f", "a b c d e f")]
+    [InlineData("project = ABC", "project = ABC")]
+    public void TextJql_QuotesTheWords_LeavingOutSpecialCharacters(string text, string phrase)
+    {
+        Assert.Equal($"text ~ \"{phrase}\" ORDER BY updated DESC", JiraIntegration.TextJql(text));
+    }
+
+    [Fact]
+    public async Task SearchTasksAsync_Throws_ForBlankText()
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => jira.SearchTasksAsync(" ", CancellationToken));
     }
 
     [Fact]
     public async Task SearchTasksAsync_OnCloud_FollowsPageTokens_UntilTheLastPage()
     {
         JiraIntegration jira = await CreateAuthenticatedAsync();
-        string first = CloudSearchPath("project = ABC");
+        string first = CloudSearchPath(LoginJql);
         _api.Respond(first, FakeJiraApi.Response("search-cloud.json"))
             .Respond(first + "&nextPageToken=" + Uri.EscapeDataString(
                     "Ch0jU3RyaW5nJlFVSkQmJlNXNTBaWEpsYzNSbFpBPT0lMjM="),
                 FakeJiraApi.Response("search-cloud-page2.json"));
 
-        IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync("project = ABC", CancellationToken);
+        IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync("login", CancellationToken);
 
         Assert.Equal(["ABC-12", "ABC-9", "XYZ-3"], tasks.Select(task => task.Key));
         Assert.Equal(2, _api.Requests.Count);
@@ -195,9 +216,9 @@ public class JiraIntegrationTests : IDisposable
     public async Task SearchTasksAsync_StopsAtTheMaximumResults()
     {
         JiraIntegration jira = await CreateAuthenticatedAsync(CloudOptions() with { MaxSearchResults = 1 });
-        _api.Respond(CloudSearchPath("project = ABC", maxResults: 1), FakeJiraApi.Response("search-cloud.json"));
+        _api.Respond(CloudSearchPath(LoginJql, maxResults: 1), FakeJiraApi.Response("search-cloud.json"));
 
-        IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync("project = ABC", CancellationToken);
+        IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync("login", CancellationToken);
 
         Assert.Equal(["ABC-12"], tasks.Select(task => task.Key));
         Assert.Equal("1", Assert.Single(_api.Requests).Query("maxResults"));
@@ -207,11 +228,11 @@ public class JiraIntegrationTests : IDisposable
     public async Task SearchTasksAsync_OnCloud_Stops_WhenThePageTokenDoesntChange()
     {
         JiraIntegration jira = await CreateAuthenticatedAsync();
-        string first = CloudSearchPath("project = ABC");
+        string first = CloudSearchPath(LoginJql);
         string token = """{"issues":[{"key":"ABC-1","fields":{"summary":"One"}}],"nextPageToken":"t1"}""";
         _api.Respond(first, token).Respond(first + "&nextPageToken=t1", token);
 
-        IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync("project = ABC", CancellationToken);
+        IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync("login", CancellationToken);
 
         Assert.Equal(2, tasks.Count);
         Assert.Equal(2, _api.Requests.Count);
@@ -223,11 +244,11 @@ public class JiraIntegrationTests : IDisposable
         using var api = new FakeJiraApi(DataCenterSiteUrl);
         using var httpClient = new HttpClient(api);
         JiraIntegration jira = await CreateAuthenticatedAsync(DataCenterOptions() with { PageSize = 2 }, httpClient);
-        string first = $"search?jql={Uri.EscapeDataString("project = ABC")}&fields=summary,description&maxResults=2";
+        string first = $"search?jql={Uri.EscapeDataString(LoginJql)}&fields=summary,description,updated&maxResults=2";
         api.Respond(first + "&startAt=0", FakeJiraApi.Response("search-dc.json"))
             .Respond(first + "&startAt=2", FakeJiraApi.Response("search-dc-page2.json"));
 
-        IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync("project = ABC", CancellationToken);
+        IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync("login", CancellationToken);
 
         Assert.Equal(["ABC-12", "ABC-9", "XYZ-3"], tasks.Select(task => task.Key));
         Assert.Equal(new Uri("https://jira.example.com/jira/browse/ABC-12"), tasks[0].Url);
@@ -241,7 +262,7 @@ public class JiraIntegrationTests : IDisposable
         using var api = new FakeJiraApi(DataCenterSiteUrl);
         using var httpClient = new HttpClient(api);
         JiraIntegration jira = await CreateAuthenticatedAsync(DataCenterOptions(), httpClient);
-        api.Respond($"search?jql=x&fields=summary,description&maxResults=50&startAt=0",
+        api.Respond($"search?jql={Uri.EscapeDataString(JiraIntegration.TextJql("x"))}&fields=summary,description,updated&maxResults=50&startAt=0",
             """{"startAt":0,"maxResults":50,"total":10,"issues":[]}""");
 
         Assert.Empty(await jira.SearchTasksAsync("x", CancellationToken));
@@ -253,46 +274,27 @@ public class JiraIntegrationTests : IDisposable
     [InlineData(" abc-12 ")]
     [InlineData("https://acme.atlassian.net/browse/ABC-12")]
     [InlineData("https://acme.atlassian.net/jira/software/projects/ABC/boards/1?selectedIssue=ABC-12")]
-    public async Task SearchTasksAsync_FindsAnIssueByKeyOrUrl(string query)
+    public void TryParseTaskReference_ReadsAKeyOrUrl(string text)
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
-        _api.Respond(IssuePath, FakeJiraApi.Response("issue.json"));
-
-        IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync(query, CancellationToken);
-
-        Assert.Equal("ABC-12", Assert.Single(tasks).Key);
-        Assert.Equal(IssuePath, Assert.Single(_api.Requests).Url.PathAndQuery["/rest/api/2/".Length..]);
+        Assert.True(Create().TryParseTaskReference(text, out string? key));
+        Assert.Equal("ABC-12", key);
     }
 
-    [Fact]
-    public async Task SearchTasksAsync_ReturnsNothing_ForTheKeyOfAMissingIssue()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("login bug")]
+    [InlineData("acme/api#12")]
+    [InlineData("https://other.atlassian.net/browse/ABC-12")]
+    public void TryParseTaskReference_RejectsOtherText(string? text)
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
-        _api.Respond(IssuePath, FakeJiraApi.Response("not-found.json"), HttpStatusCode.NotFound);
-
-        Assert.Empty(await jira.SearchTasksAsync("ABC-12", CancellationToken));
-    }
-
-    [Fact]
-    public async Task SearchTasksAsync_ThrowsWithJirasMessage_ForInvalidJql()
-    {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
-        _api.Respond(CloudSearchPath("fix login bug"), FakeJiraApi.Response("invalid-jql.json"),
-            HttpStatusCode.BadRequest);
-
-        var exception = await Assert.ThrowsAsync<IntegrationException>(
-            () => jira.SearchTasksAsync("fix login bug", CancellationToken));
-
-        Assert.StartsWith(
-            "JIRA returned an error (400 Bad Request): Error in the JQL Query: Expecting operator but got 'login'.",
-            exception.Message);
+        Assert.False(Create().TryParseTaskReference(text, out _));
     }
 
     [Fact]
     public async Task Errors_IncludeFieldMessages()
     {
         JiraIntegration jira = await CreateAuthenticatedAsync();
-        _api.Respond(CloudSearchPath("x"), """{"errorMessages":[],"errors":{"jql":"The JQL is too long."}}""",
+        _api.Respond(CloudSearchPath(JiraIntegration.TextJql("x")), """{"errorMessages":[],"errors":{"jql":"The JQL is too long."}}""",
             HttpStatusCode.BadRequest);
 
         var exception = await Assert.ThrowsAsync<IntegrationException>(
@@ -319,7 +321,7 @@ public class JiraIntegrationTests : IDisposable
     public async Task GetTaskAsync_UsesTheNewKey_OfAMovedIssue()
     {
         JiraIntegration jira = await CreateAuthenticatedAsync();
-        _api.Respond("issue/ABC-1?fields=summary,description",
+        _api.Respond("issue/ABC-1?fields=summary,description,updated",
             """{"id":"10103","key":"XYZ-3","fields":{"summary":"Moved","description":null}}""");
 
         TaskInfo? task = await jira.GetTaskAsync("ABC-1", CancellationToken);
@@ -456,7 +458,7 @@ public class JiraIntegrationTests : IDisposable
     }
 
     private static string CloudSearchPath(string jql, int maxResults = 50) =>
-        $"search/jql?jql={Uri.EscapeDataString(jql)}&fields=summary,description&maxResults={maxResults}";
+        $"search/jql?jql={Uri.EscapeDataString(jql)}&fields=summary,description,updated&maxResults={maxResults}";
 
     private static JiraIntegrationOptions CloudOptions() => new()
     {

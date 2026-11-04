@@ -15,12 +15,14 @@ public static class AppRoutes
     public static IReadOnlyList<SettingsSection> SettingsSections { get; } =
     [
         new("General", Settings),
-        new("Integrations", Settings + "/integrations"),
+        new("Integrations", SettingsIntegrations),
         new("Git", Settings + "/git"),
         new("Agents", Settings + "/agents"),
         new("Tools", Settings + "/tools"),
         new("About", About),
     ];
+
+    public const string SettingsIntegrations = Settings + "/integrations";
 
     public const string About = Settings + "/about";
 

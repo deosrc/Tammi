@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
             new HttpClient { Timeout = IntegrationRequestTimeout },
             services.GetRequiredService<TimeProvider>()));
         services.AddSingleton(services => services.GetRequiredService<IntegrationManager>().Registry);
+        services.AddSingleton<TaskFinder>();
         services.AddSingleton<AgentHookServer>();
         services.AddSingleton(services => new AgentLauncher(
             services.GetRequiredService<IPtyService>(),

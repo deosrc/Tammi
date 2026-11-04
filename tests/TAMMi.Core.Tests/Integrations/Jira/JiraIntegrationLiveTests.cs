@@ -27,9 +27,9 @@ public sealed class JiraIntegrationLiveTests : IDisposable
         JiraIntegration jira = await CreateAsync();
 
         JiraUser user = await jira.GetAuthenticatedUserAsync(CancellationToken);
-        IReadOnlyList<TaskInfo> assigned = await jira.SearchTasksAsync(null, CancellationToken);
+        IReadOnlyList<TaskInfo> assigned = await jira.GetAssignedTasksAsync(CancellationToken);
 
-        TestContext.Current.SendDiagnosticMessage($"{user.DisplayName}: {assigned.Count} unfinished issues");
+        TestContext.Current.SendDiagnosticMessage($"{user.DisplayName}: {assigned.Count} issues to do");
         Assert.False(string.IsNullOrEmpty(user.DisplayName));
         Assert.Equal(assigned.Count, assigned.DistinctBy(task => task.Key).Count());
     }
@@ -38,19 +38,18 @@ public sealed class JiraIntegrationLiveTests : IDisposable
     public async Task FindsAnIssueBySearchKeyAndUrl()
     {
         JiraIntegration jira = await CreateAsync();
-        IReadOnlyList<TaskInfo> recent = await jira.SearchTasksAsync(
-            "updated >= -365d ORDER BY updated DESC", CancellationToken);
+        IReadOnlyList<TaskInfo> recent = await jira.SearchTasksAsync("the", CancellationToken);
         if (recent.Count == 0)
         {
-            Assert.Skip("The user can't see any issue updated in the last year.");
+            Assert.Skip("The user can't see any issue that mentions 'the'.");
         }
 
         TaskInfo found = recent[0];
         TaskInfo? byKey = await jira.GetTaskAsync(found.Key, CancellationToken);
-        IReadOnlyList<TaskInfo> byUrl = await jira.SearchTasksAsync(found.Url.AbsoluteUri, CancellationToken);
+        Assert.True(jira.TryParseTaskReference(found.Url.AbsoluteUri, out string? keyFromUrl));
 
         Assert.Equal(found, byKey);
-        Assert.Equal(found.Key, Assert.Single(byUrl).Key);
+        Assert.Equal(found.Key, keyFromUrl);
         Assert.Null(await jira.GetTaskAsync(found.Key.Split('-')[0] + "-999999999", CancellationToken));
     }
 

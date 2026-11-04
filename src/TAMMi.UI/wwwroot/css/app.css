@@ -483,6 +483,213 @@ a {
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
+   Create Workspace flow: numbered steps above the current step, with Back and Next below it
+   --------------------------------------------------------------------------------------------------------------- */
+
+.wizard {
+  display: flex;
+  flex-direction: column;
+  max-width: 900px;
+}
+
+/* On wide screens the wizard uses the extra room, so the chosen tasks can sit beside the search. */
+@media (min-width: 1200px) {
+  .wizard {
+    max-width: 1400px;
+  }
+
+  .task-picker {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+
+  .task-picker-search .task-results {
+    margin-bottom: 0;
+  }
+
+  /* Stays in view while scrolling through long results. */
+  .task-picker-chosen {
+    position: sticky;
+    top: 0;
+  }
+}
+
+.wizard-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  list-style: none;
+}
+
+.wizard-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.wizard-step.active {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.wizard-step-number {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  font-size: var(--font-size-small);
+}
+
+.wizard-step.active .wizard-step-number {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+.wizard-step.done .wizard-step-number {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.wizard-body {
+  margin-bottom: var(--space-6);
+}
+
+.wizard-folder {
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, monospace;
+}
+
+.wizard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.wizard-actions-end {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* A smaller button inside a list item, e.g. a task's Open and Remove. */
+.button-small {
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-small);
+}
+
+/* Finding and choosing tasks */
+
+.task-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.task-search input {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.task-query {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-results {
+  margin: var(--space-6) 0;
+}
+
+.task-results > p {
+  margin: 0 0 var(--space-2);
+}
+
+/* Results that a search under way is about to replace. */
+.task-list-stale {
+  opacity: 0.6;
+}
+
+.task-source-icon {
+  display: flex;
+  flex: none;
+}
+
+.task-source-icon .integration-icon-jira {
+  color: var(--color-jira);
+}
+
+.task-workspace {
+  flex: none;
+  white-space: nowrap;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 360px;
+  margin: 0;
+  overflow-y: auto;
+  padding: 0;
+  list-style: none;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.task-item-chosen {
+  border-color: var(--color-accent);
+}
+
+.task-choice {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+label.task-choice {
+  cursor: pointer;
+}
+
+.task-key {
+  flex: none;
+  font-family: ui-monospace, monospace;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.task-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
    Workspace View
    --------------------------------------------------------------------------------------------------------------- */
 
@@ -830,6 +1037,59 @@ a {
   background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
+}
+
+.settings-field select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.settings-field input[type="checkbox"] {
+  padding: 0;
+}
+
+/* Several short options under one field heading: a label beside each control. */
+.settings-options {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  margin: var(--space-2) 0;
+}
+
+.settings-field .settings-options label {
+  margin: 0;
+  font-weight: normal;
+}
+
+.settings-field-intro {
+  margin: 0 0 var(--space-2);
+}
+
+/* Examples of what a setting produces, e.g. suggested workspace names. */
+.settings-preview {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.settings-preview dt {
+  color: var(--color-text-muted);
+}
+
+.settings-preview dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, monospace;
 }
 
 .settings-path {
