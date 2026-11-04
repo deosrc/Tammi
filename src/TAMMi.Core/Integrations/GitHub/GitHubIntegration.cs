@@ -343,6 +343,13 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
             Description = string.IsNullOrEmpty(issue.Body) ? null : issue.Body,
             Updated = issue.UpdatedAt,
             RepositoryUrl = GetRepositoryUrl(url),
+            Status = StatusName(issue),
+            StatusCategory = issue.State switch
+            {
+                "open" => TaskStatusCategory.ToDo,
+                "closed" => TaskStatusCategory.Done,
+                _ => null,
+            },
         };
     }
 
@@ -357,4 +364,16 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
         int issues = path.LastIndexOf("/issues/", StringComparison.Ordinal);
         return issues > 0 ? new Uri(issueUrl, path[..issues]) : null;
     }
+
+    /// <summary>
+    /// Names an issue's status as GitHub shows it: open, or closed and why. GitHub has no in-progress state.
+    /// </summary>
+    private static string? StatusName(GitHubIssue issue) => (issue.State, issue.StateReason) switch
+    {
+        ("open", _) => "Open",
+        ("closed", "not_planned") => "Not planned",
+        ("closed", "duplicate") => "Duplicate",
+        ("closed", _) => "Closed",
+        _ => null,
+    };
 }

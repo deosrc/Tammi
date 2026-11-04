@@ -32,6 +32,17 @@ public sealed record TaskInfo(string Source, string Key, string Title, Uri Url)
     public Uri? RepositoryUrl { get; init; }
 
     /// <summary>
+    /// The task's status as the service names it, e.g. <c>Open</c> or <c>In Review</c>. <see langword="null"/> if the
+    /// service didn't say.
+    /// </summary>
+    public string? Status { get; init; }
+
+    /// <summary>
+    /// What <see cref="Status"/> means for the work, or <see langword="null"/> if the service didn't say.
+    /// </summary>
+    public TaskStatusCategory? StatusCategory { get; init; }
+
+    /// <summary>
     /// Identifies the task across all integrations.
     /// </summary>
     public TaskReference Reference => new(Source, Key);

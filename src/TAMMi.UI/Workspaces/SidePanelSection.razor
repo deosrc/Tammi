@@ -1,7 +1,14 @@
 @* A collapsible section of the Workspace View's side panel. Sections start expanded. *@
 
 <details class="side-panel-section" open>
-    <summary class="side-panel-section-header">@Title</summary>
+    <summary class="side-panel-section-header">
+        <span class="side-panel-section-title">@Title</span>
+        @if (Actions is not null)
+        {
+            @* Clicks on the actions don't expand or collapse the section. *@
+            <span class="side-panel-section-actions" @onclick:preventDefault @onclick:stopPropagation>@Actions</span>
+        }
+    </summary>
     <div class="side-panel-section-body">
         @ChildContent
     </div>
@@ -10,6 +17,12 @@
 @code {
     [Parameter, EditorRequired]
     public string Title { get; set; } = "";
+
+    /// <summary>
+    /// Buttons shown at the end of the section's header, e.g. to refresh it.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }

@@ -10,6 +10,7 @@
 @inject WorkspaceViewState ViewState
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceGitStatusMonitors GitStatusMonitors
+@inject WorkspaceTaskLists TaskLists
 @inject NavigationManager Navigation
 
 @if (_tab is null)
@@ -56,6 +57,36 @@ else
     <div class="workspace-view" @key="_tab.WorkspaceId">
         <aside class="side-panel">
             <div class="side-panel-sections">
+                <SidePanelSection Title="Tasks">
+                    <Actions>
+                        @if (_tasks is { Tasks.Count: > 0 } tasks)
+                        {
+                            <button type="button" class="side-panel-section-action" title="Read the tasks again"
+                                    aria-label="Refresh tasks" disabled="@tasks.IsRefreshing" @onclick="tasks.Refresh">
+                                <svg class="icon icon-small @(tasks.IsRefreshing ? "icon-spin" : null)"
+                                     viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" />
+                                    <path d="M21 3v5h-5" />
+                                </svg>
+                            </button>
+                        }
+                    </Actions>
+                    <ChildContent>
+                        @if (_tasks is null || _tasks.Tasks.Count == 0)
+                        {
+                            <p class="placeholder">No tasks in this workspace.</p>
+                        }
+                        else
+                        {
+                            <ul class="workspace-task-list">
+                                @foreach (var task in _tasks.Tasks)
+                                {
+                                    <WorkspaceTaskCard @key="task.Reference" WorkspaceTask="task" />
+                                }
+                            </ul>
+                        }
+                    </ChildContent>
+                </SidePanelSection>
                 <SidePanelSection Title="Agents">
                     @if (_listing?.Workspace is { } agentsWorkspace)
                     {
@@ -229,6 +260,9 @@ else
     // Keeps running while the tab is open, so it isn't disposed with the page.
     private WorkspaceGitStatusMonitor? _gitStatus;
 
+    // Kept while the tab is open, so switching tabs doesn't read the tasks again.
+    private WorkspaceTaskList? _tasks;
+
     // Counts loads, so a slow load that finishes after a newer one (e.g. for another tab) doesn't replace its result.
     private int _loadCount;
 
@@ -270,6 +304,7 @@ else
         Terminals.Changed -= OnProcessesChanged;
         Agents.Changed -= OnProcessesChanged;
         SetGitStatus(null);
+        SetTasks(null);
         _disposed.Cancel();
         _disposed.Dispose();
     }
@@ -292,6 +327,31 @@ else
             _listing = listing;
             _loadedWorkspaceId = WorkspaceId;
             UpdateGitStatus();
+            UpdateTasks();
+        }
+    }
+
+    private void UpdateTasks() =>
+        SetTasks(!_deleting && _listing?.Workspace is { } workspace && WorkspaceTabs.Find(workspace.Id) is not null
+            ? TaskLists.Start(workspace)
+            : null);
+
+    private void SetTasks(WorkspaceTaskList? list)
+    {
+        if (ReferenceEquals(list, _tasks))
+        {
+            return;
+        }
+
+        if (_tasks is not null)
+        {
+            _tasks.Changed -= OnMonitorChanged;
+        }
+
+        _tasks = list;
+        if (_tasks is not null)
+        {
+            _tasks.Changed += OnMonitorChanged;
         }
     }
 
@@ -314,17 +374,17 @@ else
 
         if (_gitStatus is not null)
         {
-            _gitStatus.Changed -= OnGitStatusChanged;
+            _gitStatus.Changed -= OnMonitorChanged;
         }
 
         _gitStatus = monitor;
         if (_gitStatus is not null)
         {
-            _gitStatus.Changed += OnGitStatusChanged;
+            _gitStatus.Changed += OnMonitorChanged;
         }
     }
 
-    private void OnGitStatusChanged() => InvokeAsync(() =>
+    private void OnMonitorChanged() => InvokeAsync(() =>
     {
         if (!_disposed.IsCancellationRequested)
         {
@@ -545,6 +605,7 @@ else
     {
         _deleting = false;
         UpdateGitStatus();
+        UpdateTasks();
     }
 
     private void FinishDelete()
@@ -558,6 +619,7 @@ else
     {
         _tab = WorkspaceTabs.Find(WorkspaceId);
         UpdateGitStatus();
+        UpdateTasks();
         StateHasChanged();
     });
 

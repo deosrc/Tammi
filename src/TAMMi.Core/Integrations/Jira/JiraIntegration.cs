@@ -231,6 +231,8 @@ public sealed class JiraIntegration : ITaskIntegration
         {
             Description = string.IsNullOrWhiteSpace(description) ? null : description,
             Updated = issue.Fields?.UpdatedTime,
+            Status = string.IsNullOrWhiteSpace(issue.Fields?.Status?.Name) ? null : issue.Fields.Status.Name,
+            StatusCategory = issue.Fields?.Status?.StatusCategory?.Category,
         };
     }
 }
