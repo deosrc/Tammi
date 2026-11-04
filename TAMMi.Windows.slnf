@@ -1,0 +1,11 @@
+{
+  "solution": {
+    "path": "TAMMi.slnx",
+    "projects": [
+      "src/TAMMi.Core/TAMMi.Core.csproj",
+      "src/TAMMi.UI/TAMMi.UI.csproj",
+      "src/TAMMi.Windows/TAMMi.Windows.csproj",
+      "tests/TAMMi.Core.Tests/TAMMi.Core.Tests.csproj"
+    ]
+  }
+}
