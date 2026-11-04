@@ -1,0 +1,159 @@
+name: Release
+
+# Produces release artifacts on two triggers:
+#   - a published GitHub Release (uses repo variables below)
+#   - a manual run (workflow_dispatch inputs override the variables)
+#
+# On/off switches (repo Settings -> Secrets and variables -> Actions -> Variables):
+#   PUBLISH_FRAMEWORK_DEPENDENT (default true)  - per-RID archives, need the .NET 10 runtime installed
+#   PUBLISH_SELF_CONTAINED      (default false) - per-RID archives with the runtime bundled
+# Expression precedence: dispatch input > repo variable > hardcoded default.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to attach the release assets to (manual runs)'
+        required: false
+      publish_framework_dependent:
+        description: 'Publish framework-dependent archives'
+        type: boolean
+        default: true
+      publish_self_contained:
+        description: 'Publish self-contained archives'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  # The targets every archive is built for, framework-dependent and self-contained alike. A JSON array, because it
+  # becomes the build matrices through the targets job below. Each host only builds on its own OS: the Windows host
+  # is a MAUI app and needs the maui-windows workload, which isn't available on Linux. Photino and LibGit2Sharp also
+  # ship native libraries for win-arm64, osx-x64 and osx-arm64, should those be wanted (the Windows host would need
+  # its MAUI build checked for win-arm64).
+  RELEASE_TARGETS: >-
+    [
+      {"rid": "linux-x64",   "os": "ubuntu-latest",  "project": "src/TAMMi.Linux/TAMMi.Linux.csproj"},
+      {"rid": "linux-arm64", "os": "ubuntu-latest",  "project": "src/TAMMi.Linux/TAMMi.Linux.csproj"},
+      {"rid": "win-x64",     "os": "windows-latest", "project": "src/TAMMi.Windows/TAMMi.Windows.csproj"}
+    ]
+
+jobs:
+  targets:
+    name: Resolve targets
+    runs-on: ubuntu-latest
+    # A matrix cannot read the env context, so the list is handed to the matrices as a job output.
+    outputs:
+      targets: ${{ steps.targets.outputs.targets }}
+    steps:
+      - id: targets
+        run: echo "targets=$(jq -c . <<< "$RELEASE_TARGETS")" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish ${{ matrix.mode }} (${{ matrix.target.rid }})
+    runs-on: ${{ matrix.target.os }}
+    needs: targets
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.targets.outputs.targets) }}
+        mode: [framework-dependent, self-contained]
+    # A job-level `if` cannot read the matrix, so the switches are checked in the first step instead and the rest of
+    # the job is skipped when this mode is turned off.
+    env:
+      ENABLED: >-
+        ${{ (matrix.mode == 'framework-dependent' && (github.event_name == 'workflow_dispatch' && inputs.publish_framework_dependent || github.event_name != 'workflow_dispatch' && vars.PUBLISH_FRAMEWORK_DEPENDENT != 'false'))
+         || (matrix.mode == 'self-contained' && (github.event_name == 'workflow_dispatch' && inputs.publish_self_contained || github.event_name != 'workflow_dispatch' && vars.PUBLISH_SELF_CONTAINED == 'true')) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check switch
+        id: switch
+        run: echo "enabled=$ENABLED" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.switch.outputs.enabled == 'true'
+
+      - uses: actions/setup-dotnet@v5
+        if: steps.switch.outputs.enabled == 'true'
+        with:
+          global-json-file: global.json
+
+      - name: Install MAUI workload
+        if: steps.switch.outputs.enabled == 'true' && runner.os == 'Windows'
+        run: dotnet workload install maui-windows
+
+      - name: Resolve release tag and version
+        if: steps.switch.outputs.enabled == 'true'
+        id: tag
+        env:
+          TAG: ${{ github.event.release.tag_name || inputs.tag_name }}
+        run: |
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          # The SDK cannot take a leading "v" as an assembly version, and a manual run may have no tag.
+          version="${TAG#v}"
+          [ -n "$version" ] || version="0.0.0-dev"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # MAUI's ApplicationDisplayVersion must be numeric, so it drops any prerelease suffix.
+          echo "display-version=${version%%-*}" >> "$GITHUB_OUTPUT"
+          # A manual run without a tag still names its archive, for the workflow artifact.
+          echo "label=${TAG:-dev}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish
+        if: steps.switch.outputs.enabled == 'true'
+        env:
+          PROJECT: ${{ matrix.target.project }}
+          RID: ${{ matrix.target.rid }}
+          MODE: ${{ matrix.mode }}
+          VERSION: ${{ steps.tag.outputs.version }}
+          DISPLAY_VERSION: ${{ steps.tag.outputs.display-version }}
+        run: |
+          # The Windows host is an unpackaged MAUI app, so both modes already bundle the Windows App SDK: users only
+          # need the .NET runtime (framework-dependent) or nothing (self-contained).
+          if [ "$MODE" = self-contained ]; then sc=--self-contained; else sc=--no-self-contained; fi
+          dotnet publish "$PROJECT" -c Release -r "$RID" "$sc" -o "publish/$MODE-$RID" \
+            -p:Version="$VERSION" -p:ApplicationDisplayVersion="$DISPLAY_VERSION" -p:SourceRevisionId="$GITHUB_SHA"
+
+      - name: Package archive
+        if: steps.switch.outputs.enabled == 'true'
+        id: package
+        env:
+          RID: ${{ matrix.target.rid }}
+          MODE: ${{ matrix.mode }}
+          LABEL: ${{ steps.tag.outputs.label }}
+        run: |
+          short=$([ "$MODE" = self-contained ] && echo sc || echo fd)
+          name="tammi-$LABEL-$short-$RID"
+          # Linux gets a tarball, which keeps the executable's permission bit; Windows gets a zip.
+          if [ "$RUNNER_OS" = Windows ]; then
+            file="$name.zip"
+            (cd "publish/$MODE-$RID" && 7z a -tzip "../../$file" .)
+          else
+            file="$name.tar.gz"
+            tar -czf "$file" -C "publish/$MODE-$RID" .
+          fi
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
+      # Kept on manual runs without a tag too, so they can be downloaded and tried.
+      - name: Upload workflow artifact
+        if: steps.switch.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.package.outputs.file }}
+          # The file is already an archive, so upload it as-is rather than zipping it again. The artifact takes the
+          # file's name.
+          archive: false
+
+      - name: Attach to release
+        if: steps.switch.outputs.enabled == 'true' && steps.tag.outputs.tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: ${{ steps.package.outputs.file }}
