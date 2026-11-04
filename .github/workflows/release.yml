@@ -115,15 +115,10 @@ jobs:
           VERSION: ${{ steps.tag.outputs.version }}
           DISPLAY_VERSION: ${{ steps.tag.outputs.display-version }}
         run: |
-          args=()
-          if [ "$MODE" = self-contained ]; then
-            args+=(--self-contained true)
-            # Also bundle the Windows App SDK, so the Windows host doesn't need the Windows App Runtime installed.
-            [ "$RUNNER_OS" = Windows ] && args+=(-p:WindowsAppSDKSelfContained=true)
-          else
-            args+=(--no-self-contained)
-          fi
-          dotnet publish "$PROJECT" -c Release -r "$RID" "${args[@]}" -o "publish/$MODE-$RID" \
+          # The Windows host is an unpackaged MAUI app, so both modes already bundle the Windows App SDK: users only
+          # need the .NET runtime (framework-dependent) or nothing (self-contained).
+          if [ "$MODE" = self-contained ]; then sc=--self-contained; else sc=--no-self-contained; fi
+          dotnet publish "$PROJECT" -c Release -r "$RID" "$sc" -o "publish/$MODE-$RID" \
             -p:Version="$VERSION" -p:ApplicationDisplayVersion="$DISPLAY_VERSION" -p:SourceRevisionId="$GITHUB_SHA"
 
       - name: Package archive
