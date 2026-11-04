@@ -10,6 +10,11 @@ namespace TAMMi.Core.Integrations.Jira;
 /// Calls JIRA's REST API: authenticates each request and waits out short rate limits. Errors become
 /// <see cref="IntegrationException"/>s.
 /// </summary>
+/// <remarks>
+/// JIRA Cloud API tokens without scopes work at the site's own URL. Tokens with scopes only work through Atlassian's
+/// API gateway (<see cref="GatewayUrl"/>), so when the site rejects a token, the request is tried there too, and the
+/// one that worked is used first from then on.
+/// </remarks>
 internal sealed class JiraApiClient(
     JiraIntegrationOptions options,
     IntegrationCredentials credentials,
@@ -26,9 +31,24 @@ internal sealed class JiraApiClient(
     /// </summary>
     internal static readonly TimeSpan DefaultRateLimitWait = TimeSpan.FromMinutes(1);
 
+    /// <summary>
+    /// Atlassian's API gateway, which addresses a JIRA Cloud site by its cloud ID.
+    /// </summary>
+    internal static readonly Uri GatewayUrl = new("https://api.atlassian.com/ex/jira/");
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    private readonly Uri _apiUrl = new(SiteUrl(options.SiteUrl), "rest/api/2/");
+    private readonly Uri _siteApiUrl = new(SiteUrl(options.SiteUrl), "rest/api/2/");
+
+    /// <summary>
+    /// The site's API through the gateway, once its cloud ID is known.
+    /// </summary>
+    private Uri? _gatewayApiUrl;
+
+    /// <summary>
+    /// Whether the token last worked through the gateway rather than at the site.
+    /// </summary>
+    private volatile bool _preferGateway;
 
     /// <summary>
     /// The site's base URL, ending in <c>/</c> so relative URLs keep its path.
@@ -46,23 +66,67 @@ internal sealed class JiraApiClient(
     public async Task<T?> GetAsync<T>(string path, bool allowNotFound, CancellationToken cancellationToken)
         where T : class
     {
-        using HttpResponseMessage? response = await SendAsync(new Uri(_apiUrl, path), allowNotFound, cancellationToken)
+        using HttpResponseMessage? response = await SendAsync(path, allowNotFound, cancellationToken)
             .ConfigureAwait(false);
         return response is null ? null : await ReadAsync<T>(response, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<HttpResponseMessage?> SendAsync(
-        Uri url,
+        string path,
         bool allowNotFound,
         CancellationToken cancellationToken)
     {
         AuthenticationHeaderValue authorization = Authorization(
             await credentials.GetRequiredAsync(cancellationToken).ConfigureAwait(false));
+
+        bool viaGateway = _preferGateway && _gatewayApiUrl is not null;
+        HttpResponseMessage? response = await SendAsync(
+            new Uri(viaGateway ? _gatewayApiUrl! : _siteApiUrl, path), authorization, allowNotFound,
+            cancellationToken).ConfigureAwait(false);
+        if (response?.StatusCode != HttpStatusCode.Unauthorized)
+        {
+            return response;
+        }
+
+        string body = await ReadBodyAsync(response, cancellationToken).ConfigureAwait(false);
+        Uri? otherApiUrl = options.Deployment != JiraDeployment.Cloud ? null
+            : viaGateway ? _siteApiUrl
+            : await GatewayApiUrlAsync(cancellationToken).ConfigureAwait(false);
+        if (otherApiUrl is null)
+        {
+            throw new IntegrationAuthenticationException(options.Id, RejectedMessage(viaGateway ? body : null));
+        }
+
+        response = await SendAsync(new Uri(otherApiUrl, path), authorization, allowNotFound, cancellationToken)
+            .ConfigureAwait(false);
+        if (response?.StatusCode != HttpStatusCode.Unauthorized)
+        {
+            _preferGateway = !viaGateway;
+            return response;
+        }
+
+        string otherBody = await ReadBodyAsync(response, cancellationToken).ConfigureAwait(false);
+        throw new IntegrationAuthenticationException(options.Id, RejectedMessage(viaGateway ? body : otherBody));
+    }
+
+    /// <summary>
+    /// Sends a request, waiting out short rate limits.
+    /// </summary>
+    /// <returns>
+    /// The response if it succeeded or the credentials were rejected (status 401), which the caller disposes, or
+    /// <see langword="null"/> if it was allowed not to be found.
+    /// </returns>
+    private async Task<HttpResponseMessage?> SendAsync(
+        Uri url,
+        AuthenticationHeaderValue authorization,
+        bool allowNotFound,
+        CancellationToken cancellationToken)
+    {
         for (int attempt = 0; ; attempt++)
         {
             HttpResponseMessage response = await SendOnceAsync(url, authorization, cancellationToken)
                 .ConfigureAwait(false);
-            if (response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Unauthorized)
             {
                 return response;
             }
@@ -75,9 +139,9 @@ internal sealed class JiraApiClient(
                 }
 
                 string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                if (AuthenticationError(response) is { } authenticationError)
+                if (CaptchaError(response) is { } captchaError)
                 {
-                    throw new IntegrationAuthenticationException(options.Id, authenticationError);
+                    throw new IntegrationAuthenticationException(options.Id, captchaError);
                 }
 
                 if (RateLimitRetryAt(response) is not { } retryAt)
@@ -99,6 +163,54 @@ internal sealed class JiraApiClient(
                     await Task.Delay(wait, timeProvider, cancellationToken).ConfigureAwait(false);
                 }
             }
+        }
+    }
+
+    private static async Task<string> ReadBodyAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        using (response)
+        {
+            return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// The site's API through the gateway, or <see langword="null"/> if the site doesn't say its cloud ID.
+    /// </summary>
+    private async Task<Uri?> GatewayApiUrlAsync(CancellationToken cancellationToken)
+    {
+        if (_gatewayApiUrl is { } known)
+        {
+            return known;
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get,
+                new Uri(SiteUrl(options.SiteUrl), "_edge/tenant_info"));
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            request.Headers.UserAgent.Add(new ProductInfoHeaderValue(AppInfo.Name, AppInfo.Version));
+            using HttpResponseMessage response = await httpClient
+                .SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken)
+                .ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            JiraTenantInfo? tenant = await ReadAsync<JiraTenantInfo>(response, cancellationToken)
+                .ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(tenant.CloudId))
+            {
+                return null;
+            }
+
+            return _gatewayApiUrl = new Uri(GatewayUrl, $"{Uri.EscapeDataString(tenant.CloudId)}/rest/api/2/");
+        }
+        catch (Exception exception) when (exception is HttpRequestException or IntegrationException
+            || (exception is TaskCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            return null;
         }
     }
 
@@ -159,28 +271,46 @@ internal sealed class JiraApiClient(
     }
 
     /// <summary>
-    /// Why JIRA didn't accept the credentials, or <see langword="null"/> if the response isn't about them.
+    /// Why JIRA rejected the credentials (status 401).
+    /// </summary>
+    /// <param name="gatewayBody">
+    /// The gateway's response, which says when a token with scopes lacks one, or <see langword="null"/> if the request
+    /// didn't go through the gateway.
+    /// </param>
+    private string RejectedMessage(string? gatewayBody)
+    {
+        const string AuthenticateAgain = "Authenticate again in Settings → Integrations.";
+        if (options.Deployment != JiraDeployment.Cloud)
+        {
+            return "JIRA rejected the personal access token. The token may have expired or been revoked. "
+                + AuthenticateAgain;
+        }
+
+        if (gatewayBody is not null
+            && ErrorMessage(gatewayBody)?.Contains("scope", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return $"The API token doesn't have the scopes {AppInfo.Name} needs: {JiraIntegration.CloudScopes}. "
+                + "Create a token with them, then authenticate again in Settings → Integrations.";
+        }
+
+        return "JIRA rejected the email address and API token. Check the email address is your Atlassian account's. "
+            + "The token may have expired or been revoked, or, if it has scopes, lack "
+            + $"{JiraIntegration.CloudScopes}. "
+            + AuthenticateAgain;
+    }
+
+    /// <summary>
+    /// Why JIRA refused a login, or <see langword="null"/> if the response isn't a refused login.
     /// </summary>
     /// <remarks>
     /// After several failed logins, Server and Data Center refuse further logins with a 403 until the user solves a
     /// CAPTCHA in a browser, and say so in <c>X-Authentication-Denied-Reason</c>.
     /// </remarks>
-    private string? AuthenticationError(HttpResponseMessage response)
-    {
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            string credentials = options.Deployment == JiraDeployment.Cloud
-                ? "the email address and API token"
-                : "the personal access token";
-            return $"JIRA rejected {credentials}. The token may have expired or been revoked. "
-                + "Authenticate again in Settings → Integrations.";
-        }
-
-        return Header(response, "X-Authentication-Denied-Reason")?.Contains("CAPTCHA",
+    private static string? CaptchaError(HttpResponseMessage response) =>
+        Header(response, "X-Authentication-Denied-Reason")?.Contains("CAPTCHA",
             StringComparison.OrdinalIgnoreCase) == true
             ? "JIRA wants a CAPTCHA solved after failed logins. Log in to JIRA in a browser, then try again."
             : null;
-    }
 
     /// <summary>
     /// When a rate-limited request can be tried again, or <see langword="null"/> if the response isn't a rate limit.

@@ -6,7 +6,9 @@ namespace TAMMi.Core.Tests.Integrations;
 /// <summary>
 /// Answers an integration's API requests with recorded or faked responses, and records the requests.
 /// </summary>
-/// <param name="baseUrl">The API's base URL, ending in <c>/</c>. Requests elsewhere fail.</param>
+/// <param name="baseUrl">
+/// The API's base URL, ending in <c>/</c>, that relative paths are resolved against. Requests without a response fail.
+/// </param>
 internal class FakeHttpApi(string baseUrl) : HttpMessageHandler
 {
     private readonly Uri _baseUrl = new(baseUrl);
@@ -22,7 +24,8 @@ internal class FakeHttpApi(string baseUrl) : HttpMessageHandler
     /// they were added, and the last is reused.
     /// </summary>
     /// <param name="pathAndQuery">
-    /// The request's path and query string relative to the base URL, e.g. <c>user/repos?per_page=100</c>.
+    /// The request's path and query string relative to the base URL, e.g. <c>user/repos?per_page=100</c>, or an
+    /// absolute URL for a request to another host.
     /// </param>
     /// <param name="json">The response body.</param>
     /// <param name="status">The response status.</param>
@@ -65,7 +68,7 @@ internal class FakeHttpApi(string baseUrl) : HttpMessageHandler
         return this;
     }
 
-    private string Normalise(string pathAndQuery) => new Uri(_baseUrl, pathAndQuery).PathAndQuery;
+    private string Normalise(string pathAndQuery) => new Uri(_baseUrl, pathAndQuery).AbsoluteUri;
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
@@ -78,8 +81,7 @@ internal class FakeHttpApi(string baseUrl) : HttpMessageHandler
             request.Headers.Authorization?.ToString(),
             request.Headers.ToDictionary(header => header.Key, header => string.Join(", ", header.Value))));
 
-        if (!_baseUrl.IsBaseOf(url)
-            || !_responses.TryGetValue(url.PathAndQuery, out Queue<Func<HttpResponseMessage>>? queue))
+        if (!_responses.TryGetValue(url.AbsoluteUri, out Queue<Func<HttpResponseMessage>>? queue))
         {
             throw new InvalidOperationException($"No response is set up for {url}.");
         }
