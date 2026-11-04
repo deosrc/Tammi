@@ -1,3 +1,5 @@
+using TAMMi.Core.Platform;
+
 namespace TAMMi.Core.Git;
 
 /// <summary>
@@ -138,7 +140,7 @@ public sealed class GitWorktreeService(IGitCli git, IGitRepositoryReader reader)
 
             case WorktreeHealth.RepositoryMissing or WorktreeHealth.Unregistered:
                 // Git has no record of the worktree any more, so only its folder is left to delete.
-                DeleteFolder(check.Path);
+                FileSystemDeletion.DeleteFolder(check.Path);
                 break;
 
             default:
@@ -494,20 +496,9 @@ public sealed class GitWorktreeService(IGitCli git, IGitRepositoryReader reader)
     {
         WorktreeHealth.Missing => "the folder doesn't exist.",
         WorktreeHealth.NotAWorktree => "it isn't a git worktree.",
-        WorktreeHealth.RepositoryMissing => "its Local Repository was moved or deleted.",
-        WorktreeHealth.Unregistered => "its Local Repository has no record of it.",
-        WorktreeHealth.Moved => "it was moved, and its Local Repository has the old location.",
+        WorktreeHealth.RepositoryMissing => "its local repository was moved or deleted.",
+        WorktreeHealth.Unregistered => "its local repository has no record of it.",
+        WorktreeHealth.Moved => "it was moved, and its local repository has the old location.",
         _ => "it's healthy.",
     };
-
-    private static void DeleteFolder(string path)
-    {
-        // Git makes object files read-only, which stops Directory.Delete on Windows.
-        foreach (string file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-        {
-            File.SetAttributes(file, FileAttributes.Normal);
-        }
-
-        Directory.Delete(path, recursive: true);
-    }
 }
