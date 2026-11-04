@@ -25,6 +25,13 @@ public sealed record TaskInfo(string Source, string Key, string Title, Uri Url)
     public DateTimeOffset? Updated { get; init; }
 
     /// <summary>
+    /// The web page of the repository the task belongs to (e.g. <c>https://github.com/acme/api</c> for a GitHub
+    /// issue), or <see langword="null"/> if it doesn't belong to one. The Create Workspace flow chooses the Local
+    /// Repository whose remote matches it.
+    /// </summary>
+    public Uri? RepositoryUrl { get; init; }
+
+    /// <summary>
     /// Identifies the task across all integrations.
     /// </summary>
     public TaskReference Reference => new(Source, Key);

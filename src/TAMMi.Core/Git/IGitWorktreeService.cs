@@ -21,6 +21,17 @@ public interface IGitWorktreeService
     Task<string> GetDefaultBranchAsync(string repositoryPath, string remote = GitWorktreeService.DefaultRemote, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the branches a new branch can start from: the remote-tracking branches (e.g. <c>origin/main</c>), then the
+    /// local branches, each in name order. Symbolic references such as <c>origin/HEAD</c> are left out.
+    /// </summary>
+    Task<IReadOnlyList<string>> ListBranchesAsync(string repositoryPath, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Whether <paramref name="commitish"/> (e.g. <c>origin/main</c>) names a commit in the repository.
+    /// </summary>
+    Task<bool> CommitExistsAsync(string repositoryPath, string commitish, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Whether <paramref name="branchName"/> is a valid name for a new branch.
     /// </summary>
     Task<bool> IsValidBranchNameAsync(string branchName, CancellationToken cancellationToken = default);

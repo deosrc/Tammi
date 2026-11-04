@@ -1,0 +1,312 @@
+@* Step 3 of the Create Workspace flow: choose Local Repositories from the Repository Catalogue, with each worktree's
+   folder name and base branch, and the branch to create in all of them. *@
+@implements IDisposable
+@using TAMMi.Core.Catalogue
+@using TAMMi.Core.Git
+@inject IRepositoryCatalogue Catalogue
+@inject IGitWorktreeService Worktrees
+
+<div class="settings-form">
+    <div class="settings-field">
+        <label for="workspace-branch">Branch</label>
+        <input id="workspace-branch" class="settings-text @(BranchProblem is null ? null : "invalid")"
+               autocomplete="off" spellcheck="false" value="@Draft.BranchName" @oninput="OnBranchInput" />
+        @if (BranchProblem is { } branchProblem)
+        {
+            <p class="error">@branchProblem</p>
+        }
+        else
+        {
+            <p class="settings-help">
+                Created in every repository. @(Draft.IsBranchNameEdited ? null : Draft.Tasks.Count == 1
+                    ? "Suggested from the task."
+                    : "Suggested from the workspace's name.")
+            </p>
+        }
+    </div>
+</div>
+
+<div class="repository-picker">
+    <section class="repository-picker-catalogue" aria-labelledby="catalogue-heading">
+        <h3 id="catalogue-heading">Repository Catalogue</h3>
+        <input type="search" class="settings-text repository-filter" aria-label="Filter repositories" autocomplete="off"
+               placeholder="Filter by name or folder" @bind="_filter" @bind:event="oninput" />
+
+        @if (_snapshot is null)
+        {
+            <p class="placeholder">Finding repositories…</p>
+        }
+        else if (_snapshot.Repositories.Count == 0)
+        {
+            <p class="placeholder">
+                No local repositories found. Add a Monitored Folder or a repository in
+                <a href="@AppRoutes.SettingsGit">Settings › Git</a>.
+            </p>
+        }
+        else if (FilteredRepositories.Count == 0)
+        {
+            <p class="placeholder">No repositories match.</p>
+        }
+        else
+        {
+            <ul class="task-list">
+                @foreach (var repository in FilteredRepositories)
+                {
+                    var chosen = Draft.ContainsRepository(repository);
+                    <li class="task-item @(chosen ? "task-item-chosen" : null)" @key="repository.Path">
+                        <label class="task-choice" title="@repository.Path">
+                            <input type="checkbox" checked="@chosen" @onchange="() => Toggle(repository)" />
+                            <span class="repository-name">@repository.Name</span>
+                            <span class="task-title repository-path">@DisplayPath(repository)</span>
+                        </label>
+                    </li>
+                }
+            </ul>
+        }
+        @if (Catalogue.IsScanning && _snapshot is not null)
+        {
+            <p class="settings-help">Scanning for repositories…</p>
+        }
+    </section>
+
+    <section class="repository-picker-chosen" aria-labelledby="chosen-repositories-heading">
+        <h3 id="chosen-repositories-heading">Chosen repositories (@Draft.Repositories.Count)</h3>
+        @if (Draft.Repositories.Count == 0)
+        {
+            <p class="placeholder">No repositories chosen. Each one you choose gets a worktree in the Workspace Folder.</p>
+        }
+        else
+        {
+            <ul class="chosen-repositories">
+                @foreach (var (repository, index) in Draft.Repositories.Select((repository, index) => (repository, index)))
+                {
+                    var folderId = $"repository-folder-{index}";
+                    var baseId = $"repository-base-{index}";
+                    <li class="chosen-repository" @key="repository.Repository.Path">
+                        <div class="chosen-repository-heading">
+                            <span class="repository-name">@repository.Repository.Name</span>
+                            <span class="task-title repository-path" title="@repository.Repository.Path">
+                                @DisplayPath(repository.Repository)
+                            </span>
+                            @if (repository.ChosenForTasks.Count > 0)
+                            {
+                                <span class="badge" title="Chosen because the task belongs to this repository">
+                                    For @string.Join(", ", repository.ChosenForTasks.Select(task => task.Key))
+                                </span>
+                            }
+                            <button type="button" class="button button-secondary button-small"
+                                    @onclick="() => Draft.RemoveRepository(repository.Repository)">Remove</button>
+                        </div>
+
+                        <div class="chosen-repository-fields">
+                            <div class="settings-field">
+                                <label for="@folderId">Folder</label>
+                                <input id="@folderId"
+                                       class="settings-text @(repository.FolderNameProblem is null ? null : "invalid")"
+                                       autocomplete="off" spellcheck="false"
+                                       @bind="repository.FolderName" @bind:event="oninput" />
+                                @if (repository.FolderNameProblem is { } folderProblem)
+                                {
+                                    <p class="error">@folderProblem</p>
+                                }
+                            </div>
+
+                            <div class="settings-field">
+                                <label for="@baseId">Base branch</label>
+                                <input id="@baseId" list="@($"{baseId}-options")"
+                                       class="settings-text @(BaseProblem(repository) is null ? null : "invalid")"
+                                       autocomplete="off" spellcheck="false"
+                                       placeholder="@(repository.IsLoading ? "Fetching…" : null)"
+                                       @bind="repository.BaseBranch" @bind:event="oninput" />
+                                <datalist id="@($"{baseId}-options")">
+                                    @foreach (var branch in repository.Branches)
+                                    {
+                                        <option value="@branch"></option>
+                                    }
+                                </datalist>
+                                @if (repository.IsLoading)
+                                {
+                                    <p class="settings-help">Fetching @(repository.Remote?.Name)…</p>
+                                }
+                                else if (BaseProblem(repository) is { } baseProblem)
+                                {
+                                    <p class="error">@baseProblem</p>
+                                }
+                                else if (repository.BaseBranch.Trim() == repository.DefaultBranch)
+                                {
+                                    <p class="settings-help">The remote's default branch.</p>
+                                }
+                                @if (repository.FetchProblem is { } fetchProblem)
+                                {
+                                    <p class="warning">@fetchProblem</p>
+                                }
+                            </div>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+</div>
+
+@code {
+    /// <summary>
+    /// The draft whose repositories this chooses.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public WorkspaceDraft Draft { get; set; } = null!;
+
+    /// <summary>
+    /// Raised when a repository finishes loading, so the page can update what depends on it.
+    /// </summary>
+    [Parameter]
+    public EventCallback Changed { get; set; }
+
+    private readonly CancellationTokenSource _disposed = new();
+    private RepositoryCatalogueSnapshot? _snapshot;
+    private string _filter = "";
+    private string? _gitBranchProblem;
+    private int _branchCheck;
+
+    private string? BranchProblem => Draft.BranchNameProblem ?? _gitBranchProblem;
+
+    private IReadOnlyList<CatalogueRepository> FilteredRepositories
+    {
+        get
+        {
+            var filter = _filter.Trim();
+            var repositories = _snapshot?.Repositories ?? [];
+            return filter.Length == 0
+                ? repositories
+                : [.. repositories.Where(repository =>
+                    repository.Path.Contains(filter, StringComparison.CurrentCultureIgnoreCase))];
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Catalogue.Changed += OnCatalogueChanged;
+        await CheckBranchAsync();
+        try
+        {
+            _snapshot = await Catalogue.GetAsync(_disposed.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        var added = Draft.ChooseTaskRepositories(_snapshot.Repositories);
+        if (added.Count > 0)
+        {
+            StateHasChanged();
+            await Task.WhenAll(added.Select(LoadAsync));
+        }
+    }
+
+    public void Dispose()
+    {
+        Catalogue.Changed -= OnCatalogueChanged;
+        _disposed.Cancel();
+        _disposed.Dispose();
+    }
+
+    private void OnCatalogueChanged() => _ = InvokeAsync(() =>
+    {
+        if (!Catalogue.IsScanning)
+        {
+            _snapshot = Catalogue.Current;
+        }
+
+        StateHasChanged();
+    });
+
+    /// <summary>
+    /// A repository's path, short enough to tell same-named repositories apart: relative to its Monitored Folder, or
+    /// with the home folder as <c>~</c>. The full path is in the tooltip.
+    /// </summary>
+    private static string DisplayPath(CatalogueRepository repository)
+    {
+        if (repository.MonitoredFolders is [var monitored, ..])
+        {
+            return Path.GetRelativePath(monitored, repository.Path);
+        }
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return home.Length > 0 && repository.Path.StartsWith(home + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            ? "~" + repository.Path[home.Length..]
+            : repository.Path;
+    }
+
+    private static string? BaseProblem(WorkspaceDraftRepository repository) =>
+        repository.IsLoading || repository.BaseBranch.Trim().Length > 0
+            ? null
+            : repository.DefaultBranchProblem ?? "Choose the branch to start from.";
+
+    private async Task Toggle(CatalogueRepository repository)
+    {
+        if (Draft.RemoveRepository(repository))
+        {
+            return;
+        }
+
+        if (Draft.AddRepository(repository) is not { } chosen)
+        {
+            return;
+        }
+
+        await LoadAsync(chosen);
+    }
+
+    /// <summary>
+    /// Fetches a chosen repository and finds its base branch.
+    /// </summary>
+    private async Task LoadAsync(WorkspaceDraftRepository repository)
+    {
+        try
+        {
+            await repository.LoadAsync(Worktrees, _disposed.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        await Changed.InvokeAsync();
+    }
+
+    private async Task OnBranchInput(ChangeEventArgs e)
+    {
+        Draft.BranchName = e.Value?.ToString() ?? "";
+        await CheckBranchAsync();
+    }
+
+    /// <summary>
+    /// Asks git whether the branch name is valid. A check that's overtaken by newer input is ignored.
+    /// </summary>
+    private async Task CheckBranchAsync()
+    {
+        var check = ++_branchCheck;
+        var name = Draft.BranchName.Trim();
+        if (name.Length == 0)
+        {
+            _gitBranchProblem = null;
+            return;
+        }
+
+        bool valid;
+        try
+        {
+            valid = await Worktrees.IsValidBranchNameAsync(name, _disposed.Token);
+        }
+        catch (Exception ex) when (ex is GitException or OperationCanceledException)
+        {
+            return;
+        }
+
+        if (check == _branchCheck)
+        {
+            _gitBranchProblem = valid ? null : $"'{name}' isn't a valid git branch name.";
+        }
+    }
+}
