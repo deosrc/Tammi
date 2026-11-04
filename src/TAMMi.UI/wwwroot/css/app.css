@@ -483,6 +483,30 @@ a {
   max-width: 900px;
 }
 
+/* On wide screens the wizard uses the extra room, so the chosen tasks can sit beside the search. */
+@media (min-width: 1200px) {
+  .wizard {
+    max-width: 1400px;
+  }
+
+  .task-picker {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+
+  .task-picker-search .task-results {
+    margin-bottom: 0;
+  }
+
+  /* Stays in view while scrolling through long results. */
+  .task-picker-chosen {
+    position: sticky;
+    top: 0;
+  }
+}
+
 .wizard-steps {
   display: flex;
   flex-wrap: wrap;

@@ -7,109 +7,115 @@
 @inject IWorkspaceStore WorkspaceStore
 @inject IProcessLauncher ProcessLauncher
 
-@if (!_hasSources)
-{
-    <p class="placeholder">
-        No connected integrations provide tasks. Connect one in
-        <a href="@AppRoutes.SettingsIntegrations">Settings › Integrations</a>, or go on without tasks.
-    </p>
-}
-else
-{
-    <form class="task-search" @onsubmit="SearchNowAsync">
-        <input type="search" class="task-query" aria-label="Search tasks" autocomplete="off"
-               placeholder="Search your tasks, or paste a link or reference"
-               value="@_query" @oninput="OnQueryInput" />
-        <button type="submit" class="button">Search</button>
-    </form>
-    <p class="settings-help">
-        Words are searched in your own and your organisations' tasks in @SourceNames. To add any other task, paste its
-        link, or its reference such as <code>owner/repo#42</code> or <code>ABC-123</code>.
-    </p>
-
-    <div class="task-results" aria-live="polite" aria-busy="@(_searching ? "true" : "false")">
-        <h2>@ResultsHeading</h2>
-        @if (_results?.Kind is null or TaskSearchKind.Assigned)
+<div class="task-picker">
+    <section class="task-picker-search" aria-label="Find tasks">
+        @if (!_hasSources)
         {
-            <p class="settings-help task-results-help">
-                Open tasks assigned to you that aren't in a workspace yet. JIRA issues already in progress aren't
-                listed.
+            <p class="placeholder">
+                No connected integrations provide tasks. Connect one in
+                <a href="@AppRoutes.SettingsIntegrations">Settings › Integrations</a>, or go on without tasks.
             </p>
-        }
-
-        @foreach (var error in _results?.Errors ?? [])
-        {
-            <p class="warning">
-                @error.SourceName: @error.Message
-                @if (error.IsAuthentication)
-                {
-                    <a href="@AppRoutes.SettingsIntegrations">Check it in Settings › Integrations.</a>
-                }
-            </p>
-        }
-
-        @if (_results is null)
-        {
-            <p class="placeholder">Searching…</p>
-        }
-        else if (_results.IsUnrecognisedLink)
-        {
-            <p class="placeholder">That link isn't to a task on any connected integration.</p>
-        }
-        else if (_results.Tasks.Count == 0)
-        {
-            <p class="placeholder">@EmptyText</p>
         }
         else
         {
-            <ul class="task-list @(_searching ? "task-list-stale" : null)">
-                @foreach (var task in _results.Tasks)
+            <form class="task-search" @onsubmit="SearchNowAsync">
+                <input type="search" class="task-query" aria-label="Search tasks" autocomplete="off"
+                       placeholder="Search your tasks, or paste a link or reference"
+                       value="@_query" @oninput="OnQueryInput" />
+                <button type="submit" class="button">Search</button>
+            </form>
+            <p class="settings-help">
+                Words are searched in your own and your organisations' tasks in @SourceNames. To add any other task, paste its
+                link, or its reference such as <code>owner/repo#42</code> or <code>ABC-123</code>.
+            </p>
+
+            <div class="task-results" aria-live="polite" aria-busy="@(_searching ? "true" : "false")">
+                <h2>@ResultsHeading</h2>
+                @if (_results?.Kind is null or TaskSearchKind.Assigned)
                 {
-                    var chosen = Draft.ContainsTask(task.Reference);
-                    <li class="task-item @(chosen ? "task-item-chosen" : null)" @key="task.Reference">
-                        <label class="task-choice">
-                            <input type="checkbox" checked="@chosen" @onchange="() => Toggle(task)" />
+                    <p class="settings-help task-results-help">
+                        Open tasks assigned to you that aren't in a workspace yet. JIRA issues already in progress aren't
+                        listed.
+                    </p>
+                }
+
+                @foreach (var error in _results?.Errors ?? [])
+                {
+                    <p class="warning">
+                        @error.SourceName: @error.Message
+                        @if (error.IsAuthentication)
+                        {
+                            <a href="@AppRoutes.SettingsIntegrations">Check it in Settings › Integrations.</a>
+                        }
+                    </p>
+                }
+
+                @if (_results is null)
+                {
+                    <p class="placeholder">Searching…</p>
+                }
+                else if (_results.IsUnrecognisedLink)
+                {
+                    <p class="placeholder">That link isn't to a task on any connected integration.</p>
+                }
+                else if (_results.Tasks.Count == 0)
+                {
+                    <p class="placeholder">@EmptyText</p>
+                }
+                else
+                {
+                    <ul class="task-list @(_searching ? "task-list-stale" : null)">
+                        @foreach (var task in _results.Tasks)
+                        {
+                            var chosen = Draft.ContainsTask(task.Reference);
+                            <li class="task-item @(chosen ? "task-item-chosen" : null)" @key="task.Reference">
+                                <label class="task-choice">
+                                    <input type="checkbox" checked="@chosen" @onchange="() => Toggle(task)" />
+                                    <TaskSourceIcon Source="Registry.Find(task.Source)" />
+                                    <span class="task-key">@task.Key</span>
+                                    <span class="task-title" title="@task.Title">@task.Title</span>
+                                    @if (_workspaceNames.TryGetValue(task.Reference, out var workspace))
+                                    {
+                                        <span class="badge task-workspace" title="Already in the workspace @workspace">
+                                            In @workspace
+                                        </span>
+                                    }
+                                </label>
+                                <button type="button" class="button button-secondary button-small"
+                                        title="Open @task.Key in the browser" @onclick="() => Open(task)">Open</button>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="task-picker-chosen" aria-labelledby="chosen-tasks-heading">
+        <h2 id="chosen-tasks-heading">Chosen tasks (@Draft.Tasks.Count)</h2>
+        @if (Draft.Tasks.Count == 0)
+        {
+            <p class="placeholder">No tasks chosen. A workspace doesn't need tasks: you'll name it in the next step.</p>
+        }
+        else
+        {
+            <ul class="task-list">
+                @foreach (var task in Draft.Tasks)
+                {
+                    <li class="task-item" @key="task.Reference">
+                        <div class="task-choice">
                             <TaskSourceIcon Source="Registry.Find(task.Source)" />
                             <span class="task-key">@task.Key</span>
                             <span class="task-title" title="@task.Title">@task.Title</span>
-                            @if (_workspaceNames.TryGetValue(task.Reference, out var workspace))
-                            {
-                                <span class="badge task-workspace" title="Already in the workspace @workspace">
-                                    In @workspace
-                                </span>
-                            }
-                        </label>
+                        </div>
                         <button type="button" class="button button-secondary button-small"
-                                title="Open @task.Key in the browser" @onclick="() => Open(task)">Open</button>
+                                @onclick="() => Draft.RemoveTask(task.Reference)">Remove</button>
                     </li>
                 }
             </ul>
         }
-    </div>
-}
-
-<h2>Chosen tasks (@Draft.Tasks.Count)</h2>
-@if (Draft.Tasks.Count == 0)
-{
-    <p class="placeholder">No tasks chosen. A workspace doesn't need tasks: you'll name it in the next step.</p>
-}
-else
-{
-    <ul class="task-list">
-        @foreach (var task in Draft.Tasks)
-        {
-            <li class="task-item" @key="task.Reference">
-                <div class="task-choice">
-                    <TaskSourceIcon Source="Registry.Find(task.Source)" />
-                    <span class="task-key">@task.Key</span>
-                    <span class="task-title" title="@task.Title">@task.Title</span>
-                </div>
-                <button type="button" class="button button-secondary button-small"
-                        @onclick="() => Draft.RemoveTask(task.Reference)">Remove</button>
-            </li>
-        }
-    </ul>
-}
+    </section>
+</div>
 
 @code {
     /// <summary>
