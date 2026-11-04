@@ -542,6 +542,9 @@ a {
 
 .git-status-card {
   --git-status-tone: var(--color-text-muted);
+  /* Text on a solid fill of the tone. The surface colour contrasts with every tone in both themes, except warning,
+     which has its own. */
+  --git-status-tone-text: var(--color-surface);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -560,6 +563,7 @@ a {
 
 .git-status-card-warning {
   --git-status-tone: var(--color-warning);
+  --git-status-tone-text: var(--color-warning-text);
   border-color: var(--color-warning-border);
   border-left-color: var(--color-warning);
   background: var(--color-warning-bg);
@@ -603,16 +607,18 @@ a {
   flex: none;
   margin-left: auto;
   padding: 0 var(--space-2);
-  border: 1px solid var(--git-status-tone);
   border-radius: 999px;
-  color: var(--git-status-tone);
+  background: var(--git-status-tone);
+  color: var(--git-status-tone-text);
   font-size: var(--font-size-small);
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1.6;
 }
 
-/* A submodule's own badge only shows that it's changed, so it's quieter than the card's. */
+/* A submodule's badge only appears when it needs attention, so it's always a warning, whatever the card's colour. */
 .git-status-submodule .git-status-badge {
-  font-weight: normal;
+  background: var(--color-warning);
+  color: var(--color-warning-text);
 }
 
 .git-status-head,
