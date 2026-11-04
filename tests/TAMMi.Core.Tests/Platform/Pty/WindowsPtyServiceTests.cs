@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using TAMMi.Core.Platform;
 using TAMMi.Core.Platform.Pty;
 
@@ -9,6 +10,9 @@ namespace TAMMi.Core.Tests.Platform.Pty;
 public class WindowsPtyServiceTests
 {
     private static readonly TimeSpan ExitTimeout = TimeSpan.FromSeconds(15);
+
+    // Longer than the hang-up and kill timeouts together, but well short of the 60 seconds the ping runs for.
+    private static readonly TimeSpan DisposeTimeout = TimeSpan.FromSeconds(15);
 
     [Fact]
     public async Task Start_RunsProcessAndReportsExitCode()
@@ -75,12 +79,16 @@ public class WindowsPtyServiceTests
     [Fact]
     public async Task DisposeAsync_EndsProcess()
     {
+        // The ping is a child of the shell that's attached to the pseudoconsole too, so dispose must end it rather
+        // than wait the minute it runs for.
         var session = StartCmd("echo ready& ping -n 60 127.0.0.1 > nul");
         await new PtyOutput(session).ReadUntilAsync("ready");
 
+        var stopwatch = Stopwatch.StartNew();
         await session.DisposeAsync();
 
         Assert.True(session.Exited.IsCompleted);
+        Assert.True(stopwatch.Elapsed < DisposeTimeout, $"Dispose took {stopwatch.Elapsed}.");
     }
 
     [Fact]
