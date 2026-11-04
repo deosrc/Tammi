@@ -15,12 +15,45 @@ public static class InitialPrompt
     public const string ContextFilePlaceholder = "{contextFile}";
 
     /// <summary>
-    /// The template used until the user changes it. It's a single line, so it can be passed to any agent (see
-    /// <c>docs/CONTEXT.md</c>).
+    /// The start of every predefined template: where the task context file is, and how to get the tasks' latest
+    /// details.
     /// </summary>
-    public const string DefaultTemplate =
-        "The tasks for this workspace are described in " + ContextFilePlaceholder
-        + ". Read that file before you start, and read it again when you're told the tasks have changed.";
+    private const string ReadContextFile =
+        "The tasks for this workspace are described in " + ContextFilePlaceholder + ". Read that file first. "
+        + "TAMMi rewrites it when the tasks change, so read it again whenever you need their latest details.";
+
+    /// <summary>
+    /// A predefined template that has the agent start implementing the tasks.
+    /// </summary>
+    public const string ImplementTemplate = ReadContextFile + " Then start implementing the tasks.";
+
+    /// <summary>
+    /// A predefined template that has the agent plan the change, and wait before making it.
+    /// </summary>
+    public const string PlanTemplate = ReadContextFile
+        + " Then plan the changes the tasks need, and wait for the user to approve the plan before you make them.";
+
+    /// <summary>
+    /// A predefined template that has the agent stop once it has read the tasks.
+    /// </summary>
+    public const string ReadOnlyTemplate = ReadContextFile
+        + " Then stop, and wait for the user to tell you what to do.";
+
+    /// <summary>
+    /// The template used until the user changes it, and when they clear it.
+    /// </summary>
+    public const string DefaultTemplate = ReadOnlyTemplate;
+
+    /// <summary>
+    /// The templates offered on the Settings screen, in the order they're listed. Each is a single line, so it can be
+    /// passed to any agent (see <c>docs/CONTEXT.md</c>).
+    /// </summary>
+    public static IReadOnlyList<PredefinedPrompt> Predefined { get; } =
+    [
+        new("Implement the tasks", "Reads the tasks, then starts making the changes.", ImplementTemplate),
+        new("Plan the change", "Reads the tasks, then plans the changes and waits for approval.", PlanTemplate),
+        new("Read the tasks only", "Reads the tasks, then waits for instructions.", ReadOnlyTemplate),
+    ];
 
     /// <summary>
     /// Fills in a template.

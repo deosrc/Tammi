@@ -352,7 +352,14 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     case and surrounding spaces, including the Supported Agents' names. A name that's already used is still saved,
     but shown as an error until it's changed.
   - Agents are offered in that order: the Supported Agents, then the Custom Agents.
-  - The initial prompt template. Clearing it restores the default.
+  - The initial prompt template. A menu fills it in with one of three predefined prompts, ticking the one in use. Each
+    tells the agent to read the task context file, and to read it again for the tasks' latest details, since TAMMi
+    rewrites it when they change. Then it has the agent:
+    - **Implement the tasks:** start making the changes.
+    - **Plan the change:** plan the changes, and wait for the user to approve the plan before making them.
+    - **Read the tasks only** (the default): stop, and wait for the user's instructions.
+
+    Clearing the template restores the default.
 - **Tools**
   - The external tools offered under "Open in…"
   - Terminal shell: executable and arguments. Leaving the executable empty uses the platform shell, with its own
@@ -431,7 +438,7 @@ are left to other tools for now.
   - The prompt is always passed as one argument, exactly as written. On Windows, a CLI that's a batch file (e.g.
     `claude.cmd`, installed with npm) runs through `cmd.exe`, so TAMMi also escapes `cmd.exe`'s special characters.
     `cmd.exe` can't pass on line breaks, so a template with several lines can't be sent to a batch file: starting
-    the agent fails and says why. The default template is a single line.
+    the agent fails and says why. The predefined templates are each a single line.
 - **Claude Code** is the first Supported Agent. Others (e.g. Codex CLI, Gemini CLI) can be added as Custom Agents,
   and may become Supported Agents later.
 - **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or
