@@ -859,6 +859,122 @@ label.task-choice {
   margin: 0;
 }
 
+/* The side panel's Agents section: a card for each open agent, then the workspace's past Agent Sessions. */
+.agent-list,
+.agent-session-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--agent-state-tone, var(--color-border));
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.agent-card-shown {
+  background: var(--color-surface-hover);
+}
+
+.agent-card-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.agent-card-name {
+  overflow: hidden;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.agent-card-name:hover {
+  text-decoration: underline;
+}
+
+.agent-state-badge {
+  flex: none;
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--agent-state-tone);
+  color: var(--agent-state-tone-text);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.side-panel-section-body .agent-card-detail,
+.agent-session-time {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.side-panel-section-body .agent-card-detail.warning {
+  color: var(--color-warning);
+}
+
+.agent-card-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.side-panel-section-body .agent-section-error {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-small);
+}
+
+.agent-sessions {
+  margin-top: var(--space-3);
+}
+
+.agent-sessions > summary {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.agent-session {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+.agent-session-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-session-folder {
+  color: var(--color-text-muted);
+  font-weight: normal;
+}
+
 /* The side panel's git status section: a card for each repository, with its submodules nested inside it. The card's
    colour says whether the repository needs attention. */
 .git-status-list,
@@ -1130,6 +1246,41 @@ label.task-choice {
 .session-tab-status {
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
+}
+
+/* An agent's state, as a coloured dot on its tab and a badge on its card in the side panel. Each state sets the tone
+   both use. */
+.agent-state-active {
+  --agent-state-tone: var(--color-accent);
+  --agent-state-tone-text: var(--color-accent-text);
+}
+
+.agent-state-success {
+  --agent-state-tone: var(--color-success);
+  --agent-state-tone-text: var(--color-surface);
+}
+
+.agent-state-warning {
+  --agent-state-tone: var(--color-warning);
+  --agent-state-tone-text: var(--color-warning-text);
+}
+
+.agent-state-danger {
+  --agent-state-tone: var(--color-error);
+  --agent-state-tone-text: var(--color-surface);
+}
+
+.agent-state-ended {
+  --agent-state-tone: var(--color-text-muted);
+  --agent-state-tone-text: var(--color-surface);
+}
+
+.agent-state-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--agent-state-tone);
 }
 
 /* The shown terminal fills the rest of the main area, with a small gap around it. */
@@ -1628,6 +1779,13 @@ label.task-choice {
 .menu-anchor-wide > .menu {
   right: 0;
   min-width: 0;
+}
+
+/* A line between groups of menu items. */
+.menu-separator {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--color-border);
 }
 
 /* A menu item that opens a submenu beside it. */

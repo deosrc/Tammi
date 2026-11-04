@@ -248,7 +248,7 @@ own branch. It is created automatically when the workspace is created:
 ### Workspace View (tab)
 
 - **Side panel** (in this order, top to bottom)
-  - Running agents
+  - Agents
   - Repositories: the git status of each repository in the workspace
   - "Open in…" tools
 - **Repositories section:** a card with the git status of each repository, in the workspace's order. The whole card is
@@ -269,10 +269,17 @@ own branch. It is created automatically when the workspace is created:
   again if the delete is cancelled).
 - **Git operations**, including a git graph view
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
+- **Agents section:** a card for each of the workspace's open agents, in the order they started, with its
+  [state](#agents) as a badge and the card's colour. Clicking its name shows its tab, and a running agent has a
+  **Stop** button. An agent that ended with an error shows its exit code. Below the cards, **Past sessions** lists the
+  workspace's recorded Agent Sessions that aren't running, most recently started first, each with its agent's name,
+  the repository it was started in (if it wasn't the Workspace Folder) and when it was last started. Each one can be
+  resumed, which opens it in a new tab, or forgotten. A session whose agent can't resume it says why instead.
 - **Main area tabs:** the main area has its own row of tabs, below a small divider. The first is always the
   **dashboard** (an icon, no name), which the view shows until the user opens something else. Then come the
-  workspace's terminals (and later its agent sessions). The last is always a **+** tab, which opens a menu of things to
-  start: **Terminal**, with a submenu of **Workspace** and **Repository: `<name>`** for each repository.
+  workspace's terminals and agents, in the order they started. An agent's tab has a dot coloured by its state. The
+  last is always a **+** tab, which opens a menu of things to start: **Terminal**, then each Agent Definition (in the
+  order agents are offered), each with a submenu of **Workspace** and **Repository: `<name>`** for each repository.
 - **Terminals**: any number of embedded terminals, shown as tabs alongside agent sessions. A new
   terminal opens in the workspace folder by default, or the user can open one in a specific repository.
   The shell defaults to PowerShell on Windows (`pwsh` if installed) and `$SHELL` on Linux, and can be
@@ -284,7 +291,15 @@ own branch. It is created automatically when the workspace is created:
     is closed.
   - Terminals keep running when the workspace's tab closes (see [Lifetime](#agents)). Each one keeps its latest
     1 MiB of output, so reopening the tab shows it again, and the view shows the tab it was showing.
-  - Deleting a workspace closes its terminals first.
+  - Deleting a workspace closes its terminals and agents first.
+- **Agents** open as tabs alongside terminals, and work like them, except:
+  - An agent is named after its Agent Definition when it's in the Workspace Folder (e.g. "Claude Code"), and after
+    its definition and repository folder when it's in a repository (e.g. "Claude Code (api)"). A name already used by
+    one of the workspace's open agents gets the first free number (e.g. "Claude Code 2"). A resumed session is named
+    after the folder it was started in.
+  - **Stopping** an agent (from the side panel) ends its process, and keeps its tab, marked as exited, until it's
+    closed. Closing a running agent's tab stops it. Either way, its session can still be resumed.
+  - A session that's already running in one of the workspace's agents can't be resumed again.
   - **Copy and paste:** Ctrl+Shift+C and Ctrl+Shift+V on every platform. On Windows, as in Windows Terminal,
     Ctrl+C also copies when text is selected (otherwise it interrupts the process) and Ctrl+V pastes.
 
@@ -439,7 +454,8 @@ are left to other tools for now.
 - **Lifetime:**
   - Closing a workspace tab doesn't stop its terminals or agents. They keep running in the background,
     their status still shows on Home, and reopening the tab reattaches to them.
-  - Closing TAMMi warns if any agents are running, then ends all terminal and agent processes.
+  - Closing TAMMi warns if any agents are running, saying how many, and the user can cancel. Then it ends all
+    terminal and agent processes. Running terminals alone don't warn.
   - **Agent Sessions can be resumed across app restarts.** TAMMi records each Agent Session (its ID, the
     agent's name, the folder it was started in and when it was last started) in `.tammi/agent-sessions.json`.
     Later, the user can return to it using the agent's own resume command (e.g. `claude --resume <session-id>`).

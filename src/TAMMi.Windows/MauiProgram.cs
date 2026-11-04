@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
+using TAMMi.Core.Agents;
 using TAMMi.Core.Terminals;
 using TAMMi.Core.Windowing;
 using TAMMi.UI;
@@ -22,9 +23,16 @@ public static class MauiProgram
             var services = IPlatformApplication.Current!.Services;
             WindowStatePersistence.Attach(window, services.GetRequiredService<WindowStateStore>());
 
-            // All terminals end when the app closes. They're ended off the UI thread, which is waiting for them.
+            // Closing the window warns first if any agents are running.
+            var agents = services.GetRequiredService<WorkspaceAgents>();
+            CloseConfirmation.Attach(window, agents);
+
+            // All terminals and agents end when the app closes. They're ended off the UI thread, which is waiting for
+            // them.
             var terminals = services.GetRequiredService<WorkspaceTerminals>();
-            window.Closed += (_, _) => Task.Run(() => terminals.DisposeAsync().AsTask()).GetAwaiter().GetResult();
+            window.Closed += (_, _) => Task.Run(() => Task.WhenAll(
+                terminals.DisposeAsync().AsTask(),
+                agents.DisposeAsync().AsTask())).GetAwaiter().GetResult();
         })));
 
 #if DEBUG
