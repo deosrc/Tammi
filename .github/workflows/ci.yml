@@ -54,7 +54,7 @@ jobs:
         run: dotnet build TAMMi.Windows.slnf --no-restore --configuration ${{ env.CONFIGURATION }}
 
       - name: Test
-        run: dotnet test --project tests/TAMMi.Core.Tests --no-build --configuration ${{ env.CONFIGURATION }} --output Detailed
+        run: dotnet test --project tests/TAMMi.Core.Tests --no-build --configuration ${{ env.CONFIGURATION }}
 
       # The packages take over a minute to save, so only `main` saves them: a cache saved by a pull request can only be
       # used by that pull request.
