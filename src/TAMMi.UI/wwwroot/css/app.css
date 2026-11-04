@@ -564,8 +564,7 @@ a {
   gap: var(--space-2);
 }
 
-.task-search input,
-.task-search select {
+.task-search input {
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -574,26 +573,36 @@ a {
   font: inherit;
 }
 
-.task-source {
-  flex: none;
-  max-width: 240px;
-}
-
-.task-source-name {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-2);
-  font-weight: 600;
-}
-
 .task-query {
   flex: 1;
   min-width: 0;
 }
 
 .task-results {
-  margin: var(--space-3) 0 var(--space-6);
+  margin: var(--space-6) 0;
+}
+
+.task-results > p {
+  margin: 0 0 var(--space-2);
+}
+
+/* Results that a search under way is about to replace. */
+.task-list-stale {
+  opacity: 0.6;
+}
+
+.task-source-icon {
+  display: flex;
+  flex: none;
+}
+
+.task-source-icon .integration-icon-jira {
+  color: var(--color-jira);
+}
+
+.task-workspace {
+  flex: none;
+  white-space: nowrap;
 }
 
 .task-list {

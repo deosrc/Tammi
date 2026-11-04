@@ -42,6 +42,17 @@ public sealed record GitHubIntegrationOptions
     public int MaxSearchResults { get; init; } = 100;
 
     /// <summary>
+    /// How long the accounts and repositories a text search covers are remembered before they're read again.
+    /// </summary>
+    public TimeSpan SearchScopeLifetime { get; init; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// The most <c>user:</c>, <c>org:</c> and <c>repo:</c> qualifiers in one search request. A text search that
+    /// covers more is sent as several requests, so the request URL stays a reasonable length.
+    /// </summary>
+    public int MaxScopeQualifiers { get; init; } = 25;
+
+    /// <summary>
     /// The longest TAMMi waits for a rate limit to reset before retrying a request. When GitHub asks for a longer
     /// wait, the request fails with an <see cref="IntegrationRateLimitException"/> instead.
     /// </summary>

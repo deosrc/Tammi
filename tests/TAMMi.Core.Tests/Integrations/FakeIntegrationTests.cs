@@ -23,7 +23,7 @@ public class FakeIntegrationTests
     public async Task Calls_ThrowAuthenticationException_WhenNotAuthenticated()
     {
         var exception = await Assert.ThrowsAsync<IntegrationAuthenticationException>(
-            () => _integration.SearchTasksAsync(null, CancellationToken));
+            () => _integration.GetAssignedTasksAsync(CancellationToken));
 
         Assert.Equal("fake-1", exception.IntegrationId);
         Assert.Contains("Settings", exception.Message);
@@ -43,7 +43,7 @@ public class FakeIntegrationTests
     {
         await AuthenticateAsync();
 
-        IReadOnlyList<TaskInfo> all = await _integration.SearchTasksAsync(null, CancellationToken);
+        IReadOnlyList<TaskInfo> all = await _integration.GetAssignedTasksAsync(CancellationToken);
         IReadOnlyList<TaskInfo> found = await _integration.SearchTasksAsync("dark", CancellationToken);
 
         Assert.Equal(["FAKE-1", "FAKE-2"], all.Select(task => task.Key));

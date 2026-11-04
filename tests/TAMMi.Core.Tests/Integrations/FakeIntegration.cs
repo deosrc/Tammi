@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using TAMMi.Core.Credentials;
 using TAMMi.Core.Integrations;
 
@@ -21,17 +22,35 @@ internal sealed class FakeIntegration(string id, ICredentialStore store) : ITask
 
     public List<(string Owner, string Name)> Repositories { get; } = [];
 
-    public async Task<IReadOnlyList<TaskInfo>> SearchTasksAsync(
-        string? query,
-        CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TaskInfo>> GetAssignedTasksAsync(CancellationToken cancellationToken = default)
     {
         await AuthenticateAsync(cancellationToken);
-        return
-        [
-            .. Tasks
-                .Where(task => string.IsNullOrEmpty(query) || task.Title.Contains(query, StringComparison.Ordinal))
-                .Select(ToTask),
-        ];
+        return [.. Tasks.Select(ToTask)];
+    }
+
+    public async Task<IReadOnlyList<TaskInfo>> SearchTasksAsync(
+        string text,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        await AuthenticateAsync(cancellationToken);
+        return [.. Tasks.Where(task => task.Title.Contains(text, StringComparison.Ordinal)).Select(ToTask)];
+    }
+
+    /// <summary>
+    /// Reads a key of one of <see cref="Tasks"/>, or a task's URL.
+    /// </summary>
+    public bool TryParseTaskReference(string? text, [NotNullWhen(true)] out string? key)
+    {
+        const string urlPrefix = "https://fake.example/tasks/";
+        text = text?.Trim();
+        if (text?.StartsWith(urlPrefix, StringComparison.Ordinal) == true)
+        {
+            text = text[urlPrefix.Length..];
+        }
+
+        key = Tasks.Any(task => task.Key == text) ? text : null;
+        return key is not null;
     }
 
     public async Task<TaskInfo?> GetTaskAsync(string key, CancellationToken cancellationToken = default)

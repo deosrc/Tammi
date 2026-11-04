@@ -47,9 +47,18 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
    - One workspace can mix tasks from any sources.
    - TAMMi only reads tasks from integrations. It doesn't write back status changes or PR links yet.
    - The task list can be changed after the workspace is created.
-   - The user searches one Task Source at a time, in its own query syntax (see [Integrations](#integrations)). An
-     empty search lists the user's own unfinished tasks. Tasks chosen from several searches and sources are kept
-     together in one list.
+   - **Finding tasks.** One search box covers every connected Task Source at once, and the results are combined,
+     most recently updated first. What the user enters decides what's searched:
+     - **Nothing:** the tasks assigned to the user that are still to do: open GitHub issues, and JIRA issues whose
+       status is in the To Do category (not in progress or done). Tasks already in a workspace are left out.
+     - **A link or reference** to a task, e.g. an issue's URL, `owner/repo#42` or `ABC-123`: that task, from each
+       source that recognises it. This is the only way to find public tasks outside the user's organisations. A link
+       that no source recognises isn't searched.
+     - **Any other text:** a search of the text of the tasks of the user and their organisations (see
+       [Integrations](#integrations)). Tasks already in a workspace are found too, and marked with its name.
+   - Search starts when the user stops typing. A source that fails doesn't stop the others: its error is shown
+     with their results.
+   - Tasks chosen from several searches and sources are kept together in one list.
 2. **Name and locate the workspace.**
    - The name defaults to the task's title when exactly one task is selected. Otherwise the user enters it. Until the
      user edits it, the name follows the selected tasks; clearing it makes it follow them again.
@@ -389,9 +398,15 @@ are left to other tools for now.
 - **Authentication:** a personal access token (fine-grained, or classic with the `repo` scope for private
   repositories), kept in the credential store. Fine-grained tokens need read access to issues and metadata.
 - **Task keys** are GitHub's issue references, `owner/repo#number`. Pull requests aren't tasks.
-- **Finding tasks:** with no query, TAMMi lists the user's open issues (`is:open assignee:@me archived:false`),
-  most recently updated first. A query uses GitHub's issue search syntax. A task key or an issue's URL finds that
-  issue.
+- **Finding tasks:**
+  - **Assigned:** the user's open issues (`is:open assignee:@me archived:false`). GitHub has no in-progress state, so
+    every open issue counts as still to do.
+  - **Text search** covers the user's own repositories, the organisations that own repositories they can reach
+    (`org:`), and other users' repositories they collaborate on (`repo:`, so those users' other repositories aren't
+    searched). TAMMi reads these from the user's repositories and remembers them for 10 minutes. A search that covers
+    many accounts and repositories is split into several requests. GitHub's search qualifiers (e.g. `label:bug`) can
+    still be added to the text.
+  - A task key or an issue's URL finds that issue, in any repository the token can read.
 - **Repositories** are those the user owns, collaborates on or reaches through an organisation. Each has its HTTPS and
   SSH clone URLs.
 - **Rate limits:** when GitHub asks TAMMi to wait a few seconds, it waits and retries. For longer waits, the request
@@ -407,9 +422,13 @@ are left to other tools for now.
   - **Server and Data Center:** a personal access token (JIRA 8.14 or later), kept in the credential store. When
     JIRA wants a CAPTCHA solved after failed logins, TAMMi asks the user to log in to JIRA in a browser.
 - **Task keys** are JIRA's issue keys, e.g. `ABC-123`. A moved issue is read with its new key.
-- **Finding tasks:** with no query, TAMMi lists the user's unfinished issues
-  (`assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC`). A query is JQL. An issue key, or a
-  URL on the site that shows an issue (its page, or a board or search with `selectedIssue`), finds that issue.
+- **Finding tasks:**
+  - **Assigned:** the user's issues that are still to do
+    (`assignee = currentUser() AND statusCategory = "To Do" ORDER BY updated DESC`).
+  - **Text search** covers the site's issues that the user can see (`text ~ "<words>"`), since a JIRA site is the
+    organisation's own. Characters that JQL treats specially are left out of the words.
+  - An issue key, or a URL on the site that shows an issue (its page, or a board or search with `selectedIssue`),
+    finds that issue.
 - **Descriptions** are in JIRA wiki markup, as REST API version 2 returns them on every deployment. They aren't
   converted to markdown.
 - **Rate limits** are handled as for GitHub.

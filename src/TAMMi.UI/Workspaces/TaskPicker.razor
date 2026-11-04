@@ -1,13 +1,13 @@
-@* Step 1 of the Create Workspace flow: find tasks in the connected Task Sources and choose any number of them. *@
+@* Step 1 of the Create Workspace flow: find tasks in every connected Task Source at once and choose any number. *@
 @implements IDisposable
 @using TAMMi.Core.Integrations
-@using TAMMi.Core.Integrations.GitHub
-@using TAMMi.Core.Integrations.Jira
 @using TAMMi.Core.Platform
 @inject IntegrationRegistry Registry
+@inject TaskFinder TaskFinder
+@inject IWorkspaceStore WorkspaceStore
 @inject IProcessLauncher ProcessLauncher
 
-@if (_sources.Count == 0)
+@if (!_hasSources)
 {
     <p class="placeholder">
         No connected integrations provide tasks. Connect one in
@@ -16,56 +16,68 @@
 }
 else
 {
-    <form class="task-search" @onsubmit="SearchAsync">
-        @if (_sources.Count > 1)
-        {
-            <select class="task-source" aria-label="Task source" value="@_sourceId" @onchange="OnSourceChangedAsync">
-                @foreach (var source in _sources)
-                {
-                    <option value="@source.Id">@source.Name</option>
-                }
-            </select>
-        }
-        else
-        {
-            <span class="task-source-name">
-                @if (ServiceOf(_sources[0]) is { } service)
-                {
-                    <IntegrationIcon Service="service" />
-                }
-                @_sources[0].Name
-            </span>
-        }
-        <input type="search" aria-label="Search tasks" class="task-query" placeholder="@QueryPlaceholder"
-               autocomplete="off" @bind="_query" @bind:event="oninput" />
-        <button type="submit" class="button" disabled="@_searching">Search</button>
+    <form class="task-search" @onsubmit="SearchNowAsync">
+        <input type="search" class="task-query" aria-label="Search tasks" autocomplete="off"
+               placeholder="Search your tasks, or paste a link or reference"
+               value="@_query" @oninput="OnQueryInput" />
+        <button type="submit" class="button">Search</button>
     </form>
-    <p class="settings-help">Leave the search empty to list the tasks assigned to you that aren't done.</p>
+    <p class="settings-help">
+        Words are searched in your own and your organisations' tasks in @SourceNames. To add any other task, paste its
+        link, or its reference such as <code>owner/repo#42</code> or <code>ABC-123</code>.
+    </p>
 
     <div class="task-results" aria-live="polite" aria-busy="@(_searching ? "true" : "false")">
-        @if (_searching)
+        <h2>@ResultsHeading</h2>
+        @if (_results?.Kind is null or TaskSearchKind.Assigned)
+        {
+            <p class="settings-help task-results-help">
+                Open tasks assigned to you that aren't in a workspace yet. JIRA issues already in progress aren't
+                listed.
+            </p>
+        }
+
+        @foreach (var error in _results?.Errors ?? [])
+        {
+            <p class="warning">
+                @error.SourceName: @error.Message
+                @if (error.IsAuthentication)
+                {
+                    <a href="@AppRoutes.SettingsIntegrations">Check it in Settings › Integrations.</a>
+                }
+            </p>
+        }
+
+        @if (_results is null)
         {
             <p class="placeholder">Searching…</p>
         }
-        else if (_searchError is not null)
+        else if (_results.IsUnrecognisedLink)
         {
-            <p class="error">@_searchError</p>
+            <p class="placeholder">That link isn't to a task on any connected integration.</p>
         }
-        else if (_results is { Count: 0 })
+        else if (_results.Tasks.Count == 0)
         {
-            <p class="placeholder">No tasks found.</p>
+            <p class="placeholder">@EmptyText</p>
         }
-        else if (_results is not null)
+        else
         {
-            <ul class="task-list">
-                @foreach (var task in _results)
+            <ul class="task-list @(_searching ? "task-list-stale" : null)">
+                @foreach (var task in _results.Tasks)
                 {
                     var chosen = Draft.ContainsTask(task.Reference);
                     <li class="task-item @(chosen ? "task-item-chosen" : null)" @key="task.Reference">
                         <label class="task-choice">
                             <input type="checkbox" checked="@chosen" @onchange="() => Toggle(task)" />
+                            <TaskSourceIcon Source="Registry.Find(task.Source)" />
                             <span class="task-key">@task.Key</span>
-                            <span class="task-title">@task.Title</span>
+                            <span class="task-title" title="@task.Title">@task.Title</span>
+                            @if (_workspaceNames.TryGetValue(task.Reference, out var workspace))
+                            {
+                                <span class="badge task-workspace" title="Already in the workspace @workspace">
+                                    In @workspace
+                                </span>
+                            }
                         </label>
                         <button type="button" class="button button-secondary button-small"
                                 title="Open @task.Key in the browser" @onclick="() => Open(task)">Open</button>
@@ -88,15 +100,12 @@ else
         {
             <li class="task-item" @key="task.Reference">
                 <div class="task-choice">
-                    @if (ServiceOf(Registry.Find(task.Source)) is { } service)
-                    {
-                        <IntegrationIcon Service="service" />
-                    }
+                    <TaskSourceIcon Source="Registry.Find(task.Source)" />
                     <span class="task-key">@task.Key</span>
-                    <span class="task-title">@task.Title</span>
+                    <span class="task-title" title="@task.Title">@task.Title</span>
                 </div>
                 <button type="button" class="button button-secondary button-small"
-                        @onclick="() => Remove(task)">Remove</button>
+                        @onclick="() => Draft.RemoveTask(task.Reference)">Remove</button>
             </li>
         }
     </ul>
@@ -104,56 +113,99 @@ else
 
 @code {
     /// <summary>
+    /// How long typing has to pause before the search runs.
+    /// </summary>
+    private static readonly TimeSpan SearchDelay = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>
     /// The draft whose tasks this chooses.
     /// </summary>
     [Parameter, EditorRequired]
     public WorkspaceDraft Draft { get; set; } = null!;
 
-    private IReadOnlyList<ITaskIntegration> _sources = [];
-    private string? _sourceId;
+    private readonly CancellationTokenSource _disposed = new();
+    private bool _hasSources;
     private string _query = "";
-    private IReadOnlyList<TaskInfo>? _results;
-    private string? _searchError;
+    private TaskSearchResults? _results;
     private bool _searching;
     private CancellationTokenSource? _search;
 
-    private ITaskIntegration? Source => _sources.FirstOrDefault(source => source.Id == _sourceId);
+    // The workspace each task is already in, so it can be left out of the assigned tasks and marked elsewhere.
+    private IReadOnlyDictionary<TaskReference, string> _workspaceNames = new Dictionary<TaskReference, string>();
 
-    private string QueryPlaceholder => Source switch
+    private string SourceNames => string.Join(", ", Registry.TaskIntegrations.Select(source => source.Name));
+
+    private string ResultsHeading => _results?.Kind switch
     {
-        GitHubIntegration => "GitHub issue search, an issue reference (owner/repo#1) or URL",
-        JiraIntegration => "JQL, an issue key (ABC-123) or URL",
-        _ => "Search",
+        TaskSearchKind.Reference => "Linked task",
+        TaskSearchKind.Text => "Results",
+        _ => "Assigned to you",
+    };
+
+    private string EmptyText => _results?.Kind switch
+    {
+        TaskSearchKind.Reference => "No task found there, or you can't see it.",
+        TaskSearchKind.Text => "No tasks found.",
+        _ => "Nothing assigned to you is waiting to be started.",
     };
 
     protected override async Task OnInitializedAsync()
     {
         Registry.Changed += OnRegistryChanged;
-        _sources = Registry.TaskIntegrations;
-        _sourceId = _sources.FirstOrDefault()?.Id;
-        await SearchAsync();
+        _hasSources = Registry.TaskIntegrations.Count > 0;
+        await LoadWorkspaceTasksAsync();
+        await SearchAsync(delay: false);
     }
 
     public void Dispose()
     {
         Registry.Changed -= OnRegistryChanged;
+        _disposed.Cancel();
+        _disposed.Dispose();
         _search?.Cancel();
     }
 
-    private async Task OnSourceChangedAsync(ChangeEventArgs e)
+    private async Task LoadWorkspaceTasksAsync()
     {
-        _sourceId = e.Value?.ToString();
+        IReadOnlyList<WorkspaceListing> workspaces;
+        try
+        {
+            workspaces = await WorkspaceStore.ListAsync(_disposed.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
 
-        // Each source has its own query syntax, so a query for one rarely makes sense for another.
-        _query = "";
-        await SearchAsync();
+        var names = new Dictionary<TaskReference, string>();
+        foreach (var listing in workspaces)
+        {
+            foreach (var task in listing.Workspace?.Tasks ?? [])
+            {
+                names.TryAdd(task, listing.Name);
+            }
+        }
+
+        _workspaceNames = names;
     }
 
-    private async Task SearchAsync()
+    private Task OnQueryInput(ChangeEventArgs e)
+    {
+        _query = e.Value?.ToString() ?? "";
+        return SearchAsync(delay: true);
+    }
+
+    private Task SearchNowAsync() => SearchAsync(delay: false);
+
+    /// <summary>
+    /// Searches for <see cref="_query"/>, replacing any search still running. The last results stay on screen,
+    /// dimmed, until the new ones arrive.
+    /// </summary>
+    private async Task SearchAsync(bool delay)
     {
         // The cancelled search disposes of its own token source when it finishes.
         _search?.Cancel();
-        if (Source is not { } source)
+        if (!_hasSources)
         {
             _search = null;
             _results = null;
@@ -162,28 +214,28 @@ else
         }
 
         var search = _search = new CancellationTokenSource();
-        _searching = true;
-        _searchError = null;
-        StateHasChanged();
-
-        IReadOnlyList<TaskInfo>? results = null;
-        string? error = null;
         try
         {
-            results = await source.SearchTasksAsync(_query, search.Token);
+            if (delay)
+            {
+                await Task.Delay(SearchDelay, search.Token);
+            }
+
+            _searching = true;
+            StateHasChanged();
+            var results = await TaskFinder.FindAsync(_query, new HashSet<TaskReference>(_workspaceNames.Keys),
+                search.Token);
+
+            // A source that ignores cancellation can still finish after a newer search started.
+            if (!search.IsCancellationRequested)
+            {
+                _results = results;
+                _searching = false;
+            }
         }
         catch (OperationCanceledException) when (search.IsCancellationRequested)
         {
-            // A newer search, a change of source or leaving the page cancelled it.
-            return;
-        }
-        catch (IntegrationAuthenticationException ex)
-        {
-            error = $"{ex.Message} Check {source.Name} in Settings › Integrations.";
-        }
-        catch (IntegrationException ex)
-        {
-            error = ex.Message;
+            // A newer search, or leaving the page, replaced it.
         }
         finally
         {
@@ -194,16 +246,6 @@ else
 
             search.Dispose();
         }
-
-        if (search.IsCancellationRequested)
-        {
-            // It finished before it saw the cancellation, but a newer search replaces it.
-            return;
-        }
-
-        _results = results;
-        _searchError = error;
-        _searching = false;
     }
 
     private void Toggle(TaskInfo task)
@@ -214,28 +256,12 @@ else
         }
     }
 
-    private void Remove(TaskInfo task) => Draft.RemoveTask(task.Reference);
-
     private void Open(TaskInfo task) => ProcessLauncher.Open(task.Url.AbsoluteUri);
-
-    private static IntegrationService? ServiceOf(IIntegration? integration) => integration switch
-    {
-        GitHubIntegration => IntegrationService.GitHub,
-        JiraIntegration => IntegrationService.Jira,
-        _ => null,
-    };
 
     private void OnRegistryChanged(object? sender, EventArgs e) => _ = InvokeAsync(async () =>
     {
-        _sources = Registry.TaskIntegrations;
-        if (Source is null)
-        {
-            // The chosen source was removed, or the first one was just connected.
-            _sourceId = _sources.FirstOrDefault()?.Id;
-            _query = "";
-            await SearchAsync();
-        }
-
+        _hasSources = Registry.TaskIntegrations.Count > 0;
+        await SearchAsync(delay: false);
         StateHasChanged();
     });
 }

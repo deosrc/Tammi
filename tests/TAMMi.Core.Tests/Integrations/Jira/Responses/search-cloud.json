@@ -7,6 +7,7 @@
       "key": "ABC-12",
       "fields": {
         "summary": "Login fails with an expired session",
+        "updated": "2026-11-01T09:30:00.000+0100",
         "description": "Steps to reproduce:\n# Sign in\n# Wait for the session to expire\n# Click *Save*\n\n{code}401 Unauthorized{code}"
       }
     },

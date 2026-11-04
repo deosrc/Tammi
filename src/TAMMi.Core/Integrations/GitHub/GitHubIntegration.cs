@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using TAMMi.Core.Credentials;
 
@@ -13,19 +14,25 @@ namespace TAMMi.Core.Integrations.GitHub;
 /// repositories to include. Classic tokens need the <c>repo</c> scope for private repositories.
 /// </para>
 /// <para>
-/// Task keys have the form <c>owner/repo#number</c>. Pull requests aren't tasks, so they're left out.
+/// Task keys have the form <c>owner/repo#number</c>. Pull requests aren't tasks, so they're left out. Text searches
+/// cover only the user's own, their organisations' and their collaborations' repositories; any other issue can be
+/// found by its reference or URL.
 /// </para>
 /// </remarks>
 public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
 {
     /// <summary>
-    /// The search used when no query is given: the user's open issues.
+    /// The search for the tasks assigned to the user: their open issues.
     /// </summary>
-    public const string DefaultSearch = "is:open assignee:@me archived:false";
+    public const string AssignedSearch = "is:open assignee:@me archived:false";
 
     private readonly GitHubIntegrationOptions _options;
     private readonly GitHubApiClient _api;
     private readonly string _webHost;
+    private readonly TimeProvider _timeProvider;
+    private readonly Lock _scopeLock = new();
+    private IReadOnlyList<string>? _scope;
+    private DateTimeOffset _scopeExpires;
 
     /// <param name="options">How to connect to GitHub.</param>
     /// <param name="credentialStore">Where the access token is kept.</param>
@@ -44,12 +51,14 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
         ArgumentOutOfRangeException.ThrowIfLessThan(options.PageSize, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(options.PageSize, 100);
         ArgumentOutOfRangeException.ThrowIfLessThan(options.MaxSearchResults, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(options.MaxScopeQualifiers, 1);
         if (!options.ApiUrl.IsAbsoluteUri || options.ApiUrl.Scheme is not ("https" or "http"))
         {
             throw new ArgumentException("The API URL must be an absolute HTTP or HTTPS URL.", nameof(options));
         }
 
         _options = options;
+        _timeProvider = timeProvider;
         Credentials = new IntegrationCredentials(credentialStore, options.Id);
         _api = new GitHubApiClient(options, Credentials, httpClient, timeProvider);
 
@@ -80,47 +89,135 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
             ?? throw new IntegrationException("GitHub didn't return the authenticated user.");
 
     /// <summary>
-    /// Searches issues. The query uses GitHub's search syntax, e.g. <c>repo:acme/api is:open label:bug</c>, and
-    /// <c>is:issue</c> is added to it. With no query, it lists the user's open issues (<see cref="DefaultSearch"/>).
-    /// A task key (<c>acme/api#42</c>) or an issue's URL finds that issue.
+    /// Lists the user's open issues (<see cref="AssignedSearch"/>), most recently updated first. GitHub has no
+    /// in-progress state, so every open issue counts as still to do.
     /// </summary>
     /// <returns>Up to <see cref="GitHubIntegrationOptions.MaxSearchResults"/> issues.</returns>
     /// <inheritdoc/>
+    public Task<IReadOnlyList<TaskInfo>> GetAssignedTasksAsync(CancellationToken cancellationToken = default) =>
+        SearchIssuesAsync([$"is:issue {AssignedSearch}"], sortByUpdated: true, cancellationToken);
+
+    /// <summary>
+    /// Searches the text of issues in the repositories of the user and of the organisations they belong to, and in
+    /// the other repositories they collaborate on. Results are in GitHub's best-match order.
+    /// </summary>
+    /// <remarks>
+    /// The text can hold GitHub's search qualifiers too, e.g. <c>label:bug</c>. The accounts and repositories
+    /// searched are read from GitHub and remembered for <see cref="GitHubIntegrationOptions.SearchScopeLifetime"/>.
+    /// </remarks>
+    /// <returns>Up to <see cref="GitHubIntegrationOptions.MaxSearchResults"/> issues.</returns>
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<TaskInfo>> SearchTasksAsync(
-        string? query,
+        string text,
         CancellationToken cancellationToken = default)
     {
-        if (GitHubIssueKey.TryParse(query, out GitHubIssueKey? key)
-            || GitHubIssueKey.TryParseUrl(query, _webHost, out key))
-        {
-            return await GetTaskAsync(key, cancellationToken).ConfigureAwait(false) is { } task ? [task] : [];
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        IReadOnlyList<string> scope = await GetSearchScopeAsync(cancellationToken).ConfigureAwait(false);
 
-        bool isDefault = string.IsNullOrWhiteSpace(query);
-        string search = isDefault ? $"is:issue {DefaultSearch}" : $"is:issue {query!.Trim()}";
+        // GitHub matches any of several user:, org: and repo: qualifiers, so each request covers a batch of them.
+        IEnumerable<string> searches = scope
+            .Chunk(_options.MaxScopeQualifiers)
+            .Select(batch => $"is:issue archived:false {string.Join(' ', batch)} {text.Trim()}");
+        return await SearchIssuesAsync([.. searches], sortByUpdated: false, cancellationToken).ConfigureAwait(false);
+    }
 
-        // The default list shows recently updated issues first. A search keeps GitHub's best-match order.
-        string sort = isDefault ? "&sort=updated&order=desc" : "";
+    /// <summary>
+    /// Reads an issue reference (<c>owner/repo#42</c>) or the URL of an issue's page on this GitHub server.
+    /// </summary>
+    /// <inheritdoc/>
+    public bool TryParseTaskReference(string? text, [NotNullWhen(true)] out string? key)
+    {
+        key = GitHubIssueKey.TryParse(text, out GitHubIssueKey? issue)
+            || GitHubIssueKey.TryParseUrl(text, _webHost, out issue)
+                ? issue.ToString()
+                : null;
+        return key is not null;
+    }
+
+    /// <summary>
+    /// Runs searches one after another until they've found <see cref="GitHubIntegrationOptions.MaxSearchResults"/>
+    /// issues.
+    /// </summary>
+    private async Task<IReadOnlyList<TaskInfo>> SearchIssuesAsync(
+        IReadOnlyList<string> searches,
+        bool sortByUpdated,
+        CancellationToken cancellationToken)
+    {
+        string sort = sortByUpdated ? "&sort=updated&order=desc" : "";
         string perPage = Math.Min(_options.PageSize, _options.MaxSearchResults).ToString(CultureInfo.InvariantCulture);
-        string path = $"search/issues?q={Uri.EscapeDataString(search)}{sort}&per_page={perPage}";
-
         var tasks = new List<TaskInfo>();
-        await foreach (GitHubIssue issue in _api
-            .GetPagesAsync<GitHubSearchResults, GitHubIssue>(path, results => results.Items, cancellationToken)
-            .ConfigureAwait(false))
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string search in searches)
         {
-            if (ToTask(issue) is { } task)
+            string path = $"search/issues?q={Uri.EscapeDataString(search)}{sort}&per_page={perPage}";
+            await foreach (GitHubIssue issue in _api
+                .GetPagesAsync<GitHubSearchResults, GitHubIssue>(path, results => results.Items, cancellationToken)
+                .ConfigureAwait(false))
             {
-                tasks.Add(task);
-            }
+                if (ToTask(issue) is { } task && seen.Add(task.Key))
+                {
+                    tasks.Add(task);
+                }
 
-            if (tasks.Count >= _options.MaxSearchResults)
-            {
-                break;
+                if (tasks.Count >= _options.MaxSearchResults)
+                {
+                    return tasks;
+                }
             }
         }
 
         return tasks;
+    }
+
+    /// <summary>
+    /// Returns the search qualifiers for the issues a text search covers: <c>user:</c> for the user, <c>org:</c> for
+    /// each organisation that owns a repository they can reach, and <c>repo:</c> for each other user's repository
+    /// they collaborate on (so that user's other repositories aren't searched).
+    /// </summary>
+    private async Task<IReadOnlyList<string>> GetSearchScopeAsync(CancellationToken cancellationToken)
+    {
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        lock (_scopeLock)
+        {
+            if (_scope is { } cached && now < _scopeExpires)
+            {
+                return cached;
+            }
+        }
+
+        GitHubUser user = await GetAuthenticatedUserAsync(cancellationToken).ConfigureAwait(false);
+        var owners = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { user.Login };
+        var scope = new List<string> { $"user:{user.Login}" };
+        var repositories = new List<string>();
+
+        // The user's own repositories, those they collaborate on, and those of the organisations they're in.
+        string path = $"user/repos?per_page={_options.PageSize.ToString(CultureInfo.InvariantCulture)}";
+        await foreach (GitHubRepository repository in _api
+            .GetPagesAsync<IReadOnlyList<GitHubRepository>, GitHubRepository>(path, page => page, cancellationToken)
+            .ConfigureAwait(false))
+        {
+            GitHubAccount owner = repository.Owner;
+            if (owner.IsOrganization)
+            {
+                if (owners.Add(owner.Login))
+                {
+                    scope.Add($"org:{owner.Login}");
+                }
+            }
+            else if (!owners.Contains(owner.Login))
+            {
+                repositories.Add($"repo:{owner.Login}/{repository.Name}");
+            }
+        }
+
+        scope.AddRange(repositories);
+        lock (_scopeLock)
+        {
+            _scope = scope;
+            _scopeExpires = now + _options.SearchScopeLifetime;
+        }
+
+        return scope;
     }
 
     /// <inheritdoc/>
@@ -180,6 +277,7 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
         return new TaskInfo(Id, key.ToString(), issue.Title, url)
         {
             Description = string.IsNullOrEmpty(issue.Body) ? null : issue.Body,
+            Updated = issue.UpdatedAt,
         };
     }
 }

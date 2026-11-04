@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using TAMMi.Core.Credentials;
@@ -20,9 +21,10 @@ namespace TAMMi.Core.Integrations.Jira;
 public sealed class JiraIntegration : ITaskIntegration
 {
     /// <summary>
-    /// The search used when no query is given: the user's unfinished issues, most recently updated first.
+    /// The search for the tasks assigned to the user: their issues that are still to do (neither in progress nor
+    /// done), most recently updated first.
     /// </summary>
-    public const string DefaultJql = "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC";
+    public const string AssignedJql = "assignee = currentUser() AND statusCategory = \"To Do\" ORDER BY updated DESC";
 
     private readonly JiraIntegrationOptions _options;
     private readonly JiraApiClient _api;
@@ -85,22 +87,52 @@ public sealed class JiraIntegration : ITaskIntegration
             ?? throw new IntegrationException("JIRA didn't return the authenticated user.");
 
     /// <summary>
-    /// Searches issues with JQL, e.g. <c>project = ABC AND status = "In Progress"</c>. With no query, it lists the
-    /// user's unfinished issues (<see cref="DefaultJql"/>). An issue key (<c>ABC-123</c>) or the URL of an issue on
-    /// the site finds that issue.
+    /// Lists the user's issues that are still to do (<see cref="AssignedJql"/>).
     /// </summary>
     /// <returns>Up to <see cref="JiraIntegrationOptions.MaxSearchResults"/> issues.</returns>
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<TaskInfo>> SearchTasksAsync(
-        string? query,
-        CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TaskInfo>> GetAssignedTasksAsync(CancellationToken cancellationToken = default) =>
+        SearchJqlAsync(AssignedJql, cancellationToken);
+
+    /// <summary>
+    /// Searches the text of the site's issues that the user can see (<see cref="TextJql"/>), most recently updated
+    /// first.
+    /// </summary>
+    /// <returns>Up to <see cref="JiraIntegrationOptions.MaxSearchResults"/> issues.</returns>
+    /// <inheritdoc/>
+    public Task<IReadOnlyList<TaskInfo>> SearchTasksAsync(string text, CancellationToken cancellationToken = default)
     {
-        if (JiraIssueKey.TryParse(query, out string? key) || JiraIssueKey.TryParseUrl(query, _siteUrl, out key))
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        return SearchJqlAsync(TextJql(text), cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads an issue key (<c>ABC-123</c>) or the URL of an issue on the site: its page, or a board or search with
+    /// it selected.
+    /// </summary>
+    /// <inheritdoc/>
+    public bool TryParseTaskReference(string? text, [NotNullWhen(true)] out string? key) =>
+        JiraIssueKey.TryParse(text, out key) || JiraIssueKey.TryParseUrl(text, _siteUrl, out key);
+
+    /// <summary>
+    /// The JQL that searches issues' text (summary, description and comments) for words. Characters that JQL or its
+    /// text search treat specially are left out, so any text the user types is a valid search.
+    /// </summary>
+    public static string TextJql(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        var words = new System.Text.StringBuilder(text.Length);
+        foreach (char c in text)
         {
-            return await GetIssueAsync(key, cancellationToken).ConfigureAwait(false) is { } task ? [task] : [];
+            words.Append(char.IsControl(c) || "\"'+-&|!(){}[]^~*?:/\\".Contains(c) ? ' ' : c);
         }
 
-        string jql = string.IsNullOrWhiteSpace(query) ? DefaultJql : query.Trim();
+        string phrase = string.Join(' ', words.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        return $"text ~ \"{phrase}\" ORDER BY updated DESC";
+    }
+
+    private async Task<IReadOnlyList<TaskInfo>> SearchJqlAsync(string jql, CancellationToken cancellationToken)
+    {
         var tasks = new List<TaskInfo>();
         await foreach (JiraIssue issue in SearchAsync(jql, cancellationToken).ConfigureAwait(false))
         {
@@ -198,6 +230,7 @@ public sealed class JiraIntegration : ITaskIntegration
             new Uri(_siteUrl, $"browse/{Uri.EscapeDataString(issue.Key)}"))
         {
             Description = string.IsNullOrWhiteSpace(description) ? null : description,
+            Updated = issue.Fields?.UpdatedTime,
         };
     }
 }
