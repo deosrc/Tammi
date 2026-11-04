@@ -12,7 +12,7 @@ public class JiraIntegrationTests : IDisposable
     private const string Token = "ATATT3xFfGF0test";
     private const string Email = "mia@example.com";
     private const string DataCenterSiteUrl = "https://jira.example.com/jira/";
-    private const string IssuePath = "issue/ABC-12?fields=summary,description,updated";
+    private const string IssuePath = "issue/ABC-12?fields=summary,description,updated,status";
 
     private static readonly string LoginJql = JiraIntegration.TextJql("login");
 
@@ -143,7 +143,7 @@ public class JiraIntegrationTests : IDisposable
         Assert.Equal("/rest/api/2/search/jql", request.Url.AbsolutePath);
         Assert.Equal("assignee = currentUser() AND statusCategory = \"To Do\" ORDER BY updated DESC",
             request.Query("jql"));
-        Assert.Equal("summary,description,updated", request.Query("fields"));
+        Assert.Equal("summary,description,updated,status", request.Query("fields"));
     }
 
     [Fact]
@@ -244,7 +244,7 @@ public class JiraIntegrationTests : IDisposable
         using var api = new FakeJiraApi(DataCenterSiteUrl);
         using var httpClient = new HttpClient(api);
         JiraIntegration jira = await CreateAuthenticatedAsync(DataCenterOptions() with { PageSize = 2 }, httpClient);
-        string first = $"search?jql={Uri.EscapeDataString(LoginJql)}&fields=summary,description,updated&maxResults=2";
+        string first = $"search?jql={Uri.EscapeDataString(LoginJql)}&fields=summary,description,updated,status&maxResults=2";
         api.Respond(first + "&startAt=0", FakeJiraApi.Response("search-dc.json"))
             .Respond(first + "&startAt=2", FakeJiraApi.Response("search-dc-page2.json"));
 
@@ -262,7 +262,7 @@ public class JiraIntegrationTests : IDisposable
         using var api = new FakeJiraApi(DataCenterSiteUrl);
         using var httpClient = new HttpClient(api);
         JiraIntegration jira = await CreateAuthenticatedAsync(DataCenterOptions(), httpClient);
-        api.Respond($"search?jql={Uri.EscapeDataString(JiraIntegration.TextJql("x"))}&fields=summary,description,updated&maxResults=50&startAt=0",
+        api.Respond($"search?jql={Uri.EscapeDataString(JiraIntegration.TextJql("x"))}&fields=summary,description,updated,status&maxResults=50&startAt=0",
             """{"startAt":0,"maxResults":50,"total":10,"issues":[]}""");
 
         Assert.Empty(await jira.SearchTasksAsync("x", CancellationToken));
@@ -315,13 +315,45 @@ public class JiraIntegrationTests : IDisposable
         Assert.Equal("Login fails with an expired session", task.Title);
         Assert.Equal("jira-acme", task.Source);
         Assert.EndsWith("{code}401 Unauthorized{code}", task.Description);
+        Assert.Equal("In Review", task.Status);
+        Assert.Equal(TaskStatusCategory.InProgress, task.StatusCategory);
+    }
+
+    [Theory]
+    [InlineData("new", TaskStatusCategory.ToDo)]
+    [InlineData("indeterminate", TaskStatusCategory.InProgress)]
+    [InlineData("done", TaskStatusCategory.Done)]
+    [InlineData("undefined", null)]
+    public async Task GetTaskAsync_ReadsTheStatusCategory(string key, TaskStatusCategory? category)
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond(IssuePath,
+            """{"key":"ABC-12","fields":{"summary":"S","status":{"name":"Custom","statusCategory":{"key":"KEY"}}}}"""
+                .Replace("KEY", key, StringComparison.Ordinal));
+
+        TaskInfo? task = await jira.GetTaskAsync("ABC-12", CancellationToken);
+
+        Assert.Equal("Custom", task?.Status);
+        Assert.Equal(category, task?.StatusCategory);
+    }
+
+    [Fact]
+    public async Task GetTaskAsync_HasNoStatus_WhenJiraDoesntSay()
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond(IssuePath, """{"key":"ABC-12","fields":{"summary":"S"}}""");
+
+        TaskInfo? task = await jira.GetTaskAsync("ABC-12", CancellationToken);
+
+        Assert.Null(task?.Status);
+        Assert.Null(task?.StatusCategory);
     }
 
     [Fact]
     public async Task GetTaskAsync_UsesTheNewKey_OfAMovedIssue()
     {
         JiraIntegration jira = await CreateAuthenticatedAsync();
-        _api.Respond("issue/ABC-1?fields=summary,description,updated",
+        _api.Respond("issue/ABC-1?fields=summary,description,updated,status",
             """{"id":"10103","key":"XYZ-3","fields":{"summary":"Moved","description":null}}""");
 
         TaskInfo? task = await jira.GetTaskAsync("ABC-1", CancellationToken);
@@ -458,7 +490,7 @@ public class JiraIntegrationTests : IDisposable
     }
 
     private static string CloudSearchPath(string jql, int maxResults = 50) =>
-        $"search/jql?jql={Uri.EscapeDataString(jql)}&fields=summary,description,updated&maxResults={maxResults}";
+        $"search/jql?jql={Uri.EscapeDataString(jql)}&fields=summary,description,updated,status&maxResults={maxResults}";
 
     private static JiraIntegrationOptions CloudOptions() => new()
     {

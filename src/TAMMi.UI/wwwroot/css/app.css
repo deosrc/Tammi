@@ -851,6 +851,55 @@ label.task-choice {
   color: var(--color-text);
 }
 
+.side-panel-section-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.side-panel-section-actions {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+}
+
+/* A small icon button in a section's header, e.g. to refresh it. */
+.side-panel-section-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.side-panel-section-action:hover:not(:disabled) {
+  background: var(--color-chrome);
+  color: var(--color-text);
+}
+
+.side-panel-section-action:disabled {
+  cursor: default;
+}
+
+.icon-spin {
+  animation: icon-spin 1s linear infinite;
+}
+
+@keyframes icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-spin {
+    animation: none;
+  }
+}
+
 .side-panel-section-body {
   padding: 0 var(--space-4) var(--space-4);
 }
@@ -1025,6 +1074,96 @@ label.task-choice {
   flex: none;
   width: 14px;
   height: 14px;
+}
+
+/* The side panel's Tasks section: a card for each task, with its status as a chip coloured by its category (to do,
+   in progress or done). */
+.workspace-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workspace-task {
+  --workspace-task-tone: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--workspace-task-tone);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.workspace-task-in-progress {
+  --workspace-task-tone: var(--color-focus);
+}
+
+.workspace-task-done {
+  --workspace-task-tone: var(--color-success);
+}
+
+.workspace-task-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.workspace-task-key {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: var(--font-size-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-task-status {
+  flex: none;
+  max-width: 50%;
+  margin-left: auto;
+  overflow: hidden;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--workspace-task-tone);
+  /* The surface colour contrasts with the muted, blue and green tones in both themes. */
+  color: var(--color-surface);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  line-height: 1.6;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The summary opens the task's page, so it's a button that reads as text. Long summaries wrap. */
+.workspace-task-title {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.workspace-task-title:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.workspace-task p {
+  margin: 0;
+  font-size: var(--font-size-small);
+}
+
+.workspace-task-problem {
+  color: var(--color-error);
 }
 
 /* The main area: a row of session tabs, with the shown session filling the rest. */

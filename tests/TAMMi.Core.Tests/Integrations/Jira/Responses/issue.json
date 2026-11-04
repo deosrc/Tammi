@@ -5,6 +5,20 @@
   "key": "ABC-12",
   "fields": {
     "summary": "Login fails with an expired session",
+    "status": {
+      "self": "https://acme.atlassian.net/rest/api/2/status/10001",
+      "description": "",
+      "iconUrl": "https://acme.atlassian.net/",
+      "name": "In Review",
+      "id": "10001",
+      "statusCategory": {
+        "self": "https://acme.atlassian.net/rest/api/2/statuscategory/4",
+        "id": 4,
+        "key": "indeterminate",
+        "colorName": "yellow",
+        "name": "In Progress"
+      }
+    },
     "description": "Steps to reproduce:\n# Sign in\n# Wait for the session to expire\n# Click *Save*\n\n{code}401 Unauthorized{code}"
   }
 }
