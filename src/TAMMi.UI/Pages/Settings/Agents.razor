@@ -4,6 +4,12 @@
 @using TAMMi.Core.Agents
 @using TAMMi.Core.Settings
 
+@{
+    // Read once, so the whole page shows the same settings. A change being saved replaces them on another thread,
+    // and could otherwise do so part-way through rendering (e.g. removing the agent the loop is showing).
+    var agents = SettingsStore.Current.Agents;
+}
+
 <h1>Agents</h1>
 
 <h2>Supported agents</h2>
@@ -27,16 +33,16 @@
 </p>
 
 <ul class="agent-definition-list">
-    @for (var i = 0; i < Definitions.Count; i++)
+    @for (var i = 0; i < agents.CustomDefinitions.Count; i++)
     {
         var index = i;
-        var definition = Definitions[index];
+        var definition = agents.CustomDefinitions[index];
         <li class="agent-definition">
             <div class="agent-definition-header">
                 <span class="agent-definition-name">@(string.IsNullOrWhiteSpace(definition.Name) ? "Unnamed agent" : definition.Name)</span>
                 <button type="button" class="button button-secondary" disabled="@(index == 0)" @onclick="() => MoveAsync(index, -1)"
                         title="Move up" aria-label="Move @definition.Name up">↑</button>
-                <button type="button" class="button button-secondary" disabled="@(index == Definitions.Count - 1)"
+                <button type="button" class="button button-secondary" disabled="@(index == agents.CustomDefinitions.Count - 1)"
                         @onclick="() => MoveAsync(index, 1)" title="Move down"
                         aria-label="Move @definition.Name down">↓</button>
                 <button type="button" class="button button-secondary" @onclick="() => RemoveAsync(index)">Remove</button>
@@ -46,12 +52,12 @@
                 <div class="settings-field">
                     <label for="agent-@index-name">Name</label>
                     <input id="agent-@index-name"
-                           class="@(Current.HasDuplicateName(index) ? "invalid" : null)"
+                           class="@(agents.HasDuplicateName(index) ? "invalid" : null)"
                            value="@definition.Name"
-                           aria-invalid="@(Current.HasDuplicateName(index) ? "true" : null)"
-                           aria-describedby="@(Current.HasDuplicateName(index) ? $"agent-{index}-name-error" : null)"
+                           aria-invalid="@(agents.HasDuplicateName(index) ? "true" : null)"
+                           aria-describedby="@(agents.HasDuplicateName(index) ? $"agent-{index}-name-error" : null)"
                            @onchange="e => UpdateDefinitionAsync(index, d => d with { Name = Text(e) })" />
-                    @if (Current.HasDuplicateName(index))
+                    @if (agents.HasDuplicateName(index))
                     {
                         <p id="agent-@index-name-error" class="error">
                             Another agent is called "@definition.Name.Trim()". Give each one its own name, so you can
@@ -198,21 +204,21 @@
                   id="initial-prompt-template"
                   class="settings-template"
                   rows="4"
-                  value="@Current.InitialPromptTemplate"
+                  value="@agents.InitialPromptTemplate"
                   @onchange="OnTemplateChanged"></textarea>
         <p class="settings-help">
             Sent to an agent when it starts, to tell it about the workspace's task context file.
             <code>@InitialPrompt.ContextFilePlaceholder</code> is replaced with the file's full path, and the rest is sent
             as it is. Leave it empty to use the default.
         </p>
-        @if (!Current.InitialPromptTemplate.Contains(InitialPrompt.ContextFilePlaceholder, StringComparison.Ordinal))
+        @if (!agents.InitialPromptTemplate.Contains(InitialPrompt.ContextFilePlaceholder, StringComparison.Ordinal))
         {
             <p class="warning">
                 The template doesn't have <code>@InitialPrompt.ContextFilePlaceholder</code>, so agents won't be told
                 where the context file is.
             </p>
         }
-        @if (Current.InitialPromptTemplate.AsSpan().ContainsAny('\r', '\n'))
+        @if (agents.InitialPromptTemplate.AsSpan().ContainsAny('\r', '\n'))
         {
             <p class="warning">
                 On Windows, agents whose command is a batch file (e.g. <code>claude.cmd</code>) can't be given a prompt
@@ -221,7 +227,7 @@
         }
         <div class="settings-field-row">
             <button type="button" class="button button-secondary"
-                    disabled="@(Current.InitialPromptTemplate == InitialPrompt.DefaultTemplate)"
+                    disabled="@(agents.InitialPromptTemplate == InitialPrompt.DefaultTemplate)"
                     @onclick="RestoreDefaultTemplateAsync">Restore default</button>
         </div>
     </div>
@@ -235,13 +241,9 @@
 @code {
     private int _templateRevision;
 
-    private AgentSettings Current => SettingsStore.Current.Agents;
-
     // Shown in place of the prompt in the command previews.
     private const string PromptExample = "<initial prompt>";
     private const string SessionIdExample = "<session ID>";
-
-    private IReadOnlyList<AgentDefinition> Definitions => Current.CustomDefinitions;
 
     private static string Text(ChangeEventArgs e) => e.Value?.ToString() ?? "";
 
