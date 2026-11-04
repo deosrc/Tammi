@@ -477,9 +477,9 @@ public sealed class GitWorktreeService(IGitCli git, IGitRepositoryReader reader)
 
             if (!string.Equals(ReadGitDirFile(dotGit), submoduleGitDir, s_pathComparison))
             {
-                await File.WriteAllTextAsync(
+                await WriteGitDirFileAsync(
                     dotGit,
-                    $"{GitDirPrefix} {RelativePath(submoduleWorkTree, submoduleGitDir)}\n",
+                    RelativePath(submoduleWorkTree, submoduleGitDir),
                     cancellationToken).ConfigureAwait(false);
             }
 
@@ -536,6 +536,19 @@ public sealed class GitWorktreeService(IGitCli git, IGitRepositoryReader reader)
         }
 
         return ResolvePath(Path.GetDirectoryName(dotGitFile)!, firstLine[GitDirPrefix.Length..]);
+    }
+
+    /// <summary>
+    /// Points an existing <c>.git</c> file at <paramref name="gitDir"/>.
+    /// </summary>
+    private static async Task WriteGitDirFileAsync(string dotGitFile, string gitDir, CancellationToken cancellationToken)
+    {
+        // Git for Windows makes .git files hidden, and Windows won't replace a hidden file (which is what
+        // File.WriteAllText does), so open the existing file and overwrite it instead.
+        await using var stream = new FileStream(dotGitFile, FileMode.Open, FileAccess.Write, FileShare.None);
+        stream.SetLength(0);
+        await using var writer = new StreamWriter(stream);
+        await writer.WriteAsync($"{GitDirPrefix} {gitDir}\n".AsMemory(), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

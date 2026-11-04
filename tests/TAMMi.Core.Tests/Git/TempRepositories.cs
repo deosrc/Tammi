@@ -20,6 +20,7 @@ internal sealed class TempRepositories : IDisposable
             gpgSign = false
         [core]
             autocrlf = false
+            longpaths = true
         [protocol "file"]
             allow = always
         """;
@@ -116,15 +117,25 @@ internal sealed class TempRepositories : IDisposable
         File.WriteAllText(path, content);
     }
 
-    public string PathTo(string name) => Path.Combine(Root, name);
+    /// <summary>
+    /// The full path to <paramref name="name"/> in the folder, with the platform's separators, so tests can write
+    /// <c>/</c> in names and still compare paths with the ones TAMMi builds.
+    /// </summary>
+    public string PathTo(string name) => Path.GetFullPath(Path.Combine(Root, name));
 
     /// <summary>
     /// Deletes a folder holding git files.
     /// </summary>
     public static void DeleteFolder(string path)
     {
-        // Git makes object files read-only, which stops Directory.Delete on Windows.
-        foreach (string file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+        // Git makes object files read-only, which stops Directory.Delete on Windows. Links aren't followed, because a
+        // link back up to a parent folder would never end.
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            AttributesToSkip = FileAttributes.ReparsePoint,
+        };
+        foreach (string file in Directory.EnumerateFiles(path, "*", options))
         {
             File.SetAttributes(file, FileAttributes.Normal);
         }
