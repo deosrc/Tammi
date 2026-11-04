@@ -1,6 +1,6 @@
 {
   "solution": {
-    "path": "Tammi.slnx",
+    "path": "Deosrc.Tammi.slnx",
     "projects": [
       "src/Deosrc.Tammi.Core/Deosrc.Tammi.Core.csproj",
       "src/Deosrc.Tammi.UI/Deosrc.Tammi.UI.csproj",
