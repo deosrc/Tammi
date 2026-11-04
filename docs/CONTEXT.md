@@ -178,8 +178,11 @@ own branch. It is created automatically when the workspace is created:
   - Running agents
   - Git status of each repository in the workspace
   - "Open in…" tools
-- **Git status section:** an entry for each repository, in the workspace's order, with:
-  - whether it's **changed** (as on Home) or clean
+- **Git status section:** a card for each repository, in the workspace's order. The whole card is coloured by what
+  needs attention: danger when the worktree is broken or its status can't be read, warning when it has work that
+  isn't pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its submodules,
+  and success otherwise. Each card has:
+  - a label: Broken, Unreadable, Changed (as on Home), Out of sync (only behind) or Clean
   - its branch (or the commit, when HEAD is detached), and how far it's ahead of and behind its upstream, when it
     tracks one
   - how many uncommitted changes and unpushed commits it has

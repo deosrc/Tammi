@@ -525,7 +525,8 @@ a {
   margin: 0;
 }
 
-/* The side panel's git status section: an entry for each repository, with its submodules nested inside it. */
+/* The side panel's git status section: a card for each repository, with its submodules nested inside it. The card's
+   colour says whether the repository needs attention. */
 .git-status-list,
 .git-status-submodules {
   margin: 0;
@@ -536,16 +537,47 @@ a {
 .git-status-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
+}
+
+.git-status-card {
+  --git-status-tone: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.git-status-card-success {
+  --git-status-tone: var(--color-success);
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.git-status-card-warning {
+  --git-status-tone: var(--color-warning);
+  border-color: var(--color-warning-border);
+  border-left-color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+.git-status-card-danger {
+  --git-status-tone: var(--color-error);
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
 }
 
 .git-status-submodules {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-top: var(--space-2);
+  margin-top: var(--space-1);
   padding-left: var(--space-3);
-  border-left: 2px solid var(--color-border);
+  border-left: 2px solid color-mix(in srgb, var(--git-status-tone) 40%, transparent);
 }
 
 .git-status-heading,
@@ -571,21 +603,26 @@ a {
   flex: none;
   margin-left: auto;
   padding: 0 var(--space-2);
+  border: 1px solid var(--git-status-tone);
   border-radius: 999px;
-  background: var(--color-surface-hover);
-  color: var(--color-text-muted);
+  color: var(--git-status-tone);
   font-size: var(--font-size-small);
+  font-weight: 600;
 }
 
-.git-status-badge-changed {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
+/* A submodule's own badge only shows that it's changed, so it's quieter than the card's. */
+.git-status-submodule .git-status-badge {
+  font-weight: normal;
 }
 
 .git-status-head,
 .git-status-summary,
-.git-status-submodule .placeholder {
+.git-status-card .placeholder {
   font-size: var(--font-size-small);
+}
+
+.git-status-card p {
+  margin: 0;
 }
 
 .git-status-branch {
@@ -605,13 +642,14 @@ a {
 }
 
 .git-status-summary {
-  color: var(--color-warning);
+  color: var(--git-status-tone);
 }
 
 .git-status-problem {
   display: flex;
   align-items: center;
   gap: var(--space-1);
+  color: var(--git-status-tone);
   font-size: var(--font-size-small);
 }
 

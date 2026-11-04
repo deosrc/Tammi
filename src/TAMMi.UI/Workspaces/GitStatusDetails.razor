@@ -33,9 +33,9 @@
             <li class="git-status-submodule" @key="submodule.Path">
                 <div class="git-status-heading">
                     <span class="git-status-name" title="@submodule.Name">@submodule.Path</span>
-                    @if (submodule.Status?.IsChanged == true)
+                    @if (submodule.Status is { } inner && GitStatusText.NeedsAttention(inner))
                     {
-                        <span class="git-status-badge git-status-badge-changed">Changed</span>
+                        <span class="git-status-badge">@(inner.IsChanged ? "Changed" : "Out of sync")</span>
                     }
                 </div>
                 @if (submodule.CommitChange != SubmoduleCommitChange.None)

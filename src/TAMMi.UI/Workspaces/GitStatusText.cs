@@ -16,6 +16,15 @@ internal static class GitStatusText
             + status.Submodules.Count(submodule => submodule.CommitChange != SubmoduleCommitChange.None);
 
     /// <summary>
+    /// Whether a repository has work that isn't pushed (uncommitted changes or unpushed commits) or is out of sync
+    /// with its upstream (behind it), in the repository itself or in any of its submodules.
+    /// </summary>
+    public static bool NeedsAttention(RepositoryStatus status) =>
+        status.IsChanged
+            || status.IsBehind
+            || status.Submodules.Any(submodule => submodule.Status is { } inner && NeedsAttention(inner));
+
+    /// <summary>
     /// The changes that could be lost, e.g. "3 uncommitted changes · 1 unpushed commit", or <see langword="null"/>
     /// when there are none in the repository itself.
     /// </summary>
