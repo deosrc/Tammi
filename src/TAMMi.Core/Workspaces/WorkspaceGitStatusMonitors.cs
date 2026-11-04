@@ -78,6 +78,25 @@ public sealed class WorkspaceGitStatusMonitors : IDisposable
     }
 
     /// <summary>
+    /// Stops monitoring a workspace, e.g. while it's being deleted, so its folders aren't being watched. Starting it
+    /// again makes a new monitor.
+    /// </summary>
+    /// <returns>Whether the workspace was being monitored.</returns>
+    public bool Stop(string workspaceId)
+    {
+        lock (_lock)
+        {
+            if (!_monitors.Remove(workspaceId, out var monitor))
+            {
+                return false;
+            }
+
+            monitor.Dispose();
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Stops every monitor.
     /// </summary>
     public void Dispose()

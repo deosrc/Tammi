@@ -83,6 +83,21 @@ public sealed class WorkspaceGitStatusMonitorsTests : IDisposable
         Assert.Same(otherMonitor, _monitors.Find(other.Id));
     }
 
+    [Fact]
+    public void Stop_StopsTheMonitorUntilItsStartedAgain()
+    {
+        var workspace = CreateWorkspace();
+        _tabs.Open(workspace.Id, workspace.Name);
+        var monitor = _monitors.Start(workspace);
+
+        Assert.True(_monitors.Stop(workspace.Id));
+
+        Assert.Null(_monitors.Find(workspace.Id));
+        Assert.Throws<ObjectDisposedException>(monitor.Start);
+        Assert.False(_monitors.Stop(workspace.Id));
+        Assert.NotSame(monitor, _monitors.Start(workspace));
+    }
+
     private Workspace CreateWorkspace() => new()
     {
         Id = Workspace.NewId(),

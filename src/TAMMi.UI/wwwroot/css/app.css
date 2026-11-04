@@ -466,6 +466,22 @@ a {
   gap: var(--space-2);
 }
 
+/* The Delete Workspace flow, shown in the workspace's tab. */
+.delete-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 100ch;
+}
+
+.delete-workspace p {
+  margin: 0;
+}
+
+.delete-workspace .settings-list {
+  margin: 0;
+}
+
 /* ---------------------------------------------------------------------------------------------------------------
    Workspace View
    --------------------------------------------------------------------------------------------------------------- */
@@ -476,11 +492,25 @@ a {
 }
 
 .side-panel {
+  display: flex;
   flex: none;
+  flex-direction: column;
   width: var(--side-panel-width);
-  overflow-y: auto;
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
+}
+
+/* The sections scroll, so the footer stays at the bottom of the panel. */
+.side-panel-sections {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.side-panel-footer {
+  flex: none;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
 }
 
 .side-panel-section {
@@ -1126,6 +1156,32 @@ a {
 .menu-item:hover,
 .menu-item:focus-visible {
   background: var(--color-surface-hover);
+}
+
+/* A menu item that deletes something. */
+.menu-item-danger {
+  color: var(--color-error);
+}
+
+/* A menu anchor that fills its container, with its button and menu as wide as it. */
+.menu-anchor-wide {
+  display: block;
+}
+
+.menu-anchor-wide > .button {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.menu-anchor-wide > .menu {
+  right: 0;
+  min-width: 0;
+}
+
+/* A menu that opens above its button, e.g. at the bottom of the window. */
+.menu-up {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
 }
 
 .icon-small {

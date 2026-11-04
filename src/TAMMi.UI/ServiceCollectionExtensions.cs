@@ -45,6 +45,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<WindowStateStore>();
         services.AddSingleton<IWorkspaceStore, WorkspaceStore>();
         services.AddSingleton<WorkspaceGitStatusMonitors>();
+        services.AddSingleton<WorkspaceDeleter>();
         services.AddSingleton<IRepositoryCatalogue, RepositoryCatalogue>();
         return services;
     }

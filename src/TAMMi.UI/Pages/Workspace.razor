@@ -3,6 +3,7 @@
 @inject WorkspaceTabs WorkspaceTabs
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceGitStatusMonitors GitStatusMonitors
+@inject NavigationManager Navigation
 
 @if (_tab is null)
 {
@@ -16,6 +17,14 @@ else if (!IsLoaded)
     @* Render neither view until the workspace has been read, so a workspace that can't be read doesn't show the
        Workspace View for a moment first. *@
 }
+else if (_deleting)
+{
+    @* Shown until the flow finishes, since the workspace leaves the index before its branches are offered. *@
+    <div class="page">
+        <h1>Delete @_deletingName</h1>
+        <DeleteWorkspace WorkspaceId="@WorkspaceId" OnCancel="CancelDelete" OnFinished="FinishDelete" />
+    </div>
+}
 else if (_listing is { Availability: not WorkspaceAvailability.Available } listing)
 {
     @* A workspace that can't be read: say what's wrong instead of showing the Workspace View. *@
@@ -28,10 +37,8 @@ else if (_listing is { Availability: not WorkspaceAvailability.Available } listi
             <dd>@listing.Folder</dd>
         </dl>
         <div class="workspace-details-actions">
-            @* Deleting a workspace comes with the Delete Workspace flow (#27). *@
-            <button type="button" class="button button-danger" disabled
-                    title="Deleting workspaces isn't available yet">
-                Delete workspace
+            <button type="button" class="button button-danger" @onclick="() => StartDelete(listing.Name)">
+                Delete workspace…
             </button>
         </div>
     </div>
@@ -41,28 +48,55 @@ else
     @* Keyed by workspace, so switching tabs doesn't carry one workspace's collapsed sections over to another. *@
     <div class="workspace-view" @key="_tab.WorkspaceId">
         <aside class="side-panel">
-            <SidePanelSection Title="Agents">
-                <p class="placeholder">No agents running.</p>
-            </SidePanelSection>
-            <SidePanelSection Title="Repositories">
-                @if (_gitStatus is null || _gitStatus.Repositories.Count == 0)
-                {
-                    <p class="placeholder">No repositories in this workspace.</p>
-                }
-                else
-                {
-                    <ul class="git-status-list">
-                        @foreach (var repository in _gitStatus.Repositories)
-                        {
-                            <WorkspaceRepositoryGitStatus @key="repository.Repository.FolderName"
-                                                          Repository="repository" />
-                        }
-                    </ul>
-                }
-            </SidePanelSection>
-            <SidePanelSection Title="Open in…">
-                <p class="placeholder">Tools will appear here.</p>
-            </SidePanelSection>
+            <div class="side-panel-sections">
+                <SidePanelSection Title="Agents">
+                    <p class="placeholder">No agents running.</p>
+                </SidePanelSection>
+                <SidePanelSection Title="Repositories">
+                    @if (_gitStatus is null || _gitStatus.Repositories.Count == 0)
+                    {
+                        <p class="placeholder">No repositories in this workspace.</p>
+                    }
+                    else
+                    {
+                        <ul class="git-status-list">
+                            @foreach (var repository in _gitStatus.Repositories)
+                            {
+                                <WorkspaceRepositoryGitStatus @key="repository.Repository.FolderName"
+                                                              Repository="repository" />
+                            }
+                        </ul>
+                    }
+                </SidePanelSection>
+                <SidePanelSection Title="Open in…">
+                    <p class="placeholder">Tools will appear here.</p>
+                </SidePanelSection>
+            </div>
+            <div class="side-panel-footer">
+                @* Closes on Escape, or on a click anywhere outside the menu. *@
+                <div class="menu-anchor menu-anchor-wide" @onkeydown="OnManageMenuKeyDown">
+                    <button type="button" class="button button-secondary button-icon" aria-haspopup="menu"
+                            aria-expanded="@(_manageMenuOpen ? "true" : "false")"
+                            @onclick="() => _manageMenuOpen = !_manageMenuOpen">
+                        Manage Workspace
+                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <polyline points="6 15 12 9 18 15"></polyline>
+                        </svg>
+                    </button>
+                    @if (_manageMenuOpen)
+                    {
+                        <div class="menu-backdrop" @onclick="() => _manageMenuOpen = false"></div>
+                        <ul class="menu menu-up" role="menu" aria-label="Manage Workspace">
+                            <li role="none">
+                                <button type="button" class="menu-item menu-item-danger" role="menuitem"
+                                        @onclick="() => StartDelete(_tab.Name)">
+                                    Delete workspace…
+                                </button>
+                            </li>
+                        </ul>
+                    }
+                </div>
+            </div>
         </aside>
         <div class="workspace-main">
             <h1>@_tab.Name</h1>
@@ -76,6 +110,9 @@ else
     private WorkspaceTab? _tab;
     private WorkspaceListing? _listing;
     private string? _loadedWorkspaceId;
+    private bool _deleting;
+    private bool _manageMenuOpen;
+    private string _deletingName = "";
 
     // Keeps running while the tab is open, so it isn't disposed with the page.
     private WorkspaceGitStatusMonitor? _gitStatus;
@@ -96,6 +133,13 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
+        if (_tab?.WorkspaceId != WorkspaceId)
+        {
+            // Another tab is shown in this page, so the flow and menu for the previous one are closed.
+            _deleting = false;
+            _manageMenuOpen = false;
+        }
+
         _tab = WorkspaceTabs.Find(WorkspaceId);
         await LoadAsync();
     }
@@ -132,8 +176,10 @@ else
 
     private void UpdateGitStatus()
     {
-        // The monitor only runs while the workspace is open in a tab.
-        SetGitStatus(_listing?.Workspace is { } workspace && WorkspaceTabs.Find(workspace.Id) is not null
+        // The monitor only runs while the workspace is open in a tab. It's stopped while the workspace is being
+        // deleted, so it isn't watching the folders being deleted (on Windows, a watched folder can't be deleted
+        // until the watch closes).
+        SetGitStatus(!_deleting && _listing?.Workspace is { } workspace && WorkspaceTabs.Find(workspace.Id) is not null
             ? GitStatusMonitors.Start(workspace)
             : null);
     }
@@ -164,6 +210,36 @@ else
             StateHasChanged();
         }
     });
+
+    private void OnManageMenuKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _manageMenuOpen = false;
+        }
+    }
+
+    private void StartDelete(string name)
+    {
+        _manageMenuOpen = false;
+        _deletingName = name;
+        _deleting = true;
+        SetGitStatus(null);
+        GitStatusMonitors.Stop(WorkspaceId);
+    }
+
+    private void CancelDelete()
+    {
+        _deleting = false;
+        UpdateGitStatus();
+    }
+
+    private void FinishDelete()
+    {
+        _deleting = false;
+        WorkspaceTabs.Close(WorkspaceId);
+        Navigation.NavigateTo(AppRoutes.Home);
+    }
 
     private void OnTabsChanged() => InvokeAsync(() =>
     {
