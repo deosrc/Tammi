@@ -7,14 +7,26 @@
     </span>
     @if (Status.Upstream is not null && (Status.AheadBy > 0 || Status.BehindBy > 0))
     {
-        <span class="git-status-ahead-behind" title="@GitStatusText.AheadBehindTitle(Status)">
-            @if (Status.AheadBy > 0)
+        <span class="git-status-sync">
+            @if (Status.AheadBy is > 0 and var ahead)
             {
-                <span>↑@Status.AheadBy</span>
+                <span class="git-status-sync-chip git-status-ahead"
+                      title="@GitStatusText.AheadBehindTitle(ahead, "ahead of", Status.Upstream)">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 19V5M5 12l7-7 7 7" />
+                    </svg>
+                    @ahead
+                </span>
             }
-            @if (Status.BehindBy > 0)
+            @if (Status.BehindBy is > 0 and var behind)
             {
-                <span>↓@Status.BehindBy</span>
+                <span class="git-status-sync-chip git-status-behind"
+                      title="@GitStatusText.AheadBehindTitle(behind, "behind", Status.Upstream)">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14M19 12l-7 7-7-7" />
+                    </svg>
+                    @behind
+                </span>
             }
         </span>
     }

@@ -633,12 +633,40 @@ a {
   white-space: nowrap;
 }
 
-.git-status-ahead-behind {
+/* Ahead and behind counts are filled chips, so they stand out on any card colour. Ahead is work to push (warning);
+   behind is commits to pull (informational). */
+.git-status-sync {
   display: flex;
   flex: none;
   gap: var(--space-1);
   margin-left: auto;
-  color: var(--color-text-muted);
+}
+
+.git-status-sync-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 var(--space-2) 0 var(--space-1);
+  border-radius: 999px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.git-status-sync-chip .icon {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3;
+}
+
+.git-status-ahead {
+  background: var(--color-warning);
+  color: var(--color-warning-text);
+}
+
+.git-status-behind {
+  background: var(--color-focus);
+  /* The surface colour contrasts with the blue in both light and dark themes. */
+  color: var(--color-surface);
 }
 
 .git-status-summary {
