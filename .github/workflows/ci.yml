@@ -25,7 +25,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Install the SDK into a folder of its own rather than using the one on the runner image, which has other
+      # workloads (Android, iOS and so on) installed through Visual Studio. Installing a workload there installs those
+      # too, which takes minutes.
       - uses: actions/setup-dotnet@v5
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}\dotnet
         with:
           global-json-file: global.json
 
@@ -37,8 +42,7 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', '**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
 
-      # The runner image already has other workloads (Android, iOS and so on). Without --skip-manifest-update, the
-      # install moves to the newest workload set and updates all of them too, which takes minutes.
+      # Use the workload versions that come with the SDK, rather than spending time looking for newer ones.
       - name: Install MAUI workload
         run: dotnet workload install maui-windows --skip-manifest-update
 
