@@ -14,6 +14,7 @@ internal static unsafe partial class WindowsNative
     public const uint CreateUnicodeEnvironment = 0x00000400;
     public const int StartFUseStdHandles = 0x00000100;
     public const nint ProcThreadAttributePseudoConsole = 0x00020016;
+    public const nint ProcThreadAttributeJobList = 0x0002000D;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct Coord
@@ -130,6 +131,13 @@ internal static unsafe partial class WindowsNative
     [LibraryImport(Kernel32, EntryPoint = "TerminateProcess", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool TerminateProcess(SafeProcessHandle process, uint exitCode);
+
+    [LibraryImport(Kernel32, EntryPoint = "CreateJobObjectW", SetLastError = true)]
+    public static partial JobObjectHandle CreateJobObject(nint jobAttributes, nint name);
+
+    [LibraryImport(Kernel32, EntryPoint = "TerminateJobObject", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool TerminateJobObject(JobObjectHandle job, uint exitCode);
 
     [LibraryImport(Kernel32, EntryPoint = "CloseHandle", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

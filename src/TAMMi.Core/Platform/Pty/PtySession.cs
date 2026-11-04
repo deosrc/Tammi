@@ -19,8 +19,15 @@ internal abstract class PtySession : IPtySession
     // With full 16 KiB chunks, up to 1 MiB of output waits to be read.
     private const int OutputQueueLength = 64;
 
-    private static readonly TimeSpan HangUpTimeout = TimeSpan.FromSeconds(3);
-    private static readonly TimeSpan KillTimeout = TimeSpan.FromSeconds(2);
+    /// <summary>
+    /// How long a hung-up process has to exit before it's killed.
+    /// </summary>
+    protected static readonly TimeSpan HangUpTimeout = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// How long a killed process has to exit before it's given up on.
+    /// </summary>
+    protected static readonly TimeSpan KillTimeout = TimeSpan.FromSeconds(2);
 
     private readonly Channel<byte[]> _output = Channel.CreateBounded<byte[]>(
         new BoundedChannelOptions(OutputQueueLength)
@@ -287,7 +294,11 @@ internal abstract class PtySession : IPtySession
         }
     }
 
-    private static async Task<bool> WaitAsync(Task task, TimeSpan timeout)
+    /// <summary>
+    /// Waits for a task, but no longer than the timeout.
+    /// </summary>
+    /// <returns><c>true</c> if the task completed in time.</returns>
+    protected static async Task<bool> WaitAsync(Task task, TimeSpan timeout)
     {
         try
         {

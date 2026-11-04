@@ -595,7 +595,9 @@ are left to other tools for now.
   - A `git` install is therefore required.
 - The embedded terminal (used for both the Terminal and Agents) needs a PTY behind the platform service
   interfaces, with xterm.js as the renderer:
-  - **Windows:** ConPTY (Windows 10 1809 or later).
+  - **Windows:** ConPTY (Windows 10 1809 or later). The process runs in a Job Object, so closing the terminal can
+    end every process it started (e.g. a long-running command), not just the shell. Closing the pseudoconsole hangs
+    them up, and the job is ended if they haven't exited a few seconds later.
   - **Linux:** a `/dev/ptmx` pseudoterminal. The process is started with `posix_spawn` rather than `forkpty`,
     because a .NET process can't safely run code in a forked child before `exec`. `posix_spawn` starts the new
     session and opens the terminal without any code in the child. This needs glibc 2.29 or later.

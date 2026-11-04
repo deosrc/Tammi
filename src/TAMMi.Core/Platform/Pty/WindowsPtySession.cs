@@ -17,6 +17,7 @@ internal sealed class WindowsPtySession : PtySession
     private readonly FileStream _input;
     private readonly FileStream _output;
     private readonly SafeProcessHandle _process;
+    private readonly JobObjectHandle _job;
     private readonly ProcessWaitHandle _processWaitHandle;
     private readonly RegisteredWaitHandle _exitRegistration;
     private readonly Lock _pseudoConsoleLock = new();
@@ -28,6 +29,7 @@ internal sealed class WindowsPtySession : PtySession
         SafeFileHandle input,
         SafeFileHandle output,
         SafeProcessHandle process,
+        JobObjectHandle job,
         int processId,
         PtySize size)
         : base(processId, size)
@@ -36,6 +38,7 @@ internal sealed class WindowsPtySession : PtySession
         _input = new FileStream(input, FileAccess.Write, bufferSize: 0);
         _output = new FileStream(output, FileAccess.Read, bufferSize: 0);
         _process = process;
+        _job = job;
         _processWaitHandle = new ProcessWaitHandle(process);
         _exitRegistration = ThreadPool.RegisterWaitForSingleObject(
             _processWaitHandle,
@@ -60,9 +63,18 @@ internal sealed class WindowsPtySession : PtySession
         SafeFileHandle? outputWrite = null;
         nint pseudoConsole = 0;
         nint attributeList = 0;
+        JobObjectHandle? job = null;
         var started = false;
         try
         {
+            // The process and everything it starts go in a job, so they can all be ended when the session closes,
+            // even once the process itself has exited. Closing the job's handle doesn't end them.
+            job = CreateJobObject(0, 0);
+            if (job.IsInvalid)
+            {
+                throw new Win32Exception();
+            }
+
             if (!CreatePipe(out inputRead, out inputWrite, 0, 0) || !CreatePipe(out outputRead, out outputWrite, 0, 0))
             {
                 throw new Win32Exception();
@@ -73,14 +85,25 @@ internal sealed class WindowsPtySession : PtySession
 
             // The first call only asks how big the list must be, so it's expected to fail.
             nint attributeListSize = 0;
-            InitializeProcThreadAttributeList(0, 1, 0, ref attributeListSize);
+            InitializeProcThreadAttributeList(0, 2, 0, ref attributeListSize);
             attributeList = Marshal.AllocHGlobal(attributeListSize);
-            if (!InitializeProcThreadAttributeList(attributeList, 1, 0, ref attributeListSize)
+
+            // The job list is read when the process is created, so it must stay put until then.
+            var jobHandle = job.DangerousGetHandle();
+            if (!InitializeProcThreadAttributeList(attributeList, 2, 0, ref attributeListSize)
                 || !UpdateProcThreadAttribute(
                     attributeList,
                     0,
                     ProcThreadAttributePseudoConsole,
                     pseudoConsole,
+                    sizeof(nint),
+                    0,
+                    0)
+                || !UpdateProcThreadAttribute(
+                    attributeList,
+                    0,
+                    ProcThreadAttributeJobList,
+                    (nint)(&jobHandle),
                     sizeof(nint),
                     0,
                     0))
@@ -131,6 +154,7 @@ internal sealed class WindowsPtySession : PtySession
                 inputWrite,
                 outputRead,
                 new SafeProcessHandle(processInformation.Process, ownsHandle: true),
+                job,
                 processInformation.ProcessId,
                 startInfo.Size);
             started = true;
@@ -157,6 +181,7 @@ internal sealed class WindowsPtySession : PtySession
 
                 inputWrite?.Dispose();
                 outputRead?.Dispose();
+                job?.Dispose();
             }
         }
     }
@@ -194,20 +219,44 @@ internal sealed class WindowsPtySession : PtySession
         // Closing the pseudoconsole ends the processes attached to it, as closing a console window does. Older
         // versions of Windows wait until its output has been read, so close it off the caller's thread while the
         // output thread keeps reading.
-        await Task.Run(ClosePseudoConsoleOnce).ConfigureAwait(false);
-        await OutputEnded.ConfigureAwait(false);
+        var closed = Task.Run(ClosePseudoConsoleOnce);
+
+        // The output only ends once every process attached to the pseudoconsole has exited, which includes any the
+        // shell started (e.g. a long-running command). End them all if they don't exit in time.
+        if (!await WaitAsync(OutputEnded, HangUpTimeout).ConfigureAwait(false))
+        {
+            Kill();
+            if (!await WaitAsync(OutputEnded, KillTimeout).ConfigureAwait(false))
+            {
+                // Something outside the job is keeping the pseudoconsole open. Give up on it rather than hang: the
+                // output thread still owns its stream, so it's left for the finalizer.
+                await InputWritten.ConfigureAwait(false);
+                await _input.DisposeAsync().ConfigureAwait(false);
+                return;
+            }
+        }
+
+        await closed.ConfigureAwait(false);
         await InputWritten.ConfigureAwait(false);
         await _input.DisposeAsync().ConfigureAwait(false);
         await _output.DisposeAsync().ConfigureAwait(false);
     }
 
-    protected override void Kill() => TerminateProcess(_process, 1);
+    protected override void Kill()
+    {
+        // Ends the process and everything it started. If the job can't be ended, at least end the process.
+        if (!TerminateJobObject(_job, 1))
+        {
+            TerminateProcess(_process, 1);
+        }
+    }
 
     protected override void ReleaseProcess()
     {
         _exitRegistration.Unregister(null);
         _processWaitHandle.Dispose();
         _process.Dispose();
+        _job.Dispose();
     }
 
     private static Coord ToCoord(PtySize size) => new() { X = (short)size.Columns, Y = (short)size.Rows };
