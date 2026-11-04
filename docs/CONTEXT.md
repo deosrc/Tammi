@@ -132,16 +132,25 @@ own branch. It is created automatically when the workspace is created:
 **Submodules.** When a Workspace Worktree is created, TAMMi checks out its submodules automatically
 (`git submodule update --init --recursive`).
 
-**Deleting a workspace.**
-1. If any worktree has uncommitted changes or unpushed commits (including inside its submodules), TAMMi lists them
-   and asks the user to confirm. A worktree whose Local Repository is missing can't be checked, so it needs
-   confirming too.
-2. TAMMi removes each Workspace Worktree (`git worktree remove`) and then the Workspace Folder.
-3. TAMMi offers to delete the workspace branches from the Local Repositories. Branches that are merged
-   or pushed are selected for deletion by default. Others are kept unless the user selects them.
+**Deleting a workspace.** The Workspace View and the details tab of a workspace that can't be read both offer it.
+1. TAMMi checks what would be lost and always asks the user to confirm. It lists the worktrees with uncommitted changes
+   or unpushed commits (including inside their submodules), and anything else in the Workspace Folder that isn't a
+   Workspace Worktree or `.tammi/` (e.g. files an agent wrote, or a full clone), since it's deleted with the folder. A
+   worktree whose Local Repository is missing can't be checked, so it's listed too.
+2. TAMMi removes each Workspace Worktree (`git worktree remove`), then the Workspace Folder, then the workspace's index
+   entry. If a worktree has new changes, or something new appears in the folder, since the user confirmed, it stops
+   and the user checks again. Links in the folder are deleted without what they point at. `.tammi/` is deleted last,
+   so a folder that's only partly deleted is still the workspace and can be deleted again.
+3. TAMMi offers to delete the workspace branches from the Local Repositories. Branches that are merged or pushed are
+   selected for deletion by default. Others are kept unless the user selects them. Other branches are never offered.
    - **Merged** means the branch's tip is reachable from its base branch (e.g. `origin/main`). Squash and rebase
      merges aren't detected.
    - **Pushed** means every commit on the branch is on a remote-tracking branch, as for unpushed commits on Home.
+- **A workspace whose metadata can't be read** is deleted the same way. Worktrees are always created directly in the
+  Workspace Folder, so TAMMi finds them by looking at its folders. Their checked-out branches are offered, but not
+  selected, because without the metadata TAMMi can't tell they're the workspace's own.
+- **A workspace whose folder is missing, or now holds a different workspace,** only has its index entry removed. The
+  folder isn't this workspace's to delete.
 
 ## Main Screens
 

@@ -545,7 +545,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
             if (string.IsNullOrWhiteSpace(repository.LocalRepositoryPath)
                 || !Path.IsPathFullyQualified(repository.LocalRepositoryPath))
             {
-                return $"The Local Repository path '{repository.LocalRepositoryPath}' of '{repository.FolderName}' "
+                return $"The local repository path '{repository.LocalRepositoryPath}' of '{repository.FolderName}' "
                     + "isn't a full path.";
             }
 
