@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TAMMi.Core\TAMMi.Core.csproj" />
+    <ProjectReference Include="..\Deosrc.Tammi.Core\TAMMi.Core.csproj" />
   </ItemGroup>
 
 </Project>

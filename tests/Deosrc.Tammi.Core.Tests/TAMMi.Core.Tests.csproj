@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\TAMMi.Core\TAMMi.Core.csproj" />
+    <ProjectReference Include="..\..\src\Deosrc.Tammi.Core\TAMMi.Core.csproj" />
   </ItemGroup>
 
 </Project>
