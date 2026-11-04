@@ -135,7 +135,7 @@ public sealed class JiraIntegration : ITaskIntegration
         }
 
         string phrase = string.Join(' ', words.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
-        return $"text ~ \"{phrase}\" ORDER BY updated DESC";
+        return $"text ~ \"{phrase}\" AND statusCategory != \"Done\" ORDER BY updated DESC";
     }
 
     private async Task<IReadOnlyList<TaskInfo>> SearchJqlAsync(string jql, CancellationToken cancellationToken)
