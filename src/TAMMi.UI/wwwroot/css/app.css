@@ -38,6 +38,7 @@
   --color-warning-text: #ffffff;
   --color-error-bg: #ffebe9;
   --color-jira: #0052cc;
+  --color-claude: #d97757;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1759,6 +1760,28 @@ label.task-choice {
 .menu-item:hover,
 .menu-item:focus-visible {
   background: var(--color-surface-hover);
+}
+
+/* An agent's logo, e.g. Claude's on the New menu. It's shown in its brand colour. */
+.agent-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.agent-icon-claude {
+  fill: var(--color-claude);
+}
+
+/* An icon at the start of a menu item, e.g. what the New menu's items start. It keeps its size beside long names. */
+.menu-item > .icon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.menu-item:hover > .icon,
+.menu-item:focus-visible > .icon {
+  color: var(--color-text);
 }
 
 /* A menu item that deletes something. */
