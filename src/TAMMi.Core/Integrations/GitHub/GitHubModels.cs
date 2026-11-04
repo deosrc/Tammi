@@ -33,7 +33,8 @@ internal sealed record GitHubRepository(
     GitHubAccount Owner,
     string HtmlUrl,
     string CloneUrl,
-    string SshUrl);
+    string SshUrl,
+    bool Private = false);
 
 /// <param name="Login">The user or organisation name.</param>
 /// <param name="Type"><c>User</c> or <c>Organization</c>.</param>

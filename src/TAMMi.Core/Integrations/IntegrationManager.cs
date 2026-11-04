@@ -102,9 +102,7 @@ public sealed class IntegrationManager
         {
             status = await CredentialsOf(integration).GetAsync(cancellationToken).ConfigureAwait(false) is null
                 ? new IntegrationStatus(IntegrationConnectionState.NotAuthenticated)
-                : new IntegrationStatus(
-                    IntegrationConnectionState.Connected,
-                    await GetAccountAsync(integration, cancellationToken).ConfigureAwait(false));
+                : await GetConnectedStatusAsync(integration, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -233,8 +231,8 @@ public sealed class IntegrationManager
                 throw new ArgumentException($"There is no integration with ID '{id}'.", nameof(id));
             }
 
-            string account = await GetAccountAsync(create(new CandidateCredentialStore(secret)), cancellationToken)
-                .ConfigureAwait(false);
+            IntegrationStatus connected = await GetConnectedStatusAsync(
+                create(new CandidateCredentialStore(secret)), cancellationToken).ConfigureAwait(false);
 
             await new IntegrationCredentials(_credentialStore, id).SaveAsync(secret, cancellationToken)
                 .ConfigureAwait(false);
@@ -256,7 +254,7 @@ public sealed class IntegrationManager
                 Registry.Add(create(_credentialStore));
             }
 
-            SetStatus(id, new IntegrationStatus(IntegrationConnectionState.Connected, account));
+            SetStatus(id, connected);
         }
         finally
         {
@@ -341,8 +339,8 @@ public sealed class IntegrationManager
                 throw new IntegrationException($"{name} is already connected.");
             }
 
-            string account = await GetAccountAsync(create(new CandidateCredentialStore(token)), cancellationToken)
-                .ConfigureAwait(false);
+            IntegrationStatus connected = await GetConnectedStatusAsync(
+                create(new CandidateCredentialStore(token)), cancellationToken).ConfigureAwait(false);
 
             var credentials = new IntegrationCredentials(_credentialStore, id);
             await credentials.SaveAsync(token, cancellationToken).ConfigureAwait(false);
@@ -371,7 +369,7 @@ public sealed class IntegrationManager
             Registry.Add(integration);
             lock (_statusLock)
             {
-                _statuses[id] = (++_lastCheck, new IntegrationStatus(IntegrationConnectionState.Connected, account));
+                _statuses[id] = (++_lastCheck, connected);
             }
         }
         finally
@@ -395,6 +393,32 @@ public sealed class IntegrationManager
         JiraIntegration jira => jira.Credentials,
         _ => throw new NotSupportedException($"Integration '{integration.Id}' isn't one Settings manages."),
     };
+
+    /// <summary>
+    /// Checks that the service accepts the integration's credentials, and whether they can reach everything TAMMi
+    /// needs.
+    /// </summary>
+    /// <returns>A <see cref="IntegrationConnectionState.Connected"/> status, with any warning about the credentials.</returns>
+    private static async Task<IntegrationStatus> GetConnectedStatusAsync(
+        IIntegration integration,
+        CancellationToken cancellationToken)
+    {
+        string account = await GetAccountAsync(integration, cancellationToken).ConfigureAwait(false);
+        string? warning = null;
+        if (integration is GitHubIntegration github)
+        {
+            try
+            {
+                warning = await github.CheckTokenAccessAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (IntegrationException ex) when (ex is not IntegrationAuthenticationException)
+            {
+                // The credentials work, which is what the check is for. The warning is only a hint.
+            }
+        }
+
+        return new IntegrationStatus(IntegrationConnectionState.Connected, account) { Warning = warning };
+    }
 
     /// <summary>
     /// Asks the service who the credentials belong to, which checks that it accepts them.

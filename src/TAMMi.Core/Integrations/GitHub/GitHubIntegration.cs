@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Net;
 using TAMMi.Core.Credentials;
 
 namespace TAMMi.Core.Integrations.GitHub;
@@ -88,6 +89,68 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
     public async Task<GitHubUser> GetAuthenticatedUserAsync(CancellationToken cancellationToken = default) =>
         await _api.GetAsync<GitHubUser>("user", cancellationToken).ConfigureAwait(false)
             ?? throw new IntegrationException("GitHub didn't return the authenticated user.");
+
+    /// <summary>
+    /// What fine-grained personal access tokens start with. Classic tokens start with <c>ghp_</c>.
+    /// </summary>
+    public const string FineGrainedTokenPrefix = "github_pat_";
+
+    /// <summary>
+    /// The most empty private repositories <see cref="CheckTokenAccessAsync"/> looks past to find one with content.
+    /// </summary>
+    private const int MaxEmptyRepositoriesChecked = 5;
+
+    /// <summary>
+    /// Checks that a fine-grained token can read the contents of the private repositories it reaches. Without that,
+    /// GitHub's issue search leaves out their issues, though everything else works.
+    /// </summary>
+    /// <remarks>
+    /// GitHub has no way to list a fine-grained token's permissions, so this reads the latest commit of one private
+    /// repository the token reaches, which needs read access to contents. Repositories the token wasn't given at all
+    /// can't be detected. Classic tokens aren't checked.
+    /// </remarks>
+    /// <returns>A warning to show the user, or <see langword="null"/> if there's nothing to warn about.</returns>
+    /// <exception cref="IntegrationAuthenticationException">The token is missing or was rejected.</exception>
+    /// <exception cref="IntegrationException">GitHub couldn't be reached or returned an error.</exception>
+    public async Task<string?> CheckTokenAccessAsync(CancellationToken cancellationToken = default)
+    {
+        string token = await Credentials.GetRequiredAsync(cancellationToken).ConfigureAwait(false);
+        if (!token.StartsWith(FineGrainedTokenPrefix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        int empty = 0;
+        string path = $"user/repos?visibility=private&per_page={MaxEmptyRepositoriesChecked + 1}";
+        await foreach (GitHubRepository repository in _api
+            .GetPagesAsync<IReadOnlyList<GitHubRepository>, GitHubRepository>(path, page => page, cancellationToken)
+            .ConfigureAwait(false))
+        {
+            if (!repository.Private)
+            {
+                continue;
+            }
+
+            HttpStatusCode status = await _api.GetStatusAsync(
+                $"repos/{Uri.EscapeDataString(repository.Owner.Login)}/{Uri.EscapeDataString(repository.Name)}"
+                + "/commits?per_page=1",
+                cancellationToken).ConfigureAwait(false);
+            switch (status)
+            {
+                case HttpStatusCode.Conflict when ++empty < MaxEmptyRepositoriesChecked:
+                    // An empty repository has no commits to read, so it can't tell. Try another.
+                    continue;
+                case HttpStatusCode.Forbidden or HttpStatusCode.NotFound:
+                    return $"This token can't read the contents of private repositories such as "
+                        + $"{repository.Owner.Login}/{repository.Name}, so their issues won't appear when you search. "
+                        + "Give the token read access to Contents, then authenticate again.";
+                default:
+                    return null;
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Lists the user's open issues (<see cref="AssignedSearch"/>), most recently updated first. GitHub has no

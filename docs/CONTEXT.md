@@ -404,6 +404,10 @@ are left to other tools for now.
     read-only Issues, Contents and Metadata permissions filled in. GitHub can't fill in the owner or repository access,
     so the user chooses them. An Enterprise Server's link opens its token settings, because servers before 3.20 can't
     fill in the details.
+  - GitHub has no way to list a fine-grained token's permissions, so when a fine-grained token is saved or tested,
+    TAMMi reads the latest commit of one private repository the token reaches. If that's refused, the integration is
+    still connected but shows a warning that private issues won't appear in searches until the token can read
+    Contents. Repositories the token wasn't given at all can't be detected, and classic tokens aren't checked.
 - **Task keys** are GitHub's issue references, `owner/repo#number`. Pull requests aren't tasks.
 - **Finding tasks:**
   - **Assigned:** the user's open issues (`is:open assignee:@me archived:false`). GitHub has no in-progress state, so

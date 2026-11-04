@@ -274,6 +274,78 @@ public class GitHubIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task CheckTokenAccessAsync_DoesntCheckClassicTokens()
+    {
+        GitHubIntegration github = Create();
+        await github.Credentials.SaveAsync("ghp_classic", CancellationToken);
+
+        Assert.Null(await github.CheckTokenAccessAsync(CancellationToken));
+        Assert.Empty(_api.Requests);
+    }
+
+    [Fact]
+    public async Task CheckTokenAccessAsync_IsQuiet_WhenTheTokenCanReadAPrivateRepositorysContents()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        RespondWithPrivateRepositories(("deosrc", "secret", true));
+        _api.Respond(CommitsPath("deosrc", "secret"), "[]");
+
+        Assert.Null(await github.CheckTokenAccessAsync(CancellationToken));
+        Assert.Equal("6", _api.Requests[0].Query("per_page"));
+        Assert.Equal("private", _api.Requests[0].Query("visibility"));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.NotFound)]
+    public async Task CheckTokenAccessAsync_Warns_WhenTheTokenCantReadContents(HttpStatusCode status)
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        RespondWithPrivateRepositories(("deosrc", "secret", true));
+        _api.Respond(CommitsPath("deosrc", "secret"),
+            """{"message":"Resource not accessible by personal access token","status":"403"}""", status);
+
+        string? warning = await github.CheckTokenAccessAsync(CancellationToken);
+
+        Assert.NotNull(warning);
+        Assert.Contains("deosrc/secret", warning);
+        Assert.Contains("Contents", warning);
+    }
+
+    [Fact]
+    public async Task CheckTokenAccessAsync_LooksPastEmptyRepositories()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        RespondWithPrivateRepositories(("deosrc", "empty", true), ("deosrc", "secret", true));
+        _api.Respond(CommitsPath("deosrc", "empty"), """{"message":"Git Repository is empty."}""",
+                HttpStatusCode.Conflict)
+            .Respond(CommitsPath("deosrc", "secret"), "{}", HttpStatusCode.Forbidden);
+
+        Assert.NotNull(await github.CheckTokenAccessAsync(CancellationToken));
+    }
+
+    [Fact]
+    public async Task CheckTokenAccessAsync_SkipsPublicRepositories_AndIsQuietWithoutPrivateOnes()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        RespondWithPrivateRepositories(("deosrc", "open", false));
+
+        Assert.Null(await github.CheckTokenAccessAsync(CancellationToken));
+        Assert.Single(_api.Requests);
+    }
+
+    [Fact]
+    public async Task CheckTokenAccessAsync_ThrowsAuthenticationException_WhenTheTokenIsRejected()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        RespondWithPrivateRepositories(("deosrc", "secret", true));
+        _api.Respond(CommitsPath("deosrc", "secret"), """{"message":"Bad credentials"}""", HttpStatusCode.Unauthorized);
+
+        await Assert.ThrowsAsync<IntegrationAuthenticationException>(
+            () => github.CheckTokenAccessAsync(CancellationToken));
+    }
+
+    [Fact]
     public async Task GetTaskAsync_ReadsTheIssue()
     {
         GitHubIntegration github = await CreateAuthenticatedAsync();
@@ -501,6 +573,23 @@ public class GitHubIntegrationTests : IDisposable
         })]);
         _api.Respond("user/repos?per_page=100", page.ToJsonString());
     }
+
+    private void RespondWithPrivateRepositories(params (string Owner, string Name, bool Private)[] repositories)
+    {
+        var page = new JsonArray([.. repositories.Select(repository => (JsonNode)new JsonObject
+        {
+            ["name"] = repository.Name,
+            ["owner"] = new JsonObject { ["login"] = repository.Owner, ["type"] = "User" },
+            ["html_url"] = $"https://github.com/{repository.Owner}/{repository.Name}",
+            ["clone_url"] = $"https://github.com/{repository.Owner}/{repository.Name}.git",
+            ["ssh_url"] = $"git@github.com:{repository.Owner}/{repository.Name}.git",
+            ["private"] = repository.Private,
+        })]);
+        _api.Respond("user/repos?visibility=private&per_page=6", page.ToJsonString());
+    }
+
+    private static string CommitsPath(string owner, string repository) =>
+        $"repos/{owner}/{repository}/commits?per_page=1";
 
     private static string SearchPath(string query, int perPage = 100, string sort = "") =>
         $"search/issues?q={Uri.EscapeDataString(query)}{sort}&per_page={perPage}";

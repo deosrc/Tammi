@@ -82,6 +82,37 @@ public sealed class IntegrationManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task AddGitHubAsync_WithAFineGrainedTokenThatCantReadContents_ConnectsWithAWarning()
+    {
+        var api = new FakeGitHubApi()
+            .Respond("user", FakeGitHubApi.Recorded("user.json"))
+            .Respond("user/repos?visibility=private&per_page=6",
+                """[{"name":"secret","owner":{"login":"deosrc"},"html_url":"","clone_url":"","ssh_url":"","private":true}]""")
+            .Respond("repos/deosrc/secret/commits?per_page=1", "{}", HttpStatusCode.Forbidden);
+        IntegrationManager manager = CreateManager(api, CreateSettingsStore());
+
+        await manager.AddGitHubAsync(GitHubCom, "github_pat_test", CancellationToken);
+
+        IntegrationStatus status = manager.GetStatus("github");
+        Assert.Equal(IntegrationConnectionState.Connected, status.State);
+        Assert.Contains("deosrc/secret", status.Warning);
+    }
+
+    [Fact]
+    public async Task CheckAsync_StaysConnected_WhenTheTokenAccessCheckFails()
+    {
+        var api = new FakeGitHubApi()
+            .Respond("user", FakeGitHubApi.Recorded("user.json"))
+            .Respond("user/repos?visibility=private&per_page=6", "{}", HttpStatusCode.InternalServerError);
+        await _credentials.SaveAsync(GitHubKey, "github_pat_test", CancellationToken);
+        IntegrationManager manager = CreateManager(api, await WithGitHubAndJira());
+
+        IntegrationStatus status = await manager.CheckAsync("github", CancellationToken);
+
+        Assert.Equal(new IntegrationStatus(IntegrationConnectionState.Connected, "deosrc"), status);
+    }
+
+    [Fact]
     public async Task AddGitHubAsync_WithARejectedToken_SavesNothing()
     {
         var api = new FakeGitHubApi()
