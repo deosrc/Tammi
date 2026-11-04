@@ -31,11 +31,6 @@ public static class AppRoutes
     public const string ThirdPartySoftware = About + "/third-party";
 
     /// <summary>
-    /// A developer page for starting and stopping agents.
-    /// </summary>
-    public const string DevAgent = "dev/agent";
-
-    /// <summary>
     /// The Create Workspace flow. It isn't under <c>workspaces/</c>, so it can't clash with a workspace's tab.
     /// </summary>
     public const string NewWorkspace = "new-workspace";
