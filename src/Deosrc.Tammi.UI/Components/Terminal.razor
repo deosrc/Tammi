@@ -1,0 +1,153 @@
+@using System.Text
+@using Deosrc.Tammi.Core.Platform
+@using Deosrc.Tammi.Core.Terminals
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@*
+    An embedded terminal: shows a pseudoterminal session with xterm.js and sends it the user's input. The terminal
+    fills this element, and the session's size follows it. It starts by showing the session's kept output, so a
+    session shown again after its terminal was closed picks up where it was. The component doesn't own the session:
+    whoever started it disposes it. To show a different session, give the component a new @key.
+*@
+<div @ref="_element" class="terminal @Class"></div>
+
+@code {
+    private const int OutputBufferSize = 64 * 1024;
+
+    private readonly CancellationTokenSource _disposed = new();
+    private ElementReference _element;
+    private DotNetObjectReference<Terminal>? _self;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _terminal;
+    private TerminalSession? _attached;
+
+    /// <summary>
+    /// The session to show.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public TerminalSession Session { get; set; } = null!;
+
+    /// <summary>
+    /// CSS classes for the terminal's element, which should be given a size.
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>
+    /// Called with the exit code once the process has exited and all its output is shown.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnExited { get; set; }
+
+    /// <summary>
+    /// Moves the keyboard focus to the terminal.
+    /// </summary>
+    public async Task FocusAsync()
+    {
+        if (_terminal is not null)
+        {
+            await _terminal.InvokeVoidAsync("focus");
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_attached is not null && !ReferenceEquals(_attached, Session))
+        {
+            throw new InvalidOperationException("A Terminal shows one session. Give it a new @key to show another.");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _attached = Session;
+        var reader = Session.OpenReader();
+        _self = DotNetObjectReference.Create(this);
+        _module = await JS.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./_content/Deosrc.Tammi.UI/Components/Terminal.razor.js");
+
+        // xterm.js adjusts for how ConPTY redraws the screen.
+        var options = new { WindowsBuildNumber = OperatingSystem.IsWindows() ? Environment.OSVersion.Version.Build : 0 };
+        _terminal = await _module.InvokeAsync<IJSObjectReference>("create", _element, _self, options);
+
+        // The terminal has been fitted to the element, so the session can start at the right size.
+        var size = await _terminal.InvokeAsync<TerminalSize>("getSize");
+        Session.Pty.Resize(new PtySize(size.Columns, size.Rows));
+        await _terminal.InvokeVoidAsync("focus");
+
+        _ = ShowOutputAsync(reader, _disposed.Token);
+    }
+
+    [JSInvokable]
+    public void OnInput(string data) => Session.Pty.Write(Encoding.UTF8.GetBytes(data));
+
+    /// <summary>
+    /// Input that isn't text, e.g. some mouse reports. Each character is one byte.
+    /// </summary>
+    [JSInvokable]
+    public void OnBinaryInput(string data) => Session.Pty.Write(Encoding.Latin1.GetBytes(data));
+
+    [JSInvokable]
+    public void OnResize(int columns, int rows) => Session.Pty.Resize(new PtySize(columns, rows));
+
+    public async ValueTask DisposeAsync()
+    {
+        await _disposed.CancelAsync();
+        try
+        {
+            if (_terminal is not null)
+            {
+                await _terminal.InvokeVoidAsync("dispose");
+                await _terminal.DisposeAsync();
+            }
+
+            if (_module is not null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The web view has gone, and the terminal with it.
+        }
+
+        _self?.Dispose();
+        _disposed.Dispose();
+    }
+
+    private async Task ShowOutputAsync(TerminalOutputReader reader, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[OutputBufferSize];
+        try
+        {
+            // Each write waits until xterm.js has processed it, so output doesn't pile up in the web view. A terminal
+            // that falls far behind skips to the latest output the session has kept.
+            int count;
+            while ((count = await reader.ReadAsync(buffer, cancellationToken)) > 0)
+            {
+                await _terminal!.InvokeVoidAsync("write", cancellationToken, buffer.AsSpan(0, count).ToArray());
+            }
+
+            var exitCode = await Session.Pty.Exited.WaitAsync(cancellationToken);
+            await _terminal!.InvokeVoidAsync(
+                "write",
+                cancellationToken,
+                $"\r\n\x1b[90m[Process exited with code {exitCode}]\x1b[0m\r\n");
+            await OnExited.InvokeAsync(exitCode);
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or JSDisconnectedException
+            || cancellationToken.IsCancellationRequested)
+        {
+            // The component has been disposed.
+        }
+    }
+
+    private sealed record TerminalSize(int Columns, int Rows);
+}

@@ -1,0 +1,27 @@
+@using Deosrc.Tammi.Core.Git
+@inject IGitCli GitCli
+
+@* The version of the git CLI Tammi runs, or a warning when git can't be found. *@
+@if (_checking)
+{
+    <span class="placeholder">Checking…</span>
+}
+else if (_installation is null)
+{
+    <span class="error">Not found. Tammi needs git to be installed.</span>
+}
+else
+{
+    <span>@_installation.VersionText</span>
+}
+
+@code {
+    private bool _checking = true;
+    private GitInstallation? _installation;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _installation = await GitCli.DetectAsync();
+        _checking = false;
+    }
+}

@@ -1,0 +1,97 @@
+@using Deosrc.Tammi.Core.Agents
+@using Deosrc.Tammi.Core.Platform
+@implements IDisposable
+@inject SupportedAgentChecker Checker
+@inject IProcessLauncher ProcessLauncher
+
+@* A Supported Agent on the Agents settings page: whether its CLI is installed and runs, and why not if it doesn't. *@
+<li class="agent-definition">
+    <div class="agent-definition-header">
+        <AgentIcon Definition="Agent.Definition" />
+        <span class="agent-definition-name">@Agent.Name</span>
+        @if (_status is null)
+        {
+            <span class="badge">Checking…</span>
+        }
+        else if (_status.IsAvailable)
+        {
+            <span class="badge badge-success">✓ Ready</span>
+        }
+        else
+        {
+            <span class="badge badge-error">✗ Not available</span>
+        }
+        <button type="button" class="button button-secondary" disabled="@(_status is null)" @onclick="CheckAsync">
+            Check again
+        </button>
+    </div>
+
+    <dl class="settings-values agent-status">
+        <dt>Command</dt>
+        <dd><code>@Agent.Definition.Command</code>@(_status?.ExecutablePath is { } path ? $" ({path})" : null)</dd>
+        @if (_status?.Version is { } version)
+        {
+            <dt>Version</dt>
+            <dd>@version</dd>
+        }
+    </dl>
+
+    @if (_status is { IsAvailable: false } status)
+    {
+        <p class="error" role="alert">@status.Problem</p>
+        <p>
+            <a href="@Agent.InstallUrl" @onclick="OpenInstallGuide" @onclick:preventDefault>
+                How to install @Agent.Name
+            </a>
+        </p>
+    }
+
+    @if (_openError is not null)
+    {
+        <p class="error">@_openError</p>
+    }
+</li>
+
+@code {
+    private readonly CancellationTokenSource _disposed = new();
+    private AgentToolStatus? _status;
+    private string? _openError;
+
+    [Parameter, EditorRequired]
+    public SupportedAgent Agent { get; set; } = null!;
+
+    protected override Task OnInitializedAsync() => CheckAsync();
+
+    private async Task CheckAsync()
+    {
+        _status = null;
+        try
+        {
+            _status = await Checker.CheckAsync(Agent, _disposed.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // The page was closed.
+        }
+    }
+
+    // Links must open in the user's browser: following them would navigate the app's own window away from Tammi.
+    private void OpenInstallGuide()
+    {
+        _openError = null;
+        try
+        {
+            ProcessLauncher.Open(Agent.InstallUrl);
+        }
+        catch (Exception ex)
+        {
+            _openError = $"Couldn't open {Agent.InstallUrl}: {ex.Message}";
+        }
+    }
+
+    public void Dispose()
+    {
+        _disposed.Cancel();
+        _disposed.Dispose();
+    }
+}

@@ -1,0 +1,73 @@
+@using Deosrc.Tammi.Core.Git
+@* The git status of a repository or submodule: what's checked out, what could be lost, and its submodules. *@
+
+<div class="git-status-head">
+    <span class="git-status-branch" title="@(Status.Branch is null ? "Detached HEAD" : "Branch")">
+        @GitStatusText.Head(Status)
+    </span>
+    @if (Status.Upstream is not null && (Status.AheadBy > 0 || Status.BehindBy > 0))
+    {
+        <span class="git-status-sync">
+            @if (Status.AheadBy is > 0 and var ahead)
+            {
+                <span class="git-status-sync-chip git-status-ahead"
+                      title="@GitStatusText.AheadBehindTitle(ahead, "ahead of", Status.Upstream)">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 19V5M5 12l7-7 7 7" />
+                    </svg>
+                    @ahead
+                </span>
+            }
+            @if (Status.BehindBy is > 0 and var behind)
+            {
+                <span class="git-status-sync-chip git-status-behind"
+                      title="@GitStatusText.AheadBehindTitle(behind, "behind", Status.Upstream)">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14M19 12l-7 7-7-7" />
+                    </svg>
+                    @behind
+                </span>
+            }
+        </span>
+    }
+</div>
+
+@if (GitStatusText.Summary(Status) is { } summary)
+{
+    <div class="git-status-summary">@summary</div>
+}
+
+@if (Status.Submodules.Count > 0)
+{
+    <ul class="git-status-submodules">
+        @foreach (var submodule in Status.Submodules)
+        {
+            <li class="git-status-submodule" @key="submodule.Path">
+                <div class="git-status-heading">
+                    <span class="git-status-name" title="@submodule.Name">@submodule.Path</span>
+                    @if (submodule.Status is { } inner && GitStatusText.NeedsAttention(inner))
+                    {
+                        <span class="git-status-badge">@(inner.IsChanged ? "Changed" : "Out of sync")</span>
+                    }
+                </div>
+                @if (submodule.CommitChange != SubmoduleCommitChange.None)
+                {
+                    <div class="git-status-summary">@GitStatusText.CommitChange(submodule.CommitChange)</div>
+                }
+                @if (submodule.Status is { } status)
+                {
+                    <GitStatusDetails Status="status" />
+                }
+                else
+                {
+                    <div class="placeholder">Not checked out</div>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public RepositoryStatus Status { get; set; } = null!;
+}

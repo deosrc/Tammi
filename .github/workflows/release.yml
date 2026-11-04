@@ -39,9 +39,9 @@ env:
   # its MAUI build checked for win-arm64).
   RELEASE_TARGETS: >-
     [
-      {"rid": "linux-x64",   "os": "ubuntu-latest",  "project": "src/TAMMi.Linux/TAMMi.Linux.csproj"},
-      {"rid": "linux-arm64", "os": "ubuntu-latest",  "project": "src/TAMMi.Linux/TAMMi.Linux.csproj"},
-      {"rid": "win-x64",     "os": "windows-latest", "project": "src/TAMMi.Windows/TAMMi.Windows.csproj"}
+      {"rid": "linux-x64",   "os": "ubuntu-latest",  "project": "src/Deosrc.Tammi.Linux/Deosrc.Tammi.Linux.csproj"},
+      {"rid": "linux-arm64", "os": "ubuntu-latest",  "project": "src/Deosrc.Tammi.Linux/Deosrc.Tammi.Linux.csproj"},
+      {"rid": "win-x64",     "os": "windows-latest", "project": "src/Deosrc.Tammi.Windows/Deosrc.Tammi.Windows.csproj"}
     ]
 
 jobs:

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Third-party license texts, shown on the About page's third-party software list. -->
+    <EmbeddedResource Include="Licenses\*.txt" LogicalName="Deosrc.Tammi.UI.Licenses.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Deosrc.Tammi.Core\Deosrc.Tammi.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -32,4 +32,4 @@
 *.snk    binary
 
 # Third-party files, kept as published.
-src/TAMMi.UI/wwwroot/lib/** linguist-vendored -diff
+src/Deosrc.Tammi.UI/wwwroot/lib/** linguist-vendored -diff

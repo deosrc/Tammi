@@ -1,0 +1,14 @@
+@using Deosrc.Tammi.Core.Git
+@inject IGitRepositoryReader GitRepositoryReader
+
+@* The version of libgit2, which Tammi uses (through LibGit2Sharp) for in-process git reads. *@
+<span>
+    @(_version.LibGit2Version ?? $"commit {_version.LibGit2Commit}")
+    <span class="placeholder">(LibGit2Sharp @_version.LibGit2SharpVersion)</span>
+</span>
+
+@code {
+    private GitLibraryVersion _version = null!;
+
+    protected override void OnInitialized() => _version = GitRepositoryReader.LibraryVersion;
+}

@@ -48,13 +48,13 @@ jobs:
 
       # The Linux host is built by the Linux job, so the solution filter leaves it out.
       - name: Restore
-        run: dotnet restore TAMMi.Windows.slnf
+        run: dotnet restore Deosrc.Tammi.Windows.slnf
 
       - name: Build
-        run: dotnet build TAMMi.Windows.slnf --no-restore --configuration ${{ env.CONFIGURATION }}
+        run: dotnet build Deosrc.Tammi.Windows.slnf --no-restore --configuration ${{ env.CONFIGURATION }}
 
       - name: Test
-        run: dotnet test --project tests/TAMMi.Core.Tests --no-build --configuration ${{ env.CONFIGURATION }}
+        run: dotnet test --project tests/Deosrc.Tammi.Core.Tests --no-build --configuration ${{ env.CONFIGURATION }}
 
       # The packages take over a minute to save, so only `main` saves them: a cache saved by a pull request can only be
       # used by that pull request.
@@ -84,12 +84,12 @@ jobs:
 
       # The Windows host can't be built on Linux, so the solution filter leaves it out.
       - name: Restore
-        run: dotnet restore TAMMi.Linux.slnf
+        run: dotnet restore Deosrc.Tammi.Linux.slnf
 
       - name: Build
-        run: dotnet build TAMMi.Linux.slnf --no-restore --configuration ${{ env.CONFIGURATION }}
+        run: dotnet build Deosrc.Tammi.Linux.slnf --no-restore --configuration ${{ env.CONFIGURATION }}
 
       # `dotnet test` evaluates every project in a solution filter, including the Windows host, so run the test
       # project directly.
       - name: Test
-        run: dotnet test --project tests/TAMMi.Core.Tests --no-build --configuration ${{ env.CONFIGURATION }}
+        run: dotnet test --project tests/Deosrc.Tammi.Core.Tests --no-build --configuration ${{ env.CONFIGURATION }}

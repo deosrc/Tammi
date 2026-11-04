@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Responses recorded from the GitHub API. -->
+    <None Update="Integrations\GitHub\Responses\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Responses faked from the JIRA REST API documentation. -->
+    <None Update="Integrations\Jira\Responses\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Deosrc.Tammi.Core\Deosrc.Tammi.Core.csproj" />
+  </ItemGroup>
+
+</Project>

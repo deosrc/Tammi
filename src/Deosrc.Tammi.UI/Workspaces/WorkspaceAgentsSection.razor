@@ -1,0 +1,244 @@
+@implements IDisposable
+@using Deosrc.Tammi.Core.Agents
+@using Deosrc.Tammi.Core.Settings
+@inject WorkspaceAgents Agents
+@inject ISettingsStore SettingsStore
+
+@* The body of the Workspace View's Agents section: the workspace's open agents with their live state, and its past
+   Agent Sessions, which can be resumed or forgotten. *@
+@if (OpenAgents.Count == 0)
+{
+    <p class="placeholder">No agents running. Start one from the + tab.</p>
+}
+else
+{
+    <ul class="agent-list">
+        @foreach (var agent in OpenAgents)
+        {
+            var state = agent.State;
+            var shown = ReferenceEquals(agent, Shown);
+            <li class="agent-card @AgentStateText.ToneClass(state) @(shown ? "agent-card-shown" : null)" @key="agent">
+                <div class="agent-card-heading">
+                    <button type="button" class="agent-card-name" title="@agent.WorkingDirectory"
+                            aria-current="@(shown ? "true" : null)" @onclick="() => OnShow.InvokeAsync(agent)">
+                        @agent.Name
+                    </button>
+                    <span class="agent-state-badge">@AgentStateText.Label(state)</span>
+                </div>
+                @if (state == AgentState.Error && agent.Agent.ExitCode is { } exitCode)
+                {
+                    <p class="agent-card-detail">Exit code @exitCode</p>
+                }
+                @if (agent.SessionProblem is { } problem)
+                {
+                    <p class="agent-card-detail warning" title="@problem">Its session can't be resumed later.</p>
+                }
+                @if (!agent.HasExited)
+                {
+                    <div class="agent-card-actions">
+                        <button type="button" class="button button-secondary button-small"
+                                disabled="@_stopping.Contains(agent)" @onclick="() => StopAsync(agent)">
+                            Stop
+                        </button>
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@if (_error is not null)
+{
+    <p class="error agent-section-error">@_error</p>
+}
+
+@if (PastSessions.Count > 0 || _problem is not null)
+{
+    <details class="agent-sessions">
+        <summary>Past sessions (@PastSessions.Count)</summary>
+        @if (_problem is not null)
+        {
+            <p class="warning agent-section-error">@_problem</p>
+        }
+        <ul class="agent-session-list">
+            @foreach (var session in PastSessions)
+            {
+                var cantResume = CantResumeReason(session);
+                <li class="agent-session" @key="session.Id">
+                    <div class="agent-session-name" title="@session.WorkingDirectory">
+                        @session.AgentName
+                        @if (WorkspaceAgents.RepositoryFolderOf(Workspace, session.WorkingDirectory) is { } folder)
+                        {
+                            <span class="agent-session-folder">(@folder)</span>
+                        }
+                    </div>
+                    <div class="agent-session-time">@session.LastStartedAt.ToLocalTime().ToString("g")</div>
+                    @if (cantResume is not null)
+                    {
+                        <p class="agent-card-detail warning">@cantResume</p>
+                    }
+                    <div class="agent-card-actions">
+                        <button type="button" class="button button-small" disabled="@(cantResume is not null || _busy)"
+                                @onclick="() => ResumeAsync(session)">
+                            Resume
+                        </button>
+                        <button type="button" class="button button-secondary button-small" disabled="@_busy"
+                                @onclick="() => ForgetAsync(session)">
+                            Forget
+                        </button>
+                    </div>
+                </li>
+            }
+        </ul>
+    </details>
+}
+
+@code {
+    private readonly CancellationTokenSource _disposed = new();
+    private readonly HashSet<WorkspaceAgent> _stopping = [];
+    private IReadOnlyList<AgentSession> _sessions = [];
+    private string? _problem;
+    private string? _error;
+    private string? _loadedWorkspaceId;
+    private bool _busy;
+
+    // Counts loads, so a slow load doesn't replace a newer one's result.
+    private int _loadCount;
+
+    /// <summary>
+    /// The workspace.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public Workspace Workspace { get; set; } = null!;
+
+    /// <summary>
+    /// The terminal or agent the Workspace View is showing, or <c>null</c> for the dashboard.
+    /// </summary>
+    [Parameter]
+    public IWorkspaceProcess? Shown { get; set; }
+
+    /// <summary>
+    /// Called with an agent to show its tab: one the user picked, or one just resumed.
+    /// </summary>
+    [Parameter]
+    public EventCallback<WorkspaceAgent> OnShow { get; set; }
+
+    private IReadOnlyList<WorkspaceAgent> OpenAgents => Agents.For(Workspace.Id);
+
+    // Sessions running in one of the workspace's agents are listed with the agents instead.
+    private IReadOnlyList<AgentSession> PastSessions =>
+        [.. _sessions.Where(session => !Agents.IsRunning(Workspace.Id, session.Id))];
+
+    protected override void OnInitialized() => Agents.Changed += OnAgentsChanged;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedWorkspaceId != Workspace.Id)
+        {
+            _error = null;
+            await LoadSessionsAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        Agents.Changed -= OnAgentsChanged;
+        _disposed.Cancel();
+        _disposed.Dispose();
+    }
+
+    private string? CantResumeReason(AgentSession session) =>
+        session.FindDefinition(SettingsStore.Current.Agents.Definitions) switch
+        {
+            null => $"No agent is called \"{session.AgentName}\" now.",
+            { CanResume: false } definition => $"{definition.Name} doesn't say how to resume sessions.",
+            _ => null,
+        };
+
+    private async Task LoadSessionsAsync()
+    {
+        var load = ++_loadCount;
+        var workspace = Workspace;
+        var store = Agents.SessionsOf(workspace);
+        IReadOnlyList<AgentSession> sessions;
+        try
+        {
+            sessions = await store.ListAsync(_disposed.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (load == _loadCount)
+        {
+            _sessions = sessions;
+            _problem = store.Problem;
+            _loadedWorkspaceId = workspace.Id;
+        }
+    }
+
+    private async Task StopAsync(WorkspaceAgent agent)
+    {
+        _stopping.Add(agent);
+        try
+        {
+            await Agents.StopAsync(agent);
+        }
+        finally
+        {
+            _stopping.Remove(agent);
+        }
+    }
+
+    private async Task ResumeAsync(AgentSession session)
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            await OnShow.InvokeAsync(await Agents.ResumeAsync(Workspace, session));
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or InvalidOperationException
+            or System.Runtime.InteropServices.ExternalException)
+        {
+            _error = $"Couldn't resume the session. {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task ForgetAsync(AgentSession session)
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            await Agents.SessionsOf(Workspace).ForgetAsync(session.Id);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _error = $"Couldn't forget the session. {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+        }
+
+        await LoadSessionsAsync();
+    }
+
+    // Raised on a background thread, e.g. when an agent's state changes or its session is recorded.
+    private void OnAgentsChanged(string workspaceId) => InvokeAsync(async () =>
+    {
+        if (_disposed.IsCancellationRequested || workspaceId != Workspace.Id)
+        {
+            return;
+        }
+
+        await LoadSessionsAsync();
+        StateHasChanged();
+    });
+}

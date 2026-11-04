@@ -1,0 +1,61 @@
+@* One task's card in the side panel's Tasks section: its source, reference, status and summary. Clicking the summary
+   opens the task's page in the browser. *@
+@using Deosrc.Tammi.Core.Integrations
+@using Deosrc.Tammi.Core.Platform
+@inject IntegrationRegistry Registry
+@inject IProcessLauncher ProcessLauncher
+
+<li class="workspace-task @CategoryClass">
+    <div class="workspace-task-heading">
+        <TaskSourceIcon Source="Registry.Find(WorkspaceTask.Reference.Source)" />
+        <span class="workspace-task-key" title="@WorkspaceTask.Key">@WorkspaceNames.ShortReference(WorkspaceTask.Key)</span>
+        @if (WorkspaceTask.Task?.Status is { } status)
+        {
+            <span class="workspace-task-status" title="@CategoryText">@status</span>
+        }
+    </div>
+
+    @if (WorkspaceTask.Task is { } info)
+    {
+        <button type="button" class="workspace-task-title" title="Open @info.Key in the browser"
+                @onclick="() => ProcessLauncher.Open(info.Url.AbsoluteUri)">
+            @info.Title
+        </button>
+    }
+    else if (!WorkspaceTask.IsLoaded)
+    {
+        <p class="placeholder">Reading task…</p>
+    }
+    else
+    {
+        <p class="workspace-task-problem" title="@WorkspaceTask.ProblemDetail">@ProblemText</p>
+    }
+</li>
+
+@code {
+    [Parameter, EditorRequired]
+    public WorkspaceTask WorkspaceTask { get; set; } = null!;
+
+    private string? CategoryClass => WorkspaceTask.Task?.StatusCategory switch
+    {
+        TaskStatusCategory.ToDo => "workspace-task-todo",
+        TaskStatusCategory.InProgress => "workspace-task-in-progress",
+        TaskStatusCategory.Done => "workspace-task-done",
+        _ => null,
+    };
+
+    private string? CategoryText => WorkspaceTask.Task?.StatusCategory switch
+    {
+        TaskStatusCategory.ToDo => "To do",
+        TaskStatusCategory.InProgress => "In progress",
+        TaskStatusCategory.Done => "Done",
+        _ => null,
+    };
+
+    private string ProblemText => WorkspaceTask.Problem switch
+    {
+        WorkspaceTaskProblem.SourceNotConnected => "Task Source not connected.",
+        WorkspaceTaskProblem.NotFound => "Task not found, or you can't see it.",
+        _ => "Couldn't read the task.",
+    };
+}
