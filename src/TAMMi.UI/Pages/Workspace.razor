@@ -85,6 +85,10 @@ else
                                 }
                             </ul>
                         }
+                        @if (_tasks?.ContextFileProblem is { } contextFileProblem)
+                        {
+                            <p class="workspace-task-problem">@contextFileProblem</p>
+                        }
                     </ChildContent>
                 </SidePanelSection>
                 <SidePanelSection Title="Agents">

@@ -408,8 +408,21 @@ are left to other tools for now.
   context file in `.tammi/` and keeps it up to date. When an agent starts, TAMMi sends it an
   **initial prompt** telling it about the context file. The initial prompt is configurable, with a
   placeholder for the context file's path. Each Agent Definition says how the prompt is passed to its CLI.
+  - The context file is `.tammi/tasks.md`. It has a section for each task, in the workspace's order: its key and
+    title, a link to its page, its Task Status (with its category), its repository's page if it belongs to one, and
+    its description as the source gives it (markdown from GitHub, wiki markup from JIRA). A workspace without tasks
+    gets a file that says so.
+  - It's written each time the workspace's tasks have all been read (see [Tasks section](#workspace-view-tab)): when
+    the tab opens, on Refresh, when integrations are added or removed, and when the task list changes. It's only
+    rewritten when its contents change, and always in full, so an agent never reads half a file. A task that can't be
+    read is listed by its key, with why, and its earlier details aren't kept. If the file can't be written, the Tasks
+    section says why.
+  - Starting an agent that takes an initial prompt writes the file first if it doesn't exist yet (e.g. while the tasks
+    are still being read), listing the tasks by their keys until their details are read. If it can't be written, the
+    agent doesn't start, and says why. An agent that doesn't take an initial prompt starts without it.
+  - Running agents aren't told when the file changes.
   - The template's placeholder is `{contextFile}`, replaced with the file's full path. The rest of the template is
-    sent as it is.
+    sent as it is. Resumed Agent Sessions aren't sent the prompt again.
   - An Agent Definition has two lists of arguments. Its **arguments** are passed every time it starts. Its
     **initial prompt arguments** are added after them only when there's a prompt to send, with `{prompt}` where the
     prompt goes: `{prompt}` alone passes it as a positional argument, and `--prompt` then `{prompt}` as an option's

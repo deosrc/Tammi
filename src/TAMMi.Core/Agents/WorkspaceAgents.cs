@@ -71,6 +71,11 @@ public sealed class WorkspaceAgents(
     /// <summary>
     /// Starts an agent in a workspace, in a new Agent Session, and records the session if it can be resumed.
     /// </summary>
+    /// <remarks>
+    /// An agent that takes an initial prompt is sent the one from the Settings' template, with the path of the
+    /// workspace's task context file (see <see cref="TaskContextFile"/>). The file is written first if it doesn't exist
+    /// yet, listing the tasks by their keys until their details are read.
+    /// </remarks>
     /// <param name="workspace">The workspace.</param>
     /// <param name="definition">The agent to start.</param>
     /// <param name="repository">
@@ -82,9 +87,10 @@ public sealed class WorkspaceAgents(
     /// </returns>
     /// <exception cref="FileNotFoundException">The agent's command can't be found.</exception>
     /// <exception cref="DirectoryNotFoundException">The folder to start it in doesn't exist.</exception>
+    /// <exception cref="IOException">The task context file couldn't be written.</exception>
     /// <exception cref="ArgumentException">The definition has no command, or its initial prompt can't be passed.</exception>
     /// <exception cref="ObjectDisposedException">The app is closing.</exception>
-    public Task<WorkspaceAgent> StartAsync(
+    public async Task<WorkspaceAgent> StartAsync(
         Workspace workspace,
         AgentDefinition definition,
         WorkspaceRepository? repository = null)
@@ -93,13 +99,16 @@ public sealed class WorkspaceAgents(
         ArgumentNullException.ThrowIfNull(definition);
 
         var folder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
+        var initialPrompt = definition.AcceptsInitialPrompt
+            ? await CreateInitialPromptAsync(workspace).ConfigureAwait(false)
+            : null;
 
         // The terminal resizes the session to fit as soon as it's shown.
-        return AddAsync(
+        return await AddAsync(
             workspace,
             definition,
             repository?.FolderName,
-            () => launcher.Start(definition, folder, PtySize.Default));
+            () => launcher.Start(definition, folder, PtySize.Default, initialPrompt)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -219,6 +228,21 @@ public sealed class WorkspaceAgents(
                 folder,
                 FileSystemPaths.Normalize(workspace.GetWorktreePath(repository))))
             ?.FolderName ?? Path.GetFileName(folder);
+    }
+
+    private async Task<string> CreateInitialPromptAsync(Workspace workspace)
+    {
+        string contextFile;
+        try
+        {
+            contextFile = await TaskContextFile.CreateIfMissingAsync(workspace).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new IOException($"The task context file for agents couldn't be written. {ex.Message}", ex);
+        }
+
+        return InitialPrompt.Expand(settingsStore.Current.Agents.InitialPromptTemplate, contextFile);
     }
 
     private async Task<WorkspaceAgent> AddAsync(
