@@ -400,6 +400,10 @@ are left to other tools for now.
   on the repositories to include: GitHub's issue search leaves out private repositories' issues unless the token can
   read their contents. A fine-grained token belongs to one account or organisation, so an organisation's private
   repositories need a token owned by that organisation (or a classic token).
+  - For github.com, Settings links to GitHub's new fine-grained token page with the token's name, description and
+    read-only Issues, Contents and Metadata permissions filled in. GitHub can't fill in the owner or repository access,
+    so the user chooses them. An Enterprise Server's link opens its token settings, because servers before 3.20 can't
+    fill in the details.
 - **Task keys** are GitHub's issue references, `owner/repo#number`. Pull requests aren't tasks.
 - **Finding tasks:**
   - **Assigned:** the user's open issues (`is:open assignee:@me archived:false`). GitHub has no in-progress state, so
