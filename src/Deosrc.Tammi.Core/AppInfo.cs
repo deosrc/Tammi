@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace TAMMi.Core;
+namespace Deosrc.Tammi.Core;
 
 /// <summary>
 /// General information about the application.
@@ -10,7 +10,7 @@ public static class AppInfo
     /// <summary>
     /// The product name shown in the UI.
     /// </summary>
-    public const string Name = "TAMMi";
+    public const string Name = "Tammi";
 
     /// <summary>
     /// The product version shown in the UI, e.g. <c>0.1.0</c>. Build metadata such as the commit hash is dropped.

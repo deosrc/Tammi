@@ -1,9 +1,9 @@
 using System.Text.Json.Serialization;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
-/// An Agent Definition: a configured agent CLI that TAMMi can start.
+/// An Agent Definition: a configured agent CLI that Tammi can start.
 /// </summary>
 /// <remarks>
 /// Supported Agents have built-in definitions (see <see cref="SupportedAgent"/>). Custom Agents' definitions are kept in
@@ -79,10 +79,10 @@ public sealed record AgentDefinition
     public AgentHooks? Hooks { get; init; }
 
     /// <summary>
-    /// How TAMMi sets a new Agent Session's ID: arguments added after <see cref="Arguments"/> when the agent starts,
-    /// with <see cref="SessionIdPlaceholder"/> where the ID goes. TAMMi makes up the ID, a UUID, so it can resume the
+    /// How Tammi sets a new Agent Session's ID: arguments added after <see cref="Arguments"/> when the agent starts,
+    /// with <see cref="SessionIdPlaceholder"/> where the ID goes. Tammi makes up the ID, a UUID, so it can resume the
     /// session later. For example, <c>["--session-id", "{sessionId}"]</c>. Empty when the agent's session ID can't be
-    /// set at launch: TAMMi then gets it from the agent's hooks, if they report it (see
+    /// set at launch: Tammi then gets it from the agent's hooks, if they report it (see
     /// <see cref="AgentHooks.ReportsSessionId"/>).
     /// </summary>
     public IReadOnlyList<string> SessionIdArguments { get; init; } = [];
@@ -102,7 +102,7 @@ public sealed record AgentDefinition
     public bool AcceptsInitialPrompt => PromptArguments.Count > 0;
 
     /// <summary>
-    /// Whether TAMMi can resume the agent's sessions: it says how to resume one, and TAMMi can get a session's ID,
+    /// Whether Tammi can resume the agent's sessions: it says how to resume one, and Tammi can get a session's ID,
     /// either by setting it at launch or from the agent's hooks.
     /// </summary>
     [JsonIgnore]
@@ -112,7 +112,7 @@ public sealed record AgentDefinition
     /// <summary>
     /// The definition for Claude Code, a Supported Agent (see <see cref="SupportedAgent.ClaudeCode"/>). The initial
     /// prompt is its positional argument, which starts an interactive session with that prompt. Its state comes from
-    /// its hooks (see <see cref="ClaudeCodeHooks"/>). TAMMi sets the session's ID with <c>--session-id</c>, follows it
+    /// its hooks (see <see cref="ClaudeCodeHooks"/>). Tammi sets the session's ID with <c>--session-id</c>, follows it
     /// through the hooks, and resumes it with <c>--resume</c>.
     /// </summary>
     public static AgentDefinition ClaudeCode { get; } = new("Claude Code", "claude")

@@ -1,9 +1,9 @@
 using System.Text.Json.Nodes;
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Workspaces;
+using Tammi.Core.Integrations;
+using Tammi.Core.Platform;
+using Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Tests.Workspaces;
+namespace Tammi.Core.Tests.Workspaces;
 
 public sealed class WorkspaceStoreTests : IDisposable
 {

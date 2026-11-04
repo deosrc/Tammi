@@ -1,7 +1,7 @@
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
-/// Keeps the Agent Sessions that can be resumed, so they can be returned to after TAMMi restarts.
+/// Keeps the Agent Sessions that can be resumed, so they can be returned to after Tammi restarts.
 /// </summary>
 /// <remarks>
 /// Workspaces keep their sessions in their <c>.tammi/</c> folder (see <c>docs/CONTEXT.md</c>).

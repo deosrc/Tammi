@@ -1,7 +1,7 @@
-using TAMMi.Core.Catalogue;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Catalogue;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// The Git section of the Settings screen.

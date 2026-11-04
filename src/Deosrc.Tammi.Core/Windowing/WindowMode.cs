@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Windowing;
+namespace Deosrc.Tammi.Core.Windowing;
 
 /// <summary>
 /// How a window is shown.

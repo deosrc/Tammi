@@ -1,7 +1,7 @@
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
-/// The folders where TAMMi keeps its own files outside any workspace (see <c>docs/CONTEXT.md</c>).
+/// The folders where Tammi keeps its own files outside any workspace (see <c>docs/CONTEXT.md</c>).
 /// </summary>
 /// <remarks>
 /// The folders might not exist yet. Create them before writing to them.

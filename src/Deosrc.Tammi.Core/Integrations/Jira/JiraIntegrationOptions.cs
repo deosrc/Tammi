@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Integrations.Jira;
 
 /// <summary>
 /// How a <see cref="JiraIntegration"/> connects to a JIRA site.
@@ -49,7 +49,7 @@ public sealed record JiraIntegrationOptions
     public int MaxSearchResults { get; init; } = 100;
 
     /// <summary>
-    /// The longest TAMMi waits for a rate limit to reset before retrying a request. When JIRA asks for a longer
+    /// The longest Tammi waits for a rate limit to reset before retrying a request. When JIRA asks for a longer
     /// wait, the request fails with an <see cref="IntegrationRateLimitException"/> instead.
     /// </summary>
     public TimeSpan MaxRateLimitWait { get; init; } = TimeSpan.FromSeconds(10);

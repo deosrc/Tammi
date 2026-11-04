@@ -3,9 +3,9 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
-using static TAMMi.Core.Platform.Pty.WindowsNative;
+using static Deosrc.Tammi.Core.Platform.Pty.WindowsNative;
 
-namespace TAMMi.Core.Platform.Pty;
+namespace Deosrc.Tammi.Core.Platform.Pty;
 
 [SupportedOSPlatform("windows")]
 internal sealed class WindowsPtySession : PtySession
@@ -118,7 +118,7 @@ internal sealed class WindowsPtySession : PtySession
                     Cb = sizeof(StartupInfoEx),
 
                     // With no standard handles, the process uses the pseudoconsole's, rather than any it might
-                    // inherit from TAMMi.
+                    // inherit from Tammi.
                     Flags = StartFUseStdHandles,
                 },
                 AttributeList = attributeList,

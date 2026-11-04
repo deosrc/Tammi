@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace TAMMi.Core.Platform.Pty;
+namespace Deosrc.Tammi.Core.Platform.Pty;
 
 /// <summary>
 /// The glibc functions and constants used by <see cref="LinuxPtyService"/>. The constants are the values for x64

@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Integrations.Jira;
 
 /// <summary>
 /// An error response from JIRA's REST API, e.g. for an invalid JQL query.

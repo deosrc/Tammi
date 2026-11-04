@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
-using TAMMi.Core.Credentials;
+using Deosrc.Tammi.Core.Credentials;
 
-namespace TAMMi.Core.Integrations.GitHub;
+namespace Deosrc.Tammi.Core.Integrations.GitHub;
 
 /// <summary>
 /// Reads issues (as tasks) and repositories from GitHub, or from a GitHub Enterprise Server.
@@ -327,7 +327,7 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
         return issue is null ? null : ToTask(issue);
     }
 
-    /// <returns>The task, or <see langword="null"/> for a pull request or an issue TAMMi can't read.</returns>
+    /// <returns>The task, or <see langword="null"/> for a pull request or an issue Tammi can't read.</returns>
     private TaskInfo? ToTask(GitHubIssue issue)
     {
         if (issue.IsPullRequest

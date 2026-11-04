@@ -1,7 +1,7 @@
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Settings;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Settings;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// Suggests the name of the branch a workspace creates in each of its repositories.

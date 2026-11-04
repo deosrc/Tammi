@@ -1,6 +1,6 @@
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// The Tools section of the Settings screen.

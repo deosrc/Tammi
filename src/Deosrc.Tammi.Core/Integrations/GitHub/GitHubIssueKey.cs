@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace TAMMi.Core.Integrations.GitHub;
+namespace Deosrc.Tammi.Core.Integrations.GitHub;
 
 /// <summary>
 /// Identifies a GitHub issue. Its <see cref="TaskInfo.Key"/> form is <c>owner/repo#number</c>, as GitHub writes

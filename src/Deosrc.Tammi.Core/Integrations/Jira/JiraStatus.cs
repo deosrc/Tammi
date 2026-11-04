@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Integrations.Jira;
 
 /// <summary>
 /// An issue's status, from REST API version 2.

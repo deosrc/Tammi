@@ -1,7 +1,7 @@
-using TAMMi.Core.Platform;
-using TAMMi.Core.Platform.Pty;
+using Tammi.Core.Platform;
+using Tammi.Core.Platform.Pty;
 
-namespace TAMMi.Core.Tests.Platform.Pty;
+namespace Tammi.Core.Tests.Platform.Pty;
 
 /// <summary>
 /// Runs real processes in Linux pseudoterminals, with <c>/bin/sh</c>.

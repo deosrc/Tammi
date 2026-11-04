@@ -1,9 +1,9 @@
 using System.Text;
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Settings;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Settings;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// Suggests and checks workspace names. A workspace's name is also its Workspace Folder's name, so it must be a valid

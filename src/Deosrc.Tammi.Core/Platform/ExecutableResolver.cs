@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
 /// Finds executables on a search path, the way a shell does.

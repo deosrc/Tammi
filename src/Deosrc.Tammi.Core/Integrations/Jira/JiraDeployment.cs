@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Integrations.Jira;
 
 /// <summary>
 /// The kind of JIRA site an integration connects to. They authenticate and search differently.

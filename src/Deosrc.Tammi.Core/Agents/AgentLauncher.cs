@@ -1,7 +1,7 @@
 using System.Net.Sockets;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// Starts agents from their definitions, in the embedded terminal's pseudoterminals.
@@ -29,7 +29,7 @@ public sealed class AgentLauncher(IPtyService ptyService, AgentHookServer? hookS
     /// </remarks>
     /// <returns>
     /// The running agent. Stop it to end its process. When the definition says how to resume its sessions, the
-    /// agent's <see cref="Agent.SessionId"/> is the session's ID: a new one when TAMMi sets it at launch, or the one
+    /// agent's <see cref="Agent.SessionId"/> is the session's ID: a new one when Tammi sets it at launch, or the one
     /// its hooks report later (see <see cref="Agent.SessionIdChanged"/>). Record it (see <see cref="AgentSession.Of"/>)
     /// to resume the session later.
     /// </returns>
@@ -66,7 +66,7 @@ public sealed class AgentLauncher(IPtyService ptyService, AgentHookServer? hookS
     /// <exception cref="DirectoryNotFoundException">The session's working folder doesn't exist.</exception>
     /// <exception cref="ArgumentException">
     /// The definition has no command, or it doesn't say how to resume its sessions, or the session's ID isn't one
-    /// TAMMi could have set (see <see cref="AgentSession.IsValidId"/>).
+    /// Tammi could have set (see <see cref="AgentSession.IsValidId"/>).
     /// </exception>
     public Agent Resume(AgentDefinition definition, AgentSession session, PtySize size)
     {

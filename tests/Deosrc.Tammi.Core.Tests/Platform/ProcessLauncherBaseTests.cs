@@ -1,9 +1,9 @@
-using TAMMi.Core.Platform;
+using Tammi.Core.Platform;
 
-namespace TAMMi.Core.Tests.Platform;
+namespace Tammi.Core.Tests.Platform;
 
 /// <summary>
-/// Runs real processes. They use <c>git</c>, which TAMMi requires.
+/// Runs real processes. They use <c>git</c>, which Tammi requires.
 /// </summary>
 public class ProcessLauncherBaseTests
 {

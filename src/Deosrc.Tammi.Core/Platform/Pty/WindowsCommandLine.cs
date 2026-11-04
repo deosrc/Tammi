@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace TAMMi.Core.Platform.Pty;
+namespace Deosrc.Tammi.Core.Platform.Pty;
 
 /// <summary>
 /// Builds a Windows command line from separate arguments, quoting them so that programs that parse their command

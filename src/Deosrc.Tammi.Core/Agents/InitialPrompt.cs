@@ -1,7 +1,7 @@
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
-/// The initial prompt that TAMMi sends an agent when it starts, telling it about the workspace's task context file.
+/// The initial prompt that Tammi sends an agent when it starts, telling it about the workspace's task context file.
 /// </summary>
 /// <remarks>
 /// The prompt comes from a template, configured in Settings, with a placeholder for the context file's path. Each
@@ -20,7 +20,7 @@ public static class InitialPrompt
     /// </summary>
     private const string ReadContextFile =
         "The tasks for this workspace are described in " + ContextFilePlaceholder + ". Read that file first. "
-        + "TAMMi rewrites it when the tasks change, so read it again whenever you need their latest details.";
+        + "Tammi rewrites it when the tasks change, so read it again whenever you need their latest details.";
 
     /// <summary>
     /// A predefined template that has the agent start implementing the tasks.

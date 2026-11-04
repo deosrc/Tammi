@@ -1,42 +1,42 @@
-# TAMMi: Product Context
+# Tammi: Product Context
 
-> Living document. This is the source of truth for what TAMMi is and the words we use for it.
+> Living document. This is the source of truth for what Tammi is and the words we use for it.
 > Update it as decisions are made. Unresolved items live under [Open Questions](#open-questions).
 
 ## Purpose
 
-TAMMi is a **software development workspace management tool** with a **task-first** approach.
+Tammi is a **software development workspace management tool** with a **task-first** approach.
 
-The developer starts from the work to be done (one or more tasks), not from a repository. TAMMi
+The developer starts from the work to be done (one or more tasks), not from a repository. Tammi
 then builds a workspace around those tasks: a named folder holding the relevant git repositories,
 with a view of their git state, AI agents working on the tasks, and shortcuts into other tools.
 
 ## Principles
 
-- **TAMMi never requires changes to repositories.** It works without adding files, config or commits
+- **Tammi never requires changes to repositories.** It works without adding files, config or commits
   to any repository. Its own files live in the workspace's `.tammi/` folder and in app data.
 
 ## Glossary
 
 | Term | Meaning |
 |------|---------|
-| **Task** | A unit of work from an integration (e.g. a GitHub issue or JIRA ticket). TAMMi doesn't support manually defined tasks: a workspace without tasks is described by its name. |
+| **Task** | A unit of work from an integration (e.g. a GitHub issue or JIRA ticket). Tammi doesn't support manually defined tasks: a workspace without tasks is described by its name. |
 | **Task Source** | The integration a task comes from. |
 | **Task Status** | A task's status as its source names it (e.g. `Open` or `In Review`), with a **status category**: to do, in progress or done. JIRA puts every status, including a site's own, in a category; sources with fixed statuses map theirs to the nearest one. |
-| **Workspace** | A named collection of tasks and repositories in a folder on disk. It is the main unit of work in TAMMi. |
+| **Workspace** | A named collection of tasks and repositories in a folder on disk. It is the main unit of work in Tammi. |
 | **Workspace Folder** | The workspace's location on disk: `<parent folder>/<workspace name>`. |
 | **Repository** | A git repository that can be added to a workspace. |
 | **Repository Catalogue** | The app-level list of known repositories, collected from all repository sources. |
 | **Repository Source** | Where catalogue entries come from: an integration (e.g. GitHub), a local repository added manually, or a **Monitored Folder**. |
-| **Monitored Folder** | A local folder (where repositories are usually cloned) that TAMMi scans for git repositories. |
+| **Monitored Folder** | A local folder (where repositories are usually cloned) that Tammi scans for git repositories. |
 | **Local Repository** | A catalogue repository with a clone on disk, outside any workspace. Workspaces create their worktrees from it. |
 | **Remote-only Repository** | A catalogue repository known only through an integration, with no clone on disk yet. It must be cloned, which makes it a Local Repository, before it can be added to a workspace. |
 | **Workspace Worktree** | A `git worktree` of a Local Repository, created inside the Workspace Folder. This is how a repository is included in a workspace. |
 | **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
-| **Agent Definition** | A configured agent CLI (e.g. Claude Code) that TAMMi can start: name, command, arguments, how to pass the initial prompt, and how to resume a session. |
-| **Agent Session** | One conversation with an agent. TAMMi records it so it can be resumed after a restart, with the agent's own resume command. |
-| **Supported Agent** | An agent CLI that TAMMi knows how to start, with a built-in Agent Definition (e.g. Claude Code). It's always offered and isn't configured by the user. |
+| **Agent Definition** | A configured agent CLI (e.g. Claude Code) that Tammi can start: name, command, arguments, how to pass the initial prompt, and how to resume a session. |
+| **Agent Session** | One conversation with an agent. Tammi records it so it can be resumed after a restart, with the agent's own resume command. |
+| **Supported Agent** | An agent CLI that Tammi knows how to start, with a built-in Agent Definition (e.g. Claude Code). It's always offered and isn't configured by the user. |
 | **Custom Agent** | An agent CLI the user sets up with their own Agent Definition (e.g. Codex CLI or Gemini CLI). |
 | **Open in…** | Actions that open the workspace or a repository in an external tool (IDE, terminal, file manager, …). |
 
@@ -46,7 +46,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
    - Tasks come from integrations (GitHub, JIRA).
    - Tasks are optional. A workspace with no tasks is described by its name alone.
    - One workspace can mix tasks from any sources.
-   - TAMMi only reads tasks from integrations. It doesn't write back status changes or PR links yet.
+   - Tammi only reads tasks from integrations. It doesn't write back status changes or PR links yet.
    - The task list can be changed after the workspace is created.
    - **Finding tasks.** One search box covers every connected Task Source at once, and the results are combined,
      most recently updated first. What the user enters decides what's searched:
@@ -80,11 +80,11 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
      doesn't need to exist yet: it's created with the workspace.
    - The Workspace Folder must not already exist, as a folder or a file.
 3. **Select repositories** from the Repository Catalogue.
-   - **Local Repository:** TAMMi creates a Workspace Worktree for it in the Workspace Folder.
-   - **Remote-only Repository:** TAMMi first guides the user through cloning it to a local folder.
-     This turns it into a Local Repository, and TAMMi then creates the worktree as normal. The clone
+   - **Local Repository:** Tammi creates a Workspace Worktree for it in the Workspace Folder.
+   - **Remote-only Repository:** Tammi first guides the user through cloning it to a local folder.
+     This turns it into a Local Repository, and Tammi then creates the worktree as normal. The clone
      lives outside the workspace, so other workspaces can reuse it.
-   - The clone defaults to `<Monitored Folder>/<repo>`, so TAMMi finds it automatically. If there are
+   - The clone defaults to `<Monitored Folder>/<repo>`, so Tammi finds it automatically. If there are
      several Monitored Folders, the user picks one. The user can choose any other folder instead, and
      the clone is then added as a manually added local repository.
    - **Task repositories are chosen automatically.** A task that belongs to a repository (e.g. a GitHub issue) chooses
@@ -101,13 +101,13 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
      A repository that can't be fetched still offers the branches fetched before, and one with no remotes needs its
      base branch chosen.
    - A workspace can be created without repositories.
-4. **Create the workspace.** TAMMi checks everything first (the Workspace Folder is still free, the branch name is
+4. **Create the workspace.** Tammi checks everything first (the Workspace Folder is still free, the branch name is
    valid and doesn't exist in any of the repositories, each base branch exists, the folder names are valid and
    different), so nothing is created when a check fails. It then creates the Workspace Folder (and its parent
    folders), fetches each repository again and creates its worktree and submodules, and writes the metadata and index
    entry last, showing each step as it goes.
    - A repository that can't be fetched now is still created, from the last fetched base, with a warning.
-   - If a step fails, or the user cancels (or leaves the page), TAMMi removes everything it created: the worktrees,
+   - If a step fails, or the user cancels (or leaves the page), Tammi removes everything it created: the worktrees,
      their new branches, the Workspace Folder and any parent folders it created that are still empty. Anything it
      couldn't remove is listed. Since the metadata is written last, a workspace that's only partly created is never
      listed on Home.
@@ -149,11 +149,11 @@ same catalogue entry when any of the clone's remotes matches the integration rep
 normalised before comparing, so HTTPS and SSH forms match. A clone of a fork with an `upstream` remote
 therefore counts as a Local Repository for both the fork and the upstream repository.
 
-**Moved or deleted Local Repositories.** TAMMi detects when a Workspace Worktree's Local Repository
+**Moved or deleted Local Repositories.** Tammi detects when a Workspace Worktree's Local Repository
 has been moved or deleted, and marks the workspace as broken on Home and in the Workspace View. It
 offers to repair the worktree: either point it at the repository's new location (`git worktree repair`)
 or clone the repository again. `git worktree repair` doesn't fix the worktree's submodules, whose links to their
-git data are relative paths, so TAMMi relinks them itself. Moving a Workspace Folder breaks its worktrees in the
+git data are relative paths, so Tammi relinks them itself. Moving a Workspace Folder breaks its worktrees in the
 same way, and is repaired the same way.
 
 **Metadata.** Each workspace describes itself in `.tammi/workspace.json`: an ID that never changes, its name, its
@@ -165,12 +165,12 @@ name and folder), which Home uses to list workspaces.
 - A workspace whose folder or metadata is missing (moved or deleted) is still listed, by its last known name. If it was
   moved, the user can add it again from its new folder, which updates its index entry. A workspace whose metadata
   can't be read is listed as unreadable.
-- If the index can't be read, no workspaces are listed and TAMMi keeps a copy of it as `workspaces.invalid.json`.
-- A repository's folder name must be a single folder name, never a path, so nothing TAMMi does to a worktree can reach
+- If the index can't be read, no workspaces are listed and Tammi keeps a copy of it as `workspaces.invalid.json`.
+- A repository's folder name must be a single folder name, never a path, so nothing Tammi does to a worktree can reach
   outside the Workspace Folder.
 
 **Folder names.** A Workspace Worktree's folder defaults to the repository name (e.g. `api`). If two
-repositories in the workspace have the same name, TAMMi prefixes the owner (e.g. `acme-api`). The user
+repositories in the workspace have the same name, Tammi prefixes the owner (e.g. `acme-api`). The user
 can change any folder name during setup.
 - The owner comes from the URL of the remote that's fetched (`origin`, or the first remote if there's no `origin`),
   e.g. `acme` for `git@github.com:acme/api.git`. A repository with no remotes uses the name of the folder it's in.
@@ -180,7 +180,7 @@ can change any folder name during setup.
 
 **Branches.** Git won't check out one branch in two worktrees, so each Workspace Worktree gets its
 own branch. It is created automatically when the workspace is created:
-- TAMMi suggests a branch name from the task, e.g. `<task-key>-<slug>`. When there are no tasks or
+- Tammi suggests a branch name from the task, e.g. `<task-key>-<slug>`. When there are no tasks or
   several tasks, it uses the workspace name instead.
   - The task key is its reference as in the suggested workspace name, as written, so a JIRA key stays uppercase and
     JIRA links the branch to the issue. The slug is the title (or the workspace name) in lowercase words joined by
@@ -189,31 +189,31 @@ own branch. It is created automatically when the workspace is created:
   - It follows the tasks and the workspace name until the user edits it.
 - The user can edit the suggested name before the workspace is created.
 - The same branch name is used in every repository in the workspace.
-- **Base:** TAMMi fetches each Local Repository, then branches from the remote's default branch
+- **Base:** Tammi fetches each Local Repository, then branches from the remote's default branch
   (e.g. `origin/main`). The user can choose a different base branch for each repository, from its remote-tracking
   and local branches or by entering any commit-ish.
 - The new branch doesn't track its base, so pushing it publishes it under its own name rather than to the base.
 
-**Submodules.** When a Workspace Worktree is created, TAMMi checks out its submodules automatically
+**Submodules.** When a Workspace Worktree is created, Tammi checks out its submodules automatically
 (`git submodule update --init --recursive`).
 
 **Deleting a workspace.** The Workspace View and the details tab of a workspace that can't be read both offer it.
-1. TAMMi checks what would be lost and always asks the user to confirm. It lists the worktrees with uncommitted changes
+1. Tammi checks what would be lost and always asks the user to confirm. It lists the worktrees with uncommitted changes
    or unpushed commits (including inside their submodules), and anything else in the Workspace Folder that isn't a
    Workspace Worktree or `.tammi/` (e.g. files an agent wrote, or a full clone), since it's deleted with the folder. A
    worktree whose Local Repository is missing can't be checked, so it's listed too.
-2. TAMMi removes each Workspace Worktree (`git worktree remove`), then the Workspace Folder, then the workspace's index
+2. Tammi removes each Workspace Worktree (`git worktree remove`), then the Workspace Folder, then the workspace's index
    entry. If a worktree has new changes, or something new appears in the folder, since the user confirmed, it stops
    and the user checks again. Links in the folder are deleted without what they point at. `.tammi/` is deleted last,
    so a folder that's only partly deleted is still the workspace and can be deleted again.
-3. TAMMi offers to delete the workspace branches from the Local Repositories. Branches that are merged or pushed are
+3. Tammi offers to delete the workspace branches from the Local Repositories. Branches that are merged or pushed are
    selected for deletion by default. Others are kept unless the user selects them. Other branches are never offered.
    - **Merged** means the branch's tip is reachable from its base branch (e.g. `origin/main`). Squash and rebase
      merges aren't detected.
    - **Pushed** means every commit on the branch is on a remote-tracking branch, as for unpushed commits on Home.
 - **A workspace whose metadata can't be read** is deleted the same way. Worktrees are always created directly in the
-  Workspace Folder, so TAMMi finds them by looking at its folders. Their checked-out branches are offered, but not
-  selected, because without the metadata TAMMi can't tell they're the workspace's own.
+  Workspace Folder, so Tammi finds them by looking at its folders. Their checked-out branches are offered, but not
+  selected, because without the metadata Tammi can't tell they're the workspace's own.
 - **A workspace whose folder is missing, or now holds a different workspace,** only has its index entry removed. The
   folder isn't this workspace's to delete.
 
@@ -237,7 +237,7 @@ own branch. It is created automatically when the workspace is created:
 - **Keeping git status current:**
   - Workspaces open in a tab watch their worktrees for file changes and update live.
   - Other workspaces refresh when Home is shown, and on a timer (interval in Settings).
-  - Agent status is always live, because TAMMi runs the agent processes itself.
+  - Agent status is always live, because Tammi runs the agent processes itself.
 - Workspaces are listed in the order they were first saved or added, each with its name and Workspace Folder.
   A workspace whose folder or metadata is missing, or whose metadata can't be read, can't be opened. Its card says
   why in a few words ("Workspace folder missing" or "Corrupt"), and its Details button opens a tab with the full
@@ -273,7 +273,7 @@ own branch. It is created automatically when the workspace is created:
   - how many uncommitted changes and unpushed commits it has
   - its submodules, nested under it, each with the same details, or "Not checked out"
   - a broken worktree says what's wrong (e.g. "Local Repository moved or deleted") instead
-- **Live updates:** while a workspace's tab is open (even when another tab is shown), TAMMi watches each worktree's
+- **Live updates:** while a workspace's tab is open (even when another tab is shown), Tammi watches each worktree's
   folder and its git data in the Local Repository: the worktree's git directory (index, HEAD and its submodules' git
   directories), the Local Repository's refs and the entries directly in its `.git` folder (e.g. `packed-refs`). So
   editing, staging, committing and fetching all update the status, whichever tool does them. Only the repository that
@@ -327,7 +327,7 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
   - A single Add button opens a menu of the integration types (GitHub, JIRA), in alphabetical order.
   - The user adds GitHub (github.com or a GitHub Enterprise Server) and JIRA sites, authenticates them again with a new
     token, tests them and removes them.
-  - TAMMi checks a token with the service before saving it, so a rejected token is never saved and an integration is
+  - Tammi checks a token with the service before saving it, so a rejected token is never saved and an integration is
     never added without working credentials.
   - Each integration's status is checked when the section opens and on demand: connected (with the account's name),
     not authenticated (no token saved), authentication failed (the token was rejected), or couldn't connect (with the
@@ -341,10 +341,10 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
   - Manually added local repositories
   - The Repository Catalogue's size, with a Rescan button
   - Status refresh interval for workspaces that aren't open (whole minutes from 1 to 1440, default 5)
-  - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that TAMMi uses
+  - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that Tammi uses
 - **Agents**
   - **Supported Agents** are always listed, and can't be edited or removed. Each one shows whether its CLI is ready:
-    TAMMi finds the command and runs it to get its version (e.g. `claude --version`). If that fails, it says why
+    Tammi finds the command and runs it to get its version (e.g. `claude --version`). If that fails, it says why
     (not found, failed with an error, or didn't finish) and links to the agent's install guide. The user can check
     again after installing it.
   - **Custom Agents** are added, edited, reordered and removed by the user. Each one has a name, command, arguments,
@@ -353,7 +353,7 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     but shown as an error until it's changed.
   - Agents are offered in that order: the Supported Agents, then the Custom Agents.
   - The initial prompt template. A menu fills it in with one of three predefined prompts, ticking the one in use. Each
-    tells the agent to read the task context file, and to read it again for the tasks' latest details, since TAMMi
+    tells the agent to read the task context file, and to read it again for the tasks' latest details, since Tammi
     rewrites it when they change. Then it has the agent:
     - **Implement the tasks:** start making the changes.
     - **Plan the change:** plan the changes, and wait for the user to approve the plan before making them.
@@ -367,14 +367,14 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
 Lists of arguments (for the terminal shell and Custom Agents) are edited one argument per line, so they need no
 quoting. Blank lines are ignored.
-- **About:** the TAMMi version, and the git CLI and libgit2 versions
+- **About:** the Tammi version, and the git CLI and libgit2 versions
 
 Changes are saved as soon as they're made. The settings live in `settings.json` in the app's Config folder (see
 [Technical Constraints](#technical-constraints)):
-- The file has a `version`. When its layout changes, the version goes up and TAMMi migrates older files as it
-  loads them. A file from a newer TAMMi is read as far as possible.
+- The file has a `version`. When its layout changes, the version goes up and Tammi migrates older files as it
+  loads them. A file from a newer Tammi is read as far as possible.
 - Missing settings take their default values, and out-of-range values are brought into range.
-- If the file can't be read, TAMMi uses the defaults, says so on the Settings screen, and keeps a copy of the file
+- If the file can't be read, Tammi uses the defaults, says so on the Settings screen, and keeps a copy of the file
   as `settings.invalid.json` so the next save doesn't lose it.
 
 ## Git
@@ -391,7 +391,7 @@ are left to other tools for now.
 
 ## Open in… Tools
 
-- TAMMi has built-in definitions for common tools: VS Code, Visual Studio (Windows only), JetBrains
+- Tammi has built-in definitions for common tools: VS Code, Visual Studio (Windows only), JetBrains
   Rider, the system file manager and the system terminal.
 - Only built-in tools detected as installed are shown.
 - Users can add their own tools.
@@ -400,19 +400,19 @@ are left to other tools for now.
 - **Scope** sets what a tool can open: the workspace folder, a single repository, or both. Workspace
   tools appear in the side panel's tools section. Repository tools appear on each repository's entry
   in the Repositories section.
-- **Visual Studio** opens solutions, not folders. TAMMi finds the `.sln` and `.slnx` files in the
+- **Visual Studio** opens solutions, not folders. Tammi finds the `.sln` and `.slnx` files in the
   workspace's repositories and shows an "Open in…" entry for each one (e.g. "Visual Studio: Api.sln").
 
 ## Agents
 
 - Agents run as **CLI processes inside the embedded terminal component**. The user interacts with them
-  through the terminal, just as they would outside TAMMi.
+  through the terminal, just as they would outside Tammi.
 - Agents are **pluggable**. Each Agent Definition has a name, a command and arguments. Supported Agents have
   built-in definitions; Custom Agents are configured much like an "Open in…" tool.
 - **Working directory:** an agent starts in the Workspace Folder by default, so it can see and change
   every repository. The user can start it in a single Workspace Worktree instead.
-- **Task context:** TAMMi writes the workspace's task details (title, description, links) to a markdown
-  context file in `.tammi/` and keeps it up to date. When an agent starts, TAMMi sends it an
+- **Task context:** Tammi writes the workspace's task details (title, description, links) to a markdown
+  context file in `.tammi/` and keeps it up to date. When an agent starts, Tammi sends it an
   **initial prompt** telling it about the context file. The initial prompt is configurable, with a
   placeholder for the context file's path. Each Agent Definition says how the prompt is passed to its CLI.
   - The context file is `.tammi/tasks.md`. It has a section for each task, in the workspace's order: its key and
@@ -436,14 +436,14 @@ are left to other tools for now.
     value, so the option is left out with the prompt. A definition without initial prompt arguments doesn't take an
     initial prompt, and starts without one. Claude Code takes it as its positional argument.
   - The prompt is always passed as one argument, exactly as written. On Windows, a CLI that's a batch file (e.g.
-    `claude.cmd`, installed with npm) runs through `cmd.exe`, so TAMMi also escapes `cmd.exe`'s special characters.
+    `claude.cmd`, installed with npm) runs through `cmd.exe`, so Tammi also escapes `cmd.exe`'s special characters.
     `cmd.exe` can't pass on line breaks, so a template with several lines can't be sent to a batch file: starting
     the agent fails and says why. The predefined templates are each a single line.
 - **Claude Code** is the first Supported Agent. Others (e.g. Codex CLI, Gemini CLI) can be added as Custom Agents,
   and may become Supported Agents later.
 - **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or
-  status events (e.g. Claude Code hooks), TAMMi uses them for richer states. In keeping with the
-  principles, hooks are supplied when TAMMi launches the agent (e.g. through CLI arguments), never by
+  status events (e.g. Claude Code hooks), Tammi uses them for richer states. In keeping with the
+  principles, hooks are supplied when Tammi launches the agent (e.g. through CLI arguments), never by
   changing repository files.
 - **States**, shown on Home and in the Workspace View:
 
@@ -454,17 +454,17 @@ are left to other tools for now.
   | Idle | The agent has finished its turn | Yes |
   | Running | The process is running, but finer detail isn't available | No |
   | Exited | The process ended normally, or the user stopped it | No |
-  | Error | The process crashed, was killed by something other than TAMMi, or exited with a non-zero code | No |
+  | Error | The process crashed, was killed by something other than Tammi, or exited with a non-zero code | No |
 
   Agents with hooks use Working / Needs input / Idle while running. Agents without hooks show Running.
 - **Hooks:** each Agent Definition says whether its agent has hooks, and how they're supplied and read. Only Supported
   Agents have them for now. Custom Agents have none, and show Running.
-  - TAMMi runs a small HTTP server on the loopback address (`127.0.0.1`, on a port chosen when it's first needed).
+  - Tammi runs a small HTTP server on the loopback address (`127.0.0.1`, on a port chosen when it's first needed).
     Hooks POST each event to it as JSON. Each agent gets its own random token, passed in its environment as
     `TAMMI_AGENT_HOOK_TOKEN` rather than its arguments, so other users can't read it from the process list. The hooks
     send it as a bearer token, and events with an unknown token are refused. The token stops working when the agent
     ends.
-  - TAMMi answers each event with an empty response, so hooks never change what the agent does. If TAMMi can't be
+  - Tammi answers each event with an empty response, so hooks never change what the agent does. If Tammi can't be
     reached, the agent carries on without it. If the server can't start, agents start without hooks and show Running.
   - An agent with hooks shows Running until its first event.
   - **Claude Code** gets HTTP hooks in its `--settings` argument, which it merges with the hooks in its own settings
@@ -480,22 +480,22 @@ are left to other tools for now.
     dialog) it shows Running, after the user answers a permission prompt it shows Needs input until the tool finishes,
     and after the user interrupts a turn it shows Working until Claude Code reports it idle a minute later. Hooks
     don't run where Claude Code's settings turn them off (e.g. `disableAllHooks`, managed `allowManagedHooksOnly`, or
-    an `allowedHttpHookUrls` list without TAMMi's URL), and the agent then shows Running.
+    an `allowedHttpHookUrls` list without Tammi's URL), and the agent then shows Running.
   Stopping an agent hangs up its terminal and kills the process if it doesn't exit, so the exit code it then
   gets doesn't mean it failed: a stopped agent is Exited, whatever its exit code.
 - **Lifetime:**
   - Closing a workspace tab doesn't stop its terminals or agents. They keep running in the background,
     their status still shows on Home, and reopening the tab reattaches to them.
-  - Closing TAMMi warns if any agents are running, saying how many, and the user can cancel. Then it ends all
+  - Closing Tammi warns if any agents are running, saying how many, and the user can cancel. Then it ends all
     terminal and agent processes. Running terminals alone don't warn.
-  - **Agent Sessions can be resumed across app restarts.** TAMMi records each Agent Session (its ID, the
+  - **Agent Sessions can be resumed across app restarts.** Tammi records each Agent Session (its ID, the
     agent's name, the folder it was started in and when it was last started) in `.tammi/agent-sessions.json`.
     Later, the user can return to it using the agent's own resume command (e.g. `claude --resume <session-id>`).
-    - TAMMi gets the session ID in either or both of two ways:
-      - **Setting it at launch:** TAMMi makes up a UUID and passes it with the Agent Definition's **session ID
+    - Tammi gets the session ID in either or both of two ways:
+      - **Setting it at launch:** Tammi makes up a UUID and passes it with the Agent Definition's **session ID
         arguments**, with `{sessionId}` where the ID goes (Claude Code: `--session-id {sessionId}`).
       - **From the agent's hooks**, when they report it. Claude Code's hook events all carry the session's ID, so
-        TAMMi follows the agent when it moves to another session in the same process (e.g. after `/clear`) and
+        Tammi follows the agent when it moves to another session in the same process (e.g. after `/clear`) and
         records the new session too. Only Supported Agents have hooks, so Custom Agents need session ID arguments.
     - The definition's **resume arguments** resume a session (Claude Code: `--resume {sessionId}`). They're added
       after its arguments in place of the session ID arguments and the initial prompt, which the session already
@@ -504,9 +504,9 @@ are left to other tools for now.
       Agents have neither list unless the user sets them.
     - A session is resumed with the Agent Definition that has its agent's name now. If none has, or that definition
       can no longer resume sessions, the session is still listed but can't be resumed.
-    - Only session IDs that TAMMi could have made (UUIDs) are resumed, so a changed file can't pass the agent other
+    - Only session IDs that Tammi could have made (UUIDs) are resumed, so a changed file can't pass the agent other
       arguments.
-    - The file is versioned like `settings.json`. If it can't be read, no sessions are listed, and TAMMi keeps a copy
+    - The file is versioned like `settings.json`. If it can't be read, no sessions are listed, and Tammi keeps a copy
       of it as `agent-sessions.invalid.json` before it next changes the file.
     - The user can forget a session, so it's no longer offered.
   - Plain terminals aren't restored after a restart.
@@ -527,7 +527,7 @@ are left to other tools for now.
     so the user chooses them. An Enterprise Server's link opens its token settings, because servers before 3.20 can't
     fill in the details.
   - GitHub has no way to list a fine-grained token's permissions, so when a fine-grained token is saved or tested,
-    TAMMi reads the latest commit of one private repository the token reaches. If that's refused, the integration is
+    Tammi reads the latest commit of one private repository the token reaches. If that's refused, the integration is
     still connected but shows a warning that private issues won't appear in searches until the token can read
     Contents. Repositories the token wasn't given at all can't be detected, and classic tokens aren't checked.
 - **Task keys** are GitHub's issue references, `owner/repo#number`. Pull requests aren't tasks.
@@ -536,13 +536,13 @@ are left to other tools for now.
     every open issue counts as still to do.
   - **Text search** covers the user's own repositories, the organisations that own repositories they can reach
     (`org:`), and other users' repositories they collaborate on (`repo:`, so those users' other repositories aren't
-    searched). TAMMi reads these from the user's repositories and remembers them for 10 minutes. A search that covers
+    searched). Tammi reads these from the user's repositories and remembers them for 10 minutes. A search that covers
     many accounts and repositories is split into several requests. GitHub's search qualifiers (e.g. `label:bug`) can
     still be added to the text.
   - A task key or an issue's URL finds that issue, in any repository the token can read.
 - **Repositories** are those the user owns, collaborates on or reaches through an organisation. Each has its HTTPS and
   SSH clone URLs.
-- **Rate limits:** when GitHub asks TAMMi to wait a few seconds, it waits and retries. For longer waits, the request
+- **Rate limits:** when GitHub asks Tammi to wait a few seconds, it waits and retries. For longer waits, the request
   fails and says when to try again.
 
 ### JIRA
@@ -553,10 +553,10 @@ are left to other tools for now.
   - **JIRA Cloud:** the Atlassian account's email address (a setting) and an API token (kept in the credential store).
     The token can be one without scopes, or one with the JIRA scopes `read:jira-work` and `read:jira-user`. Tokens
     with scopes only work through Atlassian's API gateway (`api.atlassian.com/ex/jira/<cloud ID>`), so when the site
-    rejects a token, TAMMi reads the site's cloud ID (`_edge/tenant_info`) and tries the gateway, then keeps using
-    whichever worked. When the gateway says a scope is missing, TAMMi names the scopes it needs.
+    rejects a token, Tammi reads the site's cloud ID (`_edge/tenant_info`) and tries the gateway, then keeps using
+    whichever worked. When the gateway says a scope is missing, Tammi names the scopes it needs.
   - **Server and Data Center:** a personal access token (JIRA 8.14 or later), kept in the credential store. When
-    JIRA wants a CAPTCHA solved after failed logins, TAMMi asks the user to log in to JIRA in a browser.
+    JIRA wants a CAPTCHA solved after failed logins, Tammi asks the user to log in to JIRA in a browser.
 - **Task keys** are JIRA's issue keys, e.g. `ABC-123`. A moved issue is read with its new key.
 - **Finding tasks:**
   - **Assigned:** the user's issues that are still to do
@@ -578,16 +578,16 @@ are left to other tools for now.
 - **Platforms:** Windows and Linux at minimum, with other platforms possible later
 - Platform-specific services (PTY, file system watching, launching processes, the folder picker and app
   data paths) are reached through interfaces in shared code, with an implementation for each host.
-- **App data** lives in `%LOCALAPPDATA%\TAMMi\{Config,Data,Cache}` on Windows, and in the XDG base
+- **App data** lives in `%LOCALAPPDATA%\Tammi\{Config,Data,Cache}` on Windows, and in the XDG base
   directories on Linux (`~/.config/tammi`, `~/.local/share/tammi`, `~/.cache/tammi` by default).
-- **Window state:** TAMMi opens its window at the size it had when it was last closed, maximised if it was then.
+- **Window state:** Tammi opens its window at the size it had when it was last closed, maximised if it was then.
   The state is kept in `window-state.json` in the Data folder, apart from the settings. If it's missing or can't be
   read, the window opens at its default size.
 - **Credentials** for integrations live in the platform secret store, never in settings or data files:
-  - **Windows:** Windows Credential Manager, as generic credentials named `TAMMi:<key>`, saved for the local
+  - **Windows:** Windows Credential Manager, as generic credentials named `Tammi:<key>`, saved for the local
     machine only.
   - **Linux:** the Secret Service (e.g. GNOME Keyring or KWallet), through libsecret. libsecret is a system
-    library and isn't shipped with TAMMi. When libsecret is missing or no Secret Service is running, TAMMi
+    library and isn't shipped with Tammi. When libsecret is missing or no Secret Service is running, Tammi
     shows an error saying how to install one, and integrations can't be authenticated.
   - Each integration has one secret. Values that aren't secret (e.g. a JIRA site URL or user name) are settings.
 - Web-based UI components (e.g. xterm.js for the terminal) can be used inside the Blazor UI.

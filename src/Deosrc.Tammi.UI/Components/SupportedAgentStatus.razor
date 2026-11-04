@@ -1,5 +1,5 @@
-@using TAMMi.Core.Agents
-@using TAMMi.Core.Platform
+@using Deosrc.Tammi.Core.Agents
+@using Deosrc.Tammi.Core.Platform
 @implements IDisposable
 @inject SupportedAgentChecker Checker
 @inject IProcessLauncher ProcessLauncher
@@ -75,7 +75,7 @@
         }
     }
 
-    // Links must open in the user's browser: following them would navigate the app's own window away from TAMMi.
+    // Links must open in the user's browser: following them would navigate the app's own window away from Tammi.
     private void OpenInstallGuide()
     {
         _openError = null;

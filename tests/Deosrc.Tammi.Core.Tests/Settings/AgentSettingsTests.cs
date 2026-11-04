@@ -1,7 +1,7 @@
-using TAMMi.Core.Agents;
-using TAMMi.Core.Settings;
+using Tammi.Core.Agents;
+using Tammi.Core.Settings;
 
-namespace TAMMi.Core.Tests.Settings;
+namespace Tammi.Core.Tests.Settings;
 
 public class AgentSettingsTests
 {

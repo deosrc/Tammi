@@ -1,7 +1,7 @@
-using TAMMi.Core.Platform;
-using TAMMi.Core.Workspaces;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Catalogue;
+namespace Deosrc.Tammi.Core.Catalogue;
 
 /// <summary>
 /// Finds the git repositories in a Monitored Folder.

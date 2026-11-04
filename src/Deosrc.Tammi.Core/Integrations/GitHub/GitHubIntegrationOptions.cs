@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations.GitHub;
+namespace Deosrc.Tammi.Core.Integrations.GitHub;
 
 /// <summary>
 /// How a <see cref="GitHubIntegration"/> connects to GitHub.
@@ -53,7 +53,7 @@ public sealed record GitHubIntegrationOptions
     public int MaxScopeQualifiers { get; init; } = 25;
 
     /// <summary>
-    /// The longest TAMMi waits for a rate limit to reset before retrying a request. When GitHub asks for a longer
+    /// The longest Tammi waits for a rate limit to reset before retrying a request. When GitHub asks for a longer
     /// wait, the request fails with an <see cref="IntegrationRateLimitException"/> instead.
     /// </summary>
     public TimeSpan MaxRateLimitWait { get; init; } = TimeSpan.FromSeconds(10);

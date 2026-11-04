@@ -1,6 +1,6 @@
-using TAMMi.Core.Credentials;
+using Deosrc.Tammi.Core.Credentials;
 
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
 /// One integration's secret in the <see cref="ICredentialStore"/>, e.g. an access token.

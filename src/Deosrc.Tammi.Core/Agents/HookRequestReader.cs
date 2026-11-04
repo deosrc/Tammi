@@ -2,7 +2,7 @@ using System.Buffers;
 using System.Globalization;
 using System.Text;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// Reads one HTTP/1.1 request from a connection to the <see cref="AgentHookServer"/>: its request line and headers,

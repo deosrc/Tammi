@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Integrations.Jira;
 
 /// <summary>
 /// A page of JIRA Cloud's issue search (<c>search/jql</c>), which pages with a token.

@@ -1,6 +1,6 @@
-using TAMMi.Core.Workspaces;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace TAMMi.UI.Workspaces;
+namespace Deosrc.Tammi.UI.Workspaces;
 
 /// <summary>
 /// What each Workspace View was showing, so it shows the same again when the user comes back to it (e.g. from Home,

@@ -1,7 +1,7 @@
 @page "/settings/about/third-party"
 @layout SettingsLayout
-@using TAMMi.Core.Platform
-@using TAMMi.UI.About
+@using Deosrc.Tammi.Core.Platform
+@using Deosrc.Tammi.UI.About
 @inject IProcessLauncher ProcessLauncher
 
 <p><a href="@AppRoutes.About">‹ About</a></p>
@@ -52,7 +52,7 @@
 @code {
     private string? _error;
 
-    // Links must open in the user's browser: following them would navigate the app's own window away from TAMMi.
+    // Links must open in the user's browser: following them would navigate the app's own window away from Tammi.
     private void OpenExternal(string url)
     {
         _error = null;

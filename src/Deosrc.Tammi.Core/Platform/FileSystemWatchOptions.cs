@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
 /// Options for <see cref="IFileSystemWatchService.Watch"/>.

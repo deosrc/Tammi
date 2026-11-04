@@ -1,7 +1,7 @@
-using TAMMi.Core.Platform;
-using TAMMi.Core.Settings;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Settings;
 
-namespace TAMMi.Core.Terminals;
+namespace Deosrc.Tammi.Core.Terminals;
 
 /// <summary>
 /// Starts terminals: the terminal shell from the settings, in the embedded terminal's pseudoterminals.

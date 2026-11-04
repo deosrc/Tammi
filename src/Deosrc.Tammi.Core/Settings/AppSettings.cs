@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// The app settings, shown on the Settings screen and kept in the settings file (see <see cref="SettingsStore"/>).

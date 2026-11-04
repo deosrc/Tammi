@@ -1,15 +1,15 @@
 using System.Text.Json;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// How an Agent Definition's CLI reports what it's doing through its hooks, for the states Working, Needs input and
 /// Idle.
 /// </summary>
 /// <remarks>
-/// In keeping with the principles in <c>docs/CONTEXT.md</c>, the hooks are supplied when TAMMi launches the agent, in
+/// In keeping with the principles in <c>docs/CONTEXT.md</c>, the hooks are supplied when Tammi launches the agent, in
 /// its arguments and environment, never by changing files in its working directory or any repository. The hooks send
-/// each event to TAMMi's <see cref="AgentHookServer"/> as JSON.
+/// each event to Tammi's <see cref="AgentHookServer"/> as JSON.
 /// </remarks>
 public abstract class AgentHooks
 {
@@ -30,13 +30,13 @@ public abstract class AgentHooks
     public abstract AgentState? StateAfter(JsonElement hookEvent);
 
     /// <summary>
-    /// Whether the hooks report the Agent Session's ID (see <see cref="SessionIdFrom"/>), so TAMMi can resume the
+    /// Whether the hooks report the Agent Session's ID (see <see cref="SessionIdFrom"/>), so Tammi can resume the
     /// session without setting its ID at launch.
     /// </summary>
     public virtual bool ReportsSessionId => false;
 
     /// <summary>
-    /// The Agent Session ID that a hook event reports, so TAMMi follows the agent when it moves to another session.
+    /// The Agent Session ID that a hook event reports, so Tammi follows the agent when it moves to another session.
     /// </summary>
     /// <param name="hookEvent">The event, as the hook sent it.</param>
     /// <returns>The ID of the session the agent is in, or <c>null</c> if the event doesn't say.</returns>

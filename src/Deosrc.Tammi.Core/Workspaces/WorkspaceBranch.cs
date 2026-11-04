@@ -1,6 +1,6 @@
-using TAMMi.Core.Git;
+using Deosrc.Tammi.Core.Git;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// A branch of a deleted workspace, offered for deletion from its Local Repository.
@@ -9,7 +9,7 @@ namespace TAMMi.Core.Workspaces;
 /// <param name="Branch">The branch's name.</param>
 /// <param name="State">Whether the branch is merged or pushed.</param>
 /// <param name="IsWorkspaceBranch">
-/// Whether the workspace's metadata lists the branch, so TAMMi created it for the workspace. Branches of worktrees
+/// Whether the workspace's metadata lists the branch, so Tammi created it for the workspace. Branches of worktrees
 /// found only by looking in the Workspace Folder could be used elsewhere.
 /// </param>
 public sealed record WorkspaceBranch(

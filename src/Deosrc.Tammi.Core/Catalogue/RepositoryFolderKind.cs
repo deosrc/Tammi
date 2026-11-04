@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Catalogue;
+namespace Deosrc.Tammi.Core.Catalogue;
 
 /// <summary>
 /// What a folder holds, as far as the Repository Catalogue is concerned (see <see cref="RepositoryScanner.Inspect"/>).

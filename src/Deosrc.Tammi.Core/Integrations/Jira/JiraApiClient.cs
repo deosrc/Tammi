@@ -4,7 +4,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
-namespace TAMMi.Core.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Integrations.Jira;
 
 /// <summary>
 /// Calls JIRA's REST API: authenticates each request and waits out short rate limits. Errors become
@@ -265,7 +265,7 @@ internal sealed class JiraApiClient(
         }
         catch (JsonException exception)
         {
-            throw new IntegrationException($"JIRA returned a response TAMMi couldn't read: {exception.Message}",
+            throw new IntegrationException($"JIRA returned a response Tammi couldn't read: {exception.Message}",
                 exception);
         }
     }

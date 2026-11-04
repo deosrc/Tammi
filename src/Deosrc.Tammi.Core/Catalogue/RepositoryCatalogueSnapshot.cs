@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Catalogue;
+namespace Deosrc.Tammi.Core.Catalogue;
 
 /// <summary>
 /// The Repository Catalogue as it was at the end of a scan.

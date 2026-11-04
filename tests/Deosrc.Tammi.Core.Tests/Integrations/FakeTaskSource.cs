@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using TAMMi.Core.Integrations;
+using Tammi.Core.Integrations;
 
-namespace TAMMi.Core.Tests.Integrations;
+namespace Tammi.Core.Tests.Integrations;
 
 /// <summary>
 /// A Task Source with set answers, for testing what's done with them. Keys of the form <c>&lt;prefix&gt;-n</c> and

@@ -9,11 +9,11 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Product>TAMMi</Product>
+    <Product>Tammi</Product>
     <Authors>Deosrc</Authors>
     <Company>Deosrc</Company>
     <Copyright>Copyright © Deosrc</Copyright>
-    <RepositoryUrl>https://github.com/deosrc/TAMMi</RepositoryUrl>
+    <RepositoryUrl>https://github.com/deosrc/Tammi</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <Version>0.1.0</Version>
   </PropertyGroup>

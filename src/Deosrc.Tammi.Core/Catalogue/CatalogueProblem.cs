@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Catalogue;
+namespace Deosrc.Tammi.Core.Catalogue;
 
 /// <summary>
 /// A Monitored Folder or manually added local repository that couldn't be catalogued, e.g. because it's missing.

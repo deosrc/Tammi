@@ -1,8 +1,8 @@
 using LibGit2Sharp;
-using TAMMi.Core.Git;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// Keeps the git status of a workspace's repositories up to date, by watching their Workspace Worktrees for file

@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
 /// What a <see cref="TaskFinder"/> search looked for, which depends on what the user entered.

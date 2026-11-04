@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Credentials;
+namespace Deosrc.Tammi.Core.Credentials;
 
 /// <summary>
 /// The platform's secret store failed to read, save or delete a secret.

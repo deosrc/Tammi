@@ -1,9 +1,9 @@
-using TAMMi.Core.Terminals;
-using TAMMi.Core.Tests.Platform.Pty;
-using TAMMi.Core.Tests.Settings;
-using TAMMi.Core.Workspaces;
+using Tammi.Core.Terminals;
+using Tammi.Core.Tests.Platform.Pty;
+using Tammi.Core.Tests.Settings;
+using Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Tests.Terminals;
+namespace Tammi.Core.Tests.Terminals;
 
 public sealed class WorkspaceTerminalsTests : IAsyncDisposable
 {

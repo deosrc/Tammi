@@ -1,6 +1,6 @@
-using AppInfo = TAMMi.Core.AppInfo;
+using AppInfo = Deosrc.Tammi.Core.AppInfo;
 
-namespace TAMMi.Windows;
+namespace Deosrc.Tammi.Windows;
 
 public partial class App : Application
 {

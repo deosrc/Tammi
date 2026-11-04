@@ -1,16 +1,16 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace TAMMi.Core.Storage;
+namespace Deosrc.Tammi.Core.Storage;
 
 /// <summary>
-/// Reads and writes TAMMi's versioned JSON files, such as the settings file and workspace metadata.
+/// Reads and writes Tammi's versioned JSON files, such as the settings file and workspace metadata.
 /// </summary>
 /// <remarks>
 /// Each file is a JSON object with a <c>version</c> property. When a file's layout changes, its version goes up and a
 /// migration is added for it. The migration at index <c>i</c> upgrades a file from version <c>i + 1</c> to version
 /// <c>i + 2</c>, so the current version is one more than the number of migrations. A file from a newer version of
-/// TAMMi is read as far as possible.
+/// Tammi is read as far as possible.
 /// </remarks>
 internal static class VersionedJsonFile
 {
@@ -87,7 +87,7 @@ internal static class VersionedJsonFile
 
     private static int ReadVersion(JsonObject json)
     {
-        // TAMMi always writes the version, but a file written by hand might not have one.
+        // Tammi always writes the version, but a file written by hand might not have one.
         if (!json.TryGetPropertyValue(VersionProperty, out var versionNode) || versionNode is null)
         {
             return 1;

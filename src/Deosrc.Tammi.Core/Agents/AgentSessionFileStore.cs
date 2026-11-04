@@ -1,15 +1,15 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using TAMMi.Core.Storage;
+using Deosrc.Tammi.Core.Storage;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// Keeps Agent Sessions in a versioned JSON file, such as <c>.tammi/agent-sessions.json</c> in a Workspace Folder.
 /// </summary>
 /// <remarks>
 /// The file is versioned like the settings file (see <see cref="VersionedJsonFile"/>). It's read each time the
-/// sessions are listed, so changes made by another TAMMi window are seen. If it can't be read, no sessions are listed,
+/// sessions are listed, so changes made by another Tammi window are seen. If it can't be read, no sessions are listed,
 /// and the next change first copies it to a file named like it with <c>.invalid</c> before the extension (e.g.
 /// <c>agent-sessions.invalid.json</c>), so it isn't lost.
 /// </remarks>

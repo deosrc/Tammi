@@ -1,6 +1,6 @@
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Linux.PlatformServices;
+namespace Deosrc.Tammi.Linux.PlatformServices;
 
 /// <summary>
 /// App folders under the XDG base directories, e.g. <c>~/.config/tammi</c>.

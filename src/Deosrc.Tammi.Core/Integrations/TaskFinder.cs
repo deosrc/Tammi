@@ -1,6 +1,6 @@
-using TAMMi.Core.Credentials;
+using Deosrc.Tammi.Core.Credentials;
 
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
 /// Finds tasks in every connected Task Source at once, for the Create Workspace flow. The user enters one thing and

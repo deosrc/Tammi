@@ -1,9 +1,9 @@
 using System.Text.Json.Nodes;
-using TAMMi.Core.Agents;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Tests.Platform.Pty;
+using Tammi.Core.Agents;
+using Tammi.Core.Platform;
+using Tammi.Core.Tests.Platform.Pty;
 
-namespace TAMMi.Core.Tests.Agents;
+namespace Tammi.Core.Tests.Agents;
 
 public sealed class AgentSessionFileStoreTests : IDisposable
 {

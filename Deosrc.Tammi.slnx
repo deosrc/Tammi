@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Deosrc.Tammi.Core/Deosrc.Tammi.Core.csproj" />
+    <Project Path="src/Deosrc.Tammi.Linux/Deosrc.Tammi.Linux.csproj" />
+    <Project Path="src/Deosrc.Tammi.UI/Deosrc.Tammi.UI.csproj" />
+    <Project Path="src/Deosrc.Tammi.Windows/Deosrc.Tammi.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Deosrc.Tammi.Core.Tests/Deosrc.Tammi.Core.Tests.csproj" />
+  </Folder>
+</Solution>

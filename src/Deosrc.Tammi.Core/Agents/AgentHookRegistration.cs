@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// An agent's place on the <see cref="AgentHookServer"/>: the endpoint its hooks send their events to, and the events

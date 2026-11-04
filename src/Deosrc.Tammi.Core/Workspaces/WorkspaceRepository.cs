@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// A repository in a workspace: a Workspace Worktree of a Local Repository, on the workspace's branch.

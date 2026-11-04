@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// What goes between the words of a suggested workspace name.

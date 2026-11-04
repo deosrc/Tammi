@@ -1,4 +1,4 @@
-namespace TAMMi.UI.Components;
+namespace Deosrc.Tammi.UI.Components;
 
 /// <summary>
 /// The services an integration can connect to.

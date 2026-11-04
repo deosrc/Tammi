@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// Builds the <see cref="Integrations.IIntegration.Id"/> of a configured integration from the service it connects

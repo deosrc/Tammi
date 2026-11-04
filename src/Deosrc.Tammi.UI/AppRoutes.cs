@@ -1,4 +1,4 @@
-namespace TAMMi.UI;
+namespace Deosrc.Tammi.UI;
 
 /// <summary>
 /// Paths of the app's pages, relative to the base URI.

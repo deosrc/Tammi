@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// Runs the <c>git</c> CLI as a child process.
@@ -75,7 +75,7 @@ public sealed partial class GitCli(GitCliOptions? options = null) : IGitCli
             startInfo.ArgumentList.Add(arg);
         }
 
-        // TAMMi is a GUI app: a git process waiting for a terminal prompt would hang with nobody to answer it.
+        // Tammi is a GUI app: a git process waiting for a terminal prompt would hang with nobody to answer it.
         // Credential helpers with their own UI still work.
         startInfo.Environment["GIT_TERMINAL_PROMPT"] = "0";
         foreach ((string name, string? value) in _options.Environment)

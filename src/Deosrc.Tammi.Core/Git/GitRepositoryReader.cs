@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using LibGit2Sharp;
 
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// Reads repository status and history with LibGit2Sharp.

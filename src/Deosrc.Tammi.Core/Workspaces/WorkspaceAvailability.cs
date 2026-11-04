@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// Whether a known workspace's metadata could be read when the workspaces were listed.

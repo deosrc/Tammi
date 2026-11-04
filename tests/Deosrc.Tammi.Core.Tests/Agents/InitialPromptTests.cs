@@ -1,6 +1,6 @@
-using TAMMi.Core.Agents;
+using Tammi.Core.Agents;
 
-namespace TAMMi.Core.Tests.Agents;
+namespace Tammi.Core.Tests.Agents;
 
 public class InitialPromptTests
 {

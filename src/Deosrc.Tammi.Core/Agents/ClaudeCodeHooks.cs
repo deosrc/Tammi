@@ -1,11 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// Claude Code's hooks: HTTP hooks, passed in its <c>--settings</c> argument as JSON. Claude Code merges them with the
-/// hooks in its own settings files, and a hook that can't reach TAMMi doesn't hold it up or block anything.
+/// hooks in its own settings files, and a hook that can't reach Tammi doesn't hold it up or block anything.
 /// </summary>
 /// <remarks>
 /// See https://code.claude.com/docs/en/hooks. Claude Code doesn't report everything:
@@ -21,7 +21,7 @@ namespace TAMMi.Core.Agents;
 public sealed class ClaudeCodeHooks : AgentHooks
 {
     /// <summary>
-    /// How long, in seconds, Claude Code waits for TAMMi to accept an event before it carries on without it.
+    /// How long, in seconds, Claude Code waits for Tammi to accept an event before it carries on without it.
     /// </summary>
     private const int TimeoutSeconds = 10;
 

@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
 /// The parts of <see cref="IProcessLauncher"/> that work the same on every platform, built on

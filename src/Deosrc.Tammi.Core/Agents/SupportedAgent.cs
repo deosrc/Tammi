@@ -1,7 +1,7 @@
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
-/// A Supported Agent: an agent CLI that TAMMi knows how to start. It's always offered, and isn't configured by the
+/// A Supported Agent: an agent CLI that Tammi knows how to start. It's always offered, and isn't configured by the
 /// user. Other agents can be added as Custom Agents (see <see cref="Settings.AgentSettings.CustomDefinitions"/>).
 /// </summary>
 /// <param name="Definition">How to start the agent.</param>

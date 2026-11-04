@@ -1,6 +1,6 @@
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// Manages Workspace Worktrees with the <c>git</c> CLI.
@@ -441,7 +441,7 @@ public sealed class GitWorktreeService(IGitCli git, IGitRepositoryReader reader)
         string worktree,
         CancellationToken cancellationToken)
     {
-        // --force: TAMMi checks for lost work itself, including inside submodules, and git refuses to remove any
+        // --force: Tammi checks for lost work itself, including inside submodules, and git refuses to remove any
         // worktree with checked-out submodules without it. A single --force still keeps locked worktrees.
         await git.RunAsync(
             repository,

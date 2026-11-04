@@ -1,6 +1,6 @@
-using TAMMi.Core.Windowing;
+using Tammi.Core.Windowing;
 
-namespace TAMMi.Core.Tests.Windowing;
+namespace Tammi.Core.Tests.Windowing;
 
 public class WindowStateTrackerTests
 {

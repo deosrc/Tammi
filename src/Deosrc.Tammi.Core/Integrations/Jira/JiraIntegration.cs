@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using TAMMi.Core.Credentials;
+using Deosrc.Tammi.Core.Credentials;
 
-namespace TAMMi.Core.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Integrations.Jira;
 
 /// <summary>
 /// Reads issues from a JIRA Cloud, Server or Data Center site, as tasks.

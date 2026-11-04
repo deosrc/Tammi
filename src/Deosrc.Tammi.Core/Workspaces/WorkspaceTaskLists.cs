@@ -1,6 +1,6 @@
-using TAMMi.Core.Integrations;
+using Deosrc.Tammi.Core.Integrations;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// The task lists of the workspaces open in tabs. A workspace's list is read when it's first started, kept while its tab

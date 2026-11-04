@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
-namespace TAMMi.Core.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Integrations.Jira;
 
 /// <summary>
 /// Reads JIRA issue keys, e.g. <c>ABC-123</c>, which are the <see cref="TaskInfo.Key"/>s of JIRA tasks.

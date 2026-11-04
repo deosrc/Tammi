@@ -1,6 +1,6 @@
-using TAMMi.Core.Git;
+using Deosrc.Tammi.Core.Git;
 
-namespace TAMMi.UI.Workspaces;
+namespace Deosrc.Tammi.UI.Workspaces;
 
 /// <summary>
 /// Short descriptions of what's wrong with a broken Workspace Worktree, as shown in the Workspace View's side panel.

@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// The outcome of running a <c>git</c> command.

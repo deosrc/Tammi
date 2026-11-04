@@ -1,6 +1,6 @@
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Terminals;
+namespace Deosrc.Tammi.Core.Terminals;
 
 /// <summary>
 /// A pseudoterminal session whose recent output is kept, so a terminal that's closed and shown again can replay it.

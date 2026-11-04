@@ -1,6 +1,6 @@
-using TAMMi.Core.Git;
+using Deosrc.Tammi.Core.Git;
 
-namespace TAMMi.UI.Workspaces;
+namespace Deosrc.Tammi.UI.Workspaces;
 
 /// <summary>
 /// Wording for git status in the Workspace View's side panel.

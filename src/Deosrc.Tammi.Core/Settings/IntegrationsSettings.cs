@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// The Integrations section of the Settings screen: the integrations the user has connected. Their secrets are kept
@@ -17,7 +17,7 @@ public sealed record IntegrationsSettings
     public IReadOnlyList<JiraIntegrationSettings> Jira { get; init; } = [];
 
     /// <summary>
-    /// Drops integrations that are missing values TAMMi needs, or that have the same ID as one before them.
+    /// Drops integrations that are missing values Tammi needs, or that have the same ID as one before them.
     /// </summary>
     public IntegrationsSettings Normalize()
     {

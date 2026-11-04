@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
 /// A process running in a pseudoterminal.

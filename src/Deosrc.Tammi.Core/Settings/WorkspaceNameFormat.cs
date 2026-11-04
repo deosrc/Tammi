@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// How the workspace name suggested from a task is written (see <c>WorkspaceNames.Suggest</c>). The default is lower
@@ -26,7 +26,7 @@ public sealed record WorkspaceNameFormat
     public bool IncludeTaskReference { get; init; } = true;
 
     /// <summary>
-    /// Replaces values this version of TAMMi doesn't know with the defaults.
+    /// Replaces values this version of Tammi doesn't know with the defaults.
     /// </summary>
     public WorkspaceNameFormat Normalize() => this with
     {

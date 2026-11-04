@@ -1,21 +1,21 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-namespace TAMMi.Core.Credentials;
+namespace Deosrc.Tammi.Core.Credentials;
 
 /// <summary>
 /// Keeps secrets with the Secret Service (e.g. GNOME Keyring or KWallet), through libsecret.
 /// </summary>
 /// <remarks>
-/// Secrets are saved in the default collection (usually the "Login" keyring), labelled <c>TAMMi:&lt;key&gt;</c>.
-/// libsecret is a system library, so it isn't shipped with TAMMi. Calls block while the Secret Service asks the user
+/// Secrets are saved in the default collection (usually the "Login" keyring), labelled <c>Tammi:&lt;key&gt;</c>.
+/// libsecret is a system library, so it isn't shipped with Tammi. Calls block while the Secret Service asks the user
 /// to unlock a keyring, so they run on the thread pool and can be cancelled.
 /// </remarks>
 [SupportedOSPlatform("linux")]
 public sealed partial class LibSecretCredentialStore : ICredentialStore
 {
     /// <summary>
-    /// The libsecret schema for TAMMi's secrets. The <see cref="KeyAttribute"/> attribute holds the key.
+    /// The libsecret schema for Tammi's secrets. The <see cref="KeyAttribute"/> attribute holds the key.
     /// </summary>
     internal const string SchemaName = "com.deosrc.tammi.Credential";
 
@@ -93,9 +93,9 @@ public sealed partial class LibSecretCredentialStore : ICredentialStore
         if (domain == "g-dbus-error-quark" || (domain == "g-io-error-quark" && IsBusError(code)))
         {
             return new CredentialStoreUnavailableException(
-                "No secret store is available to keep TAMMi's credentials in. TAMMi needs a Secret Service, such as "
+                "No secret store is available to keep Tammi's credentials in. Tammi needs a Secret Service, such as "
                     + "GNOME Keyring or KWallet, running in your desktop session. Install one (e.g. the "
-                    + $"'gnome-keyring' package), sign out and back in, and restart TAMMi. Details: {message}");
+                    + $"'gnome-keyring' package), sign out and back in, and restart Tammi. Details: {message}");
         }
 
         return new CredentialStoreException($"The Secret Service failed: {message}");
@@ -135,9 +135,9 @@ public sealed partial class LibSecretCredentialStore : ICredentialStore
                 catch (Exception exception) when (exception is DllNotFoundException or EntryPointNotFoundException)
                 {
                     throw new CredentialStoreUnavailableException(
-                        "No secret store is available to keep TAMMi's credentials in, because libsecret isn't "
+                        "No secret store is available to keep Tammi's credentials in, because libsecret isn't "
                             + "installed. Install it (e.g. 'libsecret-1-0' on Debian and Ubuntu, or 'libsecret' on "
-                            + "Fedora and Arch) and restart TAMMi.",
+                            + "Fedora and Arch) and restart Tammi.",
                         exception);
                 }
             },

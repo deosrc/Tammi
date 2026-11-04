@@ -1,6 +1,6 @@
 using Microsoft.Win32.SafeHandles;
 
-namespace TAMMi.Core.Platform.Pty;
+namespace Deosrc.Tammi.Core.Platform.Pty;
 
 /// <summary>
 /// A Windows Job Object, which groups a process with every process it starts so they can be ended together.

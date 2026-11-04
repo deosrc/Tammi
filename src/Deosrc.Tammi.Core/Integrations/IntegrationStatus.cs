@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
 /// The result of the last connection check of an integration, shown in Settings.
@@ -15,7 +15,7 @@ public sealed record IntegrationStatus(
     string? Message = null)
 {
     /// <summary>
-    /// Something about a connected integration the user should fix, e.g. a token that can't see everything TAMMi
+    /// Something about a connected integration the user should fix, e.g. a token that can't see everything Tammi
     /// needs. The integration still works.
     /// </summary>
     public string? Warning { get; init; }

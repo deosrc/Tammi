@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// Creates, checks, repairs and removes Workspace Worktrees, and manages their branches in the Local Repository. Writes

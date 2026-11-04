@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Storage;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Storage;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// Keeps each workspace's metadata in <c>.tammi/workspace.json</c> in its Workspace Folder, and the index of known
@@ -13,8 +13,8 @@ namespace TAMMi.Core.Workspaces;
 /// <remarks>
 /// <para>
 /// Both files are versioned like the settings file: when a layout changes, its version goes up and a migration is
-/// added, which upgrades files written by older versions of TAMMi when they're read. A file from a newer version of
-/// TAMMi is read as far as possible.
+/// added, which upgrades files written by older versions of Tammi when they're read. A file from a newer version of
+/// Tammi is read as far as possible.
 /// </para>
 /// <para>
 /// The metadata doesn't hold the Workspace Folder's path, so a moved workspace still reads correctly. The index holds

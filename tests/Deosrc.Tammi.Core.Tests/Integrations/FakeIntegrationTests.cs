@@ -1,7 +1,7 @@
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Tests.Credentials;
+using Tammi.Core.Integrations;
+using Tammi.Core.Tests.Credentials;
 
-namespace TAMMi.Core.Tests.Integrations;
+namespace Tammi.Core.Tests.Integrations;
 
 public class FakeIntegrationTests
 {

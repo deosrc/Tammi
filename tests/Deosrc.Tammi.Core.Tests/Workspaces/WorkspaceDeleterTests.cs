@@ -1,8 +1,8 @@
-using TAMMi.Core.Git;
-using TAMMi.Core.Tests.Git;
-using TAMMi.Core.Workspaces;
+using Tammi.Core.Git;
+using Tammi.Core.Tests.Git;
+using Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Tests.Workspaces;
+namespace Tammi.Core.Tests.Workspaces;
 
 public sealed class WorkspaceDeleterTests : IDisposable
 {

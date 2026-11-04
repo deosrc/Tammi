@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// The local channel that agents' hooks report their events on: a small HTTP server on the loopback address, on a
@@ -133,7 +133,7 @@ public sealed class AgentHookServer : IAsyncDisposable
         catch (Exception ex) when (ex is IOException or SocketException or OperationCanceledException
             or ObjectDisposedException)
         {
-            // The connection was lost, or the request took too long. The hook carries on without TAMMi.
+            // The connection was lost, or the request took too long. The hook carries on without Tammi.
         }
     }
 

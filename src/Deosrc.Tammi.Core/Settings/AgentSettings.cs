@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using TAMMi.Core.Agents;
+using Deosrc.Tammi.Core.Agents;
 
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// The Agents section of the Settings screen.

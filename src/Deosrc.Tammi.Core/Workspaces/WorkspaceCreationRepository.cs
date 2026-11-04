@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// A repository for <see cref="WorkspaceCreator"/> to add to a new workspace, as a Workspace Worktree.

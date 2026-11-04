@@ -1,6 +1,6 @@
-using TAMMi.Core.Integrations.GitHub;
+using Tammi.Core.Integrations.GitHub;
 
-namespace TAMMi.Core.Tests.Integrations.GitHub;
+namespace Tammi.Core.Tests.Integrations.GitHub;
 
 public class GitHubIssueKeyTests
 {

@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
 /// Deletes folders without following links out of them.

@@ -1,6 +1,6 @@
 using System.Runtime.Versioning;
 
-namespace TAMMi.Core.Platform.Pty;
+namespace Deosrc.Tammi.Core.Platform.Pty;
 
 /// <summary>
 /// Starts processes in a Windows pseudoconsole (ConPTY).

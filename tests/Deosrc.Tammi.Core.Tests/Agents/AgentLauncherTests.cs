@@ -1,9 +1,9 @@
-using TAMMi.Core.Agents;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Platform.Pty;
-using TAMMi.Core.Tests.Platform.Pty;
+using Tammi.Core.Agents;
+using Tammi.Core.Platform;
+using Tammi.Core.Platform.Pty;
+using Tammi.Core.Tests.Platform.Pty;
 
-namespace TAMMi.Core.Tests.Agents;
+namespace Tammi.Core.Tests.Agents;
 
 public class AgentLauncherTests
 {

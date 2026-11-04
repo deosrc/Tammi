@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// The General section of the Settings screen.

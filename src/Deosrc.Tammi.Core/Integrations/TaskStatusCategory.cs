@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
 /// What a task's status means for the work, whatever the Task Source calls it. JIRA puts every status, including ones

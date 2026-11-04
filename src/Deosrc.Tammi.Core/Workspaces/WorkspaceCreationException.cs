@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// A workspace couldn't be created. Whatever was created for it has been removed again, except what's listed in

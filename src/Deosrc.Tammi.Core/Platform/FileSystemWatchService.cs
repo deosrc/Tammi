@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
 /// An <see cref="IFileSystemWatchService"/> built on <see cref="FileSystemWatcher"/>, which uses

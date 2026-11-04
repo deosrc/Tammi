@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Windowing;
+namespace Deosrc.Tammi.Core.Windowing;
 
 /// <summary>
 /// Follows the main window's changes to work out the <see cref="WindowState"/> to keep.

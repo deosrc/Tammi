@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Windows.PlatformServices;
+namespace Deosrc.Tammi.Windows.PlatformServices;
 
 /// <summary>
 /// Launches processes on Windows: executables are found on <c>PATH</c> with the extensions in <c>PATHEXT</c>, so
@@ -17,7 +17,7 @@ internal sealed class WindowsProcessLauncher : ProcessLauncherBase
 
     public override string? FindExecutable(string name)
     {
-        // Read the variables each time, so tools installed while TAMMi is running are found.
+        // Read the variables each time, so tools installed while Tammi is running are found.
         var extensions = Environment.GetEnvironmentVariable("PATHEXT")
             ?.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var resolver = new ExecutableResolver(

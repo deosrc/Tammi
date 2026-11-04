@@ -1,7 +1,7 @@
 using System.Web;
-using TAMMi.Core.Integrations.GitHub;
+using Tammi.Core.Integrations.GitHub;
 
-namespace TAMMi.Core.Tests.Integrations.GitHub;
+namespace Tammi.Core.Tests.Integrations.GitHub;
 
 public sealed class GitHubTokenTemplateTests
 {
@@ -18,8 +18,8 @@ public sealed class GitHubTokenTemplateTests
     {
         var query = HttpUtility.ParseQueryString(GitHubTokenTemplate.GitHubComUrl.Query);
 
-        Assert.Equal("TAMMi", query["name"]);
-        Assert.Equal("Lets TAMMi read your issues to build workspaces.", query["description"]);
+        Assert.Equal("Tammi", query["name"]);
+        Assert.Equal("Lets Tammi read your issues to build workspaces.", query["description"]);
         Assert.Equal("read", query["issues"]);
         Assert.Equal("read", query["contents"]);
         Assert.Equal("read", query["metadata"]);

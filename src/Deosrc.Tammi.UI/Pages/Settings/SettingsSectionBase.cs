@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
-using TAMMi.Core.Settings;
+using Deosrc.Tammi.Core.Settings;
 
-namespace TAMMi.UI.Pages.Settings;
+namespace Deosrc.Tammi.UI.Pages.Settings;
 
 /// <summary>
 /// A Settings section that edits the <see cref="AppSettings"/>. Changes are saved as soon as they're made.

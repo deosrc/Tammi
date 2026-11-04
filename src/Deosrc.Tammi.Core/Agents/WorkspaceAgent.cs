@@ -1,7 +1,7 @@
-using TAMMi.Core.Terminals;
-using TAMMi.Core.Workspaces;
+using Deosrc.Tammi.Core.Terminals;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// An agent in a workspace: an Agent Definition running in the Workspace Folder or one of its repositories.

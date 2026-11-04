@@ -1,4 +1,4 @@
-namespace TAMMi.Windows.WinUI;
+namespace Deosrc.Tammi.Windows.WinUI;
 
 /// <summary>
 /// Provides application-specific behavior to supplement the default Application class.

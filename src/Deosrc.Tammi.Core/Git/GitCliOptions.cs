@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// Configuration for <see cref="GitCli"/>.

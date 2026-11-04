@@ -1,7 +1,7 @@
-namespace TAMMi.UI.About;
+namespace Deosrc.Tammi.UI.About;
 
 /// <summary>
-/// Third-party software that TAMMi ships with, and its licenses.
+/// Third-party software that Tammi ships with, and its licenses.
 /// </summary>
 /// <remarks>
 /// Keep this up to date when adding a dependency that ships with the app. Each license text is a file in
@@ -46,9 +46,9 @@ public static class ThirdPartySoftware
     /// </summary>
     public static string ReadLicense(string licenseFile)
     {
-        var name = $"TAMMi.UI.Licenses.{licenseFile}";
+        var name = $"Deosrc.Tammi.UI.Licenses.{licenseFile}";
         using var stream = typeof(ThirdPartySoftware).Assembly.GetManifestResourceStream(name)
-            ?? throw new InvalidOperationException($"License text '{licenseFile}' isn't embedded in TAMMi.UI.");
+            ?? throw new InvalidOperationException($"License text '{licenseFile}' isn't embedded in Deosrc.Tammi.UI.");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }

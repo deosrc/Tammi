@@ -1,9 +1,9 @@
 using Microsoft.Maui.ApplicationModel;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 
-namespace TAMMi.Windows.PlatformServices;
+namespace Deosrc.Tammi.Windows.PlatformServices;
 
 /// <summary>
 /// Shows the native Windows folder dialog.

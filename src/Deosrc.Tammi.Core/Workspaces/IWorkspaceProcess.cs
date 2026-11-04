@@ -1,6 +1,6 @@
-using TAMMi.Core.Terminals;
+using Deosrc.Tammi.Core.Terminals;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// A process running in a workspace's embedded terminal, shown as a tab in its Workspace View: a terminal or an agent.

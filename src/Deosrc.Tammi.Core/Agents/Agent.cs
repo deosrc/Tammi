@@ -1,7 +1,7 @@
 using System.Text.Json;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// An Agent: an agent CLI running in a pseudoterminal, in the context of a folder.
@@ -34,7 +34,7 @@ public sealed class Agent : IAsyncDisposable
     /// over, and disposes it once the process has ended.
     /// </param>
     /// <param name="sessionId">
-    /// The Agent Session's ID, if TAMMi set it at launch. Otherwise <c>null</c>, until the agent's hooks report one.
+    /// The Agent Session's ID, if Tammi set it at launch. Otherwise <c>null</c>, until the agent's hooks report one.
     /// </param>
     public Agent(
         AgentDefinition definition,
@@ -88,7 +88,7 @@ public sealed class Agent : IAsyncDisposable
 
     /// <summary>
     /// The ID of the Agent Session the agent is running, which can be resumed with it later (see
-    /// <see cref="AgentLauncher.Resume"/>). It's <c>null</c> until it's known: TAMMi sets it at launch when the Agent
+    /// <see cref="AgentLauncher.Resume"/>). It's <c>null</c> until it's known: Tammi sets it at launch when the Agent
     /// Definition says how, and the agent's hooks report it when they can. It stays <c>null</c> for agents that can't
     /// resume sessions.
     /// </summary>

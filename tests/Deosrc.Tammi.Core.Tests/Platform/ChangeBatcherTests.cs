@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Time.Testing;
-using TAMMi.Core.Platform;
+using Tammi.Core.Platform;
 
-namespace TAMMi.Core.Tests.Platform;
+namespace Tammi.Core.Tests.Platform;
 
 public class ChangeBatcherTests
 {

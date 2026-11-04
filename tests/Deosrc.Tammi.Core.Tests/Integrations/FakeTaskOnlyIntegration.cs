@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using TAMMi.Core.Integrations;
+using Tammi.Core.Integrations;
 
-namespace TAMMi.Core.Tests.Integrations;
+namespace Tammi.Core.Tests.Integrations;
 
 /// <summary>
 /// An integration that only provides tasks, e.g. JIRA.

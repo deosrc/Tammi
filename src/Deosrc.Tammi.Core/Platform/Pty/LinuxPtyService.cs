@@ -1,6 +1,6 @@
 using System.Runtime.Versioning;
 
-namespace TAMMi.Core.Platform.Pty;
+namespace Deosrc.Tammi.Core.Platform.Pty;
 
 /// <summary>
 /// Starts processes in a Linux pseudoterminal.
@@ -21,7 +21,7 @@ public sealed class LinuxPtyService(IProcessLauncher processLauncher) : PtyServi
 {
     private const string FallbackShell = "/bin/sh";
 
-    // Variables that describe the terminal TAMMi was started from, if any, rather than TAMMi's own.
+    // Variables that describe the terminal Tammi was started from, if any, rather than Tammi's own.
     private static readonly string[] OuterTerminalVariables =
         ["COLUMNS", "LINES", "TERM_PROGRAM", "TERM_PROGRAM_VERSION", "VTE_VERSION", "WINDOWID"];
 

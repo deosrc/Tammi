@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Integrations.Jira;
 
 /// <summary>
 /// What a JIRA Cloud site says about itself at <c>_edge/tenant_info</c>, which needs no authentication.

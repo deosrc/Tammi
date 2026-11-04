@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="TAMMi.Core.Tests" />
+    <InternalsVisibleTo Include="Deosrc.Tammi.Core.Tests" />
   </ItemGroup>
 
   <ItemGroup>

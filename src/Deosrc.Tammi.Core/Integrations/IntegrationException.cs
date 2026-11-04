@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
 /// An integration couldn't complete a request, e.g. because its service can't be reached or returned an error.

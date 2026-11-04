@@ -1,8 +1,8 @@
 @page "/settings/agents"
 @layout SettingsLayout
 @inherits SettingsSectionBase
-@using TAMMi.Core.Agents
-@using TAMMi.Core.Settings
+@using Deosrc.Tammi.Core.Agents
+@using Deosrc.Tammi.Core.Settings
 
 @{
     // Read once, so the whole page shows the same settings. A change being saved replaces them on another thread,
@@ -15,7 +15,7 @@
 <h2>Supported agents</h2>
 
 <p class="settings-help">
-    Agents that TAMMi knows how to start. They're always offered: install an agent's CLI to use it.
+    Agents that Tammi knows how to start. They're always offered: install an agent's CLI to use it.
 </p>
 
 <ul class="agent-definition-list">
@@ -100,7 +100,7 @@
                               value="@ArgumentLines.Format(definition.PromptArguments)"
                               @onchange="e => UpdateDefinitionAsync(index, d => d with { PromptArguments = ArgumentLines.Parse(Text(e)) })"></textarea>
                     <p class="settings-help">
-                        Added after the arguments <strong>only when</strong> TAMMi sends the agent an initial prompt
+                        Added after the arguments <strong>only when</strong> Tammi sends the agent an initial prompt
                         (see below). <code>@AgentDefinition.PromptPlaceholder</code> is replaced with the prompt. Most
                         agents take it on its own line. If the agent takes the prompt as an option's value, put the
                         option on the line before, e.g. <code>--prompt</code>, so it's left out with the prompt. Leave
@@ -123,8 +123,8 @@
                               value="@ArgumentLines.Format(definition.SessionIdArguments)"
                               @onchange="e => UpdateDefinitionAsync(index, d => d with { SessionIdArguments = ArgumentLines.Parse(Text(e)) })"></textarea>
                     <p class="settings-help">
-                        Added after the arguments when the agent starts a new session, so TAMMi can resume it later.
-                        <code>@AgentDefinition.SessionIdPlaceholder</code> is replaced with a session ID that TAMMi
+                        Added after the arguments when the agent starts a new session, so Tammi can resume it later.
+                        <code>@AgentDefinition.SessionIdPlaceholder</code> is replaced with a session ID that Tammi
                         makes up (a UUID), e.g. <code>--session-id</code> then <code>@AgentDefinition.SessionIdPlaceholder</code>.
                         Leave this empty if the agent can't be given a session ID.
                     </p>

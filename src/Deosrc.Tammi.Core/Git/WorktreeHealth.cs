@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// Whether a Workspace Worktree is still connected to its Local Repository.

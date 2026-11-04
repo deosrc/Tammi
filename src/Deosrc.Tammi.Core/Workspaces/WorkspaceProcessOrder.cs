@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// Hands out <see cref="IWorkspaceProcess.StartOrder"/> numbers, so terminals and agents can be listed together in the

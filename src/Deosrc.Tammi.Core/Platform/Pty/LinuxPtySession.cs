@@ -1,8 +1,8 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using static TAMMi.Core.Platform.Pty.LinuxNative;
+using static Deosrc.Tammi.Core.Platform.Pty.LinuxNative;
 
-namespace TAMMi.Core.Platform.Pty;
+namespace Deosrc.Tammi.Core.Platform.Pty;
 
 [SupportedOSPlatform("linux")]
 internal sealed class LinuxPtySession : PtySession
@@ -48,7 +48,7 @@ internal sealed class LinuxPtySession : PtySession
             ThrowIfFailed(flags, "fcntl");
             ThrowIfFailed(Fcntl(master, FSetFl, flags | ONonBlock), "fcntl");
 
-            // TAMMi never opens the terminal's other end itself. Only the process holds it, so once the process and
+            // Tammi never opens the terminal's other end itself. Only the process holds it, so once the process and
             // its children have closed it, reads report the end of the output.
             var processId = Spawn(startInfo, name);
             return new LinuxPtySession(master, processId, startInfo.Size);

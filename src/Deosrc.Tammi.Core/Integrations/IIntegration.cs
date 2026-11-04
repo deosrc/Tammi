@@ -1,11 +1,11 @@
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
 /// A connection to an external service, such as GitHub or JIRA. An integration provides tasks
 /// (<see cref="ITaskIntegration"/>), repositories (<see cref="IRepositoryIntegration"/>) or both.
 /// </summary>
 /// <remarks>
-/// TAMMi only reads from integrations. Credentials are kept in the platform secret store through
+/// Tammi only reads from integrations. Credentials are kept in the platform secret store through
 /// <see cref="IntegrationCredentials"/>, never in settings.
 /// </remarks>
 public interface IIntegration

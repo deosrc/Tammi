@@ -1,6 +1,6 @@
-using TAMMi.Core.Git;
+using Tammi.Core.Git;
 
-namespace TAMMi.Core.Tests.Git;
+namespace Tammi.Core.Tests.Git;
 
 public sealed class GitWorktreeServiceBranchTests : IDisposable
 {

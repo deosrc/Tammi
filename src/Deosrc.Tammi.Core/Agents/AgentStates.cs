@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// Works out an agent's state from its process.

@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// Where an agent's hooks send their events, and the token that says which agent sent them.

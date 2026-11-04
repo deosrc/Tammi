@@ -1,7 +1,7 @@
 using Photino.NET;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Linux.PlatformServices;
+namespace Deosrc.Tammi.Linux.PlatformServices;
 
 /// <summary>
 /// Shows the native folder dialog (GTK on Linux) through Photino.

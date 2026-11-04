@@ -1,6 +1,6 @@
-using TAMMi.Core.Git;
+using Tammi.Core.Git;
 
-namespace TAMMi.Core.Tests.Git;
+namespace Tammi.Core.Tests.Git;
 
 public sealed class GitWorktreeServiceCreateTests : IDisposable
 {
@@ -23,7 +23,7 @@ public sealed class GitWorktreeServiceCreateTests : IDisposable
         string remote = await _repos.CreateRemoteAsync("api");
         string clone = await _repos.CloneAsync(remote, "api");
 
-        // A commit pushed after cloning is only in the worktree if TAMMi fetches first.
+        // A commit pushed after cloning is only in the worktree if Tammi fetches first.
         string seed = _repos.PathTo("api-seed");
         await _repos.CommitFileAsync(seed, "later.txt", "later", "Later commit");
         await _repos.RunAsync(seed, "push", "origin", "main");

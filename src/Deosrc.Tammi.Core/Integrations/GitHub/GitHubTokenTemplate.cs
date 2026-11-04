@@ -1,7 +1,7 @@
-namespace TAMMi.Core.Integrations.GitHub;
+namespace Deosrc.Tammi.Core.Integrations.GitHub;
 
 /// <summary>
-/// The fine-grained personal access token TAMMi needs, as a link to GitHub's new-token page with its details filled
+/// The fine-grained personal access token Tammi needs, as a link to GitHub's new-token page with its details filled
 /// in. The user still chooses the token's owner and which repositories it can reach.
 /// </summary>
 /// <remarks>

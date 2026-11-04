@@ -1,6 +1,6 @@
 @using System.Text
-@using TAMMi.Core.Platform
-@using TAMMi.Core.Terminals
+@using Deosrc.Tammi.Core.Platform
+@using Deosrc.Tammi.Core.Terminals
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 
@@ -71,7 +71,7 @@
         _self = DotNetObjectReference.Create(this);
         _module = await JS.InvokeAsync<IJSObjectReference>(
             "import",
-            "./_content/TAMMi.UI/Components/Terminal.razor.js");
+            "./_content/Deosrc.Tammi.UI/Components/Terminal.razor.js");
 
         // xterm.js adjusts for how ConPTY redraws the screen.
         var options = new { WindowsBuildNumber = OperatingSystem.IsWindows() ? Environment.OSVersion.Version.Build : 0 };

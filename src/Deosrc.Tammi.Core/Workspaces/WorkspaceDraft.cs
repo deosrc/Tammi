@@ -1,9 +1,9 @@
-using TAMMi.Core.Catalogue;
-using TAMMi.Core.Git;
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Settings;
+using Deosrc.Tammi.Core.Catalogue;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Settings;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// The choices made so far in the Create Workspace flow: the tasks, the workspace's name and its parent folder, then the

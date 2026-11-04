@@ -1,7 +1,7 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
-/// The versions of the library TAMMi uses for in-process git reads.
+/// The versions of the library Tammi uses for in-process git reads.
 /// </summary>
 /// <param name="LibGit2SharpVersion">The LibGit2Sharp version, e.g. <c>0.32.0</c>.</param>
 /// <param name="LibGit2Version">

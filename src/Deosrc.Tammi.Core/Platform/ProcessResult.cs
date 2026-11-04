@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
 /// The outcome of a process run with <see cref="IProcessLauncher.RunAsync"/>.

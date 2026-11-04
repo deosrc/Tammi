@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// Loads and saves the <see cref="AppSettings"/>.

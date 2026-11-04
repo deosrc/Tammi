@@ -1,8 +1,8 @@
-# TAMMi
+# Tammi
 
 A task-first software development workspace management tool.
 
-Pick the tasks you're working on (from GitHub or JIRA), and TAMMi sets up a workspace around them.
+Pick the tasks you're working on (from GitHub or JIRA), and Tammi sets up a workspace around them.
 The workspace holds the relevant git repositories, shows their status, runs AI agents on the work and
 opens everything in your other tools.
 
@@ -10,16 +10,16 @@ See [docs/CONTEXT.md](docs/CONTEXT.md) for the full product context.
 
 ## Building and running
 
-The UI is a set of Blazor components in a shared Razor class library (`src/TAMMi.UI`), shown by a native host
+The UI is a set of Blazor components in a shared Razor class library (`src/Deosrc.Tammi.UI`), shown by a native host
 for each platform:
 
 | Project | Purpose |
 |---------|---------|
-| `src/TAMMi.Core` | Domain models and services (no UI dependencies) |
-| `src/TAMMi.UI` | Shared Blazor UI |
-| `src/TAMMi.Windows` | Windows host: .NET MAUI Blazor Hybrid (`BlazorWebView`) |
-| `src/TAMMi.Linux` | Linux host: Photino.Blazor |
-| `tests/TAMMi.Core.Tests` | xUnit tests |
+| `src/Deosrc.Tammi.Core` | Domain models and services (no UI dependencies) |
+| `src/Deosrc.Tammi.UI` | Shared Blazor UI |
+| `src/Deosrc.Tammi.Windows` | Windows host: .NET MAUI Blazor Hybrid (`BlazorWebView`) |
+| `src/Deosrc.Tammi.Linux` | Linux host: Photino.Blazor |
+| `tests/Deosrc.Tammi.Core.Tests` | xUnit tests |
 
 ### Prerequisites
 
@@ -33,19 +33,19 @@ for each platform:
 ### Windows
 
 ```shell
-dotnet build TAMMi.slnx
+dotnet build Tammi.slnx
 dotnet test
-dotnet run --project src/TAMMi.Windows
+dotnet run --project src/Deosrc.Tammi.Windows
 ```
 
 ### Linux
 
-The Windows host can't be built on Linux, so use the `TAMMi.Linux.slnf` solution filter, which leaves it out.
+The Windows host can't be built on Linux, so use the `Deosrc.Tammi.Linux.slnf` solution filter, which leaves it out.
 
 ```shell
-dotnet build TAMMi.Linux.slnf
-dotnet test --project tests/TAMMi.Core.Tests
-dotnet run --project src/TAMMi.Linux
+dotnet build Deosrc.Tammi.Linux.slnf
+dotnet test --project tests/Deosrc.Tammi.Core.Tests
+dotnet run --project src/Deosrc.Tammi.Linux
 ```
 
 `dotnet test` runs on Microsoft.Testing.Platform (set in `global.json`). It evaluates every project in a solution or

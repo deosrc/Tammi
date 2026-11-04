@@ -1,7 +1,7 @@
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
-/// The integrations TAMMi is connected to. Settings adds and removes them; the Create Workspace flow and the
+/// The integrations Tammi is connected to. Settings adds and removes them; the Create Workspace flow and the
 /// Repository Catalogue read them.
 /// </summary>
 /// <remarks>

@@ -4,14 +4,14 @@ using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace TAMMi.Core.Credentials;
+namespace Deosrc.Tammi.Core.Credentials;
 
 /// <summary>
-/// Keeps secrets in Windows Credential Manager, as generic credentials named <c>TAMMi:&lt;key&gt;</c>.
+/// Keeps secrets in Windows Credential Manager, as generic credentials named <c>Tammi:&lt;key&gt;</c>.
 /// </summary>
 /// <remarks>
 /// Credentials are saved for the local machine only, so they don't roam with the user's profile, in keeping with
-/// TAMMi's local app data. Secrets are stored as UTF-8 and can be at most 2560 bytes long.
+/// Tammi's local app data. Secrets are stored as UTF-8 and can be at most 2560 bytes long.
 /// </remarks>
 [SupportedOSPlatform("windows")]
 public sealed partial class WindowsCredentialStore : ICredentialStore
@@ -129,7 +129,7 @@ public sealed partial class WindowsCredentialStore : ICredentialStore
         return error == ErrorNoSuchLogonSession
             ? new CredentialStoreUnavailableException(
                 "Windows Credential Manager isn't available, because this Windows session can't store credentials. "
-                    + "Sign in to Windows with a user account, not a service or network logon, and restart TAMMi.",
+                    + "Sign in to Windows with a user account, not a service or network logon, and restart Tammi.",
                 inner)
             : new CredentialStoreException(
                 $"Windows Credential Manager couldn't {operation} the credential: {inner.Message}",

@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Settings;
-using TAMMi.Core.Workspaces;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// The agents of every workspace. They keep running when a workspace's tab closes, so it can show them again when it
@@ -124,7 +124,7 @@ public sealed class WorkspaceAgents(
     /// <exception cref="FileNotFoundException">The agent's command can't be found.</exception>
     /// <exception cref="DirectoryNotFoundException">The session's folder doesn't exist any more.</exception>
     /// <exception cref="ArgumentException">
-    /// The definition has no command or can't resume sessions, or the session's ID isn't one TAMMi could have set.
+    /// The definition has no command or can't resume sessions, or the session's ID isn't one Tammi could have set.
     /// </exception>
     /// <exception cref="ObjectDisposedException">The app is closing.</exception>
     public Task<WorkspaceAgent> ResumeAsync(Workspace workspace, AgentSession session)

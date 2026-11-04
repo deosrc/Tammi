@@ -1,6 +1,6 @@
-using TAMMi.Core.Git;
+using Tammi.Core.Git;
 
-namespace TAMMi.Core.Tests.Git;
+namespace Tammi.Core.Tests.Git;
 
 /// <summary>
 /// A temporary folder for building git repositories in tests. Git runs with its own global config, so the
@@ -10,7 +10,7 @@ internal sealed class TempRepositories : IDisposable
 {
     private const string GlobalConfig = """
         [user]
-            name = TAMMi Tests
+            name = Tammi Tests
             email = tests@tammi.invalid
         [init]
             defaultBranch = main
@@ -119,7 +119,7 @@ internal sealed class TempRepositories : IDisposable
 
     /// <summary>
     /// The full path to <paramref name="name"/> in the folder, with the platform's separators, so tests can write
-    /// <c>/</c> in names and still compare paths with the ones TAMMi builds.
+    /// <c>/</c> in names and still compare paths with the ones Tammi builds.
     /// </summary>
     public string PathTo(string name) => Path.GetFullPath(Path.Combine(Root, name));
 

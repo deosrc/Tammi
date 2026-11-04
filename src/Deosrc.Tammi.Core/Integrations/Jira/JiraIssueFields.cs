@@ -1,9 +1,9 @@
 using System.Globalization;
 
-namespace TAMMi.Core.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Integrations.Jira;
 
 /// <summary>
-/// The issue fields TAMMi asks for: <see cref="Fields"/>.
+/// The issue fields Tammi asks for: <see cref="Fields"/>.
 /// </summary>
 /// <param name="Summary">The issue's title.</param>
 /// <param name="Description">The description in JIRA wiki markup, or <see langword="null"/> when it has none.</param>

@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Tests.Integrations.Jira;
+namespace Tammi.Core.Tests.Integrations.Jira;
 
 /// <summary>
 /// Answers JIRA REST API requests with faked responses, and records the requests.

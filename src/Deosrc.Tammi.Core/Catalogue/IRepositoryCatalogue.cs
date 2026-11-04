@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Catalogue;
+namespace Deosrc.Tammi.Core.Catalogue;
 
 /// <summary>
 /// The Repository Catalogue: the app-level list of known repositories, collected from the repository sources.

@@ -1,8 +1,8 @@
 using System.Text;
 using System.Threading.Channels;
-using TAMMi.Core.Platform;
+using Tammi.Core.Platform;
 
-namespace TAMMi.Core.Tests.Terminals;
+namespace Tammi.Core.Tests.Terminals;
 
 /// <summary>
 /// A session with no process behind it, whose output the test writes.

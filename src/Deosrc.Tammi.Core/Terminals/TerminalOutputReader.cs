@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Terminals;
+namespace Deosrc.Tammi.Core.Terminals;
 
 /// <summary>
 /// Reads a <see cref="TerminalSession"/>'s output from where it started, e.g. for one terminal showing the session.

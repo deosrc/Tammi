@@ -1,12 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
-using TAMMi.Core.Agents;
-using TAMMi.Core.Terminals;
-using TAMMi.Core.Windowing;
-using TAMMi.UI;
-using TAMMi.Windows.PlatformServices;
+using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Terminals;
+using Deosrc.Tammi.Core.Windowing;
+using Deosrc.Tammi.UI;
+using Deosrc.Tammi.Windows.PlatformServices;
 
-namespace TAMMi.Windows;
+namespace Deosrc.Tammi.Windows;
 
 public static class MauiProgram
 {

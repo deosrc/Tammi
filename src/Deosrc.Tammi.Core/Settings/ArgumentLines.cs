@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// Shows a list of arguments as text with one argument on each line, as the Settings screen edits them.

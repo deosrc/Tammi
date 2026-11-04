@@ -1,6 +1,6 @@
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Linux.PlatformServices;
+namespace Deosrc.Tammi.Linux.PlatformServices;
 
 /// <summary>
 /// Launches processes on Linux: executables are found on <c>PATH</c>, and things are opened with <c>xdg-open</c>.
@@ -12,7 +12,7 @@ internal sealed class LinuxProcessLauncher : ProcessLauncherBase
 
     public override string? FindExecutable(string name)
     {
-        // Read PATH each time, so tools installed while TAMMi is running are found.
+        // Read PATH each time, so tools installed while Tammi is running are found.
         var resolver = new ExecutableResolver(Environment.GetEnvironmentVariable("PATH"), [""], IsExecutable);
         return resolver.Resolve(name);
     }

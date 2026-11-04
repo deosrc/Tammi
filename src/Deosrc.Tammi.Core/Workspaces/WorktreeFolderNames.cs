@@ -1,6 +1,6 @@
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// Suggests and checks the folder names of a workspace's Workspace Worktrees. Each is a single folder in the Workspace
@@ -120,7 +120,7 @@ public static class WorktreeFolderNames
 
         if (Comparer.Equals(name, Workspace.MetadataFolderName))
         {
-            return $"'{Workspace.MetadataFolderName}' is where TAMMi keeps the workspace's own files.";
+            return $"'{Workspace.MetadataFolderName}' is where Tammi keeps the workspace's own files.";
         }
 
         if (otherNames.Any(other => Comparer.Equals(other.Trim(), name)))

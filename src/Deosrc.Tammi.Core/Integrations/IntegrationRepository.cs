@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
 /// A repository known through an integration, e.g. a GitHub repository the user can access. It becomes a Local

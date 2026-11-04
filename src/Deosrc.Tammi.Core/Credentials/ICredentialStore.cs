@@ -1,11 +1,11 @@
-namespace TAMMi.Core.Credentials;
+namespace Deosrc.Tammi.Core.Credentials;
 
 /// <summary>
 /// Keeps secrets, such as integration tokens, in the platform's secret store: Windows Credential Manager on Windows,
 /// and the Secret Service (through libsecret) on Linux.
 /// </summary>
 /// <remarks>
-/// Secrets are never written to TAMMi's settings or data files. Each secret is stored under a key chosen by the
+/// Secrets are never written to Tammi's settings or data files. Each secret is stored under a key chosen by the
 /// caller, e.g. <c>integration:github</c>. Integrations reach their secret through
 /// <see cref="Integrations.IntegrationCredentials"/>.
 /// </remarks>

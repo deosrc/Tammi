@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// Whether a Supported Agent's CLI is installed and runs, as found by <see cref="SupportedAgentChecker"/>.

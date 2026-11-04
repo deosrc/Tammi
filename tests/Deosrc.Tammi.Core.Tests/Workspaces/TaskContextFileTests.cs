@@ -1,7 +1,7 @@
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Workspaces;
+using Tammi.Core.Integrations;
+using Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Tests.Workspaces;
+namespace Tammi.Core.Tests.Workspaces;
 
 public sealed class TaskContextFileTests : IDisposable
 {
@@ -46,8 +46,8 @@ public sealed class TaskContextFileTests : IDisposable
 
         Assert.Equal(
             "# Tasks\n\n"
-            + "The tasks of the TAMMi workspace \"api-42-fix-login\". "
-            + "TAMMi rewrites this file when the tasks change, so don't edit it.\n\n"
+            + "The tasks of the Tammi workspace \"api-42-fix-login\". "
+            + "Tammi rewrites this file when the tasks change, so don't edit it.\n\n"
             + "## acme/api#42: Fix login\n\n"
             + "- Link: https://github.com/acme/api/issues/42\n"
             + "- Status: Open (to do)\n"

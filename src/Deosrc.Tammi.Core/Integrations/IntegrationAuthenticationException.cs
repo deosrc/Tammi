@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
 /// An integration's credentials are missing, have expired or were rejected. The user needs to authenticate again
@@ -17,7 +17,7 @@ public sealed class IntegrationAuthenticationException(
 }
 
 /// <summary>
-/// An integration's service is limiting how often TAMMi can call it. The request can be tried again from
+/// An integration's service is limiting how often Tammi can call it. The request can be tried again from
 /// <see cref="RetryAt"/>.
 /// </summary>
 public sealed class IntegrationRateLimitException(

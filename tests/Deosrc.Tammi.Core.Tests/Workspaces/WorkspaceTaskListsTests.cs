@@ -1,8 +1,8 @@
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Tests.Integrations;
-using TAMMi.Core.Workspaces;
+using Tammi.Core.Integrations;
+using Tammi.Core.Tests.Integrations;
+using Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Tests.Workspaces;
+namespace Tammi.Core.Tests.Workspaces;
 
 public sealed class WorkspaceTaskListsTests : IDisposable
 {

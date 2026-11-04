@@ -1,6 +1,6 @@
-using TAMMi.Core.Integrations;
+using Deosrc.Tammi.Core.Integrations;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// What <see cref="WorkspaceCreator"/> creates: a Workspace Folder holding a Workspace Worktree of each repository, all

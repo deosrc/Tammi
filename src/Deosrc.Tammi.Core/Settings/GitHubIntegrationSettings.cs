@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using TAMMi.Core.Integrations.GitHub;
+using Deosrc.Tammi.Core.Integrations.GitHub;
 
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// A GitHub integration the user has connected: github.com, or a GitHub Enterprise Server. Its access token is kept

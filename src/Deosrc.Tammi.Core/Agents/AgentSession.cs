@@ -1,7 +1,7 @@
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
-/// A recorded Agent Session: one conversation with an agent, which can be resumed after TAMMi restarts with the
+/// A recorded Agent Session: one conversation with an agent, which can be resumed after Tammi restarts with the
 /// agent's own resume command (see <see cref="AgentLauncher.Resume"/>).
 /// </summary>
 /// <param name="Id">The session's ID, as the agent knows it.</param>
@@ -27,7 +27,7 @@ public sealed record AgentSession(string Id, string AgentName, string WorkingDir
     }
 
     /// <summary>
-    /// Whether <paramref name="id"/> is an ID TAMMi could have given a session: a UUID. Other IDs aren't resumed, so a
+    /// Whether <paramref name="id"/> is an ID Tammi could have given a session: a UUID. Other IDs aren't resumed, so a
     /// changed file can't pass the agent other arguments in place of the ID.
     /// </summary>
     public static bool IsValidId(string? id) => Guid.TryParseExact(id, "D", out _);

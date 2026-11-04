@@ -1,9 +1,9 @@
 using System.Text;
 
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
-/// Rules for the name of a single folder (not a path) that's valid on every platform TAMMi runs on.
+/// Rules for the name of a single folder (not a path) that's valid on every platform Tammi runs on.
 /// </summary>
 public static class FolderNames
 {

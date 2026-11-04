@@ -1,10 +1,10 @@
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// Shows a command and its arguments as one line of text, so the Settings screen can show what will be run.
 /// </summary>
 /// <remarks>
-/// It's only for reading: TAMMi passes each argument to the process as it is, without going through a shell. Arguments
+/// It's only for reading: Tammi passes each argument to the process as it is, without going through a shell. Arguments
 /// that are empty or have spaces or quotes are shown in double quotes, with their quotes escaped.
 /// </remarks>
 public static class CommandLinePreview

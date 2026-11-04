@@ -1,9 +1,9 @@
 using System.Text.Json.Nodes;
-using TAMMi.Core.Integrations.GitHub;
-using TAMMi.Core.Integrations.Jira;
-using TAMMi.Core.Settings;
+using Tammi.Core.Integrations.GitHub;
+using Tammi.Core.Integrations.Jira;
+using Tammi.Core.Settings;
 
-namespace TAMMi.Core.Tests.Settings;
+namespace Tammi.Core.Tests.Settings;
 
 public sealed class IntegrationsSettingsTests : IDisposable
 {

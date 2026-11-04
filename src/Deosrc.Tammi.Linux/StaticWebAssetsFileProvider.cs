@@ -3,10 +3,10 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders.Physical;
 using Microsoft.Extensions.Primitives;
 
-namespace TAMMi.Linux;
+namespace Deosrc.Tammi.Linux;
 
 /// <summary>
-/// Serves static web assets (e.g. <c>_content/TAMMi.UI/...</c> and <c>_framework/...</c>) from their
+/// Serves static web assets (e.g. <c>_content/Deosrc.Tammi.UI/...</c> and <c>_framework/...</c>) from their
 /// source locations, using the <c>*.staticwebassets.runtime.json</c> manifest written by the build.
 /// </summary>
 /// <remarks>

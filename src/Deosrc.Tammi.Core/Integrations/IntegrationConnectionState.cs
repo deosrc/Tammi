@@ -1,12 +1,12 @@
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
-/// Whether TAMMi can reach an integration's service with its credentials, as last checked.
+/// Whether Tammi can reach an integration's service with its credentials, as last checked.
 /// </summary>
 public enum IntegrationConnectionState
 {
     /// <summary>
-    /// The connection hasn't been checked since TAMMi started.
+    /// The connection hasn't been checked since Tammi started.
     /// </summary>
     NotChecked,
 

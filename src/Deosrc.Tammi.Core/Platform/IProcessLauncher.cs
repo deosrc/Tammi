@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
 /// Starts external processes: command-line tools such as <c>git</c>, and desktop tools for "Open in…".

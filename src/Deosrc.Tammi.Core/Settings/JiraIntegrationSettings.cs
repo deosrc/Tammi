@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using TAMMi.Core.Integrations.Jira;
+using Deosrc.Tammi.Core.Integrations.Jira;
 
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// A JIRA site the user has connected. Its token is kept in the credential store, not here.

@@ -2,9 +2,9 @@
 @layout SettingsLayout
 @inherits SettingsSectionBase
 @implements IDisposable
-@using TAMMi.Core.Catalogue
-@using TAMMi.Core.Platform
-@using TAMMi.Core.Settings
+@using Deosrc.Tammi.Core.Catalogue
+@using Deosrc.Tammi.Core.Platform
+@using Deosrc.Tammi.Core.Settings
 @inject IRepositoryCatalogue Catalogue
 @inject IFolderPicker FolderPicker
 
@@ -21,7 +21,7 @@
     <div class="settings-field">
         <h2 class="settings-field-title">Monitored Folders</h2>
         <p class="settings-help">
-            Folders where you clone repositories. TAMMi scans them, and their subfolders, for git repositories to add
+            Folders where you clone repositories. Tammi scans them, and their subfolders, for git repositories to add
             to the Repository Catalogue.
         </p>
         @if (Current.MonitoredFolders.Count == 0)

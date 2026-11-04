@@ -1,9 +1,9 @@
 using LibGit2Sharp;
-using TAMMi.Core.Git;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Settings;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Settings;
 
-namespace TAMMi.Core.Catalogue;
+namespace Deosrc.Tammi.Core.Catalogue;
 
 /// <summary>
 /// Builds the Repository Catalogue from the local sources in the Git settings: the Monitored Folders (scanned with

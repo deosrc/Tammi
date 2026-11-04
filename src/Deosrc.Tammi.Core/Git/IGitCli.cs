@@ -1,7 +1,7 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
-/// Runs the <c>git</c> CLI. TAMMi uses the CLI for writes (fetch, pull, push, stage, commit) and for worktree and
+/// Runs the <c>git</c> CLI. Tammi uses the CLI for writes (fetch, pull, push, stage, commit) and for worktree and
 /// submodule operations, so it respects the user's git config, credential helpers and hooks.
 /// </summary>
 public interface IGitCli

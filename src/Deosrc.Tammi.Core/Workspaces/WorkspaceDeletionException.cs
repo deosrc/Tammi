@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// A workspace couldn't be deleted, or was only partly deleted. What's left can be deleted by trying again, which

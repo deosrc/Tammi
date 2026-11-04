@@ -1,7 +1,7 @@
 using System.ComponentModel;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// Checks that a Supported Agent's CLI is installed and runs, by finding it and asking for its version.
@@ -48,7 +48,7 @@ public sealed class SupportedAgentChecker
         {
             return new AgentToolStatus(null, null,
                 $"Couldn't find '{command}' on the search path. Install {agent.Name}, then check again. If it's "
-                + "installed, make sure its folder is on PATH, and restart TAMMi if you've just changed PATH.");
+                + "installed, make sure its folder is on PATH, and restart Tammi if you've just changed PATH.");
         }
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

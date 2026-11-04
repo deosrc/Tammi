@@ -1,7 +1,7 @@
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
-/// A task read from an integration, e.g. a GitHub issue or a JIRA ticket. TAMMi doesn't change tasks.
+/// A task read from an integration, e.g. a GitHub issue or a JIRA ticket. Tammi doesn't change tasks.
 /// </summary>
 /// <param name="Source">The <see cref="IIntegration.Id"/> of the integration the task comes from.</param>
 /// <param name="Key">

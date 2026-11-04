@@ -1,8 +1,8 @@
 using Microsoft.UI.Xaml.Controls;
-using TAMMi.Core.Agents;
-using TAMMi.UI.Workspaces;
+using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.UI.Workspaces;
 
-namespace TAMMi.Windows.PlatformServices;
+namespace Deosrc.Tammi.Windows.PlatformServices;
 
 /// <summary>
 /// Warns the user when they close the main window while agents are running, and lets them change their mind.
@@ -40,7 +40,7 @@ internal static class CloseConfirmation
                 {
                     Title = AppCloseWarning.Title,
                     Content = AppCloseWarning.Message(running),
-                    PrimaryButtonText = "Close TAMMi",
+                    PrimaryButtonText = "Close Tammi",
                     CloseButtonText = "Cancel",
                     DefaultButton = ContentDialogButton.Close,
                     XamlRoot = root,

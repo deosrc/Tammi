@@ -1,4 +1,4 @@
-# TAMMi
+# Tammi
 
 Task-first software development workspace manager, built with .NET MAUI Blazor Hybrid (Windows) and Photino.Blazor (Linux) sharing one Blazor UI.
 
@@ -14,6 +14,6 @@ in their containing type's file.
 
 Every third-party library that ships with the app must be listed on the About page's third-party software list.
 When you add one (including a new transitive dependency that ships, or a dependency of only one host), add an entry
-to `src/TAMMi.UI/About/ThirdPartySoftware.cs` in alphabetical order, and add its license text to
-`src/TAMMi.UI/Licenses/`, copied from the package or its source repository. If the license is only published online,
+to `src/Deosrc.Tammi.UI/About/ThirdPartySoftware.cs` in alphabetical order, and add its license text to
+`src/Deosrc.Tammi.UI/Licenses/`, copied from the package or its source repository. If the license is only published online,
 link to it instead. When you remove a library, remove its entry and any license text no other entry uses.

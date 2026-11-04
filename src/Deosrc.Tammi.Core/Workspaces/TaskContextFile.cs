@@ -1,7 +1,7 @@
 using System.Text;
-using TAMMi.Core.Integrations;
+using Deosrc.Tammi.Core.Integrations;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// The task context file: a markdown file in the workspace's <c>.tammi/</c> folder with its tasks' details (titles,
@@ -40,8 +40,8 @@ public static class TaskContextFile
 
         var text = new StringBuilder();
         text.Append("# Tasks\n\n");
-        text.Append("The tasks of the TAMMi workspace \"").Append(workspace.Name).Append("\". ");
-        text.Append("TAMMi rewrites this file when the tasks change, so don't edit it.\n");
+        text.Append("The tasks of the Tammi workspace \"").Append(workspace.Name).Append("\". ");
+        text.Append("Tammi rewrites this file when the tasks change, so don't edit it.\n");
         if (tasks.Count == 0)
         {
             text.Append("\nThis workspace has no tasks. It's described by its name alone.\n");
@@ -119,12 +119,12 @@ public static class TaskContextFile
         {
             text.Append("\n\n").Append(task.Problem switch
             {
-                null => "TAMMi hasn't read this task's details yet.",
+                null => "Tammi hasn't read this task's details yet.",
                 WorkspaceTaskProblem.SourceNotConnected =>
-                    "TAMMi couldn't read this task's details, because its Task Source isn't connected.",
+                    "Tammi couldn't read this task's details, because its Task Source isn't connected.",
                 WorkspaceTaskProblem.NotFound =>
-                    "TAMMi couldn't read this task's details: it wasn't found, or the user can't see it.",
-                _ => "TAMMi couldn't read this task's details. " + task.ProblemDetail,
+                    "Tammi couldn't read this task's details: it wasn't found, or the user can't see it.",
+                _ => "Tammi couldn't read this task's details. " + task.ProblemDetail,
             }).Append('\n');
             return;
         }

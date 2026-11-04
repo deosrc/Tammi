@@ -1,8 +1,8 @@
 using System.Diagnostics;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Platform.Pty;
+using Tammi.Core.Platform;
+using Tammi.Core.Platform.Pty;
 
-namespace TAMMi.Core.Tests.Platform.Pty;
+namespace Tammi.Core.Tests.Platform.Pty;
 
 /// <summary>
 /// Runs real processes in Windows pseudoconsoles, with <c>cmd.exe</c> and Windows PowerShell.

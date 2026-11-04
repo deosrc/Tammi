@@ -1,6 +1,6 @@
-using TAMMi.Core.Git;
+using Deosrc.Tammi.Core.Git;
 
-namespace TAMMi.Core.Catalogue;
+namespace Deosrc.Tammi.Core.Catalogue;
 
 /// <summary>
 /// A repository in the Repository Catalogue.

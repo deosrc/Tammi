@@ -1,10 +1,10 @@
-using TAMMi.Core.Platform;
-using TAMMi.Core.Settings;
-using TAMMi.Core.Terminals;
-using TAMMi.Core.Tests.Platform.Pty;
-using TAMMi.Core.Tests.Settings;
+using Tammi.Core.Platform;
+using Tammi.Core.Settings;
+using Tammi.Core.Terminals;
+using Tammi.Core.Tests.Platform.Pty;
+using Tammi.Core.Tests.Settings;
 
-namespace TAMMi.Core.Tests.Terminals;
+namespace Tammi.Core.Tests.Terminals;
 
 public class TerminalLauncherTests
 {

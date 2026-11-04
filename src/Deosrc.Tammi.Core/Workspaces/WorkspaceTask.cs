@@ -1,6 +1,6 @@
-using TAMMi.Core.Integrations;
+using Deosrc.Tammi.Core.Integrations;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// One of a workspace's tasks, with its details as last read from its source.

@@ -1,6 +1,6 @@
-using TAMMi.Core.Git;
+using Deosrc.Tammi.Core.Git;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// The git state of one of a workspace's repositories, as shown in the Workspace View's side panel.

@@ -1,6 +1,6 @@
-using TAMMi.Core.Integrations;
+using Deosrc.Tammi.Core.Integrations;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// A named collection of tasks and repositories in a Workspace Folder. Its metadata is kept in the folder's
@@ -9,7 +9,7 @@ namespace TAMMi.Core.Workspaces;
 public sealed record Workspace
 {
     /// <summary>
-    /// The name of the folder in the Workspace Folder that holds TAMMi's files for the workspace.
+    /// The name of the folder in the Workspace Folder that holds Tammi's files for the workspace.
     /// </summary>
     public const string MetadataFolderName = ".tammi";
 

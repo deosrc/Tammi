@@ -1,9 +1,9 @@
-using TAMMi.Core.Credentials;
-using TAMMi.Core.Integrations.GitHub;
-using TAMMi.Core.Integrations.Jira;
-using TAMMi.Core.Settings;
+using Deosrc.Tammi.Core.Credentials;
+using Deosrc.Tammi.Core.Integrations.GitHub;
+using Deosrc.Tammi.Core.Integrations.Jira;
+using Deosrc.Tammi.Core.Settings;
 
-namespace TAMMi.Core.Integrations;
+namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
 /// Adds, authenticates, checks and removes the integrations configured in Settings. It keeps the
@@ -395,7 +395,7 @@ public sealed class IntegrationManager
     };
 
     /// <summary>
-    /// Checks that the service accepts the integration's credentials, and whether they can reach everything TAMMi
+    /// Checks that the service accepts the integration's credentials, and whether they can reach everything Tammi
     /// needs.
     /// </summary>
     /// <returns>A <see cref="IntegrationConnectionState.Connected"/> status, with any warning about the credentials.</returns>

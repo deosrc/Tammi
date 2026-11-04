@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// The git state of a repository (or Workspace Worktree), as shown on Home and in the Workspace View.

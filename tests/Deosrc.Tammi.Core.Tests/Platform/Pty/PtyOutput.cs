@@ -1,7 +1,7 @@
 using System.Text;
-using TAMMi.Core.Platform;
+using Tammi.Core.Platform;
 
-namespace TAMMi.Core.Tests.Platform.Pty;
+namespace Tammi.Core.Tests.Platform.Pty;
 
 /// <summary>
 /// Reads a pseudoterminal session's output in tests.

@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// Reads parts of git remote URLs, in any of the forms git accepts: <c>https://host/owner/repo.git</c>,

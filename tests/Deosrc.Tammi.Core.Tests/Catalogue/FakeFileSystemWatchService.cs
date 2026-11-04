@@ -1,6 +1,6 @@
-using TAMMi.Core.Platform;
+using Tammi.Core.Platform;
 
-namespace TAMMi.Core.Tests.Catalogue;
+namespace Tammi.Core.Tests.Catalogue;
 
 /// <summary>
 /// An <see cref="IFileSystemWatchService"/> whose watches report changes only when a test raises them.

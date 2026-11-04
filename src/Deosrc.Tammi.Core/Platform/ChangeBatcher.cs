@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
 /// Collects file changes and reports them in batches: once the changes stop for a quiet period, or once the oldest

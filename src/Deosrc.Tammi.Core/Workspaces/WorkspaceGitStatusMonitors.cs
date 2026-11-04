@@ -1,7 +1,7 @@
-using TAMMi.Core.Git;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// The git status monitors of the workspaces open in tabs. A workspace's monitor keeps running while its tab is open,

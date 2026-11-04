@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Integrations.Jira;
+namespace Deosrc.Tammi.Core.Integrations.Jira;
 
 /// <summary>
 /// The category of an issue's status, from REST API version 2.
@@ -10,7 +10,7 @@ namespace TAMMi.Core.Integrations.Jira;
 internal sealed record JiraStatusCategory(string? Key)
 {
     /// <summary>
-    /// <see cref="Key"/> as a <see cref="TaskStatusCategory"/>, or <see langword="null"/> if it's not one TAMMi knows.
+    /// <see cref="Key"/> as a <see cref="TaskStatusCategory"/>, or <see langword="null"/> if it's not one Tammi knows.
     /// </summary>
     public TaskStatusCategory? Category => Key switch
     {

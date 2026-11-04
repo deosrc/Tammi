@@ -1,6 +1,6 @@
-using TAMMi.Core.Agents;
+using Deosrc.Tammi.Core.Agents;
 
-namespace TAMMi.UI.Workspaces;
+namespace Deosrc.Tammi.UI.Workspaces;
 
 /// <summary>
 /// Wording and colours for agent states, as the Workspace View shows them.

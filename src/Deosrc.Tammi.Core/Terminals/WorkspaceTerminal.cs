@@ -1,7 +1,7 @@
-using TAMMi.Core.Platform;
-using TAMMi.Core.Workspaces;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Terminals;
+namespace Deosrc.Tammi.Core.Terminals;
 
 /// <summary>
 /// A terminal in a workspace: the terminal shell, running in the Workspace Folder or one of its repositories.

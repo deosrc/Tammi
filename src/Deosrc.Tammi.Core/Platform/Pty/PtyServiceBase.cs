@@ -1,6 +1,6 @@
 using System.Collections;
 
-namespace TAMMi.Core.Platform.Pty;
+namespace Deosrc.Tammi.Core.Platform.Pty;
 
 /// <summary>
 /// The parts of <see cref="IPtyService"/> that work the same on every platform: checking the request and building

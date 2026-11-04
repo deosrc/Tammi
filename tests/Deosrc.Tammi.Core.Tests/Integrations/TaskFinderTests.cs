@@ -1,6 +1,6 @@
-using TAMMi.Core.Integrations;
+using Tammi.Core.Integrations;
 
-namespace TAMMi.Core.Tests.Integrations;
+namespace Tammi.Core.Tests.Integrations;
 
 public sealed class TaskFinderTests
 {

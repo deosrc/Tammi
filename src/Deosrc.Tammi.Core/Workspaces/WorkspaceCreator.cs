@@ -1,7 +1,7 @@
-using TAMMi.Core.Git;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// Creates a workspace on disk: the Workspace Folder, a Workspace Worktree of each repository on a new branch (with its
@@ -315,7 +315,7 @@ public sealed class WorkspaceCreator(IWorkspaceStore store, IGitWorktreeService 
                 _createdParents.Insert(0, parent);
             }
 
-            // It was checked before, but something else may have created it since, and it isn't TAMMi's to delete.
+            // It was checked before, but something else may have created it since, and it isn't Tammi's to delete.
             if (Directory.Exists(Folder) || File.Exists(Folder))
             {
                 throw new IOException($"'{Folder}' already exists. Choose another name or parent folder.");

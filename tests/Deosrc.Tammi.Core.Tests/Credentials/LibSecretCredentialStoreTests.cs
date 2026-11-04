@@ -1,7 +1,7 @@
 using System.Runtime.Versioning;
-using TAMMi.Core.Credentials;
+using Tammi.Core.Credentials;
 
-namespace TAMMi.Core.Tests.Credentials;
+namespace Tammi.Core.Tests.Credentials;
 
 [SupportedOSPlatform("linux")]
 public sealed class LibSecretCredentialStoreTests : CredentialStoreContractTests

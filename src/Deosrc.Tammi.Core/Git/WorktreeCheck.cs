@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// The result of <see cref="IGitWorktreeService.CheckWorktree"/>.

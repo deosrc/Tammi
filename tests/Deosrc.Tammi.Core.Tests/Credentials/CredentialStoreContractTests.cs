@@ -1,6 +1,6 @@
-using TAMMi.Core.Credentials;
+using Tammi.Core.Credentials;
 
-namespace TAMMi.Core.Tests.Credentials;
+namespace Tammi.Core.Tests.Credentials;
 
 /// <summary>
 /// Saves, reads and deletes real secrets in the platform secret store, under random keys that are deleted afterwards.

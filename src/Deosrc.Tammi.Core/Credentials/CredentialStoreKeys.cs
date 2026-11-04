@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Credentials;
+namespace Deosrc.Tammi.Core.Credentials;
 
 /// <summary>
 /// Checks credential keys, for the <see cref="ICredentialStore"/> implementations.
@@ -6,9 +6,9 @@ namespace TAMMi.Core.Credentials;
 internal static class CredentialStoreKeys
 {
     /// <summary>
-    /// The prefix that marks TAMMi's entries where the store is shared with other apps.
+    /// The prefix that marks Tammi's entries where the store is shared with other apps.
     /// </summary>
-    public const string AppPrefix = "TAMMi:";
+    public const string AppPrefix = "Tammi:";
 
     public static void Validate(string key)
     {

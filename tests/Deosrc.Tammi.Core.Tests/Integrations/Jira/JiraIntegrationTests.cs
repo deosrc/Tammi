@@ -1,11 +1,11 @@
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.Time.Testing;
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Integrations.Jira;
-using TAMMi.Core.Tests.Credentials;
+using Tammi.Core.Integrations;
+using Tammi.Core.Integrations.Jira;
+using Tammi.Core.Tests.Credentials;
 
-namespace TAMMi.Core.Tests.Integrations.Jira;
+namespace Tammi.Core.Tests.Integrations.Jira;
 
 public class JiraIntegrationTests : IDisposable
 {
@@ -56,7 +56,7 @@ public class JiraIntegrationTests : IDisposable
         Assert.Equal($"Basic {Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Email}:{Token}"))}",
             request.Authorization);
         Assert.Equal("application/json", request.Headers["Accept"]);
-        Assert.StartsWith("TAMMi/", request.Headers["User-Agent"]);
+        Assert.StartsWith("Tammi/", request.Headers["User-Agent"]);
     }
 
     [Fact]

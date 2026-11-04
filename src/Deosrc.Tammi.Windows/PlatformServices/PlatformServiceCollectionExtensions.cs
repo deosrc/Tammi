@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
-using TAMMi.Core.Credentials;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Platform.Pty;
+using Deosrc.Tammi.Core.Credentials;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Platform.Pty;
 
-namespace TAMMi.Windows.PlatformServices;
+namespace Deosrc.Tammi.Windows.PlatformServices;
 
 internal static class PlatformServiceCollectionExtensions
 {

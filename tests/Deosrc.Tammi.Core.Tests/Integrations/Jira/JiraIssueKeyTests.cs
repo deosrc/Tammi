@@ -1,6 +1,6 @@
-using TAMMi.Core.Integrations.Jira;
+using Tammi.Core.Integrations.Jira;
 
-namespace TAMMi.Core.Tests.Integrations.Jira;
+namespace Tammi.Core.Tests.Integrations.Jira;
 
 public class JiraIssueKeyTests
 {

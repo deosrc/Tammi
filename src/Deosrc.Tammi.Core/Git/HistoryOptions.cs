@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// Which commits <see cref="IGitRepositoryReader.ReadHistory"/> returns.

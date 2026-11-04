@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// A worktree wasn't removed because it holds work that would be lost: uncommitted changes or unpushed commits, in the

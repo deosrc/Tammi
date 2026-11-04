@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Agents;
+namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
 /// What an agent is doing, as shown on Home and in the Workspace View.
@@ -21,7 +21,7 @@ public enum AgentState
     Exited,
 
     /// <summary>
-    /// The process crashed, was killed by something other than TAMMi, or exited with a non-zero code.
+    /// The process crashed, was killed by something other than Tammi, or exited with a non-zero code.
     /// </summary>
     Error,
 

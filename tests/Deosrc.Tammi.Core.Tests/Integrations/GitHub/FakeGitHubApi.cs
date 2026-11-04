@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Tests.Integrations.GitHub;
+namespace Tammi.Core.Tests.Integrations.GitHub;
 
 /// <summary>
 /// Answers GitHub API requests with recorded or faked responses, and records the requests.

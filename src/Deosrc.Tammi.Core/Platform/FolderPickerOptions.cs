@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
 /// Options for <see cref="IFolderPicker.PickFolderAsync"/>. Platforms that can't apply an option ignore it.

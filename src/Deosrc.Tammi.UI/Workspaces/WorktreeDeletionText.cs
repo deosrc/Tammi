@@ -1,7 +1,7 @@
-using TAMMi.Core.Git;
-using TAMMi.Core.Workspaces;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace TAMMi.UI.Workspaces;
+namespace Deosrc.Tammi.UI.Workspaces;
 
 /// <summary>
 /// Describes what deleting a workspace removes, for the Delete Workspace flow.

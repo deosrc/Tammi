@@ -1,6 +1,6 @@
-using TAMMi.Core.Workspaces;
+using Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Tests.Workspaces;
+namespace Tammi.Core.Tests.Workspaces;
 
 public class WorkspaceTabsTests
 {

@@ -1,7 +1,7 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
-/// Base class for errors raised by TAMMi's git access.
+/// Base class for errors raised by Tammi's git access.
 /// </summary>
 public class GitException : Exception
 {

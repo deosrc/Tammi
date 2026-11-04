@@ -1,7 +1,7 @@
 using System.Text.Json;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Windowing;
+namespace Deosrc.Tammi.Core.Windowing;
 
 /// <summary>
 /// Keeps the main window's <see cref="WindowState"/> in <c>window-state.json</c> in the app's data folder

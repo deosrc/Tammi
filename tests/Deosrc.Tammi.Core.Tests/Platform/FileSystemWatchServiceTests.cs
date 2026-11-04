@@ -1,6 +1,6 @@
-using TAMMi.Core.Platform;
+using Tammi.Core.Platform;
 
-namespace TAMMi.Core.Tests.Platform;
+namespace Tammi.Core.Tests.Platform;
 
 public sealed class FileSystemWatchServiceTests : IDisposable
 {

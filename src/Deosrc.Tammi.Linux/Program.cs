@@ -3,17 +3,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Photino.Blazor;
 using Photino.NET;
-using TAMMi.Core;
-using TAMMi.Core.Agents;
-using TAMMi.Core.Terminals;
-using TAMMi.Core.Windowing;
-using TAMMi.Linux.PlatformServices;
-using TAMMi.UI;
-using TAMMi.UI.Workspaces;
+using Deosrc.Tammi.Core;
+using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Terminals;
+using Deosrc.Tammi.Core.Windowing;
+using Deosrc.Tammi.Linux.PlatformServices;
+using Deosrc.Tammi.UI;
+using Deosrc.Tammi.UI.Workspaces;
 
 [assembly: SupportedOSPlatform("linux")]
 
-namespace TAMMi.Linux;
+namespace Deosrc.Tammi.Linux;
 
 internal static class Program
 {
@@ -59,7 +59,7 @@ internal static class Program
     }
 
     /// <summary>
-    /// Asks the user whether to close TAMMi, if any agents are running.
+    /// Asks the user whether to close Tammi, if any agents are running.
     /// </summary>
     /// <returns>Whether the window should close.</returns>
     private static bool ConfirmClose(PhotinoWindow window, WorkspaceAgents agents)

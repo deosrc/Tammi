@@ -1,6 +1,6 @@
-using TAMMi.Core.Workspaces;
+using Deosrc.Tammi.Core.Workspaces;
 
-namespace TAMMi.UI.Workspaces;
+namespace Deosrc.Tammi.UI.Workspaces;
 
 /// <summary>
 /// Short descriptions of why a workspace isn't available, short enough to fit on one line of a Home card. The full

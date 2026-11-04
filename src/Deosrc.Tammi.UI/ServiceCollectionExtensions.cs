@@ -1,17 +1,17 @@
 using Microsoft.Extensions.DependencyInjection;
-using TAMMi.Core.Agents;
-using TAMMi.Core.Catalogue;
-using TAMMi.Core.Credentials;
-using TAMMi.Core.Git;
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Settings;
-using TAMMi.Core.Terminals;
-using TAMMi.Core.Windowing;
-using TAMMi.Core.Workspaces;
-using TAMMi.UI.Workspaces;
+using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Catalogue;
+using Deosrc.Tammi.Core.Credentials;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Terminals;
+using Deosrc.Tammi.Core.Windowing;
+using Deosrc.Tammi.Core.Workspaces;
+using Deosrc.Tammi.UI.Workspaces;
 
-namespace TAMMi.UI;
+namespace Deosrc.Tammi.UI;
 
 public static class ServiceCollectionExtensions
 {

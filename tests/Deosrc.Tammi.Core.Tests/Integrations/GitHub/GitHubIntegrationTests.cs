@@ -1,11 +1,11 @@
 using System.Net;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Time.Testing;
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Integrations.GitHub;
-using TAMMi.Core.Tests.Credentials;
+using Tammi.Core.Integrations;
+using Tammi.Core.Integrations.GitHub;
+using Tammi.Core.Tests.Credentials;
 
-namespace TAMMi.Core.Tests.Integrations.GitHub;
+namespace Tammi.Core.Tests.Integrations.GitHub;
 
 public class GitHubIntegrationTests : IDisposable
 {
@@ -46,7 +46,7 @@ public class GitHubIntegrationTests : IDisposable
         Assert.Equal($"Bearer {Token}", request.Authorization);
         Assert.Equal("application/vnd.github+json", request.Headers["Accept"]);
         Assert.Equal("2022-11-28", request.Headers["X-GitHub-Api-Version"]);
-        Assert.StartsWith("TAMMi/", request.Headers["User-Agent"]);
+        Assert.StartsWith("Tammi/", request.Headers["User-Agent"]);
     }
 
     [Fact]

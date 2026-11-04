@@ -1,6 +1,6 @@
-using TAMMi.Core.Git;
+using Tammi.Core.Git;
 
-namespace TAMMi.Core.Tests.Git;
+namespace Tammi.Core.Tests.Git;
 
 public sealed class GitRepositoryReaderHistoryTests : IDisposable
 {
@@ -22,7 +22,7 @@ public sealed class GitRepositoryReaderHistoryTests : IDisposable
         Assert.Equal("Add a\n\nWith a body.\n", history[1].Message);
         Assert.Equal([history[1].Sha], history[0].ParentShas);
         Assert.Empty(history[2].ParentShas);
-        Assert.Equal("TAMMi Tests", history[0].Author.Name);
+        Assert.Equal("Tammi Tests", history[0].Author.Name);
         Assert.Equal("tests@tammi.invalid", history[0].Committer.Email);
 
         string head = Assert.Single((await _repos.RunAsync(clone, "rev-parse", "HEAD")).OutputLines);

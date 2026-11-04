@@ -1,9 +1,9 @@
-using TAMMi.Core.Git;
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Tests.Git;
-using TAMMi.Core.Workspaces;
+using Tammi.Core.Git;
+using Tammi.Core.Integrations;
+using Tammi.Core.Tests.Git;
+using Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Tests.Workspaces;
+namespace Tammi.Core.Tests.Workspaces;
 
 public sealed class WorkspaceCreatorTests : IDisposable
 {
@@ -161,7 +161,7 @@ public sealed class WorkspaceCreatorTests : IDisposable
     [Theory]
     [InlineData("api", "API", "origin/main", "Each needs its own folder")]
     [InlineData("../api", "web", "origin/main", "folder name")]
-    [InlineData("api", ".tammi", "origin/main", "TAMMi keeps")]
+    [InlineData("api", ".tammi", "origin/main", "Tammi keeps")]
     [InlineData("api", "web", "origin/missing", "doesn't exist")]
     [InlineData("api", "web", "", "choose a base branch")]
     public async Task Check_FindsProblems(string apiFolder, string webFolder, string webBase, string expected)

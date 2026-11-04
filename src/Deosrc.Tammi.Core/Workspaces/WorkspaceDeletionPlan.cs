@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// What deleting a workspace would remove, and the work that would be lost, for the user to confirm. Made by
@@ -28,7 +28,7 @@ public sealed record WorkspaceDeletionPlan(string WorkspaceId, string Name, stri
     public IReadOnlyList<WorktreeToDelete> Worktrees { get; init; } = [];
 
     /// <summary>
-    /// The full paths of everything else in the Workspace Folder that would be deleted with it, other than TAMMi's own
+    /// The full paths of everything else in the Workspace Folder that would be deleted with it, other than Tammi's own
     /// <c>.tammi/</c> folder: files and folders that aren't Workspace Worktrees.
     /// </summary>
     public IReadOnlyList<string> OtherContent { get; init; } = [];

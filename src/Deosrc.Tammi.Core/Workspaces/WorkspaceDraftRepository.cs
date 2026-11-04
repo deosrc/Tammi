@@ -1,8 +1,8 @@
-using TAMMi.Core.Catalogue;
-using TAMMi.Core.Git;
-using TAMMi.Core.Integrations;
+using Deosrc.Tammi.Core.Catalogue;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Integrations;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// A repository chosen in the Create Workspace flow, with its worktree's folder name and base branch.

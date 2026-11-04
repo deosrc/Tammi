@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Git;
+namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// What <see cref="IGitWorktreeService.CreateWorktreeAsync"/> creates: a Workspace Worktree of a Local Repository, on a

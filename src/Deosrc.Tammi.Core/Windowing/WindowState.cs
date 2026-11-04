@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Windowing;
+namespace Deosrc.Tammi.Core.Windowing;
 
 /// <summary>
 /// The main window's size and whether it's maximised, kept so the window opens the same way next time.

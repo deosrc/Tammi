@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Storage;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Storage;
 
-namespace TAMMi.Core.Settings;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// Keeps the <see cref="AppSettings"/> in <c>settings.json</c> in the app's config folder
@@ -12,8 +12,8 @@ namespace TAMMi.Core.Settings;
 /// <remarks>
 /// <para>
 /// The file has a <c>version</c> property. When the file's layout changes, the version goes up and a migration is
-/// added to <see cref="Migrations"/>, which upgrades files written by older versions of TAMMi when they're loaded.
-/// A file from a newer version of TAMMi is read as far as possible.
+/// added to <see cref="Migrations"/>, which upgrades files written by older versions of Tammi when they're loaded.
+/// A file from a newer version of Tammi is read as far as possible.
 /// </para>
 /// <para>
 /// If the file can't be read, the defaults are used and the file is copied to <c>settings.invalid.json</c>, so the

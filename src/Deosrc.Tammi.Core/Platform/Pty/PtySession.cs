@@ -1,6 +1,6 @@
 using System.Threading.Channels;
 
-namespace TAMMi.Core.Platform.Pty;
+namespace Deosrc.Tammi.Core.Platform.Pty;
 
 /// <summary>
 /// The parts of <see cref="IPtySession"/> that work the same on every platform: buffering output and input, and

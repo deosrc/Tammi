@@ -1,8 +1,8 @@
-using TAMMi.Core.Catalogue;
-using TAMMi.Core.Tests.Git;
-using TAMMi.Core.Workspaces;
+using Tammi.Core.Catalogue;
+using Tammi.Core.Tests.Git;
+using Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Tests.Catalogue;
+namespace Tammi.Core.Tests.Catalogue;
 
 public sealed class RepositoryScannerTests : IDisposable
 {
@@ -59,7 +59,7 @@ public sealed class RepositoryScannerTests : IDisposable
         string workspace = Path.Combine(Monitored, "workspaces", "fix-login");
         Directory.CreateDirectory(Path.Combine(workspace, Workspace.MetadataFolderName));
         await _repos.RunAsync(api, "worktree", "add", "-b", "fix-login", Path.Combine(workspace, "api"));
-        // A full clone in a Workspace Folder isn't something TAMMi makes, so it isn't looked for either.
+        // A full clone in a Workspace Folder isn't something Tammi makes, so it isn't looked for either.
         await _repos.RunAsync(_repos.Root, "init", Path.Combine(workspace, "stray"));
 
         var found = RepositoryScanner.FindRepositories(Monitored, TestContext.Current.CancellationToken);

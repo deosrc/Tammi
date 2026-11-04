@@ -3,9 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using TAMMi.Core.Agents;
+using Tammi.Core.Agents;
 
-namespace TAMMi.Core.Tests.Agents;
+namespace Tammi.Core.Tests.Agents;
 
 public sealed class AgentHookServerTests : IAsyncDisposable
 {

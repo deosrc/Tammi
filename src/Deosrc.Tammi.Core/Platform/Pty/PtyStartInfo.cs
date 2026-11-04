@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Platform.Pty;
+namespace Deosrc.Tammi.Core.Platform.Pty;
 
 /// <summary>
 /// A checked request to start a process in a pseudoterminal.

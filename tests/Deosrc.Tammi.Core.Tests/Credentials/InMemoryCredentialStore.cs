@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using TAMMi.Core.Credentials;
+using Tammi.Core.Credentials;
 
-namespace TAMMi.Core.Tests.Credentials;
+namespace Tammi.Core.Tests.Credentials;
 
 /// <summary>
 /// A credential store for tests that don't need the platform secret store.

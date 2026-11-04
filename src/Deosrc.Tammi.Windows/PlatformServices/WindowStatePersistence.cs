@@ -1,8 +1,8 @@
 using Microsoft.UI.Windowing;
-using TAMMi.Core.Windowing;
+using Deosrc.Tammi.Core.Windowing;
 using Windows.Graphics;
 
-namespace TAMMi.Windows.PlatformServices;
+namespace Deosrc.Tammi.Windows.PlatformServices;
 
 /// <summary>
 /// Opens the main window at the size and maximised state it had when it was last closed, and keeps them when it

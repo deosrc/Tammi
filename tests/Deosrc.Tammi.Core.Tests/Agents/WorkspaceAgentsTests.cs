@@ -1,13 +1,13 @@
 using Microsoft.Extensions.Time.Testing;
-using TAMMi.Core.Agents;
-using TAMMi.Core.Integrations;
-using TAMMi.Core.Settings;
-using TAMMi.Core.Terminals;
-using TAMMi.Core.Tests.Platform.Pty;
-using TAMMi.Core.Tests.Settings;
-using TAMMi.Core.Workspaces;
+using Tammi.Core.Agents;
+using Tammi.Core.Integrations;
+using Tammi.Core.Settings;
+using Tammi.Core.Terminals;
+using Tammi.Core.Tests.Platform.Pty;
+using Tammi.Core.Tests.Settings;
+using Tammi.Core.Workspaces;
 
-namespace TAMMi.Core.Tests.Agents;
+namespace Tammi.Core.Tests.Agents;
 
 public sealed class WorkspaceAgentsTests : IAsyncDisposable
 {

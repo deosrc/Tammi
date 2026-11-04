@@ -1,11 +1,11 @@
-namespace TAMMi.Core.Tests;
+namespace Tammi.Core.Tests;
 
 public class AppInfoTests
 {
     [Fact]
     public void Name_IsTammi()
     {
-        Assert.Equal("TAMMi", AppInfo.Name);
+        Assert.Equal("Tammi", AppInfo.Name);
     }
 
     [Fact]

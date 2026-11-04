@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Photino.Blazor;
-using TAMMi.Core.Credentials;
-using TAMMi.Core.Platform;
-using TAMMi.Core.Platform.Pty;
+using Deosrc.Tammi.Core.Credentials;
+using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Platform.Pty;
 
-namespace TAMMi.Linux.PlatformServices;
+namespace Deosrc.Tammi.Linux.PlatformServices;
 
 internal static class PlatformServiceCollectionExtensions
 {

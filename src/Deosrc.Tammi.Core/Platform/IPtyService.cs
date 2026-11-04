@@ -1,4 +1,4 @@
-namespace TAMMi.Core.Platform;
+namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
 /// Starts processes in a pseudoterminal (PTY), for the embedded terminal that terminals and agents run in.

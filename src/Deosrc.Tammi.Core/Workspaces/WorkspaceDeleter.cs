@@ -1,7 +1,7 @@
-using TAMMi.Core.Git;
-using TAMMi.Core.Platform;
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Platform;
 
-namespace TAMMi.Core.Workspaces;
+namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// Deletes workspaces: checks for work that would be lost, removes the Workspace Worktrees and the Workspace Folder,
@@ -276,7 +276,7 @@ public sealed class WorkspaceDeleter(IWorkspaceStore store, IGitWorktreeService 
     }
 
     /// <summary>
-    /// Lists the entries in a Workspace Folder other than TAMMi's own <c>.tammi/</c> folder.
+    /// Lists the entries in a Workspace Folder other than Tammi's own <c>.tammi/</c> folder.
     /// </summary>
     private static IEnumerable<FileSystemInfo> ReadFolder(string folder) =>
         new DirectoryInfo(folder).EnumerateFileSystemInfos()
@@ -286,7 +286,7 @@ public sealed class WorkspaceDeleter(IWorkspaceStore store, IGitWorktreeService 
         WorkspaceDeletionPlan plan,
         CancellationToken cancellationToken)
     {
-        // The metadata's branch is the one TAMMi created. A worktree found only in the folder offers its checked-out
+        // The metadata's branch is the one Tammi created. A worktree found only in the folder offers its checked-out
         // branch, if it had one.
         var candidates = plan.Worktrees
             .Select(worktree => worktree.Repository is { } repository

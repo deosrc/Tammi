@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace TAMMi.Core.Integrations.GitHub;
+namespace Deosrc.Tammi.Core.Integrations.GitHub;
 
 /// <summary>
 /// Calls GitHub's REST API: authenticates each request, follows pages and waits out short rate limits. Errors become
@@ -205,7 +205,7 @@ internal sealed partial class GitHubApiClient(
         }
         catch (JsonException exception)
         {
-            throw new IntegrationException($"GitHub returned a response TAMMi couldn't read: {exception.Message}",
+            throw new IntegrationException($"GitHub returned a response Tammi couldn't read: {exception.Message}",
                 exception);
         }
     }

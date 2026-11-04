@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace TAMMi.Core.Integrations.GitHub;
+namespace Deosrc.Tammi.Core.Integrations.GitHub;
 
 /// <summary>
 /// The GitHub user an access token belongs to.
@@ -9,7 +9,7 @@ namespace TAMMi.Core.Integrations.GitHub;
 /// <param name="Name">The display name, if the user has set one.</param>
 public sealed record GitHubUser(string Login, string? Name);
 
-// The parts of GitHub's REST API responses that TAMMi reads. Property names are mapped from snake_case.
+// The parts of GitHub's REST API responses that Tammi reads. Property names are mapped from snake_case.
 
 /// <param name="State"><c>open</c> or <c>closed</c>.</param>
 /// <param name="StateReason">

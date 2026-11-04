@@ -1,7 +1,7 @@
-using TAMMi.Core.Platform;
-using TAMMi.Core.Tests.Agents;
+using Tammi.Core.Platform;
+using Tammi.Core.Tests.Agents;
 
-namespace TAMMi.Core.Tests.Platform.Pty;
+namespace Tammi.Core.Tests.Platform.Pty;
 
 /// <summary>
 /// A pseudoterminal service that records what it's asked to start, and starts nothing.
