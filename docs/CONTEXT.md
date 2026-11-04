@@ -22,6 +22,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 |------|---------|
 | **Task** | A unit of work from an integration (e.g. a GitHub issue or JIRA ticket). TAMMi doesn't support manually defined tasks: a workspace without tasks is described by its name. |
 | **Task Source** | The integration a task comes from. |
+| **Task Status** | A task's status as its source names it (e.g. `Open` or `In Review`), with a **status category**: to do, in progress or done. JIRA puts every status, including a site's own, in a category; sources with fixed statuses map theirs to the nearest one. |
 | **Workspace** | A named collection of tasks and repositories in a folder on disk. It is the main unit of work in TAMMi. |
 | **Workspace Folder** | The workspace's location on disk: `<parent folder>/<workspace name>`. |
 | **Repository** | A git repository that can be added to a workspace. |
@@ -248,9 +249,20 @@ own branch. It is created automatically when the workspace is created:
 ### Workspace View (tab)
 
 - **Side panel** (in this order, top to bottom)
+  - Tasks: the workspace's tasks
   - Running agents
   - Repositories: the git status of each repository in the workspace
   - "Open in…" tools
+- **Tasks section:** a card for each of the workspace's tasks, in the workspace's order, with its source's logo, its
+  short reference (as in suggested names, e.g. `api#42` or `ABC-123`, with the full key as its tooltip), its summary
+  and its Task Status, as a chip coloured by its category. Clicking the summary opens the task's page in the browser.
+  - Tasks are read from their sources when the tab opens, and again on Refresh or when integrations are added or
+    removed. Switching between open tabs doesn't read them again. Each task is read on its own, so a failing source
+    doesn't hold up the others.
+  - A task that can't be read says why: its Task Source isn't connected, it wasn't found (or the user can't see it),
+    or the source failed (with the error as a tooltip).
+  - **GitHub** issues are Open (to do), or Closed, Not planned or Duplicate (done), from the issue's state and why it
+    was closed. GitHub has no in-progress state. **JIRA** issues have their own status and its category.
 - **Repositories section:** a card with the git status of each repository, in the workspace's order. The whole card is
   coloured by what needs attention: danger when the worktree is broken or its status can't be read, warning when it
   has work that isn't pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its

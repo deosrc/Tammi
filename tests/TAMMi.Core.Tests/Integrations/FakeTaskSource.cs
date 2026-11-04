@@ -23,7 +23,26 @@ internal sealed class FakeTaskSource(string id, string keyPrefix) : ITaskIntegra
     /// </summary>
     public Exception? Failure { get; set; }
 
-    public List<string> Calls { get; } = [];
+    /// <summary>
+    /// The calls made so far. Calls can come from several threads at once.
+    /// </summary>
+    public IReadOnlyList<string> Calls
+    {
+        get
+        {
+            lock (_calls)
+            {
+                return [.. _calls];
+            }
+        }
+    }
+
+    /// <summary>
+    /// Holds every call until it completes, if set.
+    /// </summary>
+    public TaskCompletionSource? Gate { get; set; }
+
+    private readonly List<string> _calls = [];
 
     public TaskInfo Add(int number, string title, DateTimeOffset? updated = null)
     {
@@ -53,11 +72,24 @@ internal sealed class FakeTaskSource(string id, string keyPrefix) : ITaskIntegra
     }
 
     public async Task<TaskInfo?> GetTaskAsync(string key, CancellationToken cancellationToken = default) =>
-        (await Answer($"get:{key}", () => [.. Tasks.Where(task => task.Key == key)])).SingleOrDefault();
+        (await Answer($"get:{key}", () => [.. Tasks.Where(task => task.Key == key)], cancellationToken))
+            .SingleOrDefault();
 
-    private Task<IReadOnlyList<TaskInfo>> Answer(string call, Func<IReadOnlyList<TaskInfo>> answer)
+    private async Task<IReadOnlyList<TaskInfo>> Answer(
+        string call,
+        Func<IReadOnlyList<TaskInfo>> answer,
+        CancellationToken cancellationToken = default)
     {
-        Calls.Add(call);
-        return Failure is null ? Task.FromResult(answer()) : Task.FromException<IReadOnlyList<TaskInfo>>(Failure);
+        lock (_calls)
+        {
+            _calls.Add(call);
+        }
+
+        if (Gate is { } gate)
+        {
+            await gate.Task.WaitAsync(cancellationToken);
+        }
+
+        return Failure is null ? answer() : throw Failure;
     }
 }

@@ -357,6 +357,44 @@ public class GitHubIntegrationTests : IDisposable
         Assert.NotNull(task);
         Assert.Equal("Add Remote Desktop support", task.Title);
         Assert.Equal("github", task.Source);
+        Assert.Equal("Closed", task.Status);
+        Assert.Equal(TaskStatusCategory.Done, task.StatusCategory);
+    }
+
+    [Theory]
+    [InlineData("open", null, "Open", TaskStatusCategory.ToDo)]
+    [InlineData("open", "reopened", "Open", TaskStatusCategory.ToDo)]
+    [InlineData("closed", "completed", "Closed", TaskStatusCategory.Done)]
+    [InlineData("closed", null, "Closed", TaskStatusCategory.Done)]
+    [InlineData("closed", "not_planned", "Not planned", TaskStatusCategory.Done)]
+    [InlineData("closed", "duplicate", "Duplicate", TaskStatusCategory.Done)]
+    public async Task GetTaskAsync_ReadsTheStatus(
+        string state, string? reason, string status, TaskStatusCategory category)
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        var issue = JsonNode.Parse(FakeGitHubApi.Recorded("issue.json"))!;
+        issue["state"] = state;
+        issue["state_reason"] = reason;
+        _api.Respond("repos/deosrc/Condement/issues/3", issue.ToJsonString());
+
+        TaskInfo? task = await github.GetTaskAsync("deosrc/Condement#3", CancellationToken);
+
+        Assert.Equal(status, task?.Status);
+        Assert.Equal(category, task?.StatusCategory);
+    }
+
+    [Fact]
+    public async Task GetTaskAsync_HasNoStatus_WhenGitHubDoesntSay()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        var issue = JsonNode.Parse(FakeGitHubApi.Recorded("issue.json"))!.AsObject();
+        issue.Remove("state");
+        _api.Respond("repos/deosrc/Condement/issues/3", issue.ToJsonString());
+
+        TaskInfo? task = await github.GetTaskAsync("deosrc/Condement#3", CancellationToken);
+
+        Assert.Null(task?.Status);
+        Assert.Null(task?.StatusCategory);
     }
 
     [Fact]
