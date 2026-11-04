@@ -176,12 +176,12 @@ own branch. It is created automatically when the workspace is created:
 
 - **Side panel** (in this order, top to bottom)
   - Running agents
-  - Git status of each repository in the workspace
+  - Repositories: the git status of each repository in the workspace
   - "Open in…" tools
-- **Git status section:** a card for each repository, in the workspace's order. The whole card is coloured by what
-  needs attention: danger when the worktree is broken or its status can't be read, warning when it has work that
-  isn't pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its submodules,
-  and success otherwise. Each card has:
+- **Repositories section:** a card with the git status of each repository, in the workspace's order. The whole card is
+  coloured by what needs attention: danger when the worktree is broken or its status can't be read, warning when it
+  has work that isn't pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its
+  submodules, and success otherwise. Each card has:
   - a label: Broken, Unreadable, Changed (as on Home), Out of sync (only behind) or Clean
   - its branch (or the commit, when HEAD is detached), and how far it's ahead of and behind its upstream, when it
     tracks one
@@ -277,7 +277,7 @@ are left to other tools for now.
   being opened), **enabled/disabled** and **scope**.
 - **Scope** sets what a tool can open: the workspace folder, a single repository, or both. Workspace
   tools appear in the side panel's tools section. Repository tools appear on each repository's entry
-  in the git status section.
+  in the Repositories section.
 - **Visual Studio** opens solutions, not folders. TAMMi finds the `.sln` and `.slnx` files in the
   workspace's repositories and shows an "Open in…" entry for each one (e.g. "Visual Studio: Api.sln").
 
