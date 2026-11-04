@@ -213,8 +213,24 @@ own branch. It is created automatically when the workspace is created:
 
 - **Side panel** (in this order, top to bottom)
   - Running agents
-  - Git status of each repository in the workspace
+  - Repositories: the git status of each repository in the workspace
   - "Open in…" tools
+- **Repositories section:** a card with the git status of each repository, in the workspace's order. The whole card is
+  coloured by what needs attention: danger when the worktree is broken or its status can't be read, warning when it
+  has work that isn't pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its
+  submodules, and success otherwise. Each card has:
+  - a label: Broken, Unreadable, Changed (as on Home), Out of sync (only behind) or Clean
+  - its branch (or the commit, when HEAD is detached), and how far it's ahead of and behind its upstream, when it
+    tracks one
+  - how many uncommitted changes and unpushed commits it has
+  - its submodules, nested under it, each with the same details, or "Not checked out"
+  - a broken worktree says what's wrong (e.g. "Local Repository moved or deleted") instead
+- **Live updates:** while a workspace's tab is open (even when another tab is shown), TAMMi watches each worktree's
+  folder and its git data in the Local Repository: the worktree's git directory (index, HEAD and its submodules' git
+  directories), the Local Repository's refs and the entries directly in its `.git` folder (e.g. `packed-refs`). So
+  editing, staging, committing and fetching all update the status, whichever tool does them. Only the repository that
+  changed is read again. Closing the tab stops watching, and so does starting to delete the workspace (it starts
+  again if the delete is cancelled).
 - **Git operations**, including a git graph view
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
 - **Terminals**: any number of embedded terminals, shown as tabs alongside agent sessions. A new
@@ -301,7 +317,7 @@ are left to other tools for now.
   being opened), **enabled/disabled** and **scope**.
 - **Scope** sets what a tool can open: the workspace folder, a single repository, or both. Workspace
   tools appear in the side panel's tools section. Repository tools appear on each repository's entry
-  in the git status section.
+  in the Repositories section.
 - **Visual Studio** opens solutions, not folders. TAMMi finds the `.sln` and `.slnx` files in the
   workspace's repositories and shows an "Open in…" entry for each one (e.g. "Visual Studio: Api.sln").
 

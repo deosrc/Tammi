@@ -1,0 +1,59 @@
+@* One repository's card in the side panel's Repositories section. The card's colour says whether it needs attention:
+   danger when it's broken or can't be read, warning when it has work that isn't pushed or is out of sync with its
+   upstream, and success when it's clean. *@
+
+<li class="git-status-card @ToneClass">
+    <div class="git-status-heading">
+        <span class="git-status-name" title="@Repository.WorktreePath">@Repository.Repository.FolderName</span>
+        @if (Label is { } label)
+        {
+            <span class="git-status-badge">@label</span>
+        }
+    </div>
+
+    @if (!Repository.IsLoaded)
+    {
+        <p class="placeholder">Reading status…</p>
+    }
+    else if (Repository.IsBroken)
+    {
+        <p class="git-status-problem">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+                <path d="M12 9v4M12 17h.01" />
+            </svg>
+            <span>@WorktreeHealthText.Summary(Repository.Health)</span>
+        </p>
+    }
+    else if (Repository.Status is { } status)
+    {
+        <GitStatusDetails Status="status" />
+    }
+    else
+    {
+        <p class="git-status-problem" title="@Repository.Problem">Couldn't read the status.</p>
+    }
+</li>
+
+@code {
+    [Parameter, EditorRequired]
+    public WorkspaceRepositoryStatus Repository { get; set; } = null!;
+
+    private string? ToneClass => Repository switch
+    {
+        { IsLoaded: false } => null,
+        { IsBroken: true } or { Status: null } => "git-status-card-danger",
+        { Status: { } status } when GitStatusText.NeedsAttention(status) => "git-status-card-warning",
+        _ => "git-status-card-success",
+    };
+
+    private string? Label => Repository switch
+    {
+        { IsLoaded: false } => null,
+        { IsBroken: true } => "Broken",
+        { Status: null } => "Unreadable",
+        { Status.IsChanged: true } => "Changed",
+        { Status: { } status } when GitStatusText.NeedsAttention(status) => "Out of sync",
+        _ => "Clean",
+    };
+}
