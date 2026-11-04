@@ -102,59 +102,86 @@ else
             </div>
         </aside>
         <div class="workspace-main">
+            @* The first tab is the dashboard and the last opens the New menu, so they're always there. *@
             <div class="session-tabs">
-                @if (_terminals.Count > 0)
-                {
-                    <div class="session-tab-list" role="tablist" aria-label="Terminals">
-                        @foreach (var terminal in _terminals)
-                        {
-                            var shown = ReferenceEquals(terminal, _shownTerminal);
-                            <div class="session-tab @(shown ? "active" : null)" @key="terminal">
-                                <button type="button" class="session-tab-label" role="tab"
-                                        aria-selected="@(shown ? "true" : "false")" title="@terminal.WorkingDirectory"
-                                        @onclick="() => ShowTerminal(terminal)">
-                                    <span class="tab-label-text">@terminal.Name</span>
-                                    @if (terminal.HasExited)
-                                    {
-                                        <span class="session-tab-status">Exited</span>
-                                    }
-                                </button>
-                                <button type="button" class="tab-close" title="Close @terminal.Name"
-                                        aria-label="Close @terminal.Name" @onclick="() => CloseTerminalAsync(terminal)">
-                                    &times;
-                                </button>
-                            </div>
-                        }
+                <div class="session-tab-list" role="tablist" aria-label="Workspace">
+                    <div class="session-tab session-tab-dashboard @(_shownTerminal is null ? "active" : null)">
+                        <button type="button" class="session-tab-label session-tab-icon" role="tab"
+                                aria-selected="@(_shownTerminal is null ? "true" : "false")" title="Dashboard"
+                                aria-label="Dashboard" @onclick="ShowDashboard">
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <rect x="3" y="3" width="7" height="9" rx="1" />
+                                <rect x="14" y="3" width="7" height="5" rx="1" />
+                                <rect x="14" y="12" width="7" height="9" rx="1" />
+                                <rect x="3" y="16" width="7" height="5" rx="1" />
+                            </svg>
+                        </button>
                     </div>
-                }
-                @* Closes on Escape, or on a click anywhere outside the menu. *@
-                <div class="menu-anchor" @onkeydown="OnTerminalMenuKeyDown">
-                    <button type="button" class="button button-secondary button-icon" aria-haspopup="menu"
-                            aria-expanded="@(_terminalMenuOpen ? "true" : "false")"
-                            @onclick="() => _terminalMenuOpen = !_terminalMenuOpen">
-                        New terminal
-                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <polyline points="6 9 12 15 18 9"></polyline>
+                    @foreach (var terminal in _terminals)
+                    {
+                        var shown = ReferenceEquals(terminal, _shownTerminal);
+                        <div class="session-tab @(shown ? "active" : null)" @key="terminal">
+                            <button type="button" class="session-tab-label" role="tab"
+                                    aria-selected="@(shown ? "true" : "false")" title="@terminal.WorkingDirectory"
+                                    @onclick="() => ShowTerminal(terminal)">
+                                <span class="tab-label-text">@terminal.Name</span>
+                                @if (terminal.HasExited)
+                                {
+                                    <span class="session-tab-status">Exited</span>
+                                }
+                            </button>
+                            <button type="button" class="tab-close" title="Close @terminal.Name"
+                                    aria-label="Close @terminal.Name" @onclick="() => CloseTerminalAsync(terminal)">
+                                &times;
+                            </button>
+                        </div>
+                    }
+                </div>
+                @* Outside the tab list, which scrolls and would clip the menu. Closes on Escape, or on a click anywhere
+                   outside the menu. *@
+                <div class="menu-anchor session-tab-new" @onkeydown="OnNewMenuKeyDown">
+                    <button type="button" class="session-tab-label session-tab-icon" title="New…" aria-label="New…"
+                            aria-haspopup="menu" aria-expanded="@(_newMenuOpen ? "true" : "false")"
+                            @onclick="ToggleNewMenu">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M12 5v14M5 12h14" />
                         </svg>
                     </button>
-                    @if (_terminalMenuOpen)
+                    @if (_newMenuOpen)
                     {
-                        <div class="menu-backdrop" @onclick="() => _terminalMenuOpen = false"></div>
-                        <ul class="menu" role="menu" aria-label="New terminal">
-                            <li role="none">
-                                <button type="button" class="menu-item" role="menuitem" @onclick="() => StartTerminal(null)">
-                                    Workspace Folder
+                        <div class="menu-backdrop" @onclick="CloseNewMenu"></div>
+                        <ul class="menu" role="menu" aria-label="New">
+                            <li role="none" class="menu-submenu-anchor" @onmouseenter="() => _terminalMenuOpen = true">
+                                <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
+                                        aria-expanded="@(_terminalMenuOpen ? "true" : "false")"
+                                        @onclick="() => _terminalMenuOpen = !_terminalMenuOpen">
+                                    Terminal
+                                    <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true"
+                                         focusable="false">
+                                        <polyline points="9 6 15 12 9 18"></polyline>
+                                    </svg>
                                 </button>
+                                @if (_terminalMenuOpen)
+                                {
+                                    <ul class="menu menu-submenu" role="menu" aria-label="Terminal">
+                                        <li role="none">
+                                            <button type="button" class="menu-item" role="menuitem"
+                                                    @onclick="() => StartTerminal(null)">
+                                                Workspace
+                                            </button>
+                                        </li>
+                                        @foreach (var repository in _listing?.Workspace?.Repositories ?? [])
+                                        {
+                                            <li role="none" @key="repository.FolderName">
+                                                <button type="button" class="menu-item" role="menuitem"
+                                                        @onclick="() => StartTerminal(repository)">
+                                                    Repository: @repository.FolderName
+                                                </button>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
                             </li>
-                            @foreach (var repository in _listing?.Workspace?.Repositories ?? [])
-                            {
-                                <li role="none" @key="repository.FolderName">
-                                    <button type="button" class="menu-item" role="menuitem"
-                                            @onclick="() => StartTerminal(repository)">
-                                        @repository.FolderName
-                                    </button>
-                                </li>
-                            }
                         </ul>
                     }
                 </div>
@@ -171,10 +198,7 @@ else
             {
                 <div class="workspace-main-empty">
                     <h1>@_tab.Name</h1>
-                    <p class="placeholder">
-                        Git operations and agents will appear here. Open a terminal with New terminal, in the Workspace
-                        Folder or one of its repositories.
-                    </p>
+                    <p class="placeholder">Git operations, agents and terminals will appear here.</p>
                 </div>
             }
         </div>
@@ -188,6 +212,7 @@ else
     private string? _loadedWorkspaceId;
     private bool _deleting;
     private bool _manageMenuOpen;
+    private bool _newMenuOpen;
     private bool _terminalMenuOpen;
     private string? _terminalError;
     private IReadOnlyList<WorkspaceTerminal> _terminals = [];
@@ -219,7 +244,7 @@ else
             // Another tab is shown in this page, so the flow and menu for the previous one are closed.
             _deleting = false;
             _manageMenuOpen = false;
-            _terminalMenuOpen = false;
+            CloseNewMenu();
             _terminalError = null;
         }
 
@@ -300,11 +325,18 @@ else
     {
         _terminals = Terminals.For(WorkspaceId);
 
-        // Show the terminal the view was showing last time, or the newest one if that's been closed.
+        // Show the terminal the view was showing last time, or the dashboard if it wasn't showing one or that terminal
+        // has been closed.
         _shownTerminal = ViewState.GetShownTerminal(WorkspaceId) is { } shown && _terminals.Contains(shown)
             ? shown
-            : _terminals.LastOrDefault();
+            : null;
         ViewState.SetShownTerminal(WorkspaceId, _shownTerminal);
+    }
+
+    private void ShowDashboard()
+    {
+        ViewState.SetShownTerminal(WorkspaceId, null);
+        _shownTerminal = null;
     }
 
     private void ShowTerminal(WorkspaceTerminal terminal)
@@ -315,7 +347,7 @@ else
 
     private void StartTerminal(WorkspaceRepository? repository)
     {
-        _terminalMenuOpen = false;
+        CloseNewMenu();
         _terminalError = null;
         if (_listing?.Workspace is not { } workspace)
         {
@@ -338,7 +370,7 @@ else
     {
         if (ReferenceEquals(terminal, _shownTerminal))
         {
-            // Show the next terminal, or the previous one if it was the last.
+            // Show the next terminal, or the previous one if it was the last, or else the dashboard.
             var index = _terminals.ToList().IndexOf(terminal);
             var next = index + 1 < _terminals.Count ? _terminals[index + 1] : index > 0 ? _terminals[index - 1] : null;
             ViewState.SetShownTerminal(WorkspaceId, next);
@@ -349,11 +381,23 @@ else
         await closing;
     }
 
-    private void OnTerminalMenuKeyDown(KeyboardEventArgs e)
+    private void ToggleNewMenu()
+    {
+        _newMenuOpen = !_newMenuOpen;
+        _terminalMenuOpen = false;
+    }
+
+    private void CloseNewMenu()
+    {
+        _newMenuOpen = false;
+        _terminalMenuOpen = false;
+    }
+
+    private void OnNewMenuKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Escape")
         {
-            _terminalMenuOpen = false;
+            CloseNewMenu();
         }
     }
 

@@ -958,20 +958,20 @@ label.task-choice {
   margin: var(--space-2) var(--space-3) 0;
 }
 
+/* A second row of tabs, set apart from the app's tab strip by a small divider. */
 .session-tabs {
   display: flex;
   flex: none;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 36px;
-  padding-right: var(--space-2);
+  align-items: stretch;
+  height: 36px;
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
 .session-tab-list {
   display: flex;
-  align-self: stretch;
   min-width: 0;
   overflow-x: auto;
   scrollbar-width: thin;
@@ -1011,6 +1011,32 @@ label.task-choice {
   font: inherit;
   white-space: nowrap;
   cursor: pointer;
+}
+
+/* A tab that shows only an icon: the dashboard, and the tab that opens the New menu. */
+.session-tab-icon {
+  padding: 0 var(--space-3);
+}
+
+/* The dashboard can't be closed, so it has no close button to leave room for. */
+.session-tab-dashboard {
+  padding-right: 0;
+}
+
+/* More specific than .menu-anchor, which comes later and would make it inline-block, so the button fills the tab
+   row's height like the other tabs. */
+.session-tabs > .session-tab-new {
+  display: flex;
+  flex: none;
+}
+
+.session-tab-new > .session-tab-label {
+  color: var(--color-text-muted);
+}
+
+.session-tab-new > .session-tab-label:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
 }
 
 .session-tab-status {
@@ -1514,6 +1540,21 @@ label.task-choice {
 .menu-anchor-wide > .menu {
   right: 0;
   min-width: 0;
+}
+
+/* A menu item that opens a submenu beside it. */
+.menu-submenu-anchor {
+  position: relative;
+}
+
+.menu-submenu {
+  top: calc(-1 * var(--space-1) - 1px);
+  left: calc(100% + var(--space-1));
+}
+
+/* Pushes an icon, e.g. a submenu's arrow, to the end of a menu item. */
+.menu-item-end {
+  margin-left: auto;
 }
 
 /* A menu that opens above its button, e.g. at the bottom of the window. */

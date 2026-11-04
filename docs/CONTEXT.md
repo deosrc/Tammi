@@ -233,16 +233,21 @@ own branch. It is created automatically when the workspace is created:
   again if the delete is cancelled).
 - **Git operations**, including a git graph view
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
+- **Main area tabs:** the main area has its own row of tabs, below a small divider. The first is always the
+  **dashboard** (an icon, no name), which the view shows until the user opens something else. Then come the
+  workspace's terminals (and later its agent sessions). The last is always a **+** tab, which opens a menu of things to
+  start: **Terminal**, with a submenu of **Workspace** and **Repository: `<name>`** for each repository.
 - **Terminals**: any number of embedded terminals, shown as tabs alongside agent sessions. A new
   terminal opens in the workspace folder by default, or the user can open one in a specific repository.
   The shell defaults to PowerShell on Windows (`pwsh` if installed) and `$SHELL` on Linux, and can be
   changed in Settings.
   - A terminal is named "Terminal" when it's in the Workspace Folder, or after the repository's folder (e.g. `api`).
     A name already used by one of the workspace's open terminals gets the first free number (e.g. "Terminal 2").
-  - Closing a terminal's tab ends its shell. A terminal whose shell has exited stays, marked as exited, until its tab
+  - Closing a terminal's tab ends its shell, and shows the next tab (or the previous one, or else the dashboard).
+    A terminal whose shell has exited stays, marked as exited, until its tab
     is closed.
   - Terminals keep running when the workspace's tab closes (see [Lifetime](#agents)). Each one keeps its latest
-    1 MiB of output, so reopening the tab shows it again, and the view shows the terminal it was showing.
+    1 MiB of output, so reopening the tab shows it again, and the view shows the tab it was showing.
   - Deleting a workspace closes its terminals first.
   - **Copy and paste:** Ctrl+Shift+C and Ctrl+Shift+V on every platform. On Windows, as in Windows Terminal,
     Ctrl+C also copies when text is selected (otherwise it interrupts the process) and Ctrl+V pastes.
