@@ -352,7 +352,14 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     case and surrounding spaces, including the Supported Agents' names. A name that's already used is still saved,
     but shown as an error until it's changed.
   - Agents are offered in that order: the Supported Agents, then the Custom Agents.
-  - The initial prompt template. Clearing it restores the default.
+  - The initial prompt template. A menu fills it in with one of three predefined prompts, ticking the one in use. Each
+    tells the agent to read the task context file, and to read it again for the tasks' latest details, since TAMMi
+    rewrites it when they change. Then it has the agent:
+    - **Implement the tasks:** start making the changes.
+    - **Plan the change:** plan the changes, and wait for the user to approve the plan before making them.
+    - **Read the tasks only** (the default): stop, and wait for the user's instructions.
+
+    Clearing the template restores the default.
 - **Tools**
   - The external tools offered under "Open in…"
   - Terminal shell: executable and arguments. Leaving the executable empty uses the platform shell, with its own
@@ -408,8 +415,21 @@ are left to other tools for now.
   context file in `.tammi/` and keeps it up to date. When an agent starts, TAMMi sends it an
   **initial prompt** telling it about the context file. The initial prompt is configurable, with a
   placeholder for the context file's path. Each Agent Definition says how the prompt is passed to its CLI.
+  - The context file is `.tammi/tasks.md`. It has a section for each task, in the workspace's order: its key and
+    title, a link to its page, its Task Status (with its category), its repository's page if it belongs to one, and
+    its description as the source gives it (markdown from GitHub, wiki markup from JIRA). A workspace without tasks
+    gets a file that says so.
+  - It's written each time the workspace's tasks have all been read (see [Tasks section](#workspace-view-tab)): when
+    the tab opens, on Refresh, when integrations are added or removed, and when the task list changes. It's only
+    rewritten when its contents change, and always in full, so an agent never reads half a file. A task that can't be
+    read is listed by its key, with why, and its earlier details aren't kept. If the file can't be written, the Tasks
+    section says why.
+  - Starting an agent that takes an initial prompt writes the file first if it doesn't exist yet (e.g. while the tasks
+    are still being read), listing the tasks by their keys until their details are read. If it can't be written, the
+    agent doesn't start, and says why. An agent that doesn't take an initial prompt starts without it.
+  - Running agents aren't told when the file changes.
   - The template's placeholder is `{contextFile}`, replaced with the file's full path. The rest of the template is
-    sent as it is.
+    sent as it is. Resumed Agent Sessions aren't sent the prompt again.
   - An Agent Definition has two lists of arguments. Its **arguments** are passed every time it starts. Its
     **initial prompt arguments** are added after them only when there's a prompt to send, with `{prompt}` where the
     prompt goes: `{prompt}` alone passes it as a positional argument, and `--prompt` then `{prompt}` as an option's
@@ -418,7 +438,7 @@ are left to other tools for now.
   - The prompt is always passed as one argument, exactly as written. On Windows, a CLI that's a batch file (e.g.
     `claude.cmd`, installed with npm) runs through `cmd.exe`, so TAMMi also escapes `cmd.exe`'s special characters.
     `cmd.exe` can't pass on line breaks, so a template with several lines can't be sent to a batch file: starting
-    the agent fails and says why. The default template is a single line.
+    the agent fails and says why. The predefined templates are each a single line.
 - **Claude Code** is the first Supported Agent. Others (e.g. Codex CLI, Gemini CLI) can be added as Custom Agents,
   and may become Supported Agents later.
 - **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or

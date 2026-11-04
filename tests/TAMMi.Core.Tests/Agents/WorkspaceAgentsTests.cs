@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Time.Testing;
 using TAMMi.Core.Agents;
+using TAMMi.Core.Integrations;
 using TAMMi.Core.Settings;
 using TAMMi.Core.Terminals;
 using TAMMi.Core.Tests.Platform.Pty;
@@ -20,12 +21,23 @@ public sealed class WorkspaceAgentsTests : IAsyncDisposable
 
     private static readonly AgentDefinition Plain = new("Plain", "plain-agent");
 
+    private static readonly AgentDefinition Prompted = new("Prompted", "prompted-agent", "-a")
+    {
+        PromptArguments = ["--prompt", AgentDefinition.PromptPlaceholder],
+        SessionIdArguments = ["--id", AgentDefinition.SessionIdPlaceholder],
+        ResumeArguments = ["--resume", AgentDefinition.SessionIdPlaceholder],
+    };
+
     private readonly DirectoryInfo _root = Directory.CreateTempSubdirectory("tammi-tests-");
     private readonly RecordingPtyService _pty = new();
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 11, 4, 12, 0, 0, TimeSpan.Zero));
     private readonly InMemorySettingsStore _settings = new(new AppSettings
     {
-        Agents = new AgentSettings { CustomDefinitions = [Resumable, Plain] },
+        Agents = new AgentSettings
+        {
+            CustomDefinitions = [Resumable, Plain, Prompted],
+            InitialPromptTemplate = "Read {contextFile} first.",
+        },
     });
 
     private readonly WorkspaceAgents _agents;
@@ -173,6 +185,68 @@ public sealed class WorkspaceAgentsTests : IAsyncDisposable
         Assert.Equal("Resumable (api) 2", resumed.Name);
         var recorded = Assert.Single(await _agents.SessionsOf(_workspace).ListAsync(TestContext.Current.CancellationToken));
         Assert.Equal(_time.GetUtcNow(), recorded.LastStartedAt);
+    }
+
+    [Fact]
+    public async Task StartAsync_AgentTakesAPrompt_SendsTheInitialPrompt_WithTheTaskContextFile()
+    {
+        var workspace = _workspace with { Tasks = [new TaskReference("github", "acme/api#42")] };
+
+        var agent = await _agents.StartAsync(workspace, Prompted);
+
+        var contextFile = TaskContextFile.PathOf(workspace);
+        Assert.Equal(
+            ["-a", "--id", agent.Agent.SessionId!, "--prompt", $"Read {contextFile} first."],
+            Assert.Single(_pty.Requests).Request.Arguments);
+        Assert.Contains(
+            "## acme/api#42",
+            await File.ReadAllTextAsync(contextFile, TestContext.Current.CancellationToken),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartAsync_TaskContextFileExists_KeepsIt()
+    {
+        var contextFile = TaskContextFile.PathOf(_workspace);
+        await File.WriteAllTextAsync(contextFile, "Details", TestContext.Current.CancellationToken);
+
+        await _agents.StartAsync(_workspace, Prompted);
+
+        Assert.Equal("Details", await File.ReadAllTextAsync(contextFile, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task StartAsync_AgentDoesntTakeAPrompt_StartsWithoutOne_OrTheFile()
+    {
+        await _agents.StartAsync(_workspace, Resumable);
+
+        var arguments = Assert.Single(_pty.Requests).Request.Arguments;
+        Assert.DoesNotContain(arguments, argument => argument.Contains("Read ", StringComparison.Ordinal));
+        Assert.False(File.Exists(TaskContextFile.PathOf(_workspace)));
+    }
+
+    [Fact]
+    public async Task StartAsync_TaskContextFileCantBeWritten_Throws_AndAddsNothing()
+    {
+        var workspace = CreateWorkspace("broken", createMetadataFolder: false);
+
+        var ex = await Assert.ThrowsAsync<IOException>(() => _agents.StartAsync(workspace, Prompted));
+
+        Assert.Contains("task context file", ex.Message, StringComparison.Ordinal);
+        Assert.Empty(_pty.Requests);
+        Assert.Empty(_agents.For(workspace.Id));
+    }
+
+    [Fact]
+    public async Task ResumeAsync_DoesntSendTheInitialPromptAgain()
+    {
+        var started = await _agents.StartAsync(_workspace, Prompted);
+        await _agents.StopAsync(started);
+        var session = Assert.Single(await _agents.SessionsOf(_workspace).ListAsync(TestContext.Current.CancellationToken));
+
+        await _agents.ResumeAsync(_workspace, session);
+
+        Assert.Equal(["-a", "--resume", session.Id], _pty.Requests[1].Request.Arguments);
     }
 
     [Fact]

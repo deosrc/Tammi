@@ -40,10 +40,24 @@ public class InitialPromptTests
     }
 
     [Fact]
-    public void DefaultTemplate_IsOneLineWithPlaceholder()
+    public void Predefined_AreThreeDistinctOneLineTemplates_WithThePlaceholder()
     {
-        Assert.Contains(InitialPrompt.ContextFilePlaceholder, InitialPrompt.DefaultTemplate, StringComparison.Ordinal);
-        Assert.DoesNotContain('\n', InitialPrompt.DefaultTemplate);
-        Assert.DoesNotContain('\r', InitialPrompt.DefaultTemplate);
+        Assert.Equal(
+            [InitialPrompt.ImplementTemplate, InitialPrompt.PlanTemplate, InitialPrompt.ReadOnlyTemplate],
+            InitialPrompt.Predefined.Select(prompt => prompt.Template));
+        Assert.Equal(3, InitialPrompt.Predefined.Select(prompt => prompt.Name).Distinct().Count());
+        Assert.All(InitialPrompt.Predefined, prompt =>
+        {
+            Assert.Contains(InitialPrompt.ContextFilePlaceholder, prompt.Template, StringComparison.Ordinal);
+            Assert.Contains("read it again", prompt.Template, StringComparison.Ordinal);
+            Assert.DoesNotContain('\n', prompt.Template);
+            Assert.DoesNotContain('\r', prompt.Template);
+        });
+    }
+
+    [Fact]
+    public void DefaultTemplate_IsAPredefinedTemplate()
+    {
+        Assert.Contains(InitialPrompt.DefaultTemplate, InitialPrompt.Predefined.Select(prompt => prompt.Template));
     }
 }

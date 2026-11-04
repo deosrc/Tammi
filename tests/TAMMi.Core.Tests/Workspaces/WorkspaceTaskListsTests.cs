@@ -26,7 +26,7 @@ public sealed class WorkspaceTaskListsTests : IDisposable
     [Fact]
     public void Start_WorkspaceNotOpen_Throws()
     {
-        var workspace = WorkspaceTaskListTests.CreateWorkspace();
+        var workspace = WorkspaceTaskListTests.NewWorkspace();
 
         Assert.Throws<InvalidOperationException>(() => _lists.Start(workspace));
         Assert.Null(_lists.Find(workspace.Id));
@@ -95,7 +95,7 @@ public sealed class WorkspaceTaskListsTests : IDisposable
 
     private Workspace Open(params TaskReference[] tasks)
     {
-        var workspace = WorkspaceTaskListTests.CreateWorkspace(tasks);
+        var workspace = WorkspaceTaskListTests.NewWorkspace(tasks);
         _tabs.Open(workspace.Id, workspace.Name);
         return workspace;
     }

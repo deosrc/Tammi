@@ -1923,6 +1923,40 @@ label.task-choice {
   color: var(--color-text);
 }
 
+/* A menu item that's one of several choices, with a tick by the one in use and a line describing it. */
+.menu-item-choice {
+  align-items: flex-start;
+  min-width: 320px;
+}
+
+.menu-item-choice > .icon {
+  margin-top: 3px;
+}
+
+.menu-item-choice > .icon-hidden {
+  visibility: hidden;
+}
+
+.menu-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-item-note,
+.menu-item-description {
+  color: var(--color-text-muted);
+}
+
+.menu-item-description {
+  font-size: 0.9em;
+}
+
+/* Razor drops the space before it, so it's spaced with a margin instead. */
+.menu-item-note {
+  margin-left: var(--space-2);
+}
+
 /* A menu item that deletes something. */
 .menu-item-danger {
   color: var(--color-error);
@@ -2169,7 +2203,7 @@ label.task-choice {
 
 .dev-page input {
   width: 24rem;
-  margin-left: var(--space-1);
+  margin-left: var(--space-2);
   font-family: ui-monospace, monospace;
 }
 
