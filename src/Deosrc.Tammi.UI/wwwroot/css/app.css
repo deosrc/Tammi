@@ -2396,12 +2396,37 @@ label.task-choice {
   --git-graph-ref-colour: var(--color-accent);
 }
 
+/* The details panel's width is set by dragging the splitter (GitGraphView.razor.js). Without it, the panel keeps to its
+   default, and leaves the list room. */
 .git-graph-details {
   flex: none;
-  width: 360px;
+  width: min(var(--git-graph-details-width, 360px), max(240px, calc(100% - 320px)));
   overflow: auto;
   padding: var(--space-4);
-  border-left: 1px solid var(--color-border);
+}
+
+/* A thin bar between the list and the details panel, with a wider area to grab. */
+.git-graph-splitter {
+  position: relative;
+  flex: none;
+  width: 1px;
+  background: var(--color-border);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.git-graph-splitter::before {
+  position: absolute;
+  inset: 0 -3px;
+  content: "";
+}
+
+.git-graph-splitter:hover,
+.git-graph-splitter.dragging,
+.git-graph-splitter:focus-visible {
+  background: var(--color-focus);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-focus);
 }
 
 .git-graph-details-subject {

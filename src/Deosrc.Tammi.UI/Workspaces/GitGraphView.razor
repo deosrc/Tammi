@@ -36,7 +36,7 @@
         <p class="error git-graph-problem">Couldn't read the git graph. @problem</p>
     }
 
-    <div class="git-graph-body">
+    <div class="git-graph-body" @ref="_body">
         <div class="git-graph-list" tabindex="0" role="listbox" aria-label="Commits" @ref="_list"
              style="--git-graph-width: @(GraphWidth)px" @onkeydown="OnKeyDownAsync">
             <Virtualize @ref="_virtualize" TItem="GitGraphRow" ItemsProvider="ProvideRowsAsync"
@@ -67,7 +67,12 @@
             </Virtualize>
         </div>
 
-        <aside class="git-graph-details" aria-label="Commit details">
+        @* Resizes the details panel: drag it, or focus it and use Left and Right. *@
+        <div class="git-graph-splitter" role="separator" aria-orientation="vertical" aria-label="Resize commit details"
+             aria-controls="@_detailsId" tabindex="0" title="Drag to resize. Double-click to reset." @ref="_splitter">
+        </div>
+
+        <aside class="git-graph-details" id="@_detailsId" aria-label="Commit details">
             @if (Graph.Selected is not { } selection)
             {
                 <p class="placeholder">Select a commit to see its details.</p>
@@ -153,7 +158,11 @@
     private const int MaxLanes = 24;
 
     private WorkspaceGitGraph? _attached;
+    private readonly string _detailsId = $"git-graph-details-{Guid.NewGuid():N}";
     private ElementReference _list;
+    private ElementReference _body;
+    private ElementReference _splitter;
+    private IJSObjectReference? _splitterScript;
     private Virtualize<GitGraphRow>? _virtualize;
     private IJSObjectReference? _module;
     private IJSObjectReference? _listScript;
@@ -209,6 +218,7 @@
                 "import",
                 "./_content/Deosrc.Tammi.UI/Workspaces/GitGraphView.razor.js");
             _listScript = await _module.InvokeAsync<IJSObjectReference>("attach", _list);
+            _splitterScript = await _module.InvokeAsync<IJSObjectReference>("attachSplitter", _body, _splitter);
         }
         catch (JSDisconnectedException)
         {
@@ -226,10 +236,13 @@
 
         try
         {
-            if (_listScript is not null)
+            foreach (var script in new[] { _listScript, _splitterScript })
             {
-                await _listScript.InvokeVoidAsync("dispose");
-                await _listScript.DisposeAsync();
+                if (script is not null)
+                {
+                    await script.InvokeVoidAsync("dispose");
+                    await script.DisposeAsync();
+                }
             }
 
             if (_module is not null)

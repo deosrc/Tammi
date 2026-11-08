@@ -299,6 +299,8 @@ own branch. It is created automatically when the workspace is created:
   - Selecting a commit (by clicking it, or with Up, Down and Home) shows its details beside the list: its full id,
     its parents (clicking one selects it), its author and committer, its labels, its full message, and the files it
     changed compared with its first parent, with renames detected. Diffs are a separate Git operation.
+  - The split between the list and the details is resizable: drag it, or focus it and use Left and Right. Double-click
+    resets it. The width is shared by every graph until the app closes, and each side keeps a minimum width.
   - While it's shown and the workspace's tab is open, it reads the repository's refs again whenever the repository
     changes, and reads the graph again only if they've changed (e.g. after a commit, fetch or checkout), keeping the
     selection. A graph that isn't shown does the same when it's next shown. Refresh reads it again on demand.
