@@ -158,7 +158,8 @@
         var executable = WorkspaceTools.FindExecutable(tool);
         var unavailable = ToolText.UnavailablePlaceholders(tool);
         var unknown = ToolText.UnknownPlaceholders(tool);
-        <li class="agent-definition @(tool.Enabled ? null : "agent-definition-collapsed")">
+        var expanded = tool.Enabled && _expanded.Contains(index);
+        <li class="agent-definition @(tool.Enabled ? expanded ? null : "agent-definition-folded" : "agent-definition-collapsed")">
             <div class="agent-definition-header">
                 <Switch Id="@($"tool-{index}-enabled")" Checked="tool.Enabled" Label="@($"Enable {tool.Name}")"
                         CheckedChanged="enabled => UpdateCustomAsync(index, t => t with { Enabled = enabled })" />
@@ -175,12 +176,19 @@
                             @onclick="() => MoveAsync(index, 1)" title="Move down"
                             aria-label="Move @tool.Name down">↓</button>
                     <button type="button" class="button button-secondary" @onclick="() => RemoveAsync(index)">Remove</button>
+                    <button type="button" class="button button-secondary button-icon" aria-expanded="@(expanded ? "true" : "false")"
+                            aria-controls="tool-@index-settings" title="@(expanded ? "Hide settings" : "Show settings")"
+                            aria-label="@(expanded ? "Hide" : "Show") @tool.Name settings" @onclick="() => ToggleExpanded(index)">
+                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <polyline points="@(expanded ? "6 15 12 9 18 15" : "6 9 12 15 18 9")"></polyline>
+                        </svg>
+                    </button>
                 }
             </div>
 
-            @if (tool.Enabled)
+            @if (expanded)
             {
-                <div class="settings-form">
+                <div class="settings-form" id="tool-@index-settings">
                     <div class="settings-field">
                         <label for="tool-@index-name">Name</label>
                         <input id="tool-@index-name"
@@ -440,8 +448,21 @@
         }
     }
 
-    private Task AddCustomAsync(ToolKind kind) =>
-        UpdateCustomToolsAsync(tools =>
+    // The custom tools whose settings are shown, by index. They're hidden until shown, except a tool that's just been
+    // added.
+    private readonly HashSet<int> _expanded = [];
+
+    private void ToggleExpanded(int index)
+    {
+        if (!_expanded.Remove(index))
+        {
+            _expanded.Add(index);
+        }
+    }
+
+    private async Task AddCustomAsync(ToolKind kind)
+    {
+        await UpdateCustomToolsAsync(tools =>
         [
             .. tools,
             kind == ToolKind.File
@@ -458,13 +479,36 @@
                 },
         ]);
 
-    private Task RemoveAsync(int index) =>
-        UpdateCustomToolsAsync(tools => index < tools.Count ? [.. tools.Take(index), .. tools.Skip(index + 1)] : tools);
-
-    private Task MoveAsync(int index, int offset) =>
-        UpdateCustomToolsAsync(tools =>
+        // A new tool shows its settings, so it can be set up.
+        if (SaveError is null)
         {
-            var target = index + offset;
+            _expanded.Add(Current.CustomTools.Count - 1);
+        }
+    }
+
+    private async Task RemoveAsync(int index)
+    {
+        await UpdateCustomToolsAsync(tools =>
+            index < tools.Count ? [.. tools.Take(index), .. tools.Skip(index + 1)] : tools);
+        if (SaveError is null)
+        {
+            // The tools after it move up one.
+            var expanded = _expanded.Where(i => i != index).Select(i => i > index ? i - 1 : i).ToArray();
+            _expanded.Clear();
+            _expanded.UnionWith(expanded);
+        }
+    }
+
+    private async Task MoveAsync(int index, int offset)
+    {
+        var target = index + offset;
+        if (target < 0 || target >= Current.CustomTools.Count)
+        {
+            return;
+        }
+
+        await UpdateCustomToolsAsync(tools =>
+        {
             if (index >= tools.Count || target < 0 || target >= tools.Count)
             {
                 return tools;
@@ -474,6 +518,14 @@
             (moved[index], moved[target]) = (moved[target], moved[index]);
             return moved;
         });
+
+        // The tools swap places, so whether their settings are shown goes with them.
+        if (SaveError is null && _expanded.Contains(index) != _expanded.Contains(target))
+        {
+            ToggleExpanded(index);
+            ToggleExpanded(target);
+        }
+    }
 
     private Task UpdateCustomAsync(int index, Func<ToolDefinition, ToolDefinition> update) =>
         UpdateCustomToolsAsync(tools => index < tools.Count

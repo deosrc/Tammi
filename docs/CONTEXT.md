@@ -371,6 +371,8 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     edited, reordered and removed like Custom Agents. Each shows its kind, whether its executable was found, the
     placeholders it can use, warnings for placeholders it can't use or that don't exist, and the command it starts. A
     **Look again** button finds the executables and icons again, e.g. after installing a tool.
+  - A custom tool's settings are hidden until its card is expanded (with the arrow in its heading), except for a tool
+    that's just been added, so the list stays short.
   - Each tool but Terminal has a switch beside its name that enables it. A disabled tool's card is collapsed to its
     icon, switch and name.
   - Terminal shell: executable and arguments. Leaving the executable empty uses the platform shell, with its own

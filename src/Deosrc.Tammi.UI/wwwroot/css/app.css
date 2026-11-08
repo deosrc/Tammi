@@ -2279,6 +2279,15 @@ label.task-choice {
   margin-bottom: 0;
 }
 
+/* An enabled custom tool whose settings are hidden: only its header. */
+.agent-definition-folded {
+  padding-bottom: var(--space-3);
+}
+
+.agent-definition-folded .agent-definition-header {
+  margin-bottom: 0;
+}
+
 .agent-definition-collapsed .agent-definition-name {
   color: var(--color-text-muted);
 }
