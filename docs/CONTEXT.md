@@ -295,9 +295,12 @@ own branch. It is created automatically when the workspace is created:
       integration's service is a repository they can be on, so a fork's branch finds its Pull Request on the
       `upstream` it was forked from. Only Pull Requests whose branch is in one of those repositories count, so another
       fork's branch with the same name doesn't.
-    - They're read when the tab opens, every 2 minutes while it's open, and when integrations are added or removed.
+    - They're read when the tab opens, every 2 minutes while it's open, when integrations are added or removed, and on
+      Refresh.
       While they're read again, the badges read before stay. When they can't be read, a warning icon says why (e.g. the
       token can't read pull requests), beside the badges read before.
+- **Refresh:** the Repositories section's header has a Refresh button, which reads every repository's git status and
+  Pull Requests again. It doesn't fetch. It spins until they've all been read.
 - **Live updates:** while a workspace's tab is open (even when another tab is shown), Tammi watches each worktree's
   folder and its git data in the Local Repository: the worktree's git directory (index, HEAD and its submodules' git
   directories), the Local Repository's refs and the entries directly in its `.git` folder (e.g. `packed-refs`). So
