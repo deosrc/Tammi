@@ -41,6 +41,20 @@ public sealed class WorkspaceAgents(
     public event Action<string>? Changed;
 
     /// <summary>
+    /// Whether the app is closing, and the agents are being closed with it.
+    /// </summary>
+    public bool IsDisposed
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _disposed;
+            }
+        }
+    }
+
+    /// <summary>
     /// A workspace's open agents, running or ended, in the order they were started.
     /// </summary>
     public IReadOnlyList<WorkspaceAgent> For(string workspaceId)

@@ -719,6 +719,12 @@ are left to other tools for now.
       of it as `agent-sessions.invalid.json` before it next changes the file.
     - The user can forget a session, so it's no longer offered.
   - Plain terminals aren't restored after a restart.
+  - **Agent and Git Graph tabs are reopened after a restart.** Tammi keeps the agents and Git Graphs open in each
+    workspace in `.tammi/open-tabs.json`, updating it as they open and close (not as Tammi closes and ends every agent).
+    The first time a workspace is opened after Tammi starts, its agents are resumed from their recorded Agent
+    Sessions and its Git Graphs are opened, in their old order. The tab that was shown is shown again (the dashboard if it was the dashboard or a terminal). An agent whose session can't be resumed, or a graph
+    whose repository is no longer in the workspace, isn't reopened, and the view says so. Agents without a recorded
+    session aren't kept. Terminals are left out, as keeping them would depend on the terminal supporting it.
 
 ## Integrations
 
