@@ -419,7 +419,7 @@ else
         var withImages = new List<ToolEntry>(entries.Count);
         foreach (var entry in entries)
         {
-            withImages.Add(entry with { Image = await ToolImages.GetAsync(entry.Tool, entry.Request.FileName) });
+            withImages.Add(entry with { Image = await ToolImages.GetAsync(entry.Tool, entry.Request?.FileName) });
         }
 
         return withImages;
@@ -430,6 +430,13 @@ else
     private void OpenTool(ToolEntry entry)
     {
         _startError = null;
+        if (entry.OpensTerminal)
+        {
+            // Opens in a tab, as the New menu's Terminal does.
+            StartTerminal(entry.Repository);
+            return;
+        }
+
         try
         {
             WorkspaceTools.Open(entry);

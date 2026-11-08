@@ -37,7 +37,7 @@ public sealed class WorkspaceTools
     /// <param name="repository">The repository, or <c>null</c> for the Workspace Folder.</param>
     /// <param name="settings">The Tools settings.</param>
     /// <returns>
-    /// The entries of each enabled tool whose executable is found and whose scope includes the folder, in the order of
+    /// The Terminal tool's entry, then the entries of each enabled tool whose executable is found and whose scope includes the folder, in the order of
     /// <see cref="ToolSettings.Tools"/>. A folder tool has one entry. A file tool has one for each file it finds, in the
     /// repository or, for the Workspace Folder, in every repository. An entry whose name or arguments use a placeholder
     /// that has no value there (e.g. <c>{RepositoryFolder}</c> for the Workspace Folder) is left out.
@@ -51,9 +51,19 @@ public sealed class WorkspaceTools
         var entries = new List<ToolEntry>();
         foreach (var tool in settings.Tools)
         {
-            if (!tool.Enabled
-                || !ToolDefinition.Includes(tool.Scope, repository is not null)
-                || FindExecutable(tool) is not { } executable)
+            if (!tool.Enabled || !ToolDefinition.Includes(tool.Scope, repository is not null))
+            {
+                continue;
+            }
+
+            if (tool.OpensTerminal)
+            {
+                var folder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
+                entries.Add(new ToolEntry(tool, tool.Name, folder, repository, null));
+                continue;
+            }
+
+            if (FindExecutable(tool) is not { } executable)
             {
                 continue;
             }
@@ -108,12 +118,17 @@ public sealed class WorkspaceTools
     /// <summary>
     /// Opens an entry's folder or file in its tool. The tool keeps running after Tammi exits.
     /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The entry opens a terminal, which the Workspace View opens in a tab itself (see
+    /// <see cref="Terminals.WorkspaceTerminals"/>).
+    /// </exception>
     /// <exception cref="FileNotFoundException">The tool's executable can't be found.</exception>
     public void Open(ToolEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
-        var request = entry.Request;
+        var request = entry.Request
+            ?? throw new InvalidOperationException($"{entry.Label} is opened in a tab by the Workspace View.");
         var executable = _processLauncher.FindExecutable(request.FileName)
             ?? throw new FileNotFoundException($"Couldn't find the executable '{request.FileName}'.", request.FileName);
 

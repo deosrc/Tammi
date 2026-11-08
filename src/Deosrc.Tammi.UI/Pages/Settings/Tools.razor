@@ -19,50 +19,63 @@
 
 <h1>Tools</h1>
 
-<h2>Terminal shell</h2>
-
-<div class="settings-form">
-    <div class="settings-field">
-        <label for="terminal-shell">Executable</label>
-        @* Recreated after each change, so it shows the saved value even when that's unchanged, e.g. after spaces are
-           trimmed. *@
-        <input @key="_shellRevision"
-               id="terminal-shell"
-               class="settings-path"
-               value="@Current.TerminalShell"
-               placeholder="@DefaultShell.FileName"
-               @onchange="OnTerminalShellChanged" />
-        <p class="settings-help">
-            The shell that new terminals run: a name on the search path, or a full path. Leave it empty to use the
-            platform's default shell (@DefaultShell.FileName).
-        </p>
-    </div>
-
-    <div class="settings-field">
-        <label for="terminal-shell-arguments">Arguments</label>
-        <textarea id="terminal-shell-arguments"
-                  class="settings-arguments"
-                  rows="3"
-                  disabled="@(Current.TerminalShell is null)"
-                  placeholder="@(Current.TerminalShell is null ? ArgumentLines.Format(DefaultShell.Arguments) : null)"
-                  value="@ArgumentLines.Format(Current.TerminalShellArguments)"
-                  @onchange="OnTerminalShellArgumentsChanged"></textarea>
-        <p class="settings-help">
-            One argument on each line, passed as it is, without quotes. The default shell uses its own arguments.
-        </p>
-    </div>
-</div>
-
 <h2>Predefined tools</h2>
 
 <p class="settings-help">
     Tools that come with Tammi. The Workspace View offers them to open the Workspace Folder, a repository or a file in:
     workspace tools in the side panel's Tools section, and repository tools on each repository's card. A tool is only
-    offered when its executable is found. Predefined tools can be turned on and off, but not changed.
+    offered when its executable is found. Predefined tools can be turned on and off, but not changed. Terminal is always
+    on, and comes first.
 </p>
 
 <ul class="agent-definition-list">
-    @foreach (var tool in allTools.Where(tool => tool.IsPredefined))
+    @* The Terminal tool is always enabled, so it has no switch. It has the terminal shell's settings instead. *@
+    <li class="agent-definition">
+        <div class="agent-definition-header">
+            <ToolImageView Image="ImageOf(PredefinedTools.Terminal)" Fallback="PredefinedTools.Terminal.Icon.Generic" />
+            <span class="agent-definition-name">@PredefinedTools.Terminal.Name</span>
+        </div>
+
+        <p class="settings-help">
+            Opens one of Tammi's own terminals in a new tab of the Workspace View, in the Workspace Folder or a
+            repository, as the New menu's Terminal does. It's always on.
+        </p>
+
+        <div class="settings-form">
+            <div class="settings-field">
+                <label for="terminal-shell">Shell</label>
+                @* Recreated after each change, so it shows the saved value even when that's unchanged, e.g. after
+                   spaces are trimmed. *@
+                <input @key="_shellRevision"
+                       id="terminal-shell"
+                       class="settings-path settings-input-wide"
+                       value="@Current.TerminalShell"
+                       placeholder="@DefaultShell.FileName"
+                       @onchange="OnTerminalShellChanged" />
+                <p class="settings-help">
+                    The shell that new terminals run: a name on the search path, or a full path. Leave it empty to use
+                    the platform's default shell (@DefaultShell.FileName).
+                </p>
+            </div>
+
+            <div class="settings-field">
+                <label for="terminal-shell-arguments">Shell arguments</label>
+                <textarea id="terminal-shell-arguments"
+                          class="settings-arguments"
+                          rows="3"
+                          disabled="@(Current.TerminalShell is null)"
+                          placeholder="@(Current.TerminalShell is null ? ArgumentLines.Format(DefaultShell.Arguments) : null)"
+                          value="@ArgumentLines.Format(Current.TerminalShellArguments)"
+                          @onchange="OnTerminalShellArgumentsChanged"></textarea>
+                <p class="settings-help">
+                    One argument on each line, passed as it is, without quotes. The default shell uses its own
+                    arguments.
+                </p>
+            </div>
+        </div>
+    </li>
+
+    @foreach (var tool in allTools.Where(tool => tool.IsPredefined && !tool.OpensTerminal))
     {
         var executable = WorkspaceTools.FindExecutable(tool);
         <li class="agent-definition @(tool.Enabled ? null : "agent-definition-collapsed")" @key="tool.Id">

@@ -49,15 +49,15 @@ public sealed class WorkspaceToolsTests : IDisposable
     [Fact]
     public void GetEntries_FolderTool_OpensWorkspaceFolder()
     {
-        var entry = Assert.Single(CreateTools().GetEntries(Workspace, null, Custom(Editor)));
+        var entry = Assert.Single(External(CreateTools(), Workspace, null, Custom(Editor)));
 
         Assert.Equal("Editor", entry.Label);
         Assert.Equal(_folder.Path, entry.Path);
         Assert.Null(entry.Repository);
         Assert.Same(Editor, entry.Tool);
-        Assert.Equal("/usr/bin/editor", entry.Request.FileName);
-        Assert.Equal(["--new", _folder.Path], entry.Request.Arguments);
-        Assert.Equal(_folder.Path, entry.Request.WorkingDirectory);
+        Assert.Equal("/usr/bin/editor", entry.Request!.FileName);
+        Assert.Equal(["--new", _folder.Path], entry.Request!.Arguments);
+        Assert.Equal(_folder.Path, entry.Request!.WorkingDirectory);
     }
 
     [Fact]
@@ -65,12 +65,12 @@ public sealed class WorkspaceToolsTests : IDisposable
     {
         var tool = Editor with { Arguments = ["{LaunchFolder}", "{RepositoryFolder}", "{WorkspaceFolder}"] };
 
-        var entry = Assert.Single(CreateTools().GetEntries(Workspace, _api, Custom(tool)));
+        var entry = Assert.Single(External(CreateTools(), Workspace, _api, Custom(tool)));
 
         Assert.Equal(ApiFolder, entry.Path);
         Assert.Same(_api, entry.Repository);
-        Assert.Equal([ApiFolder, ApiFolder, _folder.Path], entry.Request.Arguments);
-        Assert.Equal(ApiFolder, entry.Request.WorkingDirectory);
+        Assert.Equal([ApiFolder, ApiFolder, _folder.Path], entry.Request!.Arguments);
+        Assert.Equal(ApiFolder, entry.Request!.WorkingDirectory);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public sealed class WorkspaceToolsTests : IDisposable
     {
         var tool = Editor with { Name = "Edit {LaunchFolder}" };
 
-        Assert.Equal($"Edit {ApiFolder}", Assert.Single(CreateTools().GetEntries(Workspace, _api, Custom(tool))).Label);
+        Assert.Equal($"Edit {ApiFolder}", Assert.Single(External(CreateTools(), Workspace, _api, Custom(tool))).Label);
     }
 
     [Fact]
@@ -86,9 +86,9 @@ public sealed class WorkspaceToolsTests : IDisposable
     {
         var tool = Editor with { Arguments = ["{RepositoryFolder}"] };
 
-        Assert.Empty(CreateTools().GetEntries(Workspace, null, Custom(tool)));
-        Assert.Single(CreateTools().GetEntries(Workspace, _api, Custom(tool)));
-        Assert.Empty(CreateTools().GetEntries(Workspace, _api, Custom(Editor with { Name = "{FileName}" })));
+        Assert.Empty(External(CreateTools(), Workspace, null, Custom(tool)));
+        Assert.Single(External(CreateTools(), Workspace, _api, Custom(tool)));
+        Assert.Empty(External(CreateTools(), Workspace, _api, Custom(Editor with { Name = "{FileName}" })));
     }
 
     [Theory]
@@ -99,14 +99,14 @@ public sealed class WorkspaceToolsTests : IDisposable
     {
         var settings = Custom(Editor with { Scope = scope });
 
-        Assert.Equal(workspace, CreateTools().GetEntries(Workspace, null, settings).Count == 1);
-        Assert.Equal(repository, CreateTools().GetEntries(Workspace, _api, settings).Count == 1);
+        Assert.Equal(workspace, External(CreateTools(), Workspace, null, settings).Count == 1);
+        Assert.Equal(repository, External(CreateTools(), Workspace, _api, settings).Count == 1);
     }
 
     [Fact]
     public void GetEntries_LeavesOutDisabledTools()
     {
-        Assert.Empty(CreateTools().GetEntries(Workspace, null, Custom(Editor with { Enabled = false })));
+        Assert.Empty(External(CreateTools(), Workspace, null, Custom(Editor with { Enabled = false })));
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class WorkspaceToolsTests : IDisposable
     {
         var tools = CreateTools(found: name => name == "ide" ? "/usr/bin/ide" : null);
 
-        Assert.Empty(tools.GetEntries(Workspace, null, Custom(Editor, Editor with { Executable = " " })));
+        Assert.Empty(External(tools, Workspace, null, Custom(Editor, Editor with { Executable = " " })));
     }
 
     [Fact]
@@ -128,11 +128,11 @@ public sealed class WorkspaceToolsTests : IDisposable
             return name;
         });
 
-        var entry = Assert.Single(tools.GetEntries(
+        var entry = Assert.Single(External(tools, 
             Workspace, null, Custom(Editor with { Executable = "%TAMMI_TEST_TOOLS%/editor" })));
 
         Assert.Equal("/opt/tools/editor", searched);
-        Assert.Equal("/opt/tools/editor", entry.Request.FileName);
+        Assert.Equal("/opt/tools/editor", entry.Request!.FileName);
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public sealed class WorkspaceToolsTests : IDisposable
 
         Assert.DoesNotContain(
             PredefinedTools.VsCode.Name,
-            CreateTools().GetEntries(Workspace, null, settings).Select(entry => entry.Label));
+            External(CreateTools(), Workspace, null, settings).Select(entry => entry.Label));
     }
 
     [Fact]
@@ -164,12 +164,12 @@ public sealed class WorkspaceToolsTests : IDisposable
         var tools = _folder.AddFile(Path.Combine("api", "tools", "Tools.slnx"));
         _folder.AddFile(Path.Combine("web", "Web.sln"));
 
-        var entries = CreateTools().GetEntries(Workspace, _api, Custom(SolutionTool));
+        var entries = External(CreateTools(), Workspace, _api, Custom(SolutionTool));
 
         Assert.Equal(["IDE - Api", "IDE - Tools"], entries.Select(entry => entry.Label));
         Assert.Equal([api, tools], entries.Select(entry => entry.Path));
-        Assert.Equal([[api], [tools]], entries.Select(entry => entry.Request.Arguments));
-        Assert.Equal(Path.GetDirectoryName(tools), entries[1].Request.WorkingDirectory);
+        Assert.Equal([[api], [tools]], entries.Select(entry => entry.Request!.Arguments));
+        Assert.Equal(Path.GetDirectoryName(tools), entries[1].Request!.WorkingDirectory);
         Assert.All(entries, entry => Assert.Same(_api, entry.Repository));
     }
 
@@ -179,7 +179,7 @@ public sealed class WorkspaceToolsTests : IDisposable
         var api = _folder.AddFile(Path.Combine("api", "Api.sln"));
         var web = _folder.AddFile(Path.Combine("web", "src", "Web.slnx"));
 
-        var entries = CreateTools().GetEntries(Workspace, null, Custom(SolutionTool));
+        var entries = External(CreateTools(), Workspace, null, Custom(SolutionTool));
 
         Assert.Equal([api, web], entries.Select(entry => entry.Path));
         Assert.Equal([_api, _web], entries.Select(entry => entry.Repository));
@@ -199,12 +199,12 @@ public sealed class WorkspaceToolsTests : IDisposable
             ],
         };
 
-        var entry = Assert.Single(CreateTools().GetEntries(Workspace, null, Custom(tool)));
+        var entry = Assert.Single(External(CreateTools(), Workspace, null, Custom(tool)));
 
         Assert.Equal("Api.sln", entry.Label);
         Assert.Equal(
             [Path.GetDirectoryName(file)!, "Api.sln", "Api", file, ApiFolder, _folder.Path, _folder.Path],
-            entry.Request.Arguments);
+            entry.Request!.Arguments);
     }
 
     [Fact]
@@ -212,8 +212,8 @@ public sealed class WorkspaceToolsTests : IDisposable
     {
         _folder.AddFile(Path.Combine("api", "README.md"));
 
-        Assert.Empty(CreateTools().GetEntries(Workspace, _api, Custom(SolutionTool)));
-        Assert.Empty(CreateTools().GetEntries(Workspace, null, Custom(SolutionTool with { FilePatterns = [] })));
+        Assert.Empty(External(CreateTools(), Workspace, _api, Custom(SolutionTool)));
+        Assert.Empty(External(CreateTools(), Workspace, null, Custom(SolutionTool with { FilePatterns = [] })));
     }
 
     [Fact]
@@ -223,14 +223,53 @@ public sealed class WorkspaceToolsTests : IDisposable
         var settings = new ToolSettings();
 
         var entry = Assert.Single(
-            CreateTools().GetEntries(Workspace, _api, settings),
+            External(CreateTools(), Workspace, _api, settings),
             entry => entry.Tool.Id == PredefinedTools.DevContainer.Id);
 
-        Assert.Equal(["open", ApiFolder], entry.Request.Arguments);
+        Assert.Equal(["open", ApiFolder], entry.Request!.Arguments);
         Assert.DoesNotContain(
-            CreateTools().GetEntries(Workspace, _web, settings), e => e.Tool.Id == PredefinedTools.DevContainer.Id);
+            External(CreateTools(), Workspace, _web, settings), e => e.Tool.Id == PredefinedTools.DevContainer.Id);
         Assert.DoesNotContain(
-            CreateTools().GetEntries(Workspace, null, settings), e => e.Tool.Id == PredefinedTools.DevContainer.Id);
+            External(CreateTools(), Workspace, null, settings), e => e.Tool.Id == PredefinedTools.DevContainer.Id);
+    }
+
+    [Fact]
+    public void GetEntries_TerminalIsFirst_AndAlwaysOffered()
+    {
+        var tools = CreateTools(found: _ => null);
+        var settings = new ToolSettings
+        {
+            DisabledPredefinedTools = [PredefinedTools.Terminal.Id!],
+            CustomTools = [Editor],
+        };
+
+        var workspace = tools.GetEntries(Workspace, null, settings);
+        var repository = tools.GetEntries(Workspace, _api, settings);
+
+        var entry = Assert.Single(workspace);
+        Assert.True(entry.OpensTerminal);
+        Assert.Equal("Terminal", entry.Label);
+        Assert.Equal(_folder.Path, entry.Path);
+        Assert.Null(entry.Repository);
+        Assert.Null(entry.Request);
+        Assert.Same(_api, Assert.Single(repository).Repository);
+        Assert.Equal(ApiFolder, repository[0].Path);
+    }
+
+    [Fact]
+    public void GetEntries_TerminalComesBeforeOtherTools()
+    {
+        var entries = CreateTools().GetEntries(Workspace, null, Custom(Editor));
+
+        Assert.Equal(["Terminal", "Editor"], entries.Select(entry => entry.Label));
+    }
+
+    [Fact]
+    public void Open_Terminal_Throws()
+    {
+        var entry = new ToolEntry(PredefinedTools.Terminal, "Terminal", "/work", null, null);
+
+        Assert.Throws<InvalidOperationException>(() => CreateTools().Open(entry));
     }
 
     [Fact]
@@ -269,6 +308,14 @@ public sealed class WorkspaceToolsTests : IDisposable
         Assert.Throws<FileNotFoundException>(() => new WorkspaceTools(launcher).Open(entry));
         Assert.Empty(launcher.Detached);
     }
+
+    // The entries of the tools that start an executable: every entry but the Terminal tool's, which is always there.
+    private static IReadOnlyList<ToolEntry> External(
+        WorkspaceTools tools,
+        Workspace workspace,
+        WorkspaceRepository? repository,
+        ToolSettings settings) =>
+        tools.GetEntries(workspace, repository, settings).Where(entry => !entry.OpensTerminal).ToArray();
 
     private static WorkspaceTools CreateTools(Func<string, string?>? found = null) =>
         new(new RecordingProcessLauncher(found ?? (name => "/usr/bin/" + name)));

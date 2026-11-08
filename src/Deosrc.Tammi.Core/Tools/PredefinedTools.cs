@@ -1,12 +1,25 @@
 namespace Deosrc.Tammi.Core.Tools;
 
 /// <summary>
-/// The predefined tools: tool definitions that come with Tammi. The user can enable or disable them, but not change or
-/// remove them. Like any tool, each one is only offered when its executable is found.
+/// The predefined tools: tool definitions that come with Tammi. The user can enable or disable them (except
+/// <see cref="Terminal"/>), but not change or remove them. Like any tool, each one is only offered when its executable is
+/// found.
 /// </summary>
 public static class PredefinedTools
 {
     private static readonly string LaunchFolder = ToolPlaceholders.Format(ToolPlaceholders.LaunchFolder);
+
+    /// <summary>
+    /// One of Tammi's own terminals, opened in a tab of the Workspace View with the terminal shell from the settings, as
+    /// the New menu's Terminal does. It has no executable, can't be disabled, and is always offered first.
+    /// </summary>
+    public static ToolDefinition Terminal { get; } = new()
+    {
+        Id = "terminal",
+        Name = "Terminal",
+        OpensTerminal = true,
+        Icon = new ToolIconSettings { Source = ToolIconSource.Generic, Generic = ToolIcon.Terminal },
+    };
 
     /// <summary>
     /// VS Code, opening the folder.
@@ -88,9 +101,9 @@ public static class PredefinedTools
         };
 
     /// <summary>
-    /// The predefined tools for this platform, in the order they're offered.
+    /// The predefined tools for this platform, in the order they're offered: <see cref="Terminal"/> first.
     /// </summary>
     public static IReadOnlyList<ToolDefinition> All { get; } = OperatingSystem.IsWindows()
-        ? [VsCode, DevContainer, VisualStudio, Rider, FileManager]
-        : [VsCode, DevContainer, Rider, FileManager];
+        ? [Terminal, VsCode, DevContainer, VisualStudio, Rider, FileManager]
+        : [Terminal, VsCode, DevContainer, Rider, FileManager];
 }

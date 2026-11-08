@@ -33,8 +33,8 @@ public sealed record ToolSettings
     public IReadOnlyList<ToolDefinition> CustomTools { get; init; } = [];
 
     /// <summary>
-    /// Every tool, in the order they're offered: the predefined tools, each enabled unless the user has disabled it,
-    /// then the custom tools.
+    /// Every tool, in the order they're offered: the predefined tools (the Terminal tool first), each enabled unless the
+    /// user has disabled it, then the custom tools.
     /// </summary>
     [JsonIgnore]
     public IReadOnlyList<ToolDefinition> Tools =>
@@ -44,12 +44,12 @@ public sealed record ToolSettings
     ];
 
     /// <summary>
-    /// Whether a predefined tool is enabled.
+    /// Whether a predefined tool is enabled. The Terminal tool always is.
     /// </summary>
     public bool IsEnabled(ToolDefinition predefinedTool)
     {
         ArgumentNullException.ThrowIfNull(predefinedTool);
-        return !DisabledPredefinedTools.Contains(predefinedTool.Id);
+        return predefinedTool.OpensTerminal || !DisabledPredefinedTools.Contains(predefinedTool.Id);
     }
 
     /// <summary>
@@ -61,6 +61,11 @@ public sealed record ToolSettings
         if (predefinedTool.Id is not { } id)
         {
             throw new ArgumentException("Only predefined tools are enabled here.", nameof(predefinedTool));
+        }
+
+        if (predefinedTool.OpensTerminal)
+        {
+            throw new ArgumentException("The Terminal tool is always enabled.", nameof(predefinedTool));
         }
 
         return this with

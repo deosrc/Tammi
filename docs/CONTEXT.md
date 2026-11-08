@@ -362,12 +362,13 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
     Clearing the template restores the default.
 - **Tools**
-  - The tools (see [Tools](#tools)). First the predefined tools, each with whether its executable was found (and
-    where), what it opens, its scope and its command. Then the custom tools, added as a folder or file tool, then
+  - The tools (see [Tools](#tools)). First Terminal, with the terminal shell's settings (below). Then the other
+    predefined tools, each with whether its executable was found (and where), what it opens, its scope and its
+    command. Then the custom tools, added as a folder or file tool, then
     edited, reordered and removed like Custom Agents. Each shows whether its executable was found, the placeholders it
     can use, warnings for placeholders it can't use or that don't exist, and the command it starts. A **Look again**
     button finds the executables and icons again, e.g. after installing a tool.
-  - Each tool has a switch beside its name that enables it. A disabled tool's card is collapsed to its icon, switch
+  - Each tool but Terminal has a switch beside its name that enables it. A disabled tool's card is collapsed to its icon, switch
     and name.
   - Terminal shell: executable and arguments. Leaving the executable empty uses the platform shell, with its own
     arguments. Changes apply to terminals started afterwards.
@@ -419,7 +420,7 @@ are left to other tools for now.
 - **Scope** sets what a tool is offered for: the Workspace Folder, the repositories, or both (the default). Workspace
   tools appear in the side panel's Tools section. Repository tools appear on each repository's card in the
   Repositories section, as a row of icon buttons.
-- A tool is only offered when it's enabled and its executable is found.
+- A tool is only offered when it's enabled and its executable is found (except Terminal, which has none).
 - **Icon:** the application's own icon by default, or one of Tammi's generic icons (application, code editor, IDE,
   container, folder, terminal), or a custom image file, chosen with the system's file dialog (PNG, SVG, JPEG, GIF,
   WebP, ICO or BMP, up to 1 MB). When the application's or custom icon can't be found, the tool's generic icon is
@@ -431,6 +432,10 @@ are left to other tools for now.
     icon of the executable with its name in the folder above (`Code.exe`), if there is one.
 - **Predefined tools** come with Tammi, built as ordinary tool definitions. They can be enabled or disabled, but not
   changed or removed. They're offered first, then the **custom tools**, in the user's order:
+  - **Terminal** is special: it opens one of Tammi's own terminals in a new tab of the Workspace View (in the Workspace
+    Folder or the repository), rather than starting an app, so it's the same as **+** → Terminal, which stays. It has
+    no executable and is always enabled: Settings has no switch for it. It's always first, in Settings and in the
+    tools lists.
   - **VS Code:** `code {LaunchFolder}`.
   - **Dev Container** (repositories only): a file tool for `.devcontainer/devcontainer.json` and `.devcontainer.json`,
     running `devcontainer open {RepositoryFolder}`. It needs the `devcontainer` CLI that VS Code's Dev Containers
@@ -441,8 +446,7 @@ are left to other tools for now.
     Studio each solution was made for.
   - **Rider:** `rider {LaunchFolder}`, found on the search path (e.g. JetBrains Toolbox's scripts folder).
   - **File manager:** `explorer {LaunchFolder}` (File Explorer) on Windows, `xdg-open {LaunchFolder}` on Linux.
-- Tammi's own terminals aren't a tool: they're started from the main area's **+** tab.
-- Tools are external apps, and **keep running when Tammi exits**. On Linux they're started in their own session (with
+- Every other tool is an external app, and **keeps running when Tammi exits**. On Linux they're started in their own session (with
   `setsid`), without Tammi's terminal or output. On Windows, a batch file (e.g. a launcher script on the search path)
   runs without a console window. A file tool starts in the file's folder, and a folder tool in its folder.
 - The entries are worked out when the workspace's tab opens, and again when the workspace or the settings change.

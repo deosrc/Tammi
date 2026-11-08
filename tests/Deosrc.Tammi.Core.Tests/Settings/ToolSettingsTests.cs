@@ -33,6 +33,17 @@ public class ToolSettingsTests
     }
 
     [Fact]
+    public void Terminal_IsFirstAndAlwaysEnabled()
+    {
+        var settings = new ToolSettings { DisabledPredefinedTools = [PredefinedTools.Terminal.Id!] };
+
+        Assert.True(settings.IsEnabled(PredefinedTools.Terminal));
+        Assert.True(settings.Tools[0].OpensTerminal);
+        Assert.True(settings.Tools[0].Enabled);
+        Assert.Throws<ArgumentException>(() => settings.WithEnabled(PredefinedTools.Terminal, false));
+    }
+
+    [Fact]
     public void WithEnabled_ForCustomTool_Throws()
     {
         Assert.Throws<ArgumentException>(() => new ToolSettings().WithEnabled(new ToolDefinition(), false));

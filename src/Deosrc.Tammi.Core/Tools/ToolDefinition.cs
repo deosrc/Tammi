@@ -8,7 +8,7 @@ namespace Deosrc.Tammi.Core.Tools;
 /// on the Settings screen.
 /// </summary>
 /// <remarks>
-/// A tool is only offered when its executable is found. Two definitions are equal when their values are, including
+/// A tool is only offered when its executable is found, except the Terminal tool, which has none. Two definitions are equal when their values are, including
 /// their lists.
 /// </remarks>
 public sealed record ToolDefinition
@@ -66,6 +66,14 @@ public sealed record ToolDefinition
     public bool Enabled { get; init; } = true;
 
     /// <summary>
+    /// Whether the tool opens one of Tammi's own terminals in the Workspace View, rather than starting its executable.
+    /// Only the predefined Terminal tool does (see <see cref="PredefinedTools.Terminal"/>): it has no executable, and
+    /// it's always enabled.
+    /// </summary>
+    [JsonIgnore]
+    public bool OpensTerminal { get; init; }
+
+    /// <summary>
     /// Whether this is a predefined tool.
     /// </summary>
     [JsonIgnore]
@@ -111,6 +119,7 @@ public sealed record ToolDefinition
         && Scope == other.Scope
         && Equals(Icon, other.Icon)
         && Enabled == other.Enabled
+        && OpensTerminal == other.OpensTerminal
         && SequenceEqual(FilePatterns, other.FilePatterns)
         && SequenceEqual(Arguments, other.Arguments);
 
