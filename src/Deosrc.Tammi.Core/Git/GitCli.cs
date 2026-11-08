@@ -2,15 +2,20 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
 /// Runs the <c>git</c> CLI as a child process.
 /// </summary>
-public sealed partial class GitCli(GitCliOptions? options = null) : IGitCli
+/// <param name="options">Which git to run, and how.</param>
+/// <param name="logger">Logs the commands that are run (at Debug) and the ones that fail.</param>
+public sealed partial class GitCli(GitCliOptions? options = null, ILogger<GitCli>? logger = null) : IGitCli
 {
     private readonly GitCliOptions _options = options ?? new GitCliOptions();
+    private readonly ILogger _logger = logger ?? NullLogger<GitCli>.Instance;
 
     /// <inheritdoc />
     public async Task<GitInstallation?> DetectAsync(CancellationToken cancellationToken = default)
@@ -24,8 +29,9 @@ public sealed partial class GitCli(GitCliOptions? options = null) : IGitCli
                 new GitCommandOptions { ThrowOnError = false },
                 cancellationToken).ConfigureAwait(false);
         }
-        catch (GitNotInstalledException)
+        catch (GitNotInstalledException ex)
         {
+            _logger.LogError("git isn't installed: {Message}", ex.Message);
             return null;
         }
 
@@ -91,6 +97,7 @@ public sealed partial class GitCli(GitCliOptions? options = null) : IGitCli
         }
 
         using var process = new Process { StartInfo = startInfo };
+        long started = Stopwatch.GetTimestamp();
         try
         {
             process.Start();
@@ -127,8 +134,24 @@ public sealed partial class GitCli(GitCliOptions? options = null) : IGitCli
             await stdout.ConfigureAwait(false),
             await stderr.ConfigureAwait(false));
 
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "git {Arguments} in {WorkingDirectory} exited with {ExitCode} after {Elapsed:0} ms.",
+                Redact(args),
+                workingDirectory,
+                result.ExitCode,
+                Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+        }
+
         if (options.ThrowOnError && !result.Succeeded)
         {
+            _logger.LogWarning(
+                "git {Arguments} in {WorkingDirectory} failed with exit code {ExitCode}: {Error}",
+                Redact(args),
+                workingDirectory,
+                result.ExitCode,
+                result.StandardError.Trim());
             throw new GitCommandException(result);
         }
 
@@ -146,6 +169,15 @@ public sealed partial class GitCli(GitCliOptions? options = null) : IGitCli
             // Already exited.
         }
     }
+
+    /// <summary>
+    /// Joins the arguments for the log, hiding any user name or password in a URL (e.g. a remote's).
+    /// </summary>
+    internal static string Redact(IEnumerable<string> arguments) =>
+        string.Join(' ', arguments.Select(argument => UrlUserInfoPattern().Replace(argument, "://***@")));
+
+    [GeneratedRegex(@"://[^/@\s]+@")]
+    private static partial Regex UrlUserInfoPattern();
 
     [GeneratedRegex(@"git version (?<full>(?<number>\d+\.\d+(\.\d+)?)\S*)")]
     private static partial Regex VersionPattern();

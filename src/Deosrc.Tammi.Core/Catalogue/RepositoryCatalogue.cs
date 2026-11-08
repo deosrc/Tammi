@@ -1,4 +1,7 @@
+using System.Diagnostics;
 using LibGit2Sharp;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Deosrc.Tammi.Core.Git;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Settings;
@@ -6,7 +9,7 @@ using Deosrc.Tammi.Core.Settings;
 namespace Deosrc.Tammi.Core.Catalogue;
 
 /// <summary>
-/// Builds the Repository Catalogue from the local sources in the Git settings: the Monitored Folders (scanned with
+/// Builds the Repository Catalogue from the local sources in the Repositories settings: the Monitored Folders (scanned with
 /// <see cref="RepositoryScanner"/>) and the manually added local repositories.
 /// </summary>
 public sealed class RepositoryCatalogue : IRepositoryCatalogue, IDisposable
@@ -26,6 +29,7 @@ public sealed class RepositoryCatalogue : IRepositoryCatalogue, IDisposable
     private readonly IGitRepositoryReader _reader;
     private readonly IFileSystemWatchService _watchService;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger _logger;
     private readonly SemaphoreSlim _scanLock = new(1, 1);
     private readonly Lock _watchLock = new();
     private readonly Dictionary<string, IDisposable> _watches = new(FileSystemPaths.Comparer);
@@ -43,12 +47,14 @@ public sealed class RepositoryCatalogue : IRepositoryCatalogue, IDisposable
         ISettingsStore settingsStore,
         IGitRepositoryReader reader,
         IFileSystemWatchService watchService,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<RepositoryCatalogue>? logger = null)
     {
         _settingsStore = settingsStore;
         _reader = reader;
         _watchService = watchService;
         _timeProvider = timeProvider;
+        _logger = logger ?? NullLogger<RepositoryCatalogue>.Instance;
         _settingsStore.Changed += OnSettingsChanged;
     }
 
@@ -87,9 +93,19 @@ public sealed class RepositoryCatalogue : IRepositoryCatalogue, IDisposable
             Changed?.Invoke();
             try
             {
+                long started = Stopwatch.GetTimestamp();
                 var snapshot = await Task.Run(() => Scan(settings, _reader, cancellationToken), cancellationToken)
                     .ConfigureAwait(false);
                 snapshot = snapshot with { ScannedAt = _timeProvider.GetUtcNow() };
+                _logger.LogInformation(
+                    "Scanned the Repository Catalogue: {Count} repositories in {Elapsed:0} ms.",
+                    snapshot.Repositories.Count,
+                    Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+                foreach (CatalogueProblem problem in snapshot.Problems)
+                {
+                    _logger.LogWarning("Couldn't catalogue {Path}: {Problem}", problem.Path, problem.Message);
+                }
+
                 _current = snapshot;
                 _scannedSettings = settings;
                 Volatile.Write(ref _completedScans, scan);
@@ -303,6 +319,11 @@ public sealed class RepositoryCatalogue : IRepositoryCatalogue, IDisposable
             {
                 // The app is closing.
             }
+            catch (Exception ex)
+            {
+                // Nothing is waiting for this scan to report the failure to.
+                _logger.LogError(ex, "Couldn't rescan the Repository Catalogue.");
+            }
         });
     }
 
@@ -333,6 +354,8 @@ public sealed class RepositoryCatalogue : IRepositoryCatalogue, IDisposable
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
                 {
+                    _logger.LogDebug("Couldn't watch the Monitored Folder {Folder}: {Message}", folder, ex.Message);
+
                     // The folder is missing (reported as a problem) or can't be watched. It's watched again after
                     // the next scan, and can still be rescanned on request.
                 }

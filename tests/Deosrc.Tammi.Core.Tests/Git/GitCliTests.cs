@@ -22,6 +22,16 @@ public sealed class GitCliTests : IDisposable
     }
 
     [Fact]
+    public void Redact_HidesUserInfoInUrls_AndKeepsTheRest()
+    {
+        Assert.Equal(
+            "clone https://***@github.com/acme/api.git ssh://***@example.com/repo api",
+            GitCli.Redact([
+                "clone", "https://user:token@github.com/acme/api.git", "ssh://git@example.com/repo", "api",
+            ]));
+    }
+
+    [Fact]
     public async Task DetectAsync_GitMissing_ReturnsNull()
     {
         var git = new GitCli(new GitCliOptions { ExecutablePath = "tammi-git-does-not-exist" });

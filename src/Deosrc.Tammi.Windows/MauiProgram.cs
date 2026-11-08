@@ -4,6 +4,7 @@ using Deosrc.Tammi.Core.Agents;
 using Deosrc.Tammi.Core.Terminals;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.UI;
+using Deosrc.Tammi.UI.Logging;
 using Deosrc.Tammi.Windows.PlatformServices;
 
 namespace Deosrc.Tammi.Windows;
@@ -30,16 +31,23 @@ public static class MauiProgram
             // All terminals and agents end when the app closes. They're ended off the UI thread, which is waiting for
             // them.
             var terminals = services.GetRequiredService<WorkspaceTerminals>();
-            window.Closed += (_, _) => Task.Run(() => Task.WhenAll(
-                terminals.DisposeAsync().AsTask(),
-                agents.DisposeAsync().AsTask())).GetAwaiter().GetResult();
+            window.Closed += (_, _) =>
+            {
+                Task.Run(() => Task.WhenAll(
+                    terminals.DisposeAsync().AsTask(),
+                    agents.DisposeAsync().AsTask())).GetAwaiter().GetResult();
+                services.StopTammiLogging();
+            };
         })));
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
+        // After AddTammiUI, which replaces the logging providers registered before it.
         builder.Logging.AddDebug();
 #endif
 
-        return builder.Build();
+        var app = builder.Build();
+        app.Services.UseTammiLogging();
+        return app;
     }
 }

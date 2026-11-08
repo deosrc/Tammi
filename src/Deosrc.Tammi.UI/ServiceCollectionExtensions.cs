@@ -6,9 +6,12 @@ using Deosrc.Tammi.Core.Git;
 using Deosrc.Tammi.Core.Integrations;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Ssh;
 using Deosrc.Tammi.Core.Terminals;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.Core.Workspaces;
+using Deosrc.Tammi.UI.Components;
+using Deosrc.Tammi.UI.Logging;
 using Deosrc.Tammi.UI.Workspaces;
 using Microsoft.Extensions.Logging;
 
@@ -26,9 +29,16 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddTammiUI(this IServiceCollection services)
     {
+        services.AddTammiLogging();
+
         // One window per app, so the open tabs are shared app-wide.
         services.AddSingleton<WorkspaceTabs>();
-        services.AddSingleton<IGitCli>(_ => new GitCli());
+        services.AddSingleton<IGitCli>(services => new GitCli(logger: services.GetRequiredService<ILogger<GitCli>>()));
+        services.AddSingleton<IGitUserConfig>(services => new GitUserConfig(services.GetRequiredService<IGitCli>()));
+        services.AddSingleton<ISshKeyStore>(services => new SshKeyStore(
+            services.GetRequiredService<IProcessLauncher>(),
+            logger: services.GetRequiredService<ILogger<SshKeyStore>>()));
+        services.AddScoped<Clipboard>();
         services.AddSingleton<IGitRepositoryReader, GitRepositoryReader>();
         services.AddSingleton<IGitWorktreeService, GitWorktreeService>();
         services.AddSingleton(services => new IntegrationManager(

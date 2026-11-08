@@ -42,6 +42,7 @@ public sealed class JiraIntegration : ITaskIntegration
     /// <param name="options">How to connect to the site.</param>
     /// <param name="credentialStore">Where the token is kept.</param>
     /// <param name="httpClient">Sends the requests. The caller owns it.</param>
+    /// <param name="logger">Logs the requests and searches.</param>
     /// <param name="timeProvider">Times waits for rate limits to reset.</param>
     /// <exception cref="ArgumentException">
     /// The site URL isn't an HTTP or HTTPS URL, or a JIRA Cloud site has no email address.
@@ -75,7 +76,7 @@ public sealed class JiraIntegration : ITaskIntegration
         _logger = logger;
         _siteUrl = JiraApiClient.SiteUrl(options.SiteUrl);
         Credentials = new IntegrationCredentials(credentialStore, options.Id);
-        _api = new JiraApiClient(options, Credentials, httpClient, timeProvider);
+        _api = new JiraApiClient(options, Credentials, httpClient, logger, timeProvider);
     }
 
     /// <inheritdoc/>
@@ -155,7 +156,7 @@ public sealed class JiraIntegration : ITaskIntegration
             }
         }
 
-        _logger.LogInformation("Found {Count} tasks for JQL '{Jql}' at {Url}.", tasks.Count, jql, _siteUrl);
+        _logger.LogDebug("Found {Count} tasks for JQL '{Jql}' at {Url}.", tasks.Count, jql, _siteUrl);
         return tasks;
     }
 

@@ -1,0 +1,380 @@
+@using Deosrc.Tammi.Core.Integrations
+@using Deosrc.Tammi.Core.Platform
+@using Deosrc.Tammi.Core.Ssh
+@implements IDisposable
+@inject ISshKeyStore KeyStore
+@inject IntegrationRegistry Registry
+@inject IProcessLauncher ProcessLauncher
+@inject Clipboard Clipboard
+
+@* The SSH keys in ~/.ssh. They aren't app settings, so they're read from and changed on disk. *@
+<div class="settings-field">
+    <h2 class="settings-field-title">SSH keys</h2>
+    <p class="settings-help">
+        The keys in <span class="settings-list-path">@KeyStore.KeyDirectory</span>, which git uses for SSH remotes. Every
+        SSH tool on this computer uses them, not only Tammi. Add a key to a service to clone and push over SSH.
+    </p>
+
+    @if (_listError is not null)
+    {
+        <p class="error">@_listError</p>
+    }
+    else if (_keys is null)
+    {
+        <p class="placeholder">Reading your SSH keys…</p>
+    }
+    else if (_keys.Count == 0)
+    {
+        <p class="placeholder">No SSH keys yet.</p>
+    }
+    else
+    {
+        <ul class="settings-list">
+            @foreach (var key in _keys)
+            {
+                <li class="settings-list-item ssh-key">
+                    <div class="ssh-key-summary">
+                        <span class="settings-list-name">@key.Name</span>
+                        <span class="settings-list-status">@AlgorithmName(key.Algorithm)@(key.Comment is { } comment ? $" · {comment}" : "")</span>
+                        <span class="settings-list-path">@key.Fingerprint</span>
+                    </div>
+                    <div class="settings-field-row">
+                        <button type="button" class="button button-secondary" @onclick="() => CopyAsync(key)">Copy public key</button>
+                        <button type="button" class="button button-secondary" disabled="@_busy" @onclick="() => StartRemoving(key)">Remove</button>
+                    </div>
+
+                    @foreach (var integration in SshKeyIntegrations)
+                    {
+                        <div class="settings-field-row ssh-key-service">
+                            <span class="status-dot status-@StatusClass(key, integration)" aria-hidden="true"></span>
+                            <span>@integration.Name: @StatusText(key, integration)</span>
+                            @if (UploadState(key, integration) != true)
+                            {
+                                <button type="button" class="button button-secondary" disabled="@_busy"
+                                        @onclick="() => AddAsync(key, integration)">Add to @integration.Name</button>
+                            }
+                        </div>
+                    }
+
+                    @if (_messages.TryGetValue(key.Name, out var message))
+                    {
+                        <p class="@(message.IsError ? "error" : "settings-help")">@message.Text</p>
+                    }
+
+                    @if (_removing == key)
+                    {
+                        <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-ssh-key-title" aria-describedby="confirm-ssh-key-text">
+                            <h3 id="confirm-ssh-key-title" class="alert-title">Remove @key.Name?</h3>
+                            <p id="confirm-ssh-key-text">
+                                Both of its files are deleted from <span class="settings-list-path">@KeyStore.KeyDirectory</span>,
+                                and this can't be undone. Services you added the key to won't accept this computer
+                                any more, unless it has another key they know. Remove it from those services too.
+                            </p>
+                            <div class="settings-field-row">
+                                <button type="button" class="button button-danger" disabled="@_busy" @onclick="() => RemoveAsync(key)">Remove</button>
+                                <button type="button" class="button button-secondary" disabled="@_busy" @onclick="() => _removing = null">Cancel</button>
+                            </div>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    }
+
+    @if (_generating)
+    {
+        <form class="settings-form ssh-key-generate" @onsubmit="GenerateAsync">
+            <div class="settings-field">
+                <label for="ssh-key-type">Type</label>
+                <select id="ssh-key-type" value="@_type" @onchange="OnTypeChanged">
+                    <option value="@SshKeyType.Ed25519">Ed25519 (recommended)</option>
+                    <option value="@SshKeyType.Rsa">RSA, 4096 bits (for older servers)</option>
+                </select>
+            </div>
+            <div class="settings-field">
+                <label for="ssh-key-name">File name</label>
+                <input id="ssh-key-name" class="settings-text" autocomplete="off" @bind="_name" @bind:after="OnNameEdited" />
+                <p class="settings-help">The private key's file name. The public key gets the same name with .pub after it.</p>
+            </div>
+            <div class="settings-field">
+                <label for="ssh-key-comment">Comment</label>
+                <input id="ssh-key-comment" class="settings-text" autocomplete="off" @bind="_comment" />
+                <p class="settings-help">Helps you recognise the key. It's usually your email address.</p>
+            </div>
+            <div class="settings-field">
+                <label for="ssh-key-passphrase">Passphrase (optional)</label>
+                <input id="ssh-key-passphrase" type="password" class="settings-text" autocomplete="new-password" @bind="_passphrase" />
+                <p class="settings-help">
+                    Protects the key if someone copies it. Git asks for it when it uses the key, unless your SSH agent
+                    has it.
+                </p>
+            </div>
+            <div class="settings-field">
+                <label for="ssh-key-passphrase-confirm">Confirm passphrase</label>
+                <input id="ssh-key-passphrase-confirm" type="password" class="settings-text" autocomplete="new-password" @bind="_passphraseConfirm" />
+            </div>
+            @if (_generateError is not null)
+            {
+                <p class="error">@_generateError</p>
+            }
+            <div class="settings-field-row">
+                <button type="submit" class="button" disabled="@_busy">Generate</button>
+                <button type="button" class="button button-secondary" disabled="@_busy" @onclick="CancelGenerating">Cancel</button>
+            </div>
+        </form>
+    }
+    else if (KeyStore.CanGenerate)
+    {
+        <div class="settings-field-row">
+            <button type="button" class="button" @onclick="StartGenerating">Generate key…</button>
+        </div>
+    }
+    else
+    {
+        <p class="settings-help">@(new SshKeygenNotFoundException().Message)</p>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<SshKey>? _keys;
+    private string? _listError;
+
+    // The public keys on each service's account, by integration ID: null if the token can't list them.
+    private readonly Dictionary<string, IReadOnlyList<string>?> _serviceKeys = [];
+    private readonly Dictionary<string, string> _serviceErrors = [];
+    private readonly Dictionary<string, (string Text, bool IsError)> _messages = [];
+
+    private bool _busy;
+    private SshKey? _removing;
+
+    private bool _generating;
+    private SshKeyType _type;
+    private string? _name;
+    private bool _nameEdited;
+    private string? _comment;
+    private string? _passphrase;
+    private string? _passphraseConfirm;
+    private string? _generateError;
+
+    /// <summary>
+    /// The author's email address, the default comment for a new key.
+    /// </summary>
+    [Parameter]
+    public string? Email { get; set; }
+
+    private IEnumerable<ISshKeyIntegration> SshKeyIntegrations =>
+        Registry.All.OfType<ISshKeyIntegration>().OrderBy(integration => integration.Name, StringComparer.CurrentCultureIgnoreCase);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Registry.Changed += OnRegistryChanged;
+        await LoadKeysAsync();
+        await LoadServiceKeysAsync();
+    }
+
+    public void Dispose() => Registry.Changed -= OnRegistryChanged;
+
+    private void OnRegistryChanged(object? sender, EventArgs e) => _ = InvokeAsync(async () =>
+    {
+        await LoadServiceKeysAsync();
+        StateHasChanged();
+    });
+
+    private async Task LoadKeysAsync()
+    {
+        try
+        {
+            _keys = await KeyStore.ListAsync();
+            _listError = null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _listError = $"Couldn't read your SSH keys. {ex.Message}";
+        }
+    }
+
+    private async Task LoadServiceKeysAsync()
+    {
+        var integrations = SshKeyIntegrations.ToList();
+        await Task.WhenAll(integrations.Select(LoadServiceKeysAsync));
+    }
+
+    private async Task LoadServiceKeysAsync(ISshKeyIntegration integration)
+    {
+        try
+        {
+            _serviceKeys[integration.Id] = await integration.GetSshKeysAsync();
+            _serviceErrors.Remove(integration.Id);
+        }
+        catch (IntegrationException ex)
+        {
+            _serviceKeys.Remove(integration.Id);
+            _serviceErrors[integration.Id] = ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Whether the key is on the service's account, or <c>null</c> if that's not known.
+    /// </summary>
+    private bool? UploadState(SshKey key, ISshKeyIntegration integration) =>
+        _serviceKeys.TryGetValue(integration.Id, out var keys) && keys is not null
+            ? keys.Any(key.Matches)
+            : null;
+
+    private string StatusClass(SshKey key, ISshKeyIntegration integration) => UploadState(key, integration) switch
+    {
+        true => "ok",
+        false => "warning",
+        null => _serviceErrors.ContainsKey(integration.Id) ? "error" : "unknown",
+    };
+
+    private string StatusText(SshKey key, ISshKeyIntegration integration) => UploadState(key, integration) switch
+    {
+        true => "added",
+        false => "not added",
+        null when _serviceErrors.TryGetValue(integration.Id, out var error) => $"couldn't check. {error}",
+        null when !_serviceKeys.ContainsKey(integration.Id) => "checking…",
+        null => "unknown. The token can't list SSH keys.",
+    };
+
+    private static string AlgorithmName(string algorithm) => algorithm switch
+    {
+        "ssh-ed25519" => "Ed25519",
+        "ssh-rsa" => "RSA",
+        "ssh-dss" => "DSA",
+        _ when algorithm.StartsWith("ecdsa-", StringComparison.Ordinal) => "ECDSA",
+        _ when algorithm.StartsWith("sk-", StringComparison.Ordinal) => "Security key",
+        _ => algorithm,
+    };
+
+    private async Task CopyAsync(SshKey key)
+    {
+        _messages[key.Name] = await Clipboard.CopyAsync(key.PublicKey)
+            ? ("The public key is on the clipboard.", false)
+            : ("Couldn't copy the public key.", true);
+    }
+
+    private async Task AddAsync(SshKey key, ISshKeyIntegration integration)
+    {
+        _busy = true;
+        try
+        {
+            await integration.AddSshKeyAsync($"{Environment.MachineName} ({key.Name})", key.PublicKey);
+            _messages[key.Name] = ($"Added {key.Name} to {integration.Name}.", false);
+            await LoadServiceKeysAsync(integration);
+        }
+        catch (IntegrationPermissionException ex)
+        {
+            // The token can't add keys, so the user adds it on the website instead.
+            bool copied = await Clipboard.CopyAsync(key.PublicKey);
+            ProcessLauncher.Open(integration.NewSshKeyUrl.AbsoluteUri);
+            _messages[key.Name] = (copied
+                ? $"{ex.Message} The public key is on the clipboard, and {integration.Name}'s page for adding it is open."
+                : $"{ex.Message} {integration.Name}'s page for adding it is open. Copy the public key and paste it there.",
+                false);
+        }
+        catch (IntegrationException ex)
+        {
+            _messages[key.Name] = ($"Couldn't add {key.Name} to {integration.Name}. {ex.Message}", true);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void StartRemoving(SshKey key)
+    {
+        _removing = key;
+        _messages.Remove(key.Name);
+    }
+
+    private async Task RemoveAsync(SshKey key)
+    {
+        _busy = true;
+        try
+        {
+            await KeyStore.RemoveAsync(key);
+            _removing = null;
+            _messages.Remove(key.Name);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _messages[key.Name] = ($"Couldn't remove {key.Name}. {ex.Message}", true);
+        }
+        finally
+        {
+            _busy = false;
+        }
+
+        await LoadKeysAsync();
+    }
+
+    private void StartGenerating()
+    {
+        _generating = true;
+        _type = SshKeyType.Ed25519;
+        _name = KeyStore.SuggestName(_type);
+        _nameEdited = false;
+        _comment = Email;
+        _passphrase = _passphraseConfirm = null;
+        _generateError = null;
+    }
+
+    private void CancelGenerating()
+    {
+        _generating = false;
+        _passphrase = _passphraseConfirm = null;
+        _generateError = null;
+    }
+
+    private void OnNameEdited() => _nameEdited = true;
+
+    private void OnTypeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse(e.Value?.ToString(), out SshKeyType type))
+        {
+            _type = type;
+            if (!_nameEdited)
+            {
+                _name = KeyStore.SuggestName(type);
+            }
+        }
+    }
+
+    private async Task GenerateAsync()
+    {
+        if (KeyStore.CheckName(_name) is { } problem)
+        {
+            _generateError = problem;
+            return;
+        }
+
+        if ((_passphrase ?? "") != (_passphraseConfirm ?? ""))
+        {
+            _generateError = "The passphrases don't match.";
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var key = await KeyStore.GenerateAsync(new SshKeyRequest(_name!.Trim(), _type)
+            {
+                Comment = string.IsNullOrWhiteSpace(_comment) ? null : _comment.Trim(),
+                Passphrase = _passphrase,
+            });
+            CancelGenerating();
+            await LoadKeysAsync();
+            _messages[key.Name] = ($"Generated {key.Name}. Add it to the services you use.", false);
+        }
+        catch (Exception ex) when (ex is SshKeyException or ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            _generateError = $"Couldn't generate the key. {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

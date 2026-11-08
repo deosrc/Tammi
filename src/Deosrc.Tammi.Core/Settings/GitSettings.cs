@@ -5,7 +5,9 @@ using Deosrc.Tammi.Core.Platform;
 namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
-/// The Git section of the Settings screen.
+/// The Repositories section of the Settings screen, and the git graph's options (<see cref="GraphScope"/> on the Git
+/// section, and <see cref="GraphFileView"/>). It keeps its earlier name, and its <c>git</c> key in
+/// <c>settings.json</c>, from when the Repositories section was called Git.
 /// </summary>
 public sealed record GitSettings
 {

@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Workspaces;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Deosrc.Tammi.Core.Agents;
 
@@ -16,7 +18,8 @@ namespace Deosrc.Tammi.Core.Agents;
 public sealed class WorkspaceAgents(
     AgentLauncher launcher,
     ISettingsStore settingsStore,
-    TimeProvider timeProvider) : IAsyncDisposable
+    TimeProvider timeProvider,
+    ILogger<WorkspaceAgents>? logger = null) : IAsyncDisposable
 {
     /// <summary>
     /// The name of an agent whose definition has no name.
@@ -25,6 +28,7 @@ public sealed class WorkspaceAgents(
 
     private readonly Lock _lock = new();
     private readonly List<WorkspaceAgent> _agents = [];
+    private readonly ILogger _logger = logger ?? NullLogger<WorkspaceAgents>.Instance;
     private readonly ConcurrentDictionary<string, AgentSessionFileStore> _sessionStores =
         new(FileSystemPaths.Comparer);
 
@@ -65,7 +69,9 @@ public sealed class WorkspaceAgents(
     {
         ArgumentNullException.ThrowIfNull(workspace);
         var path = Path.Combine(workspace.MetadataFolder, AgentSessionFileStore.DefaultFileName);
-        return _sessionStores.GetOrAdd(FileSystemPaths.Normalize(path), file => new AgentSessionFileStore(file));
+        return _sessionStores.GetOrAdd(
+            FileSystemPaths.Normalize(path),
+            file => new AgentSessionFileStore(file, _logger));
     }
 
     /// <summary>
@@ -257,9 +263,35 @@ public sealed class WorkspaceAgents(
         lock (_lock)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            agent = new WorkspaceAgent(workspace.Id, UniqueName(workspace.Id, baseName), start());
+            Agent started;
+            try
+            {
+                started = start();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Couldn't start the agent {Definition}.", agentName);
+                throw;
+            }
+
+            agent = new WorkspaceAgent(workspace.Id, UniqueName(workspace.Id, baseName), started);
             _agents.Add(agent);
         }
+
+        _logger.LogInformation(
+            "Started the agent {Name} (process {ProcessId}) in {Folder}, session {SessionId}.",
+            agent.Name,
+            agent.Agent.Session.ProcessId,
+            agent.Agent.WorkingDirectory,
+            agent.Agent.SessionId);
+        _ = agent.Agent.Session.Exited.ContinueWith(
+            exited => _logger.LogInformation(
+                "The agent {Name} exited with {ExitCode}.",
+                agent.Name,
+                exited.IsCompletedSuccessfully ? exited.Result : null),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
 
         var store = SessionsOf(workspace);
         agent.Agent.StateChanged += _ => Changed?.Invoke(agent.WorkspaceId);
@@ -286,6 +318,7 @@ public sealed class WorkspaceAgents(
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            _logger.LogWarning(ex, "Couldn't record the session of the agent {Name}.", agent.Name);
             agent.SessionProblem =
                 $"The agent's session couldn't be recorded, so it can't be resumed after a restart. {ex.Message}";
         }

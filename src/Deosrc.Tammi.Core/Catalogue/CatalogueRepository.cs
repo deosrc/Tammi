@@ -27,7 +27,7 @@ public sealed record CatalogueRepository
     public IReadOnlyList<GitRemote> Remotes { get; init; } = [];
 
     /// <summary>
-    /// Whether the repository was added manually, in the Git settings.
+    /// Whether the repository was added manually, in the Repositories settings.
     /// </summary>
     public bool IsManuallyAdded { get; init; }
 

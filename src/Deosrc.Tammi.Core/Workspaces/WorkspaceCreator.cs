@@ -1,5 +1,7 @@
 using Deosrc.Tammi.Core.Git;
 using Deosrc.Tammi.Core.Platform;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Deosrc.Tammi.Core.Workspaces;
 
@@ -12,8 +14,13 @@ namespace Deosrc.Tammi.Core.Workspaces;
 /// created so far is removed again: the worktrees, their new branches, the Workspace Folder and any parent folders it
 /// created. The metadata is written last, so a workspace that's only partly created is never listed.
 /// </remarks>
-public sealed class WorkspaceCreator(IWorkspaceStore store, IGitWorktreeService worktrees)
+public sealed class WorkspaceCreator(
+    IWorkspaceStore store,
+    IGitWorktreeService worktrees,
+    ILogger<WorkspaceCreator>? logger = null)
 {
+    private readonly ILogger _logger = logger ?? NullLogger<WorkspaceCreator>.Instance;
+
     /// <summary>
     /// Checks a workspace can be created as requested, without changing anything.
     /// </summary>
@@ -131,6 +138,12 @@ public sealed class WorkspaceCreator(IWorkspaceStore store, IGitWorktreeService 
         void Report(string message) =>
             progress?.Report(new WorkspaceCreationProgress(message, completedSteps, totalSteps));
 
+        _logger.LogInformation(
+            "Creating the workspace {Name} in {Folder} with {RepositoryCount} repositories on the branch {Branch}.",
+            request.Name,
+            request.Folder,
+            request.Repositories.Count,
+            request.BranchName);
         var created = new CreatedItems(request.Folder);
         var warnings = new List<string>();
         try
@@ -153,6 +166,12 @@ public sealed class WorkspaceCreator(IWorkspaceStore store, IGitWorktreeService 
                     }
                     catch (GitCommandException ex)
                     {
+                        _logger.LogWarning(
+                            "Couldn't fetch {Remote} for {Repository}, so its branch starts from the last fetched "
+                            + "{BaseBranch}.",
+                            remote,
+                            repository.LocalRepositoryPath,
+                            repository.BaseBranch);
                         warnings.Add($"{repository.FolderName}: couldn't fetch '{remote}', so the branch starts from "
                             + $"the last fetched '{repository.BaseBranch}'. {ex.Message}");
                     }
@@ -201,17 +220,25 @@ public sealed class WorkspaceCreator(IWorkspaceStore store, IGitWorktreeService 
                 CancellationToken.None).ConfigureAwait(false);
             completedSteps++;
             Report("Created.");
+            _logger.LogInformation("Created the workspace {Name} ({Id}).", workspace.Name, workspace.Id);
 
             return new WorkspaceCreationResult(workspace, warnings);
         }
         catch (OperationCanceledException)
         {
+            _logger.LogInformation("Creating the workspace {Name} was cancelled. Rolling it back.", request.Name);
             await RollBackAsync(created, request.BranchName).ConfigureAwait(false);
             throw;
         }
         catch (Exception ex) when (ex is GitException or WorkspaceException or IOException or UnauthorizedAccessException)
         {
+            _logger.LogError(ex, "Couldn't create the workspace {Name}. Rolling it back.", request.Name);
             var cleanupProblems = await RollBackAsync(created, request.BranchName).ConfigureAwait(false);
+            foreach (string problem in cleanupProblems)
+            {
+                _logger.LogWarning("Rolling back the workspace {Name}: {Problem}", request.Name, problem);
+            }
+
             throw new WorkspaceCreationException(
                 $"Couldn't create the workspace '{request.Name}'. {ex.Message}",
                 request.Folder,

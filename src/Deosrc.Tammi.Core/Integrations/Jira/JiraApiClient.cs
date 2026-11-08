@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Deosrc.Tammi.Core.Integrations.Jira;
 
@@ -26,6 +27,7 @@ internal sealed class JiraApiClient(
     JiraIntegrationOptions options,
     IntegrationCredentials credentials,
     HttpClient httpClient,
+    ILogger logger,
     TimeProvider timeProvider)
 {
     /// <summary>
@@ -241,6 +243,8 @@ internal sealed class JiraApiClient(
 
                 if (wait > TimeSpan.Zero)
                 {
+                    logger.LogInformation(
+                        "JIRA's rate limit was reached at {Url}. Retrying in {Wait}.", url, wait);
                     await Task.Delay(wait, timeProvider, cancellationToken).ConfigureAwait(false);
                 }
             }
@@ -326,16 +330,20 @@ internal sealed class JiraApiClient(
 
         try
         {
-            return await httpClient
+            HttpResponseMessage response = await httpClient
                 .SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken)
                 .ConfigureAwait(false);
+            logger.LogDebug("GET {Url} returned {StatusCode}.", url, (int)response.StatusCode);
+            return response;
         }
         catch (HttpRequestException exception)
         {
+            logger.LogWarning(exception, "JIRA couldn't be reached at {Url}.", url);
             throw new IntegrationException($"JIRA couldn't be reached: {exception.Message}", exception);
         }
         catch (TaskCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
+            logger.LogWarning("JIRA didn't respond in time at {Url}.", url);
             throw new IntegrationException("JIRA didn't respond in time.", exception);
         }
     }

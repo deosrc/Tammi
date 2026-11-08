@@ -25,6 +25,7 @@ public sealed class IntegrationManager
     private readonly ICredentialStore _credentialStore;
     private readonly HttpClient _httpClient;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger _logger;
     private readonly TimeProvider _timeProvider;
     private readonly SemaphoreSlim _changeLock = new(1, 1);
     private readonly Lock _statusLock = new();
@@ -51,6 +52,7 @@ public sealed class IntegrationManager
         _credentialStore = credentialStore;
         _httpClient = httpClient;
         _loggerFactory = loggerFactory;
+        _logger = loggerFactory.CreateLogger<IntegrationManager>();
         _timeProvider = timeProvider;
 
         IntegrationsSettings settings = settingsStore.Current.Integrations;
@@ -116,9 +118,11 @@ public sealed class IntegrationManager
         }
         catch (Exception ex) when (ex is IntegrationException or CredentialStoreException)
         {
+            _logger.LogWarning(ex, "Couldn't connect to {Integration}: {Message}", id, ex.Message);
             status = Failure(ex);
         }
 
+        _logger.LogDebug("Checked {Integration}: {State}.", id, status.State);
         SetStatus(id, status, check);
         return status;
     }
@@ -260,6 +264,11 @@ public sealed class IntegrationManager
             }
 
             SetStatus(id, connected);
+            _logger.LogInformation("Authenticated {Integration} again as {Account}.", id, connected.Account);
+        }
+        catch (Exception ex) when (LogFailure(ex, "authenticate", id))
+        {
+            throw;
         }
         finally
         {
@@ -314,6 +323,12 @@ public sealed class IntegrationManager
             {
                 _statuses.Remove(id);
             }
+
+            _logger.LogInformation("Removed {Integration}.", id);
+        }
+        catch (Exception ex) when (LogFailure(ex, "remove", id))
+        {
+            throw;
         }
         finally
         {
@@ -376,6 +391,12 @@ public sealed class IntegrationManager
             {
                 _statuses[id] = (++_lastCheck, connected);
             }
+
+            _logger.LogInformation("Connected {Integration} as {Account}.", id, connected.Account);
+        }
+        catch (Exception ex) when (LogFailure(ex, "connect", id))
+        {
+            throw;
         }
         finally
         {
@@ -386,11 +407,26 @@ public sealed class IntegrationManager
         return integration;
     }
 
+    /// <summary>
+    /// Logs why a change to an integration failed, for use as an exception filter. It never catches the exception.
+    /// </summary>
+    private bool LogFailure(Exception ex, string action, string id)
+    {
+        if (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Couldn't {Action} {Integration}: {Message}", action, id, ex.Message);
+        }
+
+        return false;
+    }
+
     private IIntegration Create(GitHubIntegrationSettings settings, ICredentialStore store) =>
-        new GitHubIntegration(settings.ToOptions(), store, _httpClient, _timeProvider);
+        new GitHubIntegration(
+            settings.ToOptions(), store, _httpClient, _loggerFactory.CreateLogger<GitHubIntegration>(), _timeProvider);
 
     private IIntegration Create(JiraIntegrationSettings settings, ICredentialStore store) =>
-        new JiraIntegration(settings.ToOptions(), store, _httpClient, _loggerFactory.CreateLogger<JiraIntegration>(), _timeProvider);
+        new JiraIntegration(
+            settings.ToOptions(), store, _httpClient, _loggerFactory.CreateLogger<JiraIntegration>(), _timeProvider);
 
     private static IntegrationCredentials CredentialsOf(IIntegration integration) => integration switch
     {
