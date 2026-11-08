@@ -2279,11 +2279,93 @@ label.task-choice {
   min-height: 0;
 }
 
+/* The columns the header and every row share. The user's widths (--git-graph-col-*) are set by dragging the header's
+   handles (GitGraphView.razor.js). Until then, the graph fits its lanes (wide enough for its heading) and the others
+   have their defaults. Description
+   takes the space left, down to its minimum, after which the list scrolls sideways. */
 .git-graph-list {
+  --git-graph-graph-column: var(--git-graph-col-graph, max(var(--git-graph-width), 48px));
+  --git-graph-columns: var(--git-graph-graph-column) minmax(120px, 1fr)
+    var(--git-graph-col-author, 160px) var(--git-graph-col-date, 120px) var(--git-graph-col-sha, 72px);
+  --git-graph-columns-min-width: calc(var(--git-graph-graph-column) + 120px
+    + var(--git-graph-col-author, 160px) + var(--git-graph-col-date, 120px) + var(--git-graph-col-sha, 72px)
+    + 4 * var(--space-3) + var(--space-2) + var(--space-3));
+
   flex: 1;
   min-width: 0;
   overflow: auto;
   background: var(--color-surface);
+}
+
+.git-graph-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--git-graph-columns);
+  align-items: center;
+  gap: var(--space-3);
+  min-width: var(--git-graph-columns-min-width);
+  height: 28px;
+  padding: 0 var(--space-3) 0 var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The heading itself doesn't clip, so its handle can reach into the gap. Its label does. */
+.git-graph-heading {
+  position: relative;
+  min-width: 0;
+}
+
+.git-graph-heading-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A column's resize handle: a thin line in the gap between two headings, with a wider area to grab. */
+.git-graph-column-handle {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.git-graph-column-handle::before {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 3px;
+  width: 1px;
+  background: var(--color-border);
+  content: "";
+}
+
+.git-graph-column-handle-end {
+  right: calc(var(--space-3) / -2 - 3px);
+}
+
+.git-graph-column-handle-start {
+  left: calc(var(--space-3) / -2 - 4px);
+}
+
+.git-graph-column-handle:hover::before,
+.git-graph-column-handle.dragging::before,
+.git-graph-column-handle:focus-visible::before {
+  left: 2px;
+  width: 3px;
+  background: var(--color-focus);
+}
+
+.git-graph-column-handle:focus-visible {
+  outline: none;
 }
 
 .git-graph-list:focus-visible {
@@ -2294,9 +2376,10 @@ label.task-choice {
 /* Every row is exactly as high as GitGraphRowView.RowHeight, so the list knows where each one is. */
 .git-graph-row {
   display: grid;
-  grid-template-columns: var(--git-graph-width) minmax(0, 1fr) minmax(6rem, 10rem) 7.5rem 4.5rem;
+  grid-template-columns: var(--git-graph-columns);
   align-items: center;
   gap: var(--space-3);
+  min-width: var(--git-graph-columns-min-width);
   height: 26px;
   padding: 0 var(--space-3) 0 var(--space-2);
   cursor: default;
@@ -2311,9 +2394,14 @@ label.task-choice {
   background: color-mix(in srgb, var(--color-accent) 18%, transparent);
 }
 
+/* A graph wider than its column is cut off at the column's edge. */
+.git-graph-lane-cell {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .git-graph-lanes {
   display: block;
-  overflow: hidden;
 }
 
 .git-graph-lanes path {
@@ -2334,7 +2422,10 @@ label.task-choice {
 }
 
 .git-graph-subject,
-.git-graph-author {
+.git-graph-author,
+.git-graph-date,
+.git-graph-row .git-graph-sha {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }

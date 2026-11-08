@@ -37,34 +37,59 @@
     }
 
     <div class="git-graph-body" @ref="_body">
-        <div class="git-graph-list" tabindex="0" role="listbox" aria-label="Commits" @ref="_list"
+        <div class="git-graph-list" tabindex="0" @ref="_list"
              style="--git-graph-width: @(GraphWidth)px" @onkeydown="OnKeyDownAsync">
-            <Virtualize @ref="_virtualize" TItem="GitGraphRow" ItemsProvider="ProvideRowsAsync"
-                        ItemSize="GitGraphRowView.RowHeight" OverscanCount="30">
-                <ItemContent Context="row">
-                    @{
-                        var selected = row.Commit.Sha == Graph.Selected?.Commit.Sha;
-                        var isHead = row.Commit.Sha == Graph.Refs.HeadSha;
-                    }
-                    <div class="git-graph-row @(selected ? "selected" : null)" role="option"
-                         aria-selected="@(selected ? "true" : "false")" @key="row.Commit.Sha"
-                         @onclick="() => Graph.SelectAsync(row.Commit.Sha)">
-                        <GitGraphRowView Row="row" Width="GraphWidth" IsHead="isHead" />
-                        <span class="git-graph-summary">
-                            @References(row.Commit.Sha, isHead)
-                            <span class="git-graph-subject" title="@row.Commit.Subject">@row.Commit.Subject</span>
-                        </span>
-                        <span class="git-graph-author" title="@row.Commit.Author.Email">@row.Commit.Author.Name</span>
-                        <span class="git-graph-date" title="@GitGraphText.FullDate(row.Commit.Author.When)">
-                            @GitGraphText.When(row.Commit.Author.When, _now)
-                        </span>
-                        <span class="git-graph-sha">@GitGraphText.ShortSha(row.Commit.Sha)</span>
-                    </div>
-                </ItemContent>
-                <Placeholder>
-                    <div class="git-graph-row git-graph-row-placeholder"></div>
-                </Placeholder>
-            </Virtualize>
+            @* Stays at the top as the list scrolls down, and scrolls sideways with it. Each column but Description,
+               which takes the space left, has a handle on the edge towards Description that resizes it. *@
+            <div class="git-graph-header" @ref="_header">
+                <span class="git-graph-heading">
+                    <span class="git-graph-heading-label">Graph</span>
+                    @ColumnHandle("graph", "Graph", end: true)
+                </span>
+                <span class="git-graph-heading"><span class="git-graph-heading-label">Description</span></span>
+                <span class="git-graph-heading">
+                    @ColumnHandle("author", "Author", end: false)
+                    <span class="git-graph-heading-label">Author</span>
+                </span>
+                <span class="git-graph-heading">
+                    @ColumnHandle("date", "Date", end: false)
+                    <span class="git-graph-heading-label">Date</span>
+                </span>
+                <span class="git-graph-heading">
+                    @ColumnHandle("sha", "Commit", end: false)
+                    <span class="git-graph-heading-label">Commit</span>
+                </span>
+            </div>
+            <div role="listbox" aria-label="Commits">
+                <Virtualize @ref="_virtualize" TItem="GitGraphRow" ItemsProvider="ProvideRowsAsync"
+                            ItemSize="GitGraphRowView.RowHeight" OverscanCount="30">
+                    <ItemContent Context="row">
+                        @{
+                            var selected = row.Commit.Sha == Graph.Selected?.Commit.Sha;
+                            var isHead = row.Commit.Sha == Graph.Refs.HeadSha;
+                        }
+                        <div class="git-graph-row @(selected ? "selected" : null)" role="option"
+                             aria-selected="@(selected ? "true" : "false")" @key="row.Commit.Sha"
+                             @onclick="() => Graph.SelectAsync(row.Commit.Sha)">
+                            <span class="git-graph-lane-cell">
+                                <GitGraphRowView Row="row" Width="GraphWidth" IsHead="isHead" />
+                            </span>
+                            <span class="git-graph-summary">
+                                @References(row.Commit.Sha, isHead)
+                                <span class="git-graph-subject" title="@row.Commit.Subject">@row.Commit.Subject</span>
+                            </span>
+                            <span class="git-graph-author" title="@row.Commit.Author.Email">@row.Commit.Author.Name</span>
+                            <span class="git-graph-date" title="@GitGraphText.FullDate(row.Commit.Author.When)">
+                                @GitGraphText.When(row.Commit.Author.When, _now)
+                            </span>
+                            <span class="git-graph-sha">@GitGraphText.ShortSha(row.Commit.Sha)</span>
+                        </div>
+                    </ItemContent>
+                    <Placeholder>
+                        <div class="git-graph-row git-graph-row-placeholder"></div>
+                    </Placeholder>
+                </Virtualize>
+            </div>
         </div>
 
         @* Resizes the details panel: drag it, or focus it and use Left and Right. *@
@@ -160,6 +185,7 @@
     private WorkspaceGitGraph? _attached;
     private readonly string _detailsId = $"git-graph-details-{Guid.NewGuid():N}";
     private ElementReference _list;
+    private ElementReference _header;
     private ElementReference _body;
     private ElementReference _splitter;
     private IJSObjectReference? _splitterScript;
@@ -217,7 +243,7 @@
             _module = await JS.InvokeAsync<IJSObjectReference>(
                 "import",
                 "./_content/Deosrc.Tammi.UI/Workspaces/GitGraphView.razor.js");
-            _listScript = await _module.InvokeAsync<IJSObjectReference>("attach", _list);
+            _listScript = await _module.InvokeAsync<IJSObjectReference>("attach", _list, _header);
             _splitterScript = await _module.InvokeAsync<IJSObjectReference>("attachSplitter", _body, _splitter);
         }
         catch (JSDisconnectedException)
@@ -389,6 +415,16 @@
             <span class="git-graph-ref @GitGraphText.ReferenceClass(reference.Kind) @(current ? "git-graph-ref-head" : null)"
                   title="@(current ? $"{reference.Name} (HEAD)" : reference.Name)">@reference.Name</span>
         }
+    };
+
+    // A handle on a column heading's edge that resizes the column: drag it, or focus it and use Left and Right.
+    // `end` puts it on the heading's right edge, otherwise it's on its left edge.
+    private static RenderFragment ColumnHandle(string column, string label, bool end) => __builder =>
+    {
+        <span class="git-graph-column-handle @(end ? "git-graph-column-handle-end" : "git-graph-column-handle-start")"
+              role="separator" aria-orientation="vertical" aria-label="Resize the @label column" tabindex="0"
+              title="Drag to resize. Double-click to reset." data-column="@column"
+              data-direction="@(end ? "1" : "-1")"></span>
     };
 
     private static RenderFragment Signature(CommitSignature signature) => __builder =>
