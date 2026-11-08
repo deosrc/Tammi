@@ -1,5 +1,6 @@
 using Microsoft.Maui.ApplicationModel;
 using Deosrc.Tammi.Core.Platform;
+using IFilePicker = Deosrc.Tammi.Core.Platform.IFilePicker;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 
