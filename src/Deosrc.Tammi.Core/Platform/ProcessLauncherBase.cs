@@ -22,6 +22,10 @@ public abstract class ProcessLauncherBase : IProcessLauncher
         cancellationToken.ThrowIfCancellationRequested();
 
         var startInfo = CreateStartInfo(request);
+
+        // The output is captured, so a console app doesn't need a window. Without this, Windows opens one for it
+        // (Tammi has no console to share), which flashes on screen.
+        startInfo.CreateNoWindow = true;
         startInfo.RedirectStandardInput = true;
         startInfo.RedirectStandardOutput = true;
         startInfo.RedirectStandardError = true;
