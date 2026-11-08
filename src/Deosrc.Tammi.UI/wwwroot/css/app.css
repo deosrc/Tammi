@@ -2197,6 +2197,27 @@ label.task-choice {
   cursor: pointer;
 }
 
+/* A tool that was just launched: its background pulses once, so the click is seen while the tool starts. */
+.tool-item-pulse {
+  animation: tool-item-pulse 0.6s ease-out;
+}
+
+.tool-item-pulse-again {
+  animation: tool-item-pulse-again 0.6s ease-out;
+}
+
+@keyframes tool-item-pulse {
+  from {
+    background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  }
+}
+
+@keyframes tool-item-pulse-again {
+  from {
+    background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  }
+}
+
 .tool-item .icon {
   flex: none;
 }

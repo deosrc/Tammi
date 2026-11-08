@@ -133,7 +133,8 @@ else
                             @foreach (var item in _toolItems)
                             {
                                 <li @key="item">
-                                    <button type="button" class="tool-item" title="@(item.FilePath ?? item.Label)"
+                                    <button type="button" class="tool-item @PulseClass(item)"
+                                            title="@(item.FilePath ?? item.Label)"
                                             aria-haspopup="@(item.WorkspaceEntry is null ? "menu" : null)"
                                             @onclick="e => OnToolClicked(item, e)"
                                             @oncontextmenu="e => OpenToolMenu(item, e)" @oncontextmenu:preventDefault>
@@ -311,6 +312,11 @@ else
     // The Tools section's tools, each with the levels it can be launched at.
     private IReadOnlyList<ToolItem> _toolItems = [];
 
+    // The Tools section's item that was just launched, which pulses once, and how many launches have pulsed.
+    private static readonly TimeSpan PulseDuration = TimeSpan.FromMilliseconds(600);
+    private ToolItem? _pulsing;
+    private int _pulseCount;
+
     // The open right-click menu, if any, and whether its Tools submenu is open.
     private ContextMenuState? _contextMenu;
     private bool _contextSubmenuOpen;
@@ -458,7 +464,7 @@ else
     {
         if (item.WorkspaceEntry is { } entry)
         {
-            OpenTool(entry);
+            OpenTool(item, entry);
         }
         else
         {
@@ -477,7 +483,7 @@ else
             var workspace = ReferenceEquals(entry, item.WorkspaceEntry);
             <li role="none">
                 <button type="button" class="menu-item" role="menuitem" title="@entry.Path"
-                        @onclick="() => OpenTool(entry)">
+                        @onclick="() => OpenTool(item, entry)">
                     @(workspace ? WorkspaceFolderIcon : RepositoryIcon)
                     @(workspace ? "Workspace" : $"Repository: {entry.Repository?.FolderName}")
                 </button>
@@ -539,6 +545,29 @@ else
         _contextMenu = null;
         _contextSubmenuOpen = false;
     }
+
+    // Opens a tool from the Tools section, and pulses its item once to show it's launching.
+    private void OpenTool(ToolItem item, ToolEntry entry)
+    {
+        var pulse = ++_pulseCount;
+        _pulsing = item;
+        OpenTool(entry);
+        _ = EndPulseAsync(pulse);
+    }
+
+    private async Task EndPulseAsync(int pulse)
+    {
+        await Task.Delay(PulseDuration);
+        if (pulse == _pulseCount && !_disposed.IsCancellationRequested)
+        {
+            _pulsing = null;
+            StateHasChanged();
+        }
+    }
+
+    // Two classes with the same animation, so clicking the item again while it's pulsing starts the pulse again.
+    private string? PulseClass(ToolItem item) =>
+        Equals(item, _pulsing) ? (_pulseCount % 2 == 0 ? "tool-item-pulse" : "tool-item-pulse-again") : null;
 
     private void OpenTool(ToolEntry entry)
     {

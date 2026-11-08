@@ -434,6 +434,8 @@ are left to other tools for now.
   each repository (for a file tool, the file's repository). Right-clicking a repository's card opens a menu with a
   **Tools** submenu of every tool that can open that repository. Menus close on Escape or a click outside them, and
   stay inside the window.
+- Launching a tool from the Tools section (by clicking it, or from its menu) pulses its background once, briefly, to
+  show the click was seen while the tool starts.
 - A tool is only offered when it's enabled and its executable is found (except Terminal, which has none).
 - **Icon:** the application's own icon by default, or one of Tammi's generic icons (application, code editor, IDE,
   container, folder, terminal), or a custom image file, chosen with the system's file dialog (PNG, SVG, JPEG, GIF,
