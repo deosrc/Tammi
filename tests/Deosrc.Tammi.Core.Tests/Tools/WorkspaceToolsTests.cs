@@ -197,7 +197,7 @@ public sealed class WorkspaceToolsTests : IDisposable
             Arguments =
             [
                 "{FileDirectory}", "{FileName}", "{FileNameWithoutExtension}", "{FilePath}",
-                "{RepositoryFolder}", "{WorkspaceFolder}", "{LaunchFolder}",
+                "{RepositoryFolder}", "{WorkspaceFolder}", "{LaunchFolder}", "{MatchFolder}",
             ],
         };
 
@@ -205,7 +205,10 @@ public sealed class WorkspaceToolsTests : IDisposable
 
         Assert.Equal("Api.sln", entry.Label);
         Assert.Equal(
-            [Path.GetDirectoryName(file)!, "Api.sln", "Api", file, ApiFolder, _folder.Path, _folder.Path],
+            [
+                Path.GetDirectoryName(file)!, "Api.sln", "Api", file, ApiFolder, _folder.Path, _folder.Path,
+                Path.GetDirectoryName(file)!,
+            ],
             entry.Request!.Arguments);
     }
 
@@ -219,20 +222,74 @@ public sealed class WorkspaceToolsTests : IDisposable
     }
 
     [Fact]
-    public void GetEntries_DevContainer_OnlyForRepositoriesWithConfig()
+    public void GetEntries_DevContainer_OpensTheFolderOfTheConfigFound()
     {
-        _folder.AddFile(Path.Combine("api", ".devcontainer", "devcontainer.json"), "{}");
+        var root = _folder.AddFile(Path.Combine("api", ".devcontainer", "devcontainer.json"), "{}");
+        var file = _folder.AddFile(Path.Combine("api", "tools", ".devcontainer.json"), "{}");
+        var nested = _folder.AddFile(
+            Path.Combine("api", "services", "web", ".devcontainer", "devcontainer.json"), "{}");
         var settings = new ToolSettings();
 
-        var entry = Assert.Single(
-            External(CreateTools(), Workspace, _api, settings),
-            entry => entry.Tool.Id == PredefinedTools.DevContainer.Id);
+        var entries = External(CreateTools(), Workspace, _api, settings)
+            .Where(entry => entry.Tool.Id == PredefinedTools.DevContainer.Id)
+            .ToArray();
 
-        Assert.Equal(["open", ApiFolder], entry.Request!.Arguments);
+        Assert.Equal([root, nested, file], entries.Select(entry => entry.Path));
+        Assert.Equal(
+            [
+                ["open", ApiFolder, "--config", root],
+                ["open", Path.Combine(ApiFolder, "services", "web"), "--config", nested],
+                ["open", Path.Combine(ApiFolder, "tools"), "--config", file],
+            ],
+            entries.Select(entry => entry.Request!.Arguments));
+        Assert.Equal(Path.Combine(ApiFolder, "services", "web"), entries[1].Request!.WorkingDirectory);
         Assert.DoesNotContain(
             External(CreateTools(), Workspace, _web, settings), e => e.Tool.Id == PredefinedTools.DevContainer.Id);
-        Assert.DoesNotContain(
-            External(CreateTools(), Workspace, null, settings), e => e.Tool.Id == PredefinedTools.DevContainer.Id);
+    }
+
+    [Fact]
+    public void GroupByTool_DevContainer_LaunchesTheConfigWithoutAsking()
+    {
+        var config = _folder.AddFile(Path.Combine("web", ".devcontainer.json"), "{}");
+
+        var item = Assert.Single(Group(new ToolSettings()), item => item.Tool.Id == PredefinedTools.DevContainer.Id);
+
+        Assert.Equal(config, item.FilePath);
+        var launch = Assert.Single(item.Launches);
+        Assert.Same(launch, item.DefaultEntry);
+        Assert.Equal(["open", Path.Combine(_folder.Path, "web"), "--config", config], launch.Request!.Arguments);
+    }
+
+    [Fact]
+    public void ToolItem_Launches_KeepEntriesThatStartDifferentCommands()
+    {
+        var editor = Assert.Single(Group(Custom(Editor)), item => item.Tool == Editor);
+
+        Assert.Equal(3, editor.Launches.Count);
+        Assert.Same(editor.WorkspaceEntry, editor.DefaultEntry);
+    }
+
+    [Fact]
+    public void ToolItem_RepositoryOnlyTool_WithSeveralRepositories_HasNoDefault()
+    {
+        var editor = Assert.Single(
+            Group(Custom(Editor with { Scope = ToolScope.Repository })), item => item.Tool.Name == "Editor");
+
+        Assert.Null(editor.DefaultEntry);
+        Assert.Equal(2, editor.Launches.Count);
+    }
+
+    [Fact]
+    public void ToolItem_FileTool_SameCommandAtEachLevel_IsOneLaunch()
+    {
+        var solution = _folder.AddFile(Path.Combine("api", "Api.sln"));
+
+        var item = Assert.Single(Group(Custom(SolutionTool)), item => item.Tool.Kind == ToolKind.File);
+
+        Assert.Equal(2, item.Entries.Count);
+        var launch = Assert.Single(item.Launches);
+        Assert.Same(item.WorkspaceEntry, launch);
+        Assert.Equal([solution], launch.Request!.Arguments);
     }
 
     [Fact]

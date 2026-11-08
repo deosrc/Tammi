@@ -35,9 +35,11 @@ public static class PredefinedTools
     };
 
     /// <summary>
-    /// VS Code, opening a repository in its dev container. It uses the <c>devcontainer</c> CLI that VS Code's Dev
+    /// VS Code, opening a folder in the dev container that a configuration file found in it describes: the folder
+    /// holding <c>.devcontainer.json</c>, or the one holding the <c>.devcontainer</c> folder. Configurations are found
+    /// in subfolders too, e.g. for each project of a monorepo. It uses the <c>devcontainer</c> CLI that VS Code's Dev
     /// Containers extension installs (with its "Install devcontainer CLI" command), so it's only offered once that's
-    /// installed, and only for repositories with a dev container configuration.
+    /// installed. The configuration is passed with <c>--config</c>, so the container is the one in the file found.
     /// </summary>
     public static ToolDefinition DevContainer { get; } = new()
     {
@@ -46,8 +48,13 @@ public static class PredefinedTools
         Name = "Dev Container",
         FilePatterns = [".devcontainer/devcontainer.json", ".devcontainer.json"],
         Executable = "devcontainer",
-        Arguments = ["open", ToolPlaceholders.Format(ToolPlaceholders.RepositoryFolder)],
-        Scope = ToolScope.Repository,
+        Arguments =
+        [
+            "open",
+            ToolPlaceholders.Format(ToolPlaceholders.MatchFolder),
+            "--config",
+            ToolPlaceholders.Format(ToolPlaceholders.FilePath),
+        ],
         Icon = new ToolIconSettings { Generic = ToolIcon.Container },
     };
 

@@ -407,10 +407,12 @@ are left to other tools for now.
     includes.
   - **File tools** open files found in the repositories by their **file patterns**, e.g. Visual Studio for `*.sln`,
     `*.slnf` and `*.slnx`. Each has an entry for each file found, and none where there aren't any. For the Workspace
-    Folder, every repository is searched. A file name pattern (e.g. `*.sln`) is looked for in a repository and its
-    subfolders, three folders deep, skipping hidden folders (e.g. `.git`), `bin`, `obj`, `node_modules`, `packages` and
-    links. A path pattern (e.g. `.devcontainer/devcontainer.json`) is only looked for at that path, and can name hidden
-    folders. `*` and `?` are wildcards, and case is ignored.
+    Folder, every repository is searched. Patterns are looked for in a repository and its subfolders, three folders
+    deep, skipping hidden folders (e.g. `.git`), `bin`, `obj`, `node_modules`, `packages` and links. A file name
+    pattern (e.g. `*.sln`) matches files in each of them. A path pattern (e.g. `.devcontainer/devcontainer.json`) is a
+    path from each of them, and can name hidden folders. A leading `/` keeps a pattern to the repository's own folder
+    (e.g. `/global.json`). `*` and `?` are wildcards, and case is ignored. A file that several patterns match is found
+    once, matched by the first of them.
 - Each tool has: **kind**, **name**, **file patterns** (file tools only), **executable**, **arguments**, **scope**,
   **icon** and **enabled/disabled**. The executable is a name on the search path or a full path, with environment
   variables (`%NAME%`) filled in. Arguments are passed as-is, without a shell, so a path with spaces needs no quoting.
@@ -418,9 +420,11 @@ are left to other tools for now.
   `{PreferredFolder}` (the folder the tool should open: see below), `{LaunchFolder}` (the Workspace Folder or
   repository the entry is offered for), `{WorkspaceFolder}`,
   `{RepositoryFolder}` (the repository the entry is offered for, or that the file is in), and, for file tools only,
-  `{FileDirectory}`, `{FileName}`, `{FileNameWithoutExtension}` and `{FilePath}`. An entry is left out where a
-  placeholder it uses has no value (e.g. `{RepositoryFolder}` for the Workspace Folder). Other text in braces is left
-  as it is, and Settings warns about it.
+  `{FileDirectory}`, `{FileName}`, `{FileNameWithoutExtension}`, `{FilePath}` and `{MatchFolder}` (the folder the
+  pattern matched from: the file's folder for a file name pattern, or where a path pattern starts, e.g. the folder
+  holding `.devcontainer/`). A file tool starts in its `{MatchFolder}`. An entry is left out where a placeholder it
+  uses has no value (e.g. `{RepositoryFolder}` for the Workspace Folder). Other text in braces is left as it is, and
+  Settings warns about it.
 - **Workspaces with one repository:** a setting says what tools open when they're launched at workspace level in a
   workspace with only one repository: **the repository** (the default) or **the Workspace Folder**. It decides
   `{PreferredFolder}`: for the Workspace Folder of such a workspace it's the repository, unless the setting says the
@@ -429,9 +433,11 @@ are left to other tools for now.
   start with it as their argument.
 - **Scope** sets what a tool is offered for: the Workspace Folder, the repositories, or both (the default).
 - The side panel's **Tools section** lists each tool once (a file tool once per file it found), in the order tools
-  are offered. Clicking a tool opens the Workspace Folder in it, or, if it can only open repositories, shows the menu
-  below. Right-clicking it opens a menu of each folder it can open: **Workspace**, then **Repository: `<name>`** for
-  each repository (for a file tool, the file's repository). Right-clicking a repository's card opens a menu with a
+  are offered. Right-clicking a tool opens a menu of each folder it can open: **Workspace**, then
+  **Repository: `<name>`** for each repository (for a file tool, the file's repository). Levels that would start the
+  same command (e.g. a file tool whose arguments only use the file, or Terminal in a workspace with one repository)
+  are one item, the first. Clicking a tool opens its Workspace Folder entry, or its only launch if it has just one;
+  only a tool with several repository launches and none for the Workspace Folder shows the menu instead. Right-clicking a repository's card opens a menu with a
   **Tools** submenu of every tool that can open that repository. Menus close on Escape or a click outside them, and
   stay inside the window.
 - Launching a tool from the Tools section (by clicking it, or from its menu) pulses its background once, briefly, to
@@ -453,9 +459,11 @@ are left to other tools for now.
     no executable and is always enabled: Settings has no switch for it. It's always first, in Settings and in the
     tools lists.
   - **VS Code:** `code {PreferredFolder}`.
-  - **Dev Container** (repositories only): a file tool for `.devcontainer/devcontainer.json` and `.devcontainer.json`,
-    running `devcontainer open {RepositoryFolder}`. It needs the `devcontainer` CLI that VS Code's Dev Containers
-    extension installs (its "Install devcontainer CLI" command).
+  - **Dev Container:** a file tool for `.devcontainer/devcontainer.json` and `.devcontainer.json`, running
+    `devcontainer open {MatchFolder} --config {FilePath}`. It opens the folder the configuration belongs to (the one
+    holding `.devcontainer.json`, or the parent of the `.devcontainer` folder) in the container the file describes, so
+    each project of a monorepo with its own configuration has its own entry. It needs the `devcontainer` CLI that VS Code's Dev Containers extension installs (its
+    "Install devcontainer CLI" command).
   - **Visual Studio** (Windows only): a file tool for `*.sln`, `*.slnf` and `*.slnx`, named
     `Visual Studio - {FileName}`, started through the Visual Studio Version Selector
     (`%CommonProgramFiles(x86)%\Microsoft Shared\MSEnv\VSLauncher.exe {FilePath}`), which picks the version of Visual

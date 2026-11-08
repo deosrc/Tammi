@@ -101,5 +101,6 @@ public class ToolPlaceholdersTests
             ],
             ToolPlaceholders.For(ToolKind.Folder));
         Assert.Equal(ToolPlaceholders.All, ToolPlaceholders.For(ToolKind.File));
+        Assert.DoesNotContain(ToolPlaceholders.MatchFolder, ToolPlaceholders.For(ToolKind.Folder));
     }
 }

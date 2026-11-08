@@ -10,6 +10,9 @@ public sealed class ToolFileFinderTests : IDisposable
 
     public void Dispose() => _folder.Dispose();
 
+    private static IReadOnlyList<string> Files(string folder, IEnumerable<string> patterns, int maxDepth = 3) =>
+        ToolFileFinder.Find(folder, patterns, maxDepth).Select(match => match.FilePath).ToArray();
+
     [Fact]
     public void Find_ReturnsFilesMatchingAnyPattern()
     {
@@ -18,7 +21,7 @@ public sealed class ToolFileFinderTests : IDisposable
         _folder.AddFile("README.md");
         _folder.AddFile("Api.csproj");
 
-        Assert.Equal([sln, slnx], ToolFileFinder.Find(_folder.Path, Solutions));
+        Assert.Equal([sln, slnx], Files(_folder.Path, Solutions));
     }
 
     [Fact]
@@ -26,7 +29,7 @@ public sealed class ToolFileFinderTests : IDisposable
     {
         var solution = _folder.AddFile("Api.SLN");
 
-        Assert.Equal([solution], ToolFileFinder.Find(_folder.Path, Solutions));
+        Assert.Equal([solution], Files(_folder.Path, Solutions));
     }
 
     [Fact]
@@ -36,7 +39,7 @@ public sealed class ToolFileFinderTests : IDisposable
         var root = _folder.AddFile("All.sln");
         var tools = _folder.AddFile(Path.Combine("tools", "Tools.slnx"));
 
-        Assert.Equal([root, nested, tools], ToolFileFinder.Find(_folder.Path, Solutions));
+        Assert.Equal([root, nested, tools], Files(_folder.Path, Solutions));
     }
 
     [Fact]
@@ -45,8 +48,8 @@ public sealed class ToolFileFinderTests : IDisposable
         var shallow = _folder.AddFile(Path.Combine("a", "b", "c", "Deep.sln"));
         _folder.AddFile(Path.Combine("a", "b", "c", "d", "TooDeep.sln"));
 
-        Assert.Equal([shallow], ToolFileFinder.Find(_folder.Path, Solutions));
-        Assert.Empty(ToolFileFinder.Find(_folder.Path, Solutions, maxDepth: 2));
+        Assert.Equal([shallow], Files(_folder.Path, Solutions));
+        Assert.Empty(Files(_folder.Path, Solutions, maxDepth: 2));
     }
 
     [Fact]
@@ -55,7 +58,7 @@ public sealed class ToolFileFinderTests : IDisposable
         var root = _folder.AddFile("Api.sln");
         _folder.AddFile(Path.Combine("src", "Web.sln"));
 
-        Assert.Equal([root], ToolFileFinder.Find(_folder.Path, Solutions, maxDepth: 0));
+        Assert.Equal([root], Files(_folder.Path, Solutions, maxDepth: 0));
     }
 
     [Theory]
@@ -71,7 +74,7 @@ public sealed class ToolFileFinderTests : IDisposable
         _folder.AddFile(Path.Combine(skipped, "Skipped.sln"));
         var kept = _folder.AddFile(Path.Combine("src", "Kept.sln"));
 
-        Assert.Equal([kept], ToolFileFinder.Find(_folder.Path, Solutions));
+        Assert.Equal([kept], Files(_folder.Path, Solutions));
     }
 
     [Fact]
@@ -88,13 +91,13 @@ public sealed class ToolFileFinderTests : IDisposable
             Assert.Skip("Can't create a symbolic link here.");
         }
 
-        Assert.Equal([solution], ToolFileFinder.Find(_folder.Path, Solutions));
+        Assert.Equal([solution], Files(_folder.Path, Solutions));
     }
 
     [Fact]
     public void Find_WithMissingFolder_IsEmpty()
     {
-        Assert.Empty(ToolFileFinder.Find(Path.Combine(_folder.Path, "missing"), Solutions));
+        Assert.Empty(Files(Path.Combine(_folder.Path, "missing"), Solutions));
     }
 
     [Fact]
@@ -102,7 +105,7 @@ public sealed class ToolFileFinderTests : IDisposable
     {
         _folder.AddFile(Path.Combine("src", "Program.cs"));
 
-        Assert.Empty(ToolFileFinder.Find(_folder.Path, Solutions));
+        Assert.Empty(Files(_folder.Path, Solutions));
     }
 
     [Fact]
@@ -111,17 +114,58 @@ public sealed class ToolFileFinderTests : IDisposable
         var match = _folder.AddFile("v1.json");
         _folder.AddFile("v10.json");
 
-        Assert.Equal([match], ToolFileFinder.Find(_folder.Path, ["v?.json"]));
+        Assert.Equal([match], Files(_folder.Path, ["v?.json"]));
     }
 
     [Fact]
-    public void Find_WithPathPattern_OnlyLooksThere_IncludingHiddenFolders()
+    public void Find_WithPathPattern_MatchesInEverySearchedFolder_IncludingHiddenFoldersItNames()
     {
-        var config = _folder.AddFile(Path.Combine(".devcontainer", "devcontainer.json"));
-        _folder.AddFile(Path.Combine("src", ".devcontainer", "devcontainer.json"));
+        var root = _folder.AddFile(Path.Combine(".devcontainer", "devcontainer.json"));
+        var nested = _folder.AddFile(Path.Combine("services", "api", ".devcontainer", "devcontainer.json"));
         _folder.AddFile("devcontainer.json");
 
-        Assert.Equal([config], ToolFileFinder.Find(_folder.Path, [".devcontainer/devcontainer.json"]));
+        var matches = ToolFileFinder.Find(_folder.Path, [".devcontainer/devcontainer.json"]);
+
+        Assert.Equal(
+            [
+                new ToolFileMatch(root, _folder.Path),
+                new ToolFileMatch(nested, Path.Combine(_folder.Path, "services", "api")),
+            ],
+            matches);
+    }
+
+    [Fact]
+    public void Find_WithPathPattern_SkipsSearchedFoldersLikeFileNames()
+    {
+        _folder.AddFile(Path.Combine("node_modules", "pkg", ".devcontainer", "devcontainer.json"));
+        _folder.AddFile(Path.Combine(".git", "x", ".devcontainer", "devcontainer.json"));
+        _folder.AddFile(Path.Combine("a", "b", "c", "d", ".devcontainer", "devcontainer.json"));
+        var deepest = _folder.AddFile(Path.Combine("a", "b", "c", ".devcontainer", "devcontainer.json"));
+
+        Assert.Equal([deepest], Files(_folder.Path, [".devcontainer/devcontainer.json"]));
+    }
+
+    [Fact]
+    public void Find_WithFileName_MatchFolderIsTheFilesFolder()
+    {
+        var file = _folder.AddFile(Path.Combine("src", ".devcontainer.json"));
+
+        Assert.Equal(
+            new ToolFileMatch(file, Path.Combine(_folder.Path, "src")),
+            Assert.Single(ToolFileFinder.Find(_folder.Path, [".devcontainer.json"])));
+    }
+
+    [Fact]
+    public void Find_WithFileMatchingSeveralPatterns_TakesTheFirstPatternsMatchFolder()
+    {
+        var file = _folder.AddFile(Path.Combine("src", "config", "app.json"));
+
+        Assert.Equal(
+            Path.Combine(_folder.Path, "src"),
+            Assert.Single(ToolFileFinder.Find(_folder.Path, ["config/app.json", "app.json"])).MatchFolder);
+        Assert.Equal(
+            Path.GetDirectoryName(file),
+            Assert.Single(ToolFileFinder.Find(_folder.Path, ["app.json", "config/app.json"])).MatchFolder);
     }
 
     [Fact]
@@ -132,7 +176,7 @@ public sealed class ToolFileFinderTests : IDisposable
 
         Assert.Equal(
             [node, python],
-            ToolFileFinder.Find(_folder.Path, [@".devcontainer\*\devcontainer.json"]));
+            Files(_folder.Path, [@".devcontainer\*\devcontainer.json"]));
     }
 
     [Fact]
@@ -141,7 +185,8 @@ public sealed class ToolFileFinderTests : IDisposable
         var root = _folder.AddFile("global.json");
         _folder.AddFile(Path.Combine("src", "global.json"));
 
-        Assert.Equal([root], ToolFileFinder.Find(_folder.Path, ["/global.json"]));
+        Assert.Equal([root], Files(_folder.Path, ["/global.json"]));
+        Assert.Equal(_folder.Path, Assert.Single(ToolFileFinder.Find(_folder.Path, ["/global.json"])).MatchFolder);
     }
 
     [Theory]
@@ -151,7 +196,7 @@ public sealed class ToolFileFinderTests : IDisposable
     {
         _folder.AddFile("inside.txt");
 
-        Assert.Empty(ToolFileFinder.Find(_folder.Path, [pattern]));
+        Assert.Empty(Files(_folder.Path, [pattern]));
     }
 
     [Fact]
@@ -159,7 +204,7 @@ public sealed class ToolFileFinderTests : IDisposable
     {
         var solution = _folder.AddFile("Api.sln");
 
-        Assert.Equal([solution], ToolFileFinder.Find(_folder.Path, ["*.sln", "Api.*", "/Api.sln", " "]));
+        Assert.Equal([solution], Files(_folder.Path, ["*.sln", "Api.*", "/Api.sln", " "]));
     }
 
     [Fact]
@@ -167,6 +212,6 @@ public sealed class ToolFileFinderTests : IDisposable
     {
         _folder.AddFile("Api.sln");
 
-        Assert.Empty(ToolFileFinder.Find(_folder.Path, []));
+        Assert.Empty(Files(_folder.Path, []));
     }
 }

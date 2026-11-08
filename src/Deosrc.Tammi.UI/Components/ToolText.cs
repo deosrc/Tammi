@@ -71,6 +71,9 @@ public static class ToolText
         ToolPlaceholders.FileName => "the file's name, e.g. Api.sln",
         ToolPlaceholders.FileNameWithoutExtension => "the file's name without its extension, e.g. Api",
         ToolPlaceholders.FilePath => "the file's full path",
+        ToolPlaceholders.MatchFolder =>
+            "the folder the file pattern matched from: the file's folder for a file name, or where a path pattern "
+            + "starts, e.g. the folder holding .devcontainer/",
         _ => placeholder,
     };
 

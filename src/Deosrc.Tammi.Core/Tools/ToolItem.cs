@@ -23,4 +23,21 @@ public sealed record ToolItem(
     /// </summary>
     public IReadOnlyList<ToolEntry> Entries =>
         WorkspaceEntry is null ? RepositoryEntries : [WorkspaceEntry, .. RepositoryEntries];
+
+    /// <summary>
+    /// The entries that start something different, in the order of <see cref="Entries"/>. Entries that start the same
+    /// command (the same executable, arguments and working directory) are one launch, e.g. a file tool whose arguments
+    /// only depend on the file: only the first of them is kept.
+    /// </summary>
+    public IReadOnlyList<ToolEntry> Launches =>
+        Entries.DistinctBy(entry => entry.Request is { } request
+                ? $"{request.FileName}\0{request.WorkingDirectory}\0{string.Join('\0', request.Arguments)}"
+                : $"terminal\0{entry.Path}")
+            .ToArray();
+
+    /// <summary>
+    /// The entry that launching the item opens without asking where: its Workspace Folder entry, or else its only
+    /// launch. <c>null</c> when it has several launches and none for the Workspace Folder, so the user picks one.
+    /// </summary>
+    public ToolEntry? DefaultEntry => WorkspaceEntry ?? (Launches is [var only] ? only : null);
 }

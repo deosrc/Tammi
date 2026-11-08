@@ -56,12 +56,19 @@ public static partial class ToolPlaceholders
     public const string FilePath = "FilePath";
 
     /// <summary>
+    /// The full path of the folder the file pattern matched from: the file's folder for a file name pattern (e.g.
+    /// <c>*.sln</c>), or the folder a path pattern starts in (e.g. the folder holding <c>.devcontainer/</c> for
+    /// <c>.devcontainer/devcontainer.json</c>). Only for file tools.
+    /// </summary>
+    public const string MatchFolder = "MatchFolder";
+
+    /// <summary>
     /// Every placeholder, in the order they're listed on the Settings screen.
     /// </summary>
     public static IReadOnlyList<string> All { get; } =
     [
         PreferredFolder, LaunchFolder, WorkspaceFolder, RepositoryFolder, FileDirectory, FileName,
-        FileNameWithoutExtension, FilePath,
+        FileNameWithoutExtension, FilePath, MatchFolder,
     ];
 
     private static readonly HashSet<string> Known = new(All, StringComparer.OrdinalIgnoreCase);

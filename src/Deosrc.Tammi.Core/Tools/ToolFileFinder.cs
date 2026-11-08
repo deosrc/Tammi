@@ -23,21 +23,23 @@ public static class ToolFileFinder
     /// </summary>
     /// <remarks>
     /// <para>
-    /// A pattern with no <c>/</c> (e.g. <c>*.sln</c>) matches file names in the folder and its subfolders, up to
-    /// <paramref name="maxDepth"/> deep. Hidden folders (whose names start with <c>.</c>, e.g. <c>.git</c>), build
-    /// output and package folders, and links to other folders aren't searched.
+    /// The folder and its subfolders are searched, up to <paramref name="maxDepth"/> deep. Hidden folders (whose names
+    /// start with <c>.</c>, e.g. <c>.git</c>), build output and package folders, and links to other folders aren't
+    /// searched.
     /// </para>
     /// <para>
-    /// A pattern with a <c>/</c> (e.g. <c>.devcontainer/devcontainer.json</c>) is a path from the folder, and can name
-    /// hidden folders. A leading <c>/</c> is ignored, so <c>/global.json</c> only matches in the folder itself.
+    /// A pattern with no <c>/</c> (e.g. <c>*.sln</c>) matches the names of the files in each searched folder. A
+    /// pattern with a <c>/</c> (e.g. <c>.devcontainer/devcontainer.json</c>) is a path from each searched folder, and
+    /// can name hidden folders. A leading <c>/</c> keeps a pattern to <paramref name="folder"/> itself, so
+    /// <c>/global.json</c> only matches there.
     /// </para>
     /// <para><c>*</c> and <c>?</c> are wildcards. Case is ignored. Folders that can't be read are skipped.</para>
     /// </remarks>
     /// <returns>
-    /// The files' full paths, each once, ordered by their path within <paramref name="folder"/>. Empty if the folder
-    /// doesn't exist.
+    /// The files found, each once, ordered by their path within <paramref name="folder"/>. A file that several patterns
+    /// match has the match folder of the first of them. Empty if the folder doesn't exist.
     /// </returns>
-    public static IReadOnlyList<string> Find(
+    public static IReadOnlyList<ToolFileMatch> Find(
         string folder,
         IEnumerable<string> patterns,
         int maxDepth = DefaultMaxDepth)
@@ -47,56 +49,80 @@ public static class ToolFileFinder
         ArgumentOutOfRangeException.ThrowIfNegative(maxDepth);
 
         var root = Path.GetFullPath(folder);
-        var namePatterns = new List<string>();
-        var files = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var pattern in patterns.Where(pattern => !string.IsNullOrWhiteSpace(pattern)))
+        var parsed = patterns.Select(Parse).OfType<Pattern>().ToArray();
+
+        // Each file's match, with the index of the pattern that found it, so the first pattern's is kept.
+        var matches = new Dictionary<string, (int Pattern, string Folder)>(StringComparer.Ordinal);
+        if (parsed.Length > 0)
         {
-            var normalized = pattern.Trim().Replace('\\', '/');
-            if (normalized.Contains('/'))
-            {
-                var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                if (segments.Length > 0 && !segments.Contains("..") && !segments.Contains("."))
-                {
-                    FindPath(new DirectoryInfo(root), segments, files);
-                }
-            }
-            else
-            {
-                namePatterns.Add(normalized);
-            }
+            Search(new DirectoryInfo(root), parsed, maxDepth, isRoot: true, matches);
         }
 
-        if (namePatterns.Count > 0)
-        {
-            FindNames(new DirectoryInfo(root), namePatterns, maxDepth, files);
-        }
-
-        return files
-            .OrderBy(path => Path.GetRelativePath(root, path).Replace('\\', '/'), StringComparer.OrdinalIgnoreCase)
-            .ThenBy(path => path, StringComparer.Ordinal)
+        return matches
+            .OrderBy(
+                match => Path.GetRelativePath(root, match.Key).Replace('\\', '/'),
+                StringComparer.OrdinalIgnoreCase)
+            .ThenBy(match => match.Key, StringComparer.Ordinal)
+            .Select(match => new ToolFileMatch(match.Key, match.Value.Folder))
             .ToArray();
     }
 
-    private static void FindNames(DirectoryInfo directory, List<string> patterns, int depth, HashSet<string> files)
+    // A pattern's path segments, e.g. [".devcontainer", "devcontainer.json"], and whether it only matches at the root.
+    private sealed record Pattern(int Index, string[] Segments, bool Anchored);
+
+    private static Pattern? Parse(string? pattern, int index)
     {
-        foreach (var entry in Entries(directory))
+        if (string.IsNullOrWhiteSpace(pattern))
         {
-            if (entry is FileInfo file && patterns.Any(pattern => Matches(pattern, file.Name)))
+            return null;
+        }
+
+        var normalized = pattern.Trim().Replace('\\', '/');
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length == 0 || segments.Contains("..") || segments.Contains(".")
+            ? null
+            : new Pattern(index, segments, normalized.StartsWith('/'));
+    }
+
+    private static void Search(
+        DirectoryInfo directory,
+        Pattern[] patterns,
+        int depth,
+        bool isRoot,
+        Dictionary<string, (int Pattern, string Folder)> matches)
+    {
+        var entries = Entries(directory);
+        foreach (var pattern in patterns.Where(pattern => isRoot || !pattern.Anchored))
+        {
+            var found = new List<string>();
+            FindPath(entries, pattern.Segments, found);
+            foreach (var file in found)
             {
-                files.Add(file.FullName);
+                // The pattern matched from this folder: it's the file's folder for a file name, or where a path starts.
+                if (!matches.TryGetValue(file, out var existing) || pattern.Index < existing.Pattern)
+                {
+                    matches[file] = (pattern.Index, directory.FullName);
+                }
             }
-            else if (entry is DirectoryInfo subfolder && depth > 0 && ShouldSearch(subfolder))
-            {
-                FindNames(subfolder, patterns, depth - 1, files);
-            }
+        }
+
+        if (depth == 0)
+        {
+            return;
+        }
+
+        foreach (var subfolder in entries.OfType<DirectoryInfo>().Where(ShouldSearch))
+        {
+            Search(subfolder, patterns, depth - 1, isRoot: false, matches);
         }
     }
 
-    private static void FindPath(DirectoryInfo directory, ReadOnlySpan<string> segments, HashSet<string> files)
+    // Finds the files at a path of segments, each a name or wildcard, from a folder's entries.
+    private static void FindPath(FileSystemInfo[] entries, ReadOnlySpan<string> segments, List<string> files)
     {
         var last = segments.Length == 1;
         var segment = segments[0];
-        foreach (var entry in Entries(directory))
+        foreach (var entry in entries)
         {
             if (!Matches(segment, entry.Name))
             {
@@ -109,7 +135,7 @@ public static class ToolFileFinder
             }
             else if (!last && entry is DirectoryInfo subfolder && IsNotLink(subfolder))
             {
-                FindPath(subfolder, segments[1..], files);
+                FindPath(Entries(subfolder), segments[1..], files);
             }
         }
     }

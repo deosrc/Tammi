@@ -135,7 +135,7 @@ else
                                 <li @key="item">
                                     <button type="button" class="tool-item @PulseClass(item)"
                                             title="@(item.FilePath ?? item.Label)"
-                                            aria-haspopup="@(item.WorkspaceEntry is null ? "menu" : null)"
+                                            aria-haspopup="@(item.DefaultEntry is null ? "menu" : null)"
                                             @onclick="e => OnToolClicked(item, e)"
                                             @oncontextmenu="e => OpenToolMenu(item, e)" @oncontextmenu:preventDefault>
                                         <ToolImageView Image="item.Entries[0].Image" Fallback="item.Tool.Icon.Generic" />
@@ -462,13 +462,13 @@ else
 
     private void OnToolClicked(ToolItem item, MouseEventArgs e)
     {
-        if (item.WorkspaceEntry is { } entry)
+        if (item.DefaultEntry is { } entry)
         {
             OpenTool(item, entry);
         }
         else
         {
-            // It can only be launched in a repository, so it offers them.
+            // It can only be launched in a repository, and there are several, so it offers them.
             OpenToolMenu(item, e);
         }
     }
@@ -478,7 +478,7 @@ else
     // A tool's right-click menu: each folder it can be launched in.
     private RenderFragment ToolMenuItems(ToolItem item) => __builder =>
     {
-        foreach (var entry in item.Entries)
+        foreach (var entry in item.Launches)
         {
             var workspace = ReferenceEquals(entry, item.WorkspaceEntry);
             <li role="none">

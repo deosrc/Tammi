@@ -209,11 +209,13 @@
                                       value="@ArgumentLines.Format(tool.FilePatterns)"
                                       @onchange="e => UpdateCustomAsync(index, t => t with { FilePatterns = ArgumentLines.Parse(Text(e)) })"></textarea>
                             <p class="settings-help">
-                                One pattern on each line. A file name (e.g. <code>*.sln</code>) is looked for in each
-                                repository and its subfolders, @ToolFileFinder.DefaultMaxDepth deep, leaving out hidden,
-                                <code>bin</code>, <code>obj</code>, <code>node_modules</code> and <code>packages</code>
-                                folders. A path (e.g. <code>.devcontainer/devcontainer.json</code>) is only looked for
-                                there. <code>*</code> and <code>?</code> are wildcards, and case is ignored.
+                                One pattern on each line, each looked for in every repository and its subfolders,
+                                @ToolFileFinder.DefaultMaxDepth deep, leaving out hidden, <code>bin</code>,
+                                <code>obj</code>, <code>node_modules</code> and <code>packages</code> folders. A file
+                                name (e.g. <code>*.sln</code>) matches files in each of them. A path (e.g.
+                                <code>.devcontainer/devcontainer.json</code>) is a path from each of them, and can name
+                                hidden folders; start it with <code>/</code> to only look in the repository's own
+                                folder. <code>*</code> and <code>?</code> are wildcards, and case is ignored.
                             </p>
                             @if (tool.FilePatterns.Count == 0)
                             {

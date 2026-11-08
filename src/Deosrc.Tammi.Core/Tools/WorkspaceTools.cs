@@ -144,7 +144,7 @@ public sealed class WorkspaceTools
     /// The repository the entry is offered for or its file is in, or <c>null</c> for the Workspace Folder.
     /// </param>
     /// <param name="launchFolder">The folder the entry is offered for.</param>
-    /// <param name="file">The file's full path, for a file tool's entry; otherwise <c>null</c>.</param>
+    /// <param name="file">The file found, for a file tool's entry; otherwise <c>null</c>.</param>
     /// <param name="preferredFolder">
     /// The folder the tool should open (see <see cref="ToolPlaceholders.PreferredFolder"/>), or <c>null</c> for
     /// <paramref name="launchFolder"/>.
@@ -153,7 +153,7 @@ public sealed class WorkspaceTools
         Workspace workspace,
         WorkspaceRepository? repository,
         string launchFolder,
-        string? file,
+        ToolFileMatch? file,
         string? preferredFolder = null)
     {
         ArgumentNullException.ThrowIfNull(workspace);
@@ -172,10 +172,12 @@ public sealed class WorkspaceTools
 
         if (file is not null)
         {
-            values[ToolPlaceholders.FileDirectory] = Path.GetDirectoryName(file) ?? string.Empty;
-            values[ToolPlaceholders.FileName] = Path.GetFileName(file);
-            values[ToolPlaceholders.FileNameWithoutExtension] = Path.GetFileNameWithoutExtension(file);
-            values[ToolPlaceholders.FilePath] = file;
+            var path = file.FilePath;
+            values[ToolPlaceholders.FileDirectory] = Path.GetDirectoryName(path) ?? string.Empty;
+            values[ToolPlaceholders.FileName] = Path.GetFileName(path);
+            values[ToolPlaceholders.FileNameWithoutExtension] = Path.GetFileNameWithoutExtension(path);
+            values[ToolPlaceholders.FilePath] = path;
+            values[ToolPlaceholders.MatchFolder] = file.MatchFolder;
         }
 
         return values;
@@ -267,8 +269,10 @@ public sealed class WorkspaceTools
         {
             foreach (var file in ToolFileFinder.Find(workspace.GetWorktreePath(fileRepository), tool.FilePatterns))
             {
+                // It starts in the folder its pattern matched from: the file's folder, or e.g. the project folder that
+                // holds .devcontainer/.
                 var values = PlaceholderValues(workspace, fileRepository, launchFolder, file, preferred);
-                if (CreateEntry(tool, executable, file, fileRepository, values, Path.GetDirectoryName(file)) is { } entry)
+                if (CreateEntry(tool, executable, file.FilePath, fileRepository, values, file.MatchFolder) is { } entry)
                 {
                     yield return entry;
                 }
