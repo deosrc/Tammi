@@ -5,6 +5,23 @@ namespace Deosrc.Tammi.Core.Tests.Workspaces;
 public class WorkspaceTabsTests
 {
     [Fact]
+    public void Rename_ChangesTheTabsName_InPlace()
+    {
+        var tabs = new WorkspaceTabs();
+        tabs.Open("a", "Alpha");
+        tabs.Open("b", "Beta");
+        var changes = 0;
+        tabs.Changed += () => changes++;
+
+        tabs.Rename("a", "Gamma");
+        tabs.Rename("a", "Gamma");
+        tabs.Rename("missing", "Delta");
+
+        Assert.Equal([new WorkspaceTab("a", "Gamma"), new WorkspaceTab("b", "Beta")], tabs.Tabs);
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
     public void Open_AddsTabsInOrder()
     {
         var tabs = new WorkspaceTabs();

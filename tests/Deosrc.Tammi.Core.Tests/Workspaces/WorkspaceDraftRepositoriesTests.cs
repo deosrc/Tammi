@@ -223,15 +223,16 @@ public sealed class WorkspaceDraftRepositoriesTests
     {
         var draft = NewDraft();
         draft.AddTask(Task("ABC-1", "One"));
-        draft.Name = " Work ";
+        draft.Name = " Some work ";
+        draft.FolderName = " work ";
         var api = draft.AddRepository(Repository("acme", "api"))!;
         api.FolderName = " server ";
         api.BaseBranch = " origin/develop ";
 
         var request = draft.ToCreationRequest();
 
-        Assert.Equal("Work", request.Name);
-        Assert.Equal(Path.Combine(Root, "Work"), request.Folder);
+        Assert.Equal("Some work", request.Name);
+        Assert.Equal(Path.Combine(Root, "work"), request.Folder);
         Assert.Equal([new TaskReference("source", "ABC-1")], request.Tasks);
         Assert.Equal("ABC-1-one", request.BranchName);
         var repository = Assert.Single(request.Repositories);

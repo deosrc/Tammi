@@ -51,6 +51,21 @@ public interface IWorkspaceStore
     Task<Workspace> SaveAsync(Workspace workspace, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Renames a known workspace: reads its metadata again, and saves it with the new name. Its Workspace Folder keeps
+    /// its name.
+    /// </summary>
+    /// <returns>The renamed workspace.</returns>
+    /// <exception cref="ArgumentException">The name isn't valid (see <see cref="WorkspaceNames.Validate"/>).</exception>
+    /// <exception cref="WorkspaceNotFoundException">
+    /// The workspace isn't in the index, or its folder or metadata is missing.
+    /// </exception>
+    /// <exception cref="InvalidWorkspaceMetadataException">
+    /// The metadata can't be read, or the folder now holds a different workspace.
+    /// </exception>
+    /// <exception cref="WorkspaceException">The metadata can't be written.</exception>
+    Task<Workspace> RenameAsync(string id, string name, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Reads the workspace in a folder and adds it to the index. If the workspace is already known (e.g. its folder was
     /// moved), its entry is pointed at the new folder.
     /// </summary>

@@ -39,6 +39,40 @@ else if (_deleting)
         <DeleteWorkspace WorkspaceId="@WorkspaceId" OnCancel="CancelDelete" OnFinished="FinishDelete" />
     </div>
 }
+else if (_renaming && _listing?.Workspace is { } renamedWorkspace)
+{
+    <div class="page">
+        <h1>Rename @renamedWorkspace.Name</h1>
+        <form class="settings-form" @onsubmit="RenameAsync" @onsubmit:preventDefault>
+            <div class="settings-field">
+                <label for="workspace-new-name">Name</label>
+                <input id="workspace-new-name"
+                       class="settings-text @(RenameProblem is null ? null : "invalid")"
+                       autocomplete="off" @bind="_newName" @bind:event="oninput" @ref="_newNameInput" />
+                @if (RenameProblem is { } renameProblem)
+                {
+                    <p class="error">@renameProblem</p>
+                }
+                <p class="settings-help">
+                    Shown on Home and the workspace's tab. The Workspace Folder keeps its name:
+                    <code>@renamedWorkspace.Folder</code>.
+                </p>
+            </div>
+            @if (_renameError is not null)
+            {
+                <p class="error" role="alert">@_renameError</p>
+            }
+            <div class="workspace-details-actions">
+                <button type="submit" class="button" disabled="@(RenameProblem is not null || _savingName)">
+                    @(_savingName ? "Renaming…" : "Rename")
+                </button>
+                <button type="button" class="button button-secondary" disabled="@_savingName" @onclick="CancelRename">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+}
 else if (_listing is { Availability: not WorkspaceAvailability.Available } listing)
 {
     @* A workspace that can't be read: say what's wrong instead of showing the Workspace View. *@
@@ -185,6 +219,11 @@ else
                         <div class="menu-backdrop" @onclick="() => _manageMenuOpen = false"></div>
                         <ul class="menu menu-up" role="menu" aria-label="Manage Workspace">
                             <li role="none">
+                                <button type="button" class="menu-item" role="menuitem" @onclick="StartRename">
+                                    Rename…
+                                </button>
+                            </li>
+                            <li role="none">
                                 <button type="button" class="menu-item menu-item-danger" role="menuitem"
                                         @onclick="() => StartDelete(_tab.Name)">
                                     Delete workspace…
@@ -321,6 +360,12 @@ else
     private WorkspaceListing? _listing;
     private string? _loadedWorkspaceId;
     private bool _deleting;
+    private bool _renaming;
+    private bool _savingName;
+    private bool _focusNewName;
+    private string _newName = "";
+    private string? _renameError;
+    private ElementReference _newNameInput;
     private bool _manageMenuOpen;
     private const string TerminalSubmenu = "terminal";
     private const string GitSubmenu = "git";
@@ -395,6 +440,7 @@ else
         {
             // Another tab is shown in this page, so the flow and menu for the previous one are closed.
             _deleting = false;
+            _renaming = false;
             _manageMenuOpen = false;
             CloseNewMenu();
             _startError = null;
@@ -1075,6 +1121,68 @@ else
         _deleting = true;
         SetGitStatus(null);
         GitStatusMonitors.Stop(WorkspaceId);
+    }
+
+    private string? RenameProblem => WorkspaceNames.Validate(_newName);
+
+    private void StartRename()
+    {
+        _manageMenuOpen = false;
+        _newName = _listing?.Workspace?.Name ?? _tab?.Name ?? "";
+        _renameError = null;
+        _renaming = true;
+        _focusNewName = true;
+    }
+
+    private void CancelRename()
+    {
+        _renaming = false;
+        _renameError = null;
+    }
+
+    private async Task RenameAsync()
+    {
+        if (RenameProblem is not null || _savingName)
+        {
+            return;
+        }
+
+        _savingName = true;
+        _renameError = null;
+        try
+        {
+            var renamed = await WorkspaceStore.RenameAsync(WorkspaceId, _newName, _disposed.Token);
+            WorkspaceTabs.Rename(WorkspaceId, renamed.Name);
+            _renaming = false;
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex) when (ex is WorkspaceException or ArgumentException)
+        {
+            _renameError = $"Couldn't rename the workspace. {ex.Message}";
+        }
+        finally
+        {
+            _savingName = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusNewName && _renaming)
+        {
+            _focusNewName = false;
+            try
+            {
+                await _newNameInput.FocusAsync();
+            }
+            catch (InvalidOperationException)
+            {
+                // The input isn't rendered after all, e.g. the workspace couldn't be read.
+            }
+        }
     }
 
     private void CancelDelete()

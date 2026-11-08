@@ -46,10 +46,38 @@
                         {
                             <p class="error">@nameProblem</p>
                         }
-                        else if (!_draft.IsNameEdited && _draft.Tasks.Count == 1)
+                        else if (!_draft.IsNameEdited && _draft.SuggestedName is not null)
+                        {
+                            <p class="settings-help">
+                                From the task, with the template set in
+                                <a href="@AppRoutes.Settings">Settings › General</a>.
+                            </p>
+                        }
+                        else if (!_draft.IsNameEdited)
+                        {
+                            <p class="settings-help">The folder name, unless you enter another.</p>
+                        }
+                    </div>
+
+                    <div class="settings-field">
+                        <label for="workspace-folder-name">Folder name</label>
+                        <input id="workspace-folder-name"
+                               class="settings-text @(_draft.FolderNameProblem is null ? null : "invalid")"
+                               autocomplete="off" @bind="_draft.FolderName" @bind:event="oninput" />
+                        @if (_draft.FolderNameProblem is { } folderNameProblem)
+                        {
+                            <p class="error">@folderNameProblem</p>
+                        }
+                        else if (!_draft.IsFolderNameEdited && _draft.SuggestedFolderName is not null)
                         {
                             <p class="settings-help">
                                 From the task, in the format set in <a href="@AppRoutes.Settings">Settings › General</a>.
+                            </p>
+                        }
+                        else if (!_draft.IsFolderNameEdited && _draft.IsNameEdited)
+                        {
+                            <p class="settings-help">
+                                From the name, in the format set in <a href="@AppRoutes.Settings">Settings › General</a>.
                             </p>
                         }
                     </div>
@@ -80,7 +108,7 @@
                         }
                         else
                         {
-                            <div class="placeholder">Enter a valid name and parent folder.</div>
+                            <div class="placeholder">Enter a valid folder name and parent folder.</div>
                         }
                         @if (_draft.FolderProblem is { } folderProblem)
                         {
@@ -238,7 +266,10 @@
     protected override void OnInitialized()
     {
         var general = SettingsStore.Current.General;
-        _draft = new WorkspaceDraft(general.DefaultWorkspaceParentFolder, general.WorkspaceNameFormat);
+        _draft = new WorkspaceDraft(
+            general.DefaultWorkspaceParentFolder,
+            general.WorkspaceFolderNameFormat,
+            general.WorkspaceNameTemplate);
     }
 
     private void Next()

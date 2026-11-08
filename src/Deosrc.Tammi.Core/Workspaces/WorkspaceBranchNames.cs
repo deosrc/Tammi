@@ -8,10 +8,10 @@ namespace Deosrc.Tammi.Core.Workspaces;
 /// </summary>
 public static class WorkspaceBranchNames
 {
-    private static readonly WorkspaceNameFormat Format = new()
+    private static readonly WorkspaceFolderNameFormat Format = new()
     {
-        Separator = WorkspaceNameSeparator.Hyphens,
-        Case = WorkspaceNameCase.AsWritten,
+        Separator = WorkspaceFolderNameSeparator.Hyphens,
+        Case = WorkspaceFolderNameCase.AsWritten,
         IncludeTaskReference = true,
     };
 
@@ -20,18 +20,18 @@ public static class WorkspaceBranchNames
     /// otherwise a slug of the workspace's name.
     /// </summary>
     /// <remarks>
-    /// The task key is its short reference (see <see cref="WorkspaceNames.ShortReference"/>) as written, so a JIRA
+    /// The task key is its short reference (see <see cref="TaskReference.ShortKey"/>) as written, so a JIRA
     /// issue's key stays uppercase and links the branch to it. The slug is lowercase words joined by hyphens, leaving
     /// out punctuation. So <c>ABC-123</c> "Add some feature" suggests <c>ABC-123-add-some-feature</c>, and
     /// <c>acme/api#42</c> "Fix login" suggests <c>api-42-fix-login</c>. Like a suggested workspace name, it's at most
-    /// <see cref="WorkspaceNames.MaxSuggestedLength"/> characters.
+    /// <see cref="WorkspaceFolderNames.MaxSuggestedLength"/> characters.
     /// </remarks>
     /// <returns>The suggested name, or <see langword="null"/> if there's none (e.g. the workspace has no name yet).</returns>
     public static string? Suggest(IReadOnlyList<TaskInfo> tasks, string? workspaceName)
     {
         ArgumentNullException.ThrowIfNull(tasks);
         return tasks is [var task]
-            ? WorkspaceNames.FromTitle(task.Title.ToLowerInvariant(), Format, WorkspaceNames.ShortReference(task.Key))
-            : WorkspaceNames.FromTitle(workspaceName?.ToLowerInvariant(), Format);
+            ? WorkspaceFolderNames.FromTitle(task.Title.ToLowerInvariant(), Format, TaskReference.ShortKey(task.Key))
+            : WorkspaceFolderNames.FromTitle(workspaceName?.ToLowerInvariant(), Format);
     }
 }

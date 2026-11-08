@@ -19,6 +19,7 @@ public sealed class WorkspaceTaskList : IDisposable
     private int _pending;
     private bool _disposed;
     private volatile string? _contextFileProblem;
+    private volatile Workspace _workspace;
 
     /// <summary>
     /// Creates the list. Nothing is read until <see cref="Refresh"/> is called.
@@ -27,15 +28,15 @@ public sealed class WorkspaceTaskList : IDisposable
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(registry);
-        Workspace = workspace;
+        _workspace = workspace;
         _registry = registry;
         _tasks = [.. workspace.Tasks.Select(reference => new WorkspaceTask(reference))];
     }
 
     /// <summary>
-    /// The workspace whose tasks these are.
+    /// The workspace whose tasks these are. It changes when the workspace is renamed (see <see cref="RenameAsync"/>).
     /// </summary>
-    public Workspace Workspace { get; }
+    public Workspace Workspace => _workspace;
 
     /// <summary>
     /// Each of the workspace's tasks, in the workspace's order.
@@ -103,6 +104,44 @@ public sealed class WorkspaceTaskList : IDisposable
         }
 
         return ReadAllAsync(token);
+    }
+
+    /// <summary>
+    /// Takes the workspace's new name, after it was renamed, without reading the tasks again. The task context file is
+    /// written again with it: straight away if every task has been read, or else when they have.
+    /// </summary>
+    /// <param name="workspace">The renamed workspace. Its tasks must be the same.</param>
+    /// <returns>A task that completes when the task context file has been written, if it's written straight away.</returns>
+    /// <exception cref="ArgumentException">The workspace is a different one, or its tasks have changed.</exception>
+    public Task RenameAsync(Workspace workspace)
+    {
+        ArgumentNullException.ThrowIfNull(workspace);
+        if (workspace.Id != _workspace.Id || !workspace.Tasks.SequenceEqual(_workspace.Tasks))
+        {
+            throw new ArgumentException("Only the workspace's name can change.", nameof(workspace));
+        }
+
+        CancellationToken token;
+        lock (_lock)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_workspace.Name == workspace.Name)
+            {
+                return Task.CompletedTask;
+            }
+
+            _workspace = workspace;
+
+            // A read under way writes the file when it finishes, with the new name. Nothing's been read yet otherwise.
+            if (_pending > 0 || _refresh is null)
+            {
+                return Task.CompletedTask;
+            }
+
+            token = _refresh.Token;
+        }
+
+        return WriteContextFileAsync(token);
     }
 
     public void Dispose()

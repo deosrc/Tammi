@@ -10,7 +10,7 @@
     title="@(WorkspaceTask.Task is { } titled ? $"Open {titled.Key} in the browser" : null)" @onclick="OpenInBrowser">
     <div class="workspace-task-heading">
         <TaskSourceIcon Source="Registry.Find(WorkspaceTask.Reference.Source)" />
-        <span class="workspace-task-key" title="@WorkspaceTask.Key">@WorkspaceNames.ShortReference(WorkspaceTask.Key)</span>
+        <span class="workspace-task-key" title="@WorkspaceTask.Key">@TaskReference.ShortKey(WorkspaceTask.Key)</span>
         @if (WorkspaceTask.Task?.Status is { } status)
         {
             <span class="workspace-task-status" title="@CategoryText">@status</span>
