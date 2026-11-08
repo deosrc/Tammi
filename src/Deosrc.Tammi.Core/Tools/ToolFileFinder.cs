@@ -11,7 +11,7 @@ public static class ToolFileFinder
     /// How many folders deep file names are looked for: the folder itself, and up to this many levels of subfolders
     /// (e.g. <c>src/Api/Api.sln</c>).
     /// </summary>
-    public const int DefaultMaxDepth = 3;
+    public const int DefaultMaxDepth = 10;
 
     // Folders that hold build output, packages or tooling rather than source, so their files aren't the repository's
     // own.

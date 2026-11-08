@@ -407,7 +407,7 @@ are left to other tools for now.
     includes.
   - **File tools** open files found in the repositories by their **file patterns**, e.g. Visual Studio for `*.sln`,
     `*.slnf` and `*.slnx`. Each has an entry for each file found, and none where there aren't any. For the Workspace
-    Folder, every repository is searched. Patterns are looked for in a repository and its subfolders, three folders
+    Folder, every repository is searched. Patterns are looked for in a repository and its subfolders, ten folders
     deep, skipping hidden folders (e.g. `.git`), `bin`, `obj`, `node_modules`, `packages` and links. A file name
     pattern (e.g. `*.sln`) matches files in each of them. A path pattern (e.g. `.devcontainer/devcontainer.json`) is a
     path from each of them, and can name hidden folders. A leading `/` keeps a pattern to the repository's own folder

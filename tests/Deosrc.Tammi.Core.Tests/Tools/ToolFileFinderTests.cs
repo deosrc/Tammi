@@ -10,7 +10,10 @@ public sealed class ToolFileFinderTests : IDisposable
 
     public void Dispose() => _folder.Dispose();
 
-    private static IReadOnlyList<string> Files(string folder, IEnumerable<string> patterns, int maxDepth = 3) =>
+    // Folder names for a path that many folders deep, e.g. ["d1", "d2", "d3"].
+    private static string[] Folders(int depth) => Enumerable.Range(1, depth).Select(i => $"d{i}").ToArray();
+
+    private static IReadOnlyList<string> Files(string folder, IEnumerable<string> patterns, int maxDepth = ToolFileFinder.DefaultMaxDepth) =>
         ToolFileFinder.Find(folder, patterns, maxDepth).Select(match => match.FilePath).ToArray();
 
     [Fact]
@@ -45,11 +48,11 @@ public sealed class ToolFileFinderTests : IDisposable
     [Fact]
     public void Find_StopsAtMaxDepth()
     {
-        var shallow = _folder.AddFile(Path.Combine("a", "b", "c", "Deep.sln"));
-        _folder.AddFile(Path.Combine("a", "b", "c", "d", "TooDeep.sln"));
+        var deepest = _folder.AddFile(Path.Combine([.. Folders(ToolFileFinder.DefaultMaxDepth), "Deep.sln"]));
+        _folder.AddFile(Path.Combine([.. Folders(ToolFileFinder.DefaultMaxDepth + 1), "TooDeep.sln"]));
 
-        Assert.Equal([shallow], Files(_folder.Path, Solutions));
-        Assert.Empty(Files(_folder.Path, Solutions, maxDepth: 2));
+        Assert.Equal([deepest], Files(_folder.Path, Solutions));
+        Assert.Empty(Files(_folder.Path, Solutions, maxDepth: ToolFileFinder.DefaultMaxDepth - 1));
     }
 
     [Fact]
@@ -139,8 +142,10 @@ public sealed class ToolFileFinderTests : IDisposable
     {
         _folder.AddFile(Path.Combine("node_modules", "pkg", ".devcontainer", "devcontainer.json"));
         _folder.AddFile(Path.Combine(".git", "x", ".devcontainer", "devcontainer.json"));
-        _folder.AddFile(Path.Combine("a", "b", "c", "d", ".devcontainer", "devcontainer.json"));
-        var deepest = _folder.AddFile(Path.Combine("a", "b", "c", ".devcontainer", "devcontainer.json"));
+        _folder.AddFile(Path.Combine(
+            [.. Folders(ToolFileFinder.DefaultMaxDepth + 1), ".devcontainer", "devcontainer.json"]));
+        var deepest = _folder.AddFile(Path.Combine(
+            [.. Folders(ToolFileFinder.DefaultMaxDepth), ".devcontainer", "devcontainer.json"]));
 
         Assert.Equal([deepest], Files(_folder.Path, [".devcontainer/devcontainer.json"]));
     }
