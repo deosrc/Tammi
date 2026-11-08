@@ -146,18 +146,29 @@ public sealed class GitHubPullRequestTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPullRequestsAsync_RepositoryNotFound_HasNoPullRequests()
+    public async Task GetPullRequestsAsync_NoRepositoryFound_ThrowsPermissionException()
     {
         GitHubIntegration github = await CreateAuthenticatedAsync();
-        _api.Respond(GraphQlPath, """
-            {
-              "data": {"repository": null},
-              "errors": [{"type": "NOT_FOUND", "path": ["repository"],
-                          "message": "Could not resolve to a Repository with the name 'acme/api'."}]
-            }
-            """);
+        _api.Respond(GraphQlPath, NotFound("acme/api"));
 
-        Assert.Empty(await github.GetPullRequestsAsync(["https://github.com/acme/api"], Branch, CancellationToken));
+        var exception = await Assert.ThrowsAsync<IntegrationPermissionException>(
+            () => github.GetPullRequestsAsync(["https://github.com/acme/api"], Branch, CancellationToken));
+
+        Assert.Equal("github", exception.IntegrationId);
+        Assert.Contains("can't find acme/api", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetPullRequestsAsync_SomeRepositoryFound_LeavesOutThoseNotFound()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond(GraphQlPath, Response("me/api", PullRequest(3, "OPEN", head: "https://github.com/me/api")))
+            .Respond(GraphQlPath, NotFound("acme/api"));
+
+        IReadOnlyList<PullRequestInfo> pullRequests = await github.GetPullRequestsAsync(
+            ["https://github.com/me/api", "https://github.com/acme/api"], Branch, CancellationToken);
+
+        Assert.Equal([3], pullRequests.Select(pullRequest => pullRequest.Number));
     }
 
     [Fact]
@@ -239,6 +250,14 @@ public sealed class GitHubPullRequestTests : IDisposable
         await Assert.ThrowsAsync<IntegrationAuthenticationException>(
             () => github.GetPullRequestsAsync(["https://github.com/acme/api"], Branch, CancellationToken));
     }
+
+    private static string NotFound(string repository) => $$"""
+        {
+          "data": {"repository": null},
+          "errors": [{"type": "NOT_FOUND", "path": ["repository"],
+                      "message": "Could not resolve to a Repository with the name '{{repository}}'."}]
+        }
+        """;
 
     private static string Response(string repository, params JsonObject[] pullRequests) => new JsonObject
     {

@@ -720,7 +720,8 @@ are left to other tools for now.
   the workspace branch's name, up to 20, oldest first. Their checks are GitHub's combined status of the latest
   commit's check runs and commit statuses. When the token can't read checks, the Pull Request is shown without them.
   When it can't read pull requests, the repository says so. A repository that doesn't exist or that the token can't see
-  has none.
+  has none, but when none of a workspace repository's GitHub remotes can be found, it says the token can't reach them
+  (a fine-grained token only reaches the repositories chosen for it).
 - **Repositories** are those the user owns, collaborates on or reaches through an organisation. Each has its HTTPS and
   SSH clone URLs.
 - **Rate limits:** when GitHub asks Tammi to wait a few seconds, it waits and retries. For longer waits, the request

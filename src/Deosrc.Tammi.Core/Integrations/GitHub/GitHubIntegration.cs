@@ -350,7 +350,9 @@ public sealed class GitHubIntegration
     /// can (fine-grained tokens: Commit statuses, and Checks where GitHub offers it), and are left out otherwise.
     /// </para>
     /// <para>
-    /// A repository that doesn't exist, or that the token can't see, has no Pull Requests.
+    /// A repository that doesn't exist, or that the token can't see, has no Pull Requests. But when none of the
+    /// repositories can be found, the token most likely wasn't given them (a fine-grained token only reaches the
+    /// repositories chosen for it), so that's an <see cref="IntegrationPermissionException"/>.
     /// </para>
     /// </remarks>
     public async Task<IReadOnlyList<PullRequestInfo>> GetPullRequestsAsync(
@@ -362,7 +364,9 @@ public sealed class GitHubIntegration
         ArgumentException.ThrowIfNullOrWhiteSpace(branch);
 
         var pullRequests = new List<PullRequestInfo>();
-        foreach ((string owner, string name) in RepositoriesOnThisServer(remoteUrls))
+        List<(string Owner, string Name)> repositories = RepositoriesOnThisServer(remoteUrls);
+        int found = 0;
+        foreach ((string owner, string name) in repositories)
         {
             GitHubGraphQlResponse<GitHubPullRequestsQuery.Data> response = await _api
                 .QueryAsync<GitHubPullRequestsQuery.Data>(
@@ -383,6 +387,7 @@ public sealed class GitHubIntegration
                 continue;
             }
 
+            found++;
             if (repository.PullRequests is not { } connection)
             {
                 throw new IntegrationPermissionException(Id, PullRequestPermissionMessage);
@@ -397,6 +402,14 @@ public sealed class GitHubIntegration
                     pullRequests.Add(info);
                 }
             }
+        }
+
+        if (repositories.Count > 0 && found == 0)
+        {
+            string names = string.Join(" or ", repositories.Select(repository => $"{repository.Owner}/{repository.Name}"));
+            throw new IntegrationPermissionException(Id,
+                $"GitHub can't find {names} with this token. Give the token access to the repository, then "
+                + "authenticate again.");
         }
 
         _logger.LogDebug(
