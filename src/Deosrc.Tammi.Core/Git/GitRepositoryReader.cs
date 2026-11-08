@@ -48,6 +48,67 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
     }
 
     /// <inheritdoc />
+    public GitRefs ReadRefs(string path)
+    {
+        using Repository repository = Open(path);
+        var references = new List<GitReference>();
+        foreach (Branch branch in repository.Branches)
+        {
+            // Symbolic references such as origin/HEAD only repeat another branch.
+            if (branch.Reference is DirectReference && branch.Tip is { } tip)
+            {
+                references.Add(new GitReference(
+                    branch.FriendlyName,
+                    branch.IsRemote ? GitReferenceKind.RemoteBranch : GitReferenceKind.LocalBranch,
+                    tip.Sha));
+            }
+        }
+
+        foreach (Tag tag in repository.Tags)
+        {
+            if (tag.PeeledTarget is Commit commit)
+            {
+                references.Add(new GitReference(tag.FriendlyName, GitReferenceKind.Tag, commit.Sha));
+            }
+        }
+
+        return new GitRefs
+        {
+            HeadSha = repository.Head.Tip?.Sha,
+            HeadBranch = repository.Info.IsHeadDetached || repository.Head.Tip is null
+                ? null
+                : repository.Head.FriendlyName,
+            References = references
+                .OrderBy(reference => reference.Kind)
+                .ThenBy(reference => reference.Name, StringComparer.Ordinal)
+                .ToArray(),
+        };
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<CommitFileChange> ReadCommitChanges(string path, string sha)
+    {
+        using Repository repository = Open(path);
+        Commit commit = repository.Lookup<Commit>(sha)
+            ?? throw new GitException($"There's no commit {sha} in '{path}'.");
+
+        Tree? parentTree = commit.Parents.FirstOrDefault()?.Tree;
+        TreeChanges changes = repository.Diff.Compare<TreeChanges>(
+            parentTree,
+            commit.Tree,
+            new CompareOptions { Similarity = SimilarityOptions.Renames });
+
+        return changes
+            .Where(change => change.Status != ChangeKind.Unmodified)
+            .Select(change => new CommitFileChange(
+                change.Path,
+                CommitChangeKind(change.Status),
+                change.Status == ChangeKind.Renamed ? change.OldPath : null))
+            .OrderBy(change => change.Path, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    /// <inheritdoc />
     public IReadOnlyList<GitRemote> ReadRemotes(string path)
     {
         using Repository repository = Open(path);
@@ -143,6 +204,16 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
             .OrderBy(change => change.Path, StringComparer.Ordinal)
             .ToArray();
     }
+
+    private static FileChangeKind CommitChangeKind(ChangeKind kind) => kind switch
+    {
+        ChangeKind.Added or ChangeKind.Copied => FileChangeKind.Added,
+        ChangeKind.Deleted => FileChangeKind.Deleted,
+        ChangeKind.Renamed => FileChangeKind.Renamed,
+        ChangeKind.TypeChanged => FileChangeKind.TypeChanged,
+        ChangeKind.Conflicted => FileChangeKind.Conflicted,
+        _ => FileChangeKind.Modified,
+    };
 
     private static FileChangeKind StagedChange(FileStatus state) => state switch
     {

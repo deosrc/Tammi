@@ -40,6 +40,23 @@ public interface IGitRepositoryReader
     IGitHistoryCursor OpenHistory(string path, HistoryOptions? options = null);
 
     /// <summary>
+    /// Reads the HEAD, branches and tags of the repository at <paramref name="path"/>.
+    /// </summary>
+    /// <param name="path">The repository's working directory.</param>
+    /// <exception cref="GitRepositoryNotFoundException">There's no repository at <paramref name="path"/>.</exception>
+    GitRefs ReadRefs(string path);
+
+    /// <summary>
+    /// Reads the files a commit changed, compared with its first parent (or with nothing, for a commit with no
+    /// parents), in path order. Renames are detected.
+    /// </summary>
+    /// <param name="path">The repository's working directory.</param>
+    /// <param name="sha">The commit's full id.</param>
+    /// <exception cref="GitRepositoryNotFoundException">There's no repository at <paramref name="path"/>.</exception>
+    /// <exception cref="GitException">The repository has no commit <paramref name="sha"/>.</exception>
+    IReadOnlyList<CommitFileChange> ReadCommitChanges(string path, string sha);
+
+    /// <summary>
     /// Reads the remotes of the repository at <paramref name="path"/>, in name order.
     /// </summary>
     /// <param name="path">The repository's working directory.</param>
