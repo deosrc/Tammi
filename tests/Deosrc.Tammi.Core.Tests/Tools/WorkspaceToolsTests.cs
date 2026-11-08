@@ -105,6 +105,18 @@ public sealed class WorkspaceToolsTests : IDisposable
         Assert.Equal(repository, External(CreateTools(), Workspace, _api, settings).Count == 1);
     }
 
+    [Theory]
+    [InlineData(ToolScope.Workspace)]
+    [InlineData(ToolScope.Repository)]
+    public void GetEntries_FileTool_IgnoresScope(ToolScope scope)
+    {
+        _folder.AddFile(Path.Combine("api", "Api.sln"));
+        var settings = Custom(SolutionTool with { Scope = scope });
+
+        Assert.Single(External(CreateTools(), Workspace, null, settings));
+        Assert.Single(External(CreateTools(), Workspace, _api, settings));
+    }
+
     [Fact]
     public void GetEntries_LeavesOutDisabledTools()
     {

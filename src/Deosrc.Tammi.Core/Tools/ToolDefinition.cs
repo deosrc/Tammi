@@ -50,7 +50,8 @@ public sealed record ToolDefinition
     public IReadOnlyList<string> Arguments { get; init; } = [];
 
     /// <summary>
-    /// Whether the tool is offered for the Workspace Folder, the repositories, or both.
+    /// Whether a folder tool is offered for the Workspace Folder, the repositories, or both. Not used by file tools,
+    /// which open the files they find wherever they find them (see <see cref="IsOfferedFor"/>).
     /// </summary>
     public ToolScope Scope { get; init; } = ToolScope.Both;
 
@@ -101,6 +102,12 @@ public sealed record ToolDefinition
         Scope = Enum.IsDefined(Scope) ? Scope : ToolScope.Both,
         Icon = (Icon ?? new ToolIconSettings()).Normalize(),
     };
+
+    /// <summary>
+    /// Whether the tool is offered for a repository (<paramref name="repository"/> is <c>true</c>) or for the Workspace
+    /// Folder: a folder tool where its <see cref="Scope"/> includes it, and a file tool for both.
+    /// </summary>
+    public bool IsOfferedFor(bool repository) => Kind == ToolKind.File || Includes(Scope, repository);
 
     /// <summary>
     /// Whether a tool with <paramref name="scope"/> is offered for a repository (<paramref name="repository"/> is

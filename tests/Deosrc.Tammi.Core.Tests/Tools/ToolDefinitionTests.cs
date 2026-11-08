@@ -52,6 +52,29 @@ public class ToolDefinitionTests
         Assert.Equal(expected, ToolDefinition.Includes(scope, repository));
     }
 
+    [Theory]
+    [InlineData(ToolScope.Both, false, true)]
+    [InlineData(ToolScope.Workspace, true, false)]
+    [InlineData(ToolScope.Repository, false, true)]
+    public void IsOfferedFor_FolderToolFollowsScope(ToolScope scope, bool workspace, bool repository)
+    {
+        var tool = new ToolDefinition { Scope = scope };
+
+        Assert.Equal(workspace || scope == ToolScope.Both, tool.IsOfferedFor(repository: false));
+        Assert.Equal(repository, tool.IsOfferedFor(repository: true));
+    }
+
+    [Theory]
+    [InlineData(ToolScope.Workspace)]
+    [InlineData(ToolScope.Repository)]
+    public void IsOfferedFor_FileToolIsOfferedForBoth(ToolScope scope)
+    {
+        var tool = new ToolDefinition { Kind = ToolKind.File, Scope = scope };
+
+        Assert.True(tool.IsOfferedFor(repository: false));
+        Assert.True(tool.IsOfferedFor(repository: true));
+    }
+
     [Fact]
     public void Equals_ComparesLists()
     {

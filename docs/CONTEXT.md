@@ -366,13 +366,13 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
   - What tools open for a workspace with only one repository: the repository (the default) or the Workspace Folder
     (see [Tools](#tools)).
   - The tools (see [Tools](#tools)). First Terminal, with the terminal shell's settings (below). Then the other
-    predefined tools, each with whether its executable was found (and where), what it opens, its scope and its
-    command. Then the custom tools, added as a folder or file tool, then
-    edited, reordered and removed like Custom Agents. Each shows whether its executable was found, the placeholders it
-    can use, warnings for placeholders it can't use or that don't exist, and the command it starts. A **Look again**
-    button finds the executables and icons again, e.g. after installing a tool.
-  - Each tool but Terminal has a switch beside its name that enables it. A disabled tool's card is collapsed to its icon, switch
-    and name.
+    predefined tools, each with whether its executable was found (and where), what it opens, its scope (folder tools)
+    and its command. Then the custom tools, added as a folder or file tool, then edited, reordered and removed like
+    Custom Agents. Each shows whether its executable was found, the placeholders it can use, warnings for placeholders
+    it can't use or that don't exist, and the command it starts. A **Look again** button finds the executables and icons
+    again, e.g. after installing a tool.
+  - Each tool but Terminal has a switch beside its name that enables it. A disabled tool's card is collapsed to its
+    icon, switch and name.
   - Terminal shell: executable and arguments. Leaving the executable empty uses the platform shell, with its own
     arguments. Changes apply to terminals started afterwards.
 
@@ -413,9 +413,10 @@ are left to other tools for now.
     path from each of them, and can name hidden folders. A leading `/` keeps a pattern to the repository's own folder
     (e.g. `/global.json`). `*` and `?` are wildcards, and case is ignored. A file that several patterns match is found
     once, matched by the first of them.
-- Each tool has: **kind**, **name**, **file patterns** (file tools only), **executable**, **arguments**, **scope**,
-  **icon** and **enabled/disabled**. The executable is a name on the search path or a full path, with environment
-  variables (`%NAME%`) filled in. Arguments are passed as-is, without a shell, so a path with spaces needs no quoting.
+- Each tool has: **kind**, **name**, **file patterns** (file tools only), **executable**, **arguments**, **scope**
+  (folder tools only), **icon** and **enabled/disabled**. The executable is a name on the search path or a full path,
+  with environment variables (`%NAME%`) filled in. Arguments are passed as-is, without a shell, so a path with spaces
+  needs no quoting.
 - The name and arguments can have **placeholders**, filled in for each entry (matched ignoring case):
   `{PreferredFolder}` (the folder the tool should open: see below), `{LaunchFolder}` (the Workspace Folder or
   repository the entry is offered for), `{WorkspaceFolder}`,
@@ -431,7 +432,8 @@ are left to other tools for now.
   Workspace Folder; everywhere else it's the same as `{LaunchFolder}`. A folder tool that uses `{PreferredFolder}`
   opens, starts in and shows that folder. Terminal and the predefined folder tools use it, and new custom folder tools
   start with it as their argument.
-- **Scope** sets what a tool is offered for: the Workspace Folder, the repositories, or both (the default).
+- **Scope** sets what a folder tool is offered for: the Workspace Folder, the repositories, or both (the default).
+  File tools have no scope: they open the files they find, wherever they find them, so they're offered for both.
 - The side panel's **Tools section** lists each tool once (a file tool once per file it found), in the order tools
   are offered. Right-clicking a tool opens a menu of each folder it can open: **Workspace**, then
   **Repository: `<name>`** for each repository (for a file tool, the file's repository). Levels that would start the

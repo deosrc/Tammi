@@ -51,7 +51,7 @@ public sealed class WorkspaceTools
         var entries = new List<ToolEntry>();
         foreach (var tool in settings.Tools)
         {
-            if (!tool.Enabled || !ToolDefinition.Includes(tool.Scope, repository is not null))
+            if (!tool.Enabled || !tool.IsOfferedFor(repository is not null))
             {
                 continue;
             }

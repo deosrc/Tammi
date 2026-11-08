@@ -119,8 +119,11 @@
                             @:Folders
                         }
                     </dd>
-                    <dt>Offered for</dt>
-                    <dd>@ToolText.Label(tool.Scope)</dd>
+                    @if (tool.Kind == ToolKind.Folder)
+                    {
+                        <dt>Offered for</dt>
+                        <dd>@ToolText.Label(tool.Scope)</dd>
+                    }
                     <dt>Command</dt>
                     <dd><code>@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
                     @if (executable is not null)
@@ -283,8 +286,13 @@
                         }
                     </div>
 
-                    <ToolScopeField Id="@($"tool-{index}-scope")" Scope="tool.Scope"
-                                    ScopeChanged="scope => UpdateCustomAsync(index, t => t with { Scope = scope })" />
+                    @* File tools open the files they find, wherever they find them, so only folder tools have a
+                       scope. *@
+                    @if (tool.Kind == ToolKind.Folder)
+                    {
+                        <ToolScopeField Id="@($"tool-{index}-scope")" Scope="tool.Scope"
+                                        ScopeChanged="scope => UpdateCustomAsync(index, t => t with { Scope = scope })" />
+                    }
 
                     <div class="settings-field">
                         <label for="tool-@index-icon">Icon</label>
