@@ -641,7 +641,7 @@ are left to other tools for now.
   - opencode takes the initial prompt as `--prompt <prompt>`. Unlike Claude Code it has **no hooks**: it reports its
     state and session in its terminal output instead (see Terminal state reports below), and Tammi sets the session's ID with
     `--session <id>`, which opencode creates if needed, but only accepts IDs starting with `ses_`. So Tammi makes up
-    `ses_` and 26 hex digits for it. It has no logo of its own in Tammi yet, so it shows the generic agent icon.
+    `ses_` and 26 hex digits for it. Its logo is from Simple Icons.
 - **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or
   status events (e.g. Claude Code hooks), Tammi uses them for richer states. In keeping with the
   principles, hooks are supplied when Tammi launches the agent (e.g. through CLI arguments), never by
