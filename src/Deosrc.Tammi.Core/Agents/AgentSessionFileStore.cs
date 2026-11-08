@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Deosrc.Tammi.Core.Storage;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Deosrc.Tammi.Core.Agents;
 
@@ -26,16 +28,18 @@ public sealed class AgentSessionFileStore : IAgentSessionStore
     private static readonly IReadOnlyList<Action<JsonObject>> Migrations = [];
 
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly ILogger _logger;
     private volatile string? _problem;
 
     /// <summary>
     /// Creates a store for the file at <paramref name="filePath"/>. The file and its folder are created when a session
     /// is first recorded.
     /// </summary>
-    public AgentSessionFileStore(string filePath)
+    public AgentSessionFileStore(string filePath, ILogger? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         FilePath = Path.GetFullPath(filePath);
+        _logger = logger ?? NullLogger.Instance;
     }
 
     /// <summary>
@@ -140,6 +144,7 @@ public sealed class AgentSessionFileStore : IAgentSessionStore
         {
             // A change copies the file first, so it isn't replaced unless that copy works.
             _problem = $"Couldn't read the agent sessions in '{FilePath}', so none are listed. {ex.Message}";
+            _logger.LogWarning("{Problem}", _problem);
             return ([], false);
         }
 
@@ -152,6 +157,7 @@ public sealed class AgentSessionFileStore : IAgentSessionStore
         catch (Exception ex) when (ex is JsonException or InvalidDataException)
         {
             _problem = $"Couldn't read the agent sessions in '{FilePath}', so none are listed. {ex.Message}";
+            _logger.LogWarning("{Problem}", _problem);
             return ([], false);
         }
     }

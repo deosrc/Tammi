@@ -1512,6 +1512,13 @@ label.task-choice {
   gap: var(--space-2);
 }
 
+/* Buttons under a field's help text. */
+.settings-field-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
 .settings-field input,
 .settings-field textarea {
   padding: var(--space-1) var(--space-2);

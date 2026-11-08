@@ -4,6 +4,8 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Deosrc.Tammi.Core.Agents;
 
@@ -16,7 +18,8 @@ namespace Deosrc.Tammi.Core.Agents;
 /// as a bearer token. Requests with an unknown token are refused. The server answers each event with an empty 200
 /// response, which tells the agent to carry on as it would without the hook.
 /// </remarks>
-public sealed class AgentHookServer : IAsyncDisposable
+/// <param name="logger">Logs when the server starts, and the requests it refuses or fails to handle.</param>
+public sealed class AgentHookServer(ILogger<AgentHookServer>? logger = null) : IAsyncDisposable
 {
     /// <summary>
     /// The path that hooks POST their events to.
@@ -33,6 +36,7 @@ public sealed class AgentHookServer : IAsyncDisposable
     private readonly ConcurrentDictionary<string, AgentHookRegistration> _registrations = new(StringComparer.Ordinal);
     private readonly CancellationTokenSource _stopping = new();
     private readonly Lock _lock = new();
+    private readonly ILogger _logger = logger ?? NullLogger<AgentHookServer>.Instance;
     private TcpListener? _listener;
     private Task _accepting = Task.CompletedTask;
     private bool _disposed;
@@ -87,6 +91,8 @@ public sealed class AgentHookServer : IAsyncDisposable
                 listener.Start();
                 _listener = listener;
                 _accepting = AcceptAsync(listener);
+                _logger.LogInformation(
+                    "The agent hook server is listening on port {Port}.", ((IPEndPoint)listener.LocalEndpoint).Port);
             }
 
             return ((IPEndPoint)_listener.LocalEndpoint).Port;
@@ -126,6 +132,11 @@ public sealed class AgentHookServer : IAsyncDisposable
         {
             var stream = client.GetStream();
             var status = await HandleRequestAsync(new HookRequestReader(stream), timeout.Token).ConfigureAwait(false);
+            if (status != HttpStatusCode.OK)
+            {
+                _logger.LogWarning("Refused an agent hook request: {StatusCode} {Status}.", (int)status, status);
+            }
+
             var response = Encoding.ASCII.GetBytes(
                 $"HTTP/1.1 {(int)status} {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
             await stream.WriteAsync(response, timeout.Token).ConfigureAwait(false);
@@ -134,6 +145,12 @@ public sealed class AgentHookServer : IAsyncDisposable
             or ObjectDisposedException)
         {
             // The connection was lost, or the request took too long. The hook carries on without Tammi.
+            _logger.LogDebug("An agent hook request wasn't answered: {Message}", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            // Nothing waits for this task, so this is the only place the failure can be reported.
+            _logger.LogError(ex, "Couldn't handle an agent hook request.");
         }
     }
 

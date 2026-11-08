@@ -716,5 +716,7 @@ public sealed class WorkspaceStoreTests : IDisposable
         public string DataDirectory => dataDirectory;
 
         public string CacheDirectory => throw new NotSupportedException();
+
+        public string LogDirectory => throw new NotSupportedException();
     }
 }

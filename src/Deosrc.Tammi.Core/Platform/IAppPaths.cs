@@ -22,4 +22,9 @@ public interface IAppPaths
     /// The folder for data that can be rebuilt and is safe to delete.
     /// </summary>
     string CacheDirectory { get; }
+
+    /// <summary>
+    /// The folder for Tammi's log files.
+    /// </summary>
+    string LogDirectory { get; }
 }
