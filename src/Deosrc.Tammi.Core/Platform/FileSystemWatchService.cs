@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
@@ -8,7 +11,10 @@ namespace Deosrc.Tammi.Core.Platform;
 /// On Linux each watched folder uses an inotify watch. If the user's inotify limit is reached, the change listener
 /// gets an error and a rescan request.
 /// </remarks>
-public sealed class FileSystemWatchService(TimeProvider timeProvider) : IFileSystemWatchService
+/// <param name="timeProvider">Times the batching of changes.</param>
+/// <param name="logger">Logs the folders whose watching fails.</param>
+public sealed class FileSystemWatchService(TimeProvider timeProvider, ILogger<FileSystemWatchService>? logger = null)
+    : IFileSystemWatchService
 {
     // The largest buffer Windows allows for watching network shares. A larger buffer makes overflows less likely.
     private const int BufferSize = 64 * 1024;
@@ -37,20 +43,24 @@ public sealed class FileSystemWatchService(TimeProvider timeProvider) : IFileSys
             throw new DirectoryNotFoundException($"Couldn't find the folder '{directory}'.");
         }
 
-        return new DirectoryWatch(directory, onChanged, options, timeProvider);
+        return new DirectoryWatch(
+            directory, onChanged, options, timeProvider, logger ?? NullLogger<FileSystemWatchService>.Instance);
     }
 
     private sealed class DirectoryWatch : IDisposable
     {
         private readonly FileSystemWatcher _watcher;
         private readonly ChangeBatcher _batcher;
+        private readonly ILogger _logger;
 
         public DirectoryWatch(
             string directory,
             Action<FileSystemChanges> onChanged,
             FileSystemWatchOptions options,
-            TimeProvider timeProvider)
+            TimeProvider timeProvider,
+            ILogger logger)
         {
+            _logger = logger;
             _batcher = new ChangeBatcher(options.QuietPeriod, options.MaxDelay, timeProvider, onChanged);
             _watcher = new FileSystemWatcher(directory)
             {
@@ -96,6 +106,15 @@ public sealed class FileSystemWatchService(TimeProvider timeProvider) : IFileSys
         private void OnError(object sender, ErrorEventArgs e)
         {
             var exception = e.GetException();
+            if (exception is InternalBufferOverflowException)
+            {
+                _logger.LogInformation("Too many changes in {Folder} to follow, so it's rescanned.", _watcher.Path);
+            }
+            else
+            {
+                _logger.LogWarning(exception, "Watching {Folder} failed, so it's rescanned.", _watcher.Path);
+            }
+
             _batcher.AddRescan(exception is InternalBufferOverflowException ? null : exception);
         }
     }
