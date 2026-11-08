@@ -4,10 +4,10 @@
    Its name is a button for the keyboard, whose click reaches the card. A checked-out submodule's part of the card
    opens the submodule's graph instead. *@
 
-<li class="git-status-card git-status-opens-graph @ToneClass" title="Open the git graph of @Repository.Repository.FolderName"
+<li class="git-status-card card-action @ToneClass" title="Open the git graph of @Repository.Repository.FolderName"
     @onclick="() => OnOpenGraph.InvokeAsync(null)">
     <div class="git-status-heading">
-        <button type="button" class="git-status-name git-status-link" title="@Repository.WorktreePath">
+        <button type="button" class="git-status-name card-action-name" title="@Repository.WorktreePath">
             @Repository.Repository.FolderName
         </button>
         @if (Label is { } label)

@@ -961,22 +961,12 @@ label.task-choice {
   min-width: 0;
 }
 
+/* Looks like other card names (.card-action-name), in one line. */
 .agent-card-name {
   overflow: hidden;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--color-text);
-  font: inherit;
   font-weight: 600;
-  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
-}
-
-.agent-card-name:hover {
-  text-decoration: underline;
 }
 
 .agent-state-badge {
@@ -1277,20 +1267,9 @@ label.task-choice {
 }
 
 /* The summary opens the task's page, so it's a button that reads as text. Long summaries wrap. */
+/* Looks like other card names (.card-action-name), wrapping however long it is. */
 .workspace-task-title {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  text-align: left;
   overflow-wrap: anywhere;
-  cursor: pointer;
-}
-
-.workspace-task-title:hover {
-  color: var(--color-accent);
-  text-decoration: underline;
 }
 
 .workspace-task p {
@@ -2627,28 +2606,42 @@ label.task-choice {
   overflow-wrap: anywhere;
 }
 
-/* A repository card, or a submodule in it, that opens its git graph when clicked. A submodule's hover is drawn inside
-   its parent's, so the part that opens is clear. */
-.git-status-opens-graph {
+/* A side panel card that does something when it's clicked anywhere: a repository's opens its git graph, an agent's
+   shows its tab and a task's opens it in the browser. Its border takes the card's tone (--card-action-tone) on hover.
+   Its name is a button for the keyboard, whose click reaches the card. */
+.card-action {
   cursor: pointer;
 }
 
-.git-status-card.git-status-opens-graph:hover {
-  border-color: var(--git-status-tone);
+.card-action:hover {
+  border-color: var(--card-action-tone, var(--color-border));
 }
 
-.git-status-submodule.git-status-opens-graph {
+.git-status-card.card-action {
+  --card-action-tone: var(--git-status-tone);
+}
+
+.agent-card.card-action {
+  --card-action-tone: var(--agent-state-tone, var(--color-text-muted));
+}
+
+.workspace-task.card-action {
+  --card-action-tone: var(--workspace-task-tone);
+}
+
+/* A submodule in a repository's card opens its own git graph. Its hover is drawn inside its parent's, so the part that
+   opens is clear. */
+.git-status-submodule.card-action {
   margin: 0 calc(-1 * var(--space-1));
   padding: 0 var(--space-1);
   border-radius: var(--radius);
 }
 
-.git-status-submodule.git-status-opens-graph:hover {
+.git-status-submodule.card-action:hover {
   background: var(--color-surface-hover);
 }
 
-/* A repository or submodule name in the side panel, which opens its git graph through its card. */
-.git-status-link {
+.card-action-name {
   padding: 0;
   border: none;
   background: none;
@@ -2658,7 +2651,7 @@ label.task-choice {
   cursor: pointer;
 }
 
-.git-status-link:hover {
+.card-action-name:hover {
   color: var(--color-focus);
   text-decoration: underline;
 }

@@ -257,7 +257,8 @@ own branch. It is created automatically when the workspace is created:
   - "Open in…" tools
 - **Tasks section:** a card for each of the workspace's tasks, in the workspace's order, with its source's logo, its
   short reference (as in suggested names, e.g. `api#42` or `ABC-123`, with the full key as its tooltip), its summary
-  and its Task Status, as a chip coloured by its category. Clicking the summary opens the task's page in the browser.
+  and its Task Status, as a chip coloured by its category. Clicking the card, once its task has been read, opens the
+  task's page in the browser.
   - Tasks are read from their sources when the tab opens, and again on Refresh or when integrations are added or
     removed. Switching between open tabs doesn't read them again. Each task is read on its own, so a failing source
     doesn't hold up the others.
@@ -265,6 +266,9 @@ own branch. It is created automatically when the workspace is created:
     or the source failed (with the error as a tooltip).
   - **GitHub** issues are Open (to do), or Closed, Not planned or Duplicate (done), from the issue's state and why it
     was closed. GitHub has no in-progress state. **JIRA** issues have their own status and its category.
+- **Side panel cards** that do something when clicked (a task's, an agent's and a repository's) do it wherever the card
+  is clicked, and show it with a pointer and the card's colour on its border. Each card's name is also a button, so
+  the keyboard can reach it.
 - **Repositories section:** a card with the git status of each repository, in the workspace's order. The whole card is
   coloured by what needs attention: danger when the worktree is broken or its status can't be read, warning when it
   has work that isn't pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its
@@ -320,11 +324,12 @@ own branch. It is created automatically when the workspace is created:
     deleting the workspace closes its graphs.
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
 - **Agents section:** a card for each of the workspace's open agents, in the order they started, with its
-  [state](#agents) as a badge and the card's colour. Clicking its name shows its tab, and a running agent has a
-  **Stop** button. An agent that ended with an error shows its exit code. Below the cards, **Past sessions** lists the
-  workspace's recorded Agent Sessions that aren't running, most recently started first, each with its agent's name,
-  the repository it was started in (if it wasn't the Workspace Folder) and when it was last started. Each one can be
-  resumed, which opens it in a new tab, or forgotten. A session whose agent can't resume it says why instead.
+  [state](#agents) as a badge and the card's colour. Clicking the card shows its tab, and a running agent has a
+  **Stop** button (which only stops it). An agent that ended with an error shows its exit code. Below the cards,
+  **Past sessions** lists the workspace's recorded Agent Sessions that aren't running, most recently started first,
+  each with its agent's name, the repository it was started in (if it wasn't the Workspace Folder) and when it was
+  last started. Each one can be resumed, which opens it in a new tab, or forgotten. A session whose agent can't resume
+  it says why instead.
 - **Main area tabs:** the main area has its own row of tabs, below a small divider. The first is always the
   **dashboard** (an icon, no name), which the view shows until the user opens something else. Then come the
   workspace's terminals, agents and Git Graphs, in the order they started or opened. An agent's tab has a dot coloured by its state. The

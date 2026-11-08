@@ -17,10 +17,13 @@ else
         {
             var state = agent.State;
             var shown = ReferenceEquals(agent, Shown);
-            <li class="agent-card @AgentStateText.ToneClass(state) @(shown ? "agent-card-shown" : null)" @key="agent">
+            @* Clicking the card shows the agent's tab. Its name is a button for the keyboard, whose click reaches the
+               card. Stop does only that. *@
+            <li class="agent-card card-action @AgentStateText.ToneClass(state) @(shown ? "agent-card-shown" : null)"
+                @key="agent" title="Show @agent.Name" @onclick="() => OnShow.InvokeAsync(agent)">
                 <div class="agent-card-heading">
-                    <button type="button" class="agent-card-name" title="@agent.WorkingDirectory"
-                            aria-current="@(shown ? "true" : null)" @onclick="() => OnShow.InvokeAsync(agent)">
+                    <button type="button" class="agent-card-name card-action-name" title="@agent.WorkingDirectory"
+                            aria-current="@(shown ? "true" : null)">
                         @agent.Name
                     </button>
                     <span class="agent-state-badge">@AgentStateText.Label(state)</span>
@@ -37,7 +40,8 @@ else
                 {
                     <div class="agent-card-actions">
                         <button type="button" class="button button-secondary button-small"
-                                disabled="@_stopping.Contains(agent)" @onclick="() => StopAsync(agent)">
+                                disabled="@_stopping.Contains(agent)" @onclick="() => StopAsync(agent)"
+                                @onclick:stopPropagation="true">
                             Stop
                         </button>
                     </div>
