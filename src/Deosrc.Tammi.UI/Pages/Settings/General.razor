@@ -7,6 +7,7 @@
 @using Microsoft.Extensions.Logging
 @inject IFolderPicker FolderPicker
 @inject IAppPaths AppPaths
+@inject IProcessLauncher ProcessLauncher
 
 <h1>General</h1>
 
@@ -64,19 +65,26 @@
 
     <div class="settings-field">
         <label for="log-level">Log level</label>
-        <select id="log-level" value="@Current.LogLevel"
-                @onchange="e => UpdateGeneralAsync(g => g with { LogLevel = Parse(e, g.LogLevel) })">
-            <option value="@LogLevel.Trace">Trace</option>
-            <option value="@LogLevel.Debug">Debug</option>
-            <option value="@LogLevel.Information">Information</option>
-            <option value="@LogLevel.Warning">Warning</option>
-            <option value="@LogLevel.Error">Error</option>
-        </select>
+        <div class="settings-field-row">
+            <select id="log-level" value="@Current.LogLevel"
+                    @onchange="e => UpdateGeneralAsync(g => g with { LogLevel = Parse(e, g.LogLevel) })">
+                <option value="@LogLevel.Trace">Trace</option>
+                <option value="@LogLevel.Debug">Debug</option>
+                <option value="@LogLevel.Information">Information</option>
+                <option value="@LogLevel.Warning">Warning</option>
+                <option value="@LogLevel.Error">Error</option>
+            </select>
+            <button type="button" class="button" @onclick="OpenLogFolder">Open logs folder</button>
+        </div>
         <p class="settings-help">
             The least important messages Tammi logs. Debug adds details such as each git command, and Trace also adds
             the messages of the frameworks Tammi uses. Changes apply straight away. Logs are written to the console and
             to <code>@AppPaths.LogDirectory</code>.
         </p>
+        @if (_openLogFolderError is not null)
+        {
+            <p class="error">@_openLogFolderError</p>
+        }
     </div>
 </div>
 
@@ -86,7 +94,24 @@
 }
 
 @code {
+    private string? _openLogFolderError;
+
     private GeneralSettings Current => SettingsStore.Current.General;
+
+    // Opens the folder in the system file manager. It's created first, in case nothing has been logged to it yet.
+    private void OpenLogFolder()
+    {
+        _openLogFolderError = null;
+        try
+        {
+            Directory.CreateDirectory(AppPaths.LogDirectory);
+            ProcessLauncher.Open(AppPaths.LogDirectory);
+        }
+        catch (Exception ex)
+        {
+            _openLogFolderError = $"Couldn't open the logs folder '{AppPaths.LogDirectory}': {ex.Message}";
+        }
+    }
 
     private Task OnDefaultWorkspaceParentFolderChanged(ChangeEventArgs e) =>
         UpdateGeneralAsync(general => general with { DefaultWorkspaceParentFolder = e.Value?.ToString() ?? "" });

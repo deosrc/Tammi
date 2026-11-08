@@ -325,7 +325,8 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
   - Suggested workspace name: separator, case and whether to start with the task's reference (see
     [Name and locate the workspace](#core-flow-creating-a-workspace)), with examples of the names it suggests
   - Log level: Trace, Debug, Information (the default), Warning or Error. It applies straight away. The section shows
-    where the log files are (see [Technical Constraints](#technical-constraints)).
+    where the log files are (see [Technical Constraints](#technical-constraints)), with a button that opens the folder
+    in the system file manager.
 - **Integrations:** the connected integrations, each with its connection status, in alphabetical order
   - A single Add button opens a menu of the integration types (GitHub, JIRA), in alphabetical order.
   - The user adds GitHub (github.com or a GitHub Enterprise Server) and JIRA sites, authenticates them again with a new
