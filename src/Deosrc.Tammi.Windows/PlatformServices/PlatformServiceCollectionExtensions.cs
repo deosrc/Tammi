@@ -18,6 +18,7 @@ internal static class PlatformServiceCollectionExtensions
         services.AddSingleton<IFileSystemWatchService, FileSystemWatchService>();
         services.AddSingleton<ICredentialStore, WindowsCredentialStore>();
         services.AddSingleton<IFolderPicker, WindowsFolderPicker>();
+        services.AddSingleton<IFilePicker, WindowsFilePicker>();
         services.AddSingleton<IPtyService, WindowsPtyService>();
         services.AddSingleton<IApplicationIconProvider, WindowsApplicationIconProvider>();
         return services;

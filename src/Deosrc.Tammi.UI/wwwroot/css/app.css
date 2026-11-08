@@ -2306,3 +2306,17 @@ label.task-choice {
   margin: 0 0 var(--space-2);
   font-size: var(--font-size-small);
 }
+
+/* A text field that takes the whole width of its card, e.g. a custom tool's name and executable. */
+.settings-field input.settings-input-wide {
+  width: 100%;
+}
+
+/* The custom icon image chosen for a tool, beside the button that chooses it. */
+.tool-icon-path {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -421,8 +421,9 @@ are left to other tools for now.
   Repositories section, as a row of icon buttons.
 - A tool is only offered when it's enabled and its executable is found.
 - **Icon:** the application's own icon by default, or one of Tammi's generic icons (application, code editor, IDE,
-  container, folder, terminal), or a custom image file (PNG, SVG, JPEG, GIF, WebP, ICO or BMP, up to 1 MB). When the
-  application's or custom icon can't be found, the tool's generic icon is shown. Application icons are found:
+  container, folder, terminal), or a custom image file, chosen with the system's file dialog (PNG, SVG, JPEG, GIF,
+  WebP, ICO or BMP, up to 1 MB). When the application's or custom icon can't be found, the tool's generic icon is
+  shown. Application icons are found:
   - on Linux, from the application's desktop entry (`.desktop` file) in the XDG data folders: the one whose `TryExec`
     or `Exec` command is the executable, or has its name (ignoring `.sh`). Its `Icon` is a path, or a name looked for in
     the `hicolor` icon theme and `pixmaps`.

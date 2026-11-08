@@ -8,6 +8,7 @@
 @inject IPtyService PtyService
 @inject WorkspaceTools WorkspaceTools
 @inject ToolImages ToolImages
+@inject IFilePicker FilePicker
 
 @{
     // Read once, so the whole page shows the same settings. A change being saved replaces them on another thread,
@@ -161,6 +162,7 @@
                     <div class="settings-field">
                         <label for="tool-@index-name">Name</label>
                         <input id="tool-@index-name"
+                               class="settings-input-wide"
                                value="@tool.Name"
                                @onchange="e => UpdateCustomAsync(index, t => t with { Name = Text(e) })" />
                         <p class="settings-help">
@@ -195,7 +197,7 @@
                     <div class="settings-field">
                         <label for="tool-@index-executable">Executable</label>
                         <input id="tool-@index-executable"
-                               class="settings-path"
+                               class="settings-path settings-input-wide"
                                value="@tool.Executable"
                                @onchange="e => UpdateCustomAsync(index, t => t with { Executable = Text(e) })" />
                         <p class="settings-help">
@@ -267,16 +269,19 @@
                         </select>
                         @if (tool.Icon.Source == ToolIconSource.Custom)
                         {
-                            <input id="tool-@index-icon-path"
-                                   class="settings-path"
-                                   aria-label="Custom icon image"
-                                   value="@tool.Icon.CustomPath"
-                                   placeholder="Full path of an image file"
-                                   @onchange="e => UpdateCustomAsync(index, t => t with { Icon = t.Icon with { CustomPath = Text(e) } })" />
+                            <div class="settings-field-row">
+                                <button type="button" class="button button-secondary"
+                                        @onclick="() => PickCustomIconAsync(index)">
+                                    Choose image…
+                                </button>
+                                <span class="settings-path tool-icon-path" title="@tool.Icon.CustomPath">
+                                    @(tool.Icon.CustomPath ?? "No image chosen")
+                                </span>
+                            </div>
                             <p class="settings-help">
                                 A PNG, SVG, JPEG, GIF, WebP, ICO or BMP file, up to 1 MB.
                             </p>
-                            @if (ImageOf(tool) is { DataUri: null })
+                            @if (tool.Icon.CustomPath is not null && ImageOf(tool) is { DataUri: null })
                             {
                                 <p class="warning">Couldn't read this image, so the tool shows a generic icon.</p>
                             }
@@ -389,6 +394,22 @@
             icon with { Source = ToolIconSource.Generic, Generic = generic },
         _ => icon,
     };
+
+    private async Task PickCustomIconAsync(int index)
+    {
+        var current = index < Current.CustomTools.Count ? Current.CustomTools[index].Icon.CustomPath : null;
+        var path = await FilePicker.PickFileAsync(new FilePickerOptions
+        {
+            Title = "Choose icon image",
+            InitialDirectory = current is null ? null : Path.GetDirectoryName(current),
+            FileTypeName = "Images",
+            Extensions = [.. ImageDataUri.Extensions],
+        });
+        if (path is not null)
+        {
+            await UpdateCustomAsync(index, t => t with { Icon = t.Icon with { CustomPath = path } });
+        }
+    }
 
     private Task AddCustomAsync(ToolKind kind) =>
         UpdateCustomToolsAsync(tools =>
