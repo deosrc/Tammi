@@ -4,7 +4,10 @@
 
 <li class="git-status-card @ToneClass">
     <div class="git-status-heading">
-        <span class="git-status-name" title="@Repository.WorktreePath">@Repository.Repository.FolderName</span>
+        <button type="button" class="git-status-name git-status-link"
+                title="@Repository.WorktreePath — open its git graph" @onclick="() => OnOpenGraph.InvokeAsync(null)">
+            @Repository.Repository.FolderName
+        </button>
         @if (Label is { } label)
         {
             <span class="git-status-badge">@label</span>
@@ -27,7 +30,7 @@
     }
     else if (Repository.Status is { } status)
     {
-        <GitStatusDetails Status="status" />
+        <GitStatusDetails Status="status" OnOpenGraph="path => OnOpenGraph.InvokeAsync(path)" />
     }
     else
     {
@@ -38,6 +41,13 @@
 @code {
     [Parameter, EditorRequired]
     public WorkspaceRepositoryStatus Repository { get; set; } = null!;
+
+    /// <summary>
+    /// Opens a git graph: the repository's (with <see langword="null"/>), or a submodule's, by its path in the
+    /// repository.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string?> OnOpenGraph { get; set; }
 
     private string? ToneClass => Repository switch
     {

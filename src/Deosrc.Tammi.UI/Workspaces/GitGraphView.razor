@@ -1,0 +1,387 @@
+@implements IAsyncDisposable
+@using Deosrc.Tammi.Core.Git
+@using Deosrc.Tammi.Core.Settings
+@inject IJSRuntime JS
+@* A repository's git graph, shown as a main area tab: the commits, newest first, with their lanes, branches and tags,
+   and the selected commit's details beside them. Only the rows in view are rendered, and the history is read a page
+   at a time as the list scrolls. *@
+
+<div class="git-graph">
+    <div class="git-graph-toolbar">
+        <div class="segmented" role="group" aria-label="Commits shown">
+            <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.WorkspaceBranch)"
+                    title="HEAD, the workspace branch, its upstream and its base branch"
+                    @onclick="() => Graph.SetScopeAsync(GitGraphScope.WorkspaceBranch)">
+                Workspace branch
+            </button>
+            <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.Everything)"
+                    title="Every branch and tag" @onclick="() => Graph.SetScopeAsync(GitGraphScope.Everything)">
+                Everything
+            </button>
+        </div>
+        <span class="git-graph-count">@CountText</span>
+        <button type="button" class="button button-secondary button-icon git-graph-refresh" title="Read the graph again"
+                disabled="@Graph.IsLoading" @onclick="Graph.RefreshAsync">
+            <svg class="icon icon-small @(Graph.IsLoading ? "icon-spin" : null)" viewBox="0 0 24 24" aria-hidden="true"
+                 focusable="false">
+                <path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" />
+                <path d="M21 3v5h-5" />
+            </svg>
+            Refresh
+        </button>
+    </div>
+
+    @if (Graph.Problem is { } problem)
+    {
+        <p class="error git-graph-problem">Couldn't read the git graph. @problem</p>
+    }
+
+    <div class="git-graph-body">
+        <div class="git-graph-list" tabindex="0" role="listbox" aria-label="Commits" @ref="_list"
+             style="--git-graph-width: @(GraphWidth)px" @onkeydown="OnKeyDownAsync">
+            <Virtualize @ref="_virtualize" TItem="GitGraphRow" ItemsProvider="ProvideRowsAsync"
+                        ItemSize="GitGraphRowView.RowHeight" OverscanCount="30">
+                <ItemContent Context="row">
+                    @{
+                        var selected = row.Commit.Sha == Graph.Selected?.Commit.Sha;
+                        var isHead = row.Commit.Sha == Graph.Refs.HeadSha;
+                    }
+                    <div class="git-graph-row @(selected ? "selected" : null)" role="option"
+                         aria-selected="@(selected ? "true" : "false")" @key="row.Commit.Sha"
+                         @onclick="() => Graph.SelectAsync(row.Commit.Sha)">
+                        <GitGraphRowView Row="row" Width="GraphWidth" IsHead="isHead" />
+                        <span class="git-graph-summary">
+                            @References(row.Commit.Sha, isHead)
+                            <span class="git-graph-subject" title="@row.Commit.Subject">@row.Commit.Subject</span>
+                        </span>
+                        <span class="git-graph-author" title="@row.Commit.Author.Email">@row.Commit.Author.Name</span>
+                        <span class="git-graph-date" title="@GitGraphText.FullDate(row.Commit.Author.When)">
+                            @GitGraphText.When(row.Commit.Author.When, _now)
+                        </span>
+                        <span class="git-graph-sha">@GitGraphText.ShortSha(row.Commit.Sha)</span>
+                    </div>
+                </ItemContent>
+                <Placeholder>
+                    <div class="git-graph-row git-graph-row-placeholder"></div>
+                </Placeholder>
+            </Virtualize>
+        </div>
+
+        <aside class="git-graph-details" aria-label="Commit details">
+            @if (Graph.Selected is not { } selection)
+            {
+                <p class="placeholder">Select a commit to see its details.</p>
+            }
+            else
+            {
+                var commit = selection.Commit;
+                <h2 class="git-graph-details-subject">@commit.Subject</h2>
+                @if (Graph.LabelsFor(commit.Sha).Count > 0 || commit.Sha == Graph.Refs.HeadSha)
+                {
+                    <div class="git-graph-details-refs">@References(commit.Sha, commit.Sha == Graph.Refs.HeadSha)</div>
+                }
+                <dl class="git-graph-facts">
+                    <dt>Commit</dt>
+                    <dd class="git-graph-sha-full">@commit.Sha</dd>
+                    <dt>@(commit.ParentShas.Count == 1 ? "Parent" : "Parents")</dt>
+                    <dd>
+                        @if (commit.ParentShas.Count == 0)
+                        {
+                            <span class="placeholder">None</span>
+                        }
+                        @foreach (var parent in commit.ParentShas)
+                        {
+                            <button type="button" class="link-button git-graph-sha" title="@parent"
+                                    @onclick="() => SelectAndRevealAsync(parent)">
+                                @GitGraphText.ShortSha(parent)
+                            </button>
+                        }
+                    </dd>
+                    <dt>Author</dt>
+                    <dd>
+                        @Signature(commit.Author)
+                    </dd>
+                    @if (commit.Committer != commit.Author)
+                    {
+                        <dt>Committer</dt>
+                        <dd>@Signature(commit.Committer)</dd>
+                    }
+                </dl>
+                @if (GitGraphText.Body(commit) is { Length: > 0 } body)
+                {
+                    <pre class="git-graph-message">@body</pre>
+                }
+                <h3 class="git-graph-details-heading">Changed files</h3>
+                @if (Graph.SelectedChangesProblem is { } changesProblem)
+                {
+                    <p class="error">Couldn't read the changed files. @changesProblem</p>
+                }
+                else if (Graph.SelectedChanges is not { } changes)
+                {
+                    <p class="placeholder">Reading changed files…</p>
+                }
+                else if (changes.Count == 0)
+                {
+                    <p class="placeholder">No files changed.</p>
+                }
+                else
+                {
+                    <ul class="git-graph-files">
+                        @foreach (var change in changes)
+                        {
+                            <li class="git-graph-file" @key="change.Path">
+                                <span class="git-graph-file-kind git-graph-file-@change.Kind.ToString().ToLowerInvariant()"
+                                      title="@GitGraphText.Label(change.Kind)">@GitGraphText.Letter(change.Kind)</span>
+                                <span class="git-graph-file-path" title="@change.Path">
+                                    @if (change.OldPath is { } oldPath)
+                                    {
+                                        @oldPath<text> → </text>
+                                    }
+                                    @change.Path
+                                </span>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+        </aside>
+    </div>
+</div>
+
+@code {
+    // Wider graphs are cut off, so the commits' text stays in view.
+    private const int MaxLanes = 24;
+
+    private WorkspaceGitGraph? _attached;
+    private ElementReference _list;
+    private Virtualize<GitGraphRow>? _virtualize;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _listScript;
+    private IReadOnlyList<GitGraphRow> _shownRows = [];
+    private GitGraphScope _shownScope;
+    private DateTimeOffset _now = DateTimeOffset.Now;
+    private bool _disposed;
+
+    [Parameter, EditorRequired]
+    public WorkspaceGitGraph Graph { get; set; } = null!;
+
+    private int GraphWidth => Math.Clamp(Graph.LaneCount, 1, MaxLanes) * GitGraphRowView.LaneWidth;
+
+    private string CountText => Graph.Rows.Count switch
+    {
+        0 when Graph.IsLoading => "Reading commits…",
+        1 when Graph.IsComplete => "1 commit",
+        var count when Graph.IsComplete => $"{count:N0} commits",
+        var count => $"{count:N0}+ commits",
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ReferenceEquals(_attached, Graph))
+        {
+            return;
+        }
+
+        if (_attached is not null)
+        {
+            _attached.Changed -= OnGraphChanged;
+        }
+
+        _attached = Graph;
+        _shownScope = Graph.Scope;
+        Graph.Changed += OnGraphChanged;
+
+        // The first time, this reads the first page. Coming back to a graph read before, it's read again only if its
+        // refs have changed.
+        await Graph.LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Deosrc.Tammi.UI/Workspaces/GitGraphView.razor.js");
+            _listScript = await _module.InvokeAsync<IJSObjectReference>("attach", _list);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The web view has gone.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        if (_attached is not null)
+        {
+            _attached.Changed -= OnGraphChanged;
+        }
+
+        try
+        {
+            if (_listScript is not null)
+            {
+                await _listScript.InvokeVoidAsync("dispose");
+                await _listScript.DisposeAsync();
+            }
+
+            if (_module is not null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The web view has gone, and the list with it.
+        }
+    }
+
+    private string Pressed(GitGraphScope scope) => Graph.Scope == scope ? "true" : "false";
+
+    // Gives the list the rows it asks for, reading more of the history when it scrolls past what's been read. Until
+    // every commit is read, the list is a page longer than what's been read, so it can scroll on.
+    private async ValueTask<ItemsProviderResult<GitGraphRow>> ProvideRowsAsync(ItemsProviderRequest request)
+    {
+        if (request.StartIndex + request.Count > Graph.Rows.Count && !Graph.IsComplete)
+        {
+            await Graph.LoadMoreAsync();
+        }
+
+        var rows = Graph.Rows;
+        _shownRows = rows;
+        var start = Math.Min(request.StartIndex, rows.Count);
+        var count = Math.Min(request.Count, rows.Count - start);
+        var total = Graph.IsComplete ? rows.Count : rows.Count + WorkspaceGitGraph.PageSize;
+        return new ItemsProviderResult<GitGraphRow>(rows.Skip(start).Take(count), total);
+    }
+
+    private void OnGraphChanged() => _ = InvokeAsync(async () =>
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _now = DateTimeOffset.Now;
+        var scopeChanged = _shownScope != Graph.Scope;
+        _shownScope = Graph.Scope;
+
+        // Rows read while scrolling are already shown. Otherwise the graph was read again (e.g. after a commit), and
+        // the list shows it from the start. Other commits start at the top.
+        if (!ReferenceEquals(_shownRows, Graph.Rows) && _virtualize is not null)
+        {
+            _shownRows = Graph.Rows;
+            if (scopeChanged)
+            {
+                await ScrollToTopAsync();
+            }
+
+            await _virtualize.RefreshDataAsync();
+        }
+
+        StateHasChanged();
+    });
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        var rows = Graph.Rows;
+        if (rows.Count == 0 || e.Key is not ("ArrowUp" or "ArrowDown" or "Home"))
+        {
+            return;
+        }
+
+        var index = Graph.Selected is { } selected ? IndexOf(selected.Commit.Sha) : -1;
+        index = e.Key switch
+        {
+            "Home" => 0,
+            "ArrowUp" => Math.Max(index - 1, 0),
+            _ => Math.Min(index + 1, rows.Count - 1),
+        };
+
+        await SelectAndRevealAsync(rows[index].Commit.Sha);
+    }
+
+    // Selects a commit that's been read and scrolls the list to it.
+    private async Task SelectAndRevealAsync(string sha)
+    {
+        var index = IndexOf(sha);
+        if (index < 0)
+        {
+            return;
+        }
+
+        await Graph.SelectAsync(sha);
+        if (_listScript is not null)
+        {
+            try
+            {
+                await _listScript.InvokeVoidAsync("reveal", index, GitGraphRowView.RowHeight);
+            }
+            catch (JSDisconnectedException)
+            {
+                // The web view has gone.
+            }
+        }
+    }
+
+    private async Task ScrollToTopAsync()
+    {
+        if (_listScript is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _listScript.InvokeVoidAsync("scrollToTop");
+        }
+        catch (JSDisconnectedException)
+        {
+            // The web view has gone.
+        }
+    }
+
+    private int IndexOf(string sha)
+    {
+        var rows = Graph.Rows;
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if (rows[i].Commit.Sha == sha)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    // A commit's labels: HEAD when it's detached here, then its branches and tags. The branch HEAD is on stands out.
+    private RenderFragment References(string sha, bool isHead) => __builder =>
+    {
+        if (isHead && Graph.Refs.HeadBranch is null)
+        {
+            <span class="git-graph-ref git-graph-ref-detached" title="Detached HEAD">HEAD</span>
+        }
+
+        foreach (var reference in Graph.LabelsFor(sha))
+        {
+            var current = reference.Kind == GitReferenceKind.LocalBranch && reference.Name == Graph.Refs.HeadBranch;
+            <span class="git-graph-ref @GitGraphText.ReferenceClass(reference.Kind) @(current ? "git-graph-ref-head" : null)"
+                  title="@(current ? $"{reference.Name} (HEAD)" : reference.Name)">@reference.Name</span>
+        }
+    };
+
+    private static RenderFragment Signature(CommitSignature signature) => __builder =>
+    {
+        <span>@signature.Name</span>
+        <span class="placeholder">&lt;@signature.Email&gt;</span>
+        <div class="git-graph-fact-date">@GitGraphText.FullDate(signature.When)</div>
+    };
+}

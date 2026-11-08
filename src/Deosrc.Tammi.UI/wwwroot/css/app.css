@@ -39,6 +39,16 @@
   --color-error-bg: #ffebe9;
   --color-jira: #0052cc;
   --color-claude: #d97757;
+
+  /* The git graph's lane colours, in the order lanes take them. */
+  --color-graph-0: #0969da;
+  --color-graph-1: #bf3989;
+  --color-graph-2: #1a7f37;
+  --color-graph-3: #bc4c00;
+  --color-graph-4: #8250df;
+  --color-graph-5: #0a7f8a;
+  --color-graph-6: #9a6700;
+  --color-graph-7: #cf222e;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -62,6 +72,15 @@
     --color-warning-text: #1f2328;
     --color-error-bg: #2d1416;
     --color-jira: #4c9aff;
+
+    --color-graph-0: #4c9aff;
+    --color-graph-1: #f778ba;
+    --color-graph-2: #3fb950;
+    --color-graph-3: #f0883e;
+    --color-graph-4: #a371f7;
+    --color-graph-5: #39c5cf;
+    --color-graph-6: #d29922;
+    --color-graph-7: #ff7b72;
   }
 }
 
@@ -2169,4 +2188,324 @@ label.task-choice {
   overflow: hidden;
   border-radius: var(--radius);
   background-color: #1e1e1e;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Git graph: a main area tab with a toolbar, the commit list and the selected commit's details.
+   --------------------------------------------------------------------------------------------------------------- */
+
+.git-graph {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.git-graph-toolbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.git-graph-count {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.git-graph-refresh {
+  margin-left: auto;
+}
+
+.git-graph-problem {
+  margin: var(--space-2) var(--space-3) 0;
+}
+
+/* Two buttons joined into one control, the pressed one highlighted. */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.segmented-option {
+  padding: var(--space-1) var(--space-3);
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.segmented-option + .segmented-option {
+  border-left: 1px solid var(--color-border);
+}
+
+.segmented-option:hover {
+  background: var(--color-surface-hover);
+}
+
+.segmented-option[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+.segmented-option:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+/* A button that looks like a link. */
+.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-focus);
+  font: inherit;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.git-graph-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.git-graph-list {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  background: var(--color-surface);
+}
+
+.git-graph-list:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+/* Every row is exactly as high as GitGraphRowView.RowHeight, so the list knows where each one is. */
+.git-graph-row {
+  display: grid;
+  grid-template-columns: var(--git-graph-width) minmax(0, 1fr) minmax(6rem, 10rem) 7.5rem 4.5rem;
+  align-items: center;
+  gap: var(--space-3);
+  height: 26px;
+  padding: 0 var(--space-3) 0 var(--space-2);
+  cursor: default;
+  white-space: nowrap;
+}
+
+.git-graph-row:hover {
+  background: var(--color-surface-hover);
+}
+
+.git-graph-row.selected {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.git-graph-lanes {
+  display: block;
+  overflow: hidden;
+}
+
+.git-graph-lanes path {
+  fill: none;
+  stroke-width: 2;
+}
+
+.git-graph-lanes .git-graph-head {
+  fill: var(--color-surface);
+  stroke-width: 2.5;
+}
+
+.git-graph-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.git-graph-subject,
+.git-graph-author {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.git-graph-author,
+.git-graph-date {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.git-graph-sha,
+.git-graph-sha-full {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--font-size-small);
+}
+
+.git-graph-row .git-graph-sha {
+  color: var(--color-text-muted);
+}
+
+.git-graph-sha-full {
+  overflow-wrap: anywhere;
+}
+
+/* Branch and tag labels. */
+.git-graph-ref {
+  flex: none;
+  max-width: 14rem;
+  overflow: hidden;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--git-graph-ref-colour, var(--color-border));
+  border-radius: 999px;
+  color: var(--git-graph-ref-colour, var(--color-text));
+  font-size: var(--font-size-small);
+  line-height: 18px;
+  text-overflow: ellipsis;
+}
+
+.git-graph-ref-local {
+  --git-graph-ref-colour: var(--color-graph-0);
+}
+
+.git-graph-ref-remote {
+  --git-graph-ref-colour: var(--color-text-muted);
+}
+
+.git-graph-ref-tag {
+  --git-graph-ref-colour: var(--color-warning);
+}
+
+.git-graph-ref-head,
+.git-graph-ref-detached {
+  background: var(--git-graph-ref-colour, var(--color-accent));
+  color: var(--color-accent-text);
+  font-weight: 600;
+}
+
+.git-graph-ref-detached {
+  --git-graph-ref-colour: var(--color-accent);
+}
+
+.git-graph-details {
+  flex: none;
+  width: 360px;
+  overflow: auto;
+  padding: var(--space-4);
+  border-left: 1px solid var(--color-border);
+}
+
+.git-graph-details-subject {
+  margin: 0 0 var(--space-2);
+  font-size: 1.1em;
+  overflow-wrap: anywhere;
+}
+
+.git-graph-details-refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.git-graph-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+
+.git-graph-facts dt {
+  color: var(--color-text-muted);
+}
+
+.git-graph-facts dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.git-graph-fact-date {
+  flex-basis: 100%;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.git-graph-message {
+  margin: 0 0 var(--space-3);
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.git-graph-details-heading {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: 1em;
+}
+
+.git-graph-files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.git-graph-file {
+  display: flex;
+  gap: var(--space-2);
+  padding: 2px 0;
+}
+
+.git-graph-file-kind {
+  flex: none;
+  width: 1.2em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 600;
+  text-align: center;
+}
+
+.git-graph-file-added {
+  color: var(--color-success);
+}
+
+.git-graph-file-deleted,
+.git-graph-file-conflicted {
+  color: var(--color-error);
+}
+
+.git-graph-file-modified,
+.git-graph-file-renamed,
+.git-graph-file-typechanged {
+  color: var(--color-warning);
+}
+
+.git-graph-file-path {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A repository or submodule name in the side panel that opens its git graph. */
+.git-status-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.git-status-link:hover {
+  color: var(--color-focus);
+  text-decoration: underline;
 }

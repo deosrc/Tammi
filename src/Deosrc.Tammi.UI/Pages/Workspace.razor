@@ -1,11 +1,13 @@
 @page "/workspaces/{WorkspaceId}"
 @implements IDisposable
 @using Deosrc.Tammi.Core.Agents
+@using Deosrc.Tammi.Core.Git
 @using Deosrc.Tammi.Core.Settings
 @using Deosrc.Tammi.Core.Terminals
 @inject WorkspaceTabs WorkspaceTabs
 @inject WorkspaceTerminals Terminals
 @inject WorkspaceAgents Agents
+@inject WorkspaceGitGraphs GitGraphs
 @inject ISettingsStore SettingsStore
 @inject WorkspaceViewState ViewState
 @inject IWorkspaceStore WorkspaceStore
@@ -108,7 +110,8 @@ else
                             @foreach (var repository in _gitStatus.Repositories)
                             {
                                 <WorkspaceRepositoryGitStatus @key="repository.Repository.FolderName"
-                                                              Repository="repository" />
+                                                              Repository="repository"
+                                                              OnOpenGraph="path => OpenGraph(repository.Repository, path)" />
                             }
                         </ul>
                     }
@@ -165,13 +168,19 @@ else
                         <div class="session-tab @(shown ? "active" : null)" @key="tab">
                             <button type="button" class="session-tab-label" role="tab"
                                     aria-selected="@(shown ? "true" : "false")"
-                                    title="@((tab as IWorkspaceProcess)?.WorkingDirectory)"
+                                    title="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })"
                                     @onclick="() => ShowTab(tab)">
                                 @if (tab is WorkspaceAgent agent)
                                 {
                                     @* Agents' tabs show their state, so one that needs the user stands out. *@
                                     <span class="agent-state-dot @AgentStateText.ToneClass(agent.State)"
                                           title="@AgentStateText.Label(agent.State)"></span>
+                                }
+                                else if (tab is WorkspaceGitGraph)
+                                {
+                                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        @GitGraphIconPaths
+                                    </svg>
                                 }
                                 <span class="tab-label-text">@tab.Name</span>
                                 @if (tab is IWorkspaceProcess { HasExited: true })
@@ -203,6 +212,10 @@ else
                         <div class="menu-backdrop" @onclick="CloseNewMenu"></div>
                         <ul class="menu" role="menu" aria-label="New">
                             @NewMenuItem(TerminalSubmenu, "Terminal", TerminalIcon, StartTerminal)
+                            @if (_listing?.Workspace?.Repositories.Count > 0)
+                            {
+                                @GitMenuItem()
+                            }
                             @if (AgentDefinitions.Count > 0)
                             {
                                 <li role="separator" class="menu-separator"></li>
@@ -231,6 +244,10 @@ else
             {
                 <Terminal @key="shownProcess" Session="shownProcess.Session" Class="workspace-terminal" />
             }
+            else if (_shown is WorkspaceGitGraph shownGraph)
+            {
+                <GitGraphView @key="shownGraph" Graph="shownGraph" />
+            }
             else
             {
                 <div class="workspace-main-empty">
@@ -250,6 +267,7 @@ else
     private bool _deleting;
     private bool _manageMenuOpen;
     private const string TerminalSubmenu = "terminal";
+    private const string GitSubmenu = "git";
 
     private bool _newMenuOpen;
 
@@ -278,8 +296,9 @@ else
     {
         WorkspaceTabs.Changed += OnTabsChanged;
         WorkspaceStore.Changed += OnWorkspacesChanged;
-        Terminals.Changed += OnProcessesChanged;
-        Agents.Changed += OnProcessesChanged;
+        Terminals.Changed += OnMainAreaTabsChanged;
+        Agents.Changed += OnMainAreaTabsChanged;
+        GitGraphs.Changed += OnMainAreaTabsChanged;
     }
 
     private IReadOnlyList<AgentDefinition> AgentDefinitions => SettingsStore.Current.Agents.Definitions;
@@ -306,8 +325,9 @@ else
     {
         WorkspaceTabs.Changed -= OnTabsChanged;
         WorkspaceStore.Changed -= OnWorkspacesChanged;
-        Terminals.Changed -= OnProcessesChanged;
-        Agents.Changed -= OnProcessesChanged;
+        Terminals.Changed -= OnMainAreaTabsChanged;
+        Agents.Changed -= OnMainAreaTabsChanged;
+        GitGraphs.Changed -= OnMainAreaTabsChanged;
         SetGitStatus(null);
         SetTasks(null);
         _disposed.Cancel();
@@ -379,14 +399,27 @@ else
 
         if (_gitStatus is not null)
         {
-            _gitStatus.Changed -= OnMonitorChanged;
+            _gitStatus.Changed -= OnGitStatusChanged;
         }
 
         _gitStatus = monitor;
         if (_gitStatus is not null)
         {
-            _gitStatus.Changed += OnMonitorChanged;
+            _gitStatus.Changed += OnGitStatusChanged;
         }
+    }
+
+    // Something in one of the repositories changed, so the git graph shown reads its refs again, and the graph too if
+    // they've changed (e.g. after a commit, fetch or checkout). Graphs that aren't shown do the same when they're next
+    // shown.
+    private void OnGitStatusChanged()
+    {
+        if (_shown is WorkspaceGitGraph graph)
+        {
+            _ = graph.RefreshIfChangedAsync();
+        }
+
+        OnMonitorChanged();
     }
 
     private void OnMonitorChanged() => InvokeAsync(() =>
@@ -400,6 +433,7 @@ else
     private void UpdateTabs()
     {
         _tabs = [.. Terminals.For(WorkspaceId).Concat<IMainAreaTab>(Agents.For(WorkspaceId))
+            .Concat(GitGraphs.For(WorkspaceId))
             .OrderBy(tab => tab.StartOrder)];
 
         // Show the tab the view was showing last time, or the dashboard if it wasn't showing one or it has been
@@ -479,11 +513,105 @@ else
         {
             WorkspaceAgent agent => Agents.CloseAsync(agent),
             WorkspaceTerminal terminal => Terminals.CloseAsync(terminal),
+            WorkspaceGitGraph graph => CloseGraph(graph),
             _ => Task.CompletedTask,
         };
         UpdateTabs();
         await closing;
     }
+
+    private Task CloseGraph(WorkspaceGitGraph graph)
+    {
+        GitGraphs.Close(graph);
+        return Task.CompletedTask;
+    }
+
+    // Opens the git graph of a repository, or of one of its submodules by its path in the repository, and shows it.
+    private void OpenGraph(WorkspaceRepository repository, string? submodulePath)
+    {
+        CloseNewMenu();
+        if (_listing?.Workspace is { } workspace)
+        {
+            ShowTab(GitGraphs.Open(workspace, repository, submodulePath));
+        }
+    }
+
+    // What the New menu's Git item offers: each repository, then its checked-out submodules (and theirs), as far as its
+    // status has been read.
+    private IEnumerable<(WorkspaceRepository Repository, string? SubmodulePath)> GraphTargets()
+    {
+        foreach (var repository in _listing?.Workspace?.Repositories ?? [])
+        {
+            yield return (repository, null);
+            var status = _gitStatus?.Repositories
+                .FirstOrDefault(candidate => candidate.Repository.FolderName == repository.FolderName)?.Status;
+            foreach (var path in SubmodulePaths(status, null))
+            {
+                yield return (repository, path);
+            }
+        }
+    }
+
+    private static IEnumerable<string> SubmodulePaths(RepositoryStatus? status, string? prefix)
+    {
+        foreach (var submodule in status?.Submodules ?? [])
+        {
+            if (submodule.Status is not { } inner)
+            {
+                continue;
+            }
+
+            var path = prefix is null ? submodule.Path : $"{prefix}/{submodule.Path}";
+            yield return path;
+            foreach (var nested in SubmodulePaths(inner, path))
+            {
+                yield return nested;
+            }
+        }
+    }
+
+    // The New menu's Git item, with a submenu of the repositories and submodules whose graph it opens.
+    private RenderFragment GitMenuItem() => __builder =>
+    {
+        var open = _openSubmenu == GitSubmenu;
+        <li role="none" class="menu-submenu-anchor" @key="GitSubmenu" @onmouseenter="() => _openSubmenu = GitSubmenu">
+            <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
+                    aria-expanded="@(open ? "true" : "false")" @onclick="() => _openSubmenu = open ? null : GitSubmenu">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">@GitGraphIconPaths</svg>
+                <span class="tab-label-text">Git</span>
+                <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <polyline points="9 6 15 12 9 18"></polyline>
+                </svg>
+            </button>
+            @if (open)
+            {
+                <ul class="menu menu-submenu" role="menu" aria-label="Git">
+                    @foreach (var (repository, submodulePath) in GraphTargets())
+                    {
+                        <li role="none" @key="WorkspaceGitGraph.NameFor(repository, submodulePath)">
+                            <button type="button" class="menu-item" role="menuitem"
+                                    @onclick="() => OpenGraph(repository, submodulePath)">
+                                @RepositoryIcon
+                                @(submodulePath is null
+                                    ? $"Repository: {repository.FolderName}"
+                                    : $"Submodule: {repository.FolderName}/{submodulePath}")
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        </li>
+    };
+
+    // A git graph: a branch leaving one lane and merging back into it.
+    private static readonly RenderFragment GitGraphIconPaths =
+        @<g>
+            <circle cx="6" cy="5" r="2" />
+            <circle cx="6" cy="19" r="2" />
+            <circle cx="18" cy="9" r="2" />
+            <path d="M6 7v10" />
+            <path d="M18 11c0 4-6 4-10.5 6.5" />
+        </g>;
 
     // The New menu's icons: what each item starts, and where. Agents have theirs from AgentIcon.
     private static readonly RenderFragment TerminalIcon =
@@ -578,7 +706,7 @@ else
         }
     }
 
-    private void OnProcessesChanged(string workspaceId) => InvokeAsync(() =>
+    private void OnMainAreaTabsChanged(string workspaceId) => InvokeAsync(() =>
     {
         if (_disposed.IsCancellationRequested || workspaceId != WorkspaceId)
         {

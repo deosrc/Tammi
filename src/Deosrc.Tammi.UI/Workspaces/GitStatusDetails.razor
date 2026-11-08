@@ -44,7 +44,18 @@
         {
             <li class="git-status-submodule" @key="submodule.Path">
                 <div class="git-status-heading">
-                    <span class="git-status-name" title="@submodule.Name">@submodule.Path</span>
+                    @if (submodule.IsInitialized)
+                    {
+                        var path = PathOf(submodule);
+                        <button type="button" class="git-status-name git-status-link"
+                                title="@submodule.Name — open its git graph" @onclick="() => OnOpenGraph.InvokeAsync(path)">
+                            @submodule.Path
+                        </button>
+                    }
+                    else
+                    {
+                        <span class="git-status-name" title="@submodule.Name">@submodule.Path</span>
+                    }
                     @if (submodule.Status is { } inner && GitStatusText.NeedsAttention(inner))
                     {
                         <span class="git-status-badge">@(inner.IsChanged ? "Changed" : "Out of sync")</span>
@@ -56,7 +67,7 @@
                 }
                 @if (submodule.Status is { } status)
                 {
-                    <GitStatusDetails Status="status" />
+                    <GitStatusDetails Status="status" SubmodulePath="@PathOf(submodule)" OnOpenGraph="OnOpenGraph" />
                 }
                 else
                 {
@@ -70,4 +81,19 @@
 @code {
     [Parameter, EditorRequired]
     public RepositoryStatus Status { get; set; } = null!;
+
+    /// <summary>
+    /// For a submodule's status, its path in the workspace's repository, with <c>/</c> separators.
+    /// </summary>
+    [Parameter]
+    public string? SubmodulePath { get; set; }
+
+    /// <summary>
+    /// Opens a submodule's git graph, by its path in the workspace's repository.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnOpenGraph { get; set; }
+
+    private string PathOf(SubmoduleStatus submodule) =>
+        SubmodulePath is null ? submodule.Path : $"{SubmodulePath}/{submodule.Path}";
 }
