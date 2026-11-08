@@ -14,6 +14,7 @@
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceGitStatusMonitors GitStatusMonitors
 @inject WorkspaceTaskLists TaskLists
+@inject WorkspacePullRequestLists PullRequestLists
 @inject WorkspaceTools WorkspaceTools
 @inject ToolImages ToolImages
 @inject NavigationManager Navigation
@@ -114,6 +115,7 @@ else
                             {
                                 <WorkspaceRepositoryGitStatus @key="repository.Repository.FolderName"
                                                               Repository="repository"
+                                                              PullRequests="_pullRequests?.Find(repository.Repository.FolderName)"
                                                               OnOpenGraph="path => OpenGraph(repository.Repository, path)"
                                                               OnContextMenu="e => OpenRepositoryMenu(repository.Repository, e)" />
                             }
@@ -323,6 +325,9 @@ else
     // Kept while the tab is open, so switching tabs doesn't read the tasks again.
     private WorkspaceTaskList? _tasks;
 
+    // Kept while the tab is open, reading again on its own timer.
+    private WorkspacePullRequestList? _pullRequests;
+
     // What the Workspace Folder and each repository (by folder name) can be opened in.
     private IReadOnlyList<ToolEntry> _workspaceTools = [];
     private IReadOnlyDictionary<string, IReadOnlyList<ToolEntry>> _repositoryTools =
@@ -390,6 +395,7 @@ else
         SettingsStore.Changed -= OnToolsChanged;
         SetGitStatus(null);
         SetTasks(null);
+        SetPullRequests(null);
         _disposed.Cancel();
         _disposed.Dispose();
     }
@@ -413,6 +419,7 @@ else
             _loadedWorkspaceId = WorkspaceId;
             UpdateGitStatus();
             UpdateTasks();
+            UpdatePullRequests();
             _ = UpdateToolsAsync();
         }
     }
@@ -633,6 +640,31 @@ else
         if (_tasks is not null)
         {
             _tasks.Changed += OnMonitorChanged;
+        }
+    }
+
+    private void UpdatePullRequests() =>
+        SetPullRequests(!_deleting && _listing?.Workspace is { } workspace
+            && WorkspaceTabs.Find(workspace.Id) is not null
+                ? PullRequestLists.Start(workspace)
+                : null);
+
+    private void SetPullRequests(WorkspacePullRequestList? list)
+    {
+        if (ReferenceEquals(list, _pullRequests))
+        {
+            return;
+        }
+
+        if (_pullRequests is not null)
+        {
+            _pullRequests.Changed -= OnMonitorChanged;
+        }
+
+        _pullRequests = list;
+        if (_pullRequests is not null)
+        {
+            _pullRequests.Changed += OnMonitorChanged;
         }
     }
 
@@ -1002,6 +1034,7 @@ else
         _deleting = false;
         UpdateGitStatus();
         UpdateTasks();
+        UpdatePullRequests();
     }
 
     private void FinishDelete()
@@ -1016,6 +1049,7 @@ else
         _tab = WorkspaceTabs.Find(WorkspaceId);
         UpdateGitStatus();
         UpdateTasks();
+        UpdatePullRequests();
         StateHasChanged();
     });
 

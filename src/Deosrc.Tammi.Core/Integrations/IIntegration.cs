@@ -2,7 +2,8 @@ namespace Deosrc.Tammi.Core.Integrations;
 
 /// <summary>
 /// A connection to an external service, such as GitHub or JIRA. An integration provides tasks
-/// (<see cref="ITaskIntegration"/>), repositories (<see cref="IRepositoryIntegration"/>) or both.
+/// (<see cref="ITaskIntegration"/>), repositories (<see cref="IRepositoryIntegration"/>) or both, and can provide the
+/// Pull Requests of its repositories (<see cref="IPullRequestIntegration"/>).
 /// </summary>
 /// <remarks>
 /// Tammi only reads from integrations, except that it adds SSH keys through an <see cref="ISshKeyIntegration"/> when
