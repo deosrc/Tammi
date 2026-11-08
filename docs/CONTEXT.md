@@ -25,8 +25,8 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Task** | A unit of work from an integration (e.g. a GitHub issue or JIRA ticket). Tammi doesn't support manually defined tasks: a workspace without tasks is described by its name. |
 | **Task Source** | The integration a task comes from. |
 | **Task Status** | A task's status as its source names it (e.g. `Open` or `In Review`), with a **status category**: to do, in progress or done. JIRA puts every status, including a site's own, in a category; sources with fixed statuses map theirs to the nearest one. |
-| **Workspace** | A named collection of tasks and repositories in a folder on disk. It is the main unit of work in Tammi. |
-| **Workspace Folder** | The workspace's location on disk: `<parent folder>/<workspace name>`. |
+| **Workspace** | A named collection of tasks and repositories in a folder on disk. It is the main unit of work in Tammi. Its name is free text, separate from its folder's name, and can be changed after it's created. |
+| **Workspace Folder** | The workspace's location on disk: `<parent folder>/<folder name>`. |
 | **Repository** | A git repository that can be added to a workspace. |
 | **Repository Catalogue** | The app-level list of known repositories, collected from all repository sources. |
 | **Repository Source** | Where catalogue entries come from: an integration (e.g. GitHub), a local repository added manually, or a **Monitored Folder**. |
@@ -64,21 +64,37 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
    - Search starts when the user stops typing. A source that fails doesn't stop the others: its error is shown
      with their results.
    - Tasks chosen from several searches and sources are kept together in one list.
-2. **Name and locate the workspace.**
-   - When exactly one task is selected, the name defaults to one made from the task, in the **Suggested workspace
-     name** format from the General settings. Otherwise the user enters it. Until the user edits it, the name follows
-     the selected tasks; clearing it makes it follow them again.
-   - The name is also the Workspace Folder's name, so it must be a folder name that's valid on every platform: no
+2. **Name and locate the workspace.** The workspace has a **name** and a **folder name**, which are set separately.
+   - **Name:** shown on Home and the workspace's tab. It's free text: anything but blank, without line breaks or other
+     control characters. Surrounding spaces are removed. It can be changed later (see
+     [Workspace View](#workspace-view-tab)).
+   - When exactly one task is selected, the name defaults to the **Suggested workspace name** template from the
+     General settings, filled in from the task. Its placeholders are `{TaskReference}` (e.g. `api#42` or `ABC-123`),
+     `{TaskKey}` (e.g. `acme/api#42`), `{TaskTitle}`, `{RepositoryOwner}` and `{RepositoryName}` (e.g. `acme` and
+     `api`, only for tasks that belong to a repository, such as GitHub issues). They're matched ignoring case, other
+     text in braces is left as it is, and runs of spaces and line breaks become one space. The default is
+     `{TaskReference} {TaskTitle}`, so `JIRA-123` "Add some feature" suggests `JIRA-123 Add some feature`.
+   - When the template can't be filled in (no tasks or several, a placeholder the task has no value for, or a blank
+     template), the name follows the folder name instead.
+   - **Folder name:** the Workspace Folder's name. It must be a folder name that's valid on every platform: no
      `/ \ : * ? " < > |` or control characters, not `.` or `..`, no trailing full stop, not a name Windows reserves
      (e.g. `CON` or `NUL`), and at most 255 bytes. Surrounding spaces are removed.
-   - The suggested name is the task's title, after its reference unless that's turned off. A GitHub issue's reference
-     is its repository and number (`acme/api#42` gives `api#42`), and a JIRA issue's is its key. The format sets:
+   - When exactly one task is selected, the folder name defaults to one made from the task, in the **Suggested folder
+     name** format from the General settings. Otherwise it's made from the name the user entered, in the same format,
+     or the user enters it.
+   - Until the user edits them, the name and folder name follow what they're made from; clearing one makes it follow
+     again the next time that changes. Only one follows the other at a time: the folder name follows the name only
+     when the user entered the name, and the name follows the folder name only when it can't be suggested from the
+     task.
+   - The suggested folder name is the task's title, after its reference unless that's turned off. A GitHub issue's
+     reference is its repository and number (`acme/api#42` gives `api#42`), and a JIRA issue's is its key. The format
+     sets:
      - **Separator:** hyphens (the default) or underscores between words, leaving out punctuation (apostrophes are
        dropped, so "don't" stays one word), or spaces, keeping punctuation except characters a folder name can't have.
      - **Case:** lowercase (the default), uppercase, or as written.
      - **Task reference:** whether the name starts with it (the default).
 
-     So by default, `JIRA-123` "Add some feature" suggests `jira-123-add-some-feature`. A name longer than 80
+     So by default, `JIRA-123` "Add some feature" suggests `jira-123-add-some-feature`. A folder name longer than 80
      characters is cut at a word, keeping the reference.
    - The parent folder defaults to the **Default Workspace Parent Folder** app setting. It must be a full path. It
      doesn't need to exist yet: it's created with the workspace.
@@ -121,7 +137,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 
 ```
 <clone folder>/<repo>/              Local Repository (shared, outside any workspace)
-<parent folder>/<workspace name>/
+<parent folder>/<folder name>/
     .tammi/                         Workspace metadata (tasks, repositories, branches, settings)
                                     and the task context file for agents
     <repo>/                         Workspace Worktree of <clone folder>/<repo>
@@ -180,13 +196,13 @@ can change any folder name during setup.
   e.g. `acme` for `git@github.com:acme/api.git`. A repository with no remotes uses the name of the folder it's in.
 - Names are compared ignoring case, as on Windows. A name the user chose counts as taken, and so does `.tammi`. If the
   owner doesn't tell two repositories apart, a number is added (e.g. `api-2`).
-- Folder names follow the repositories chosen until the user edits them, like the workspace's name.
+- Folder names follow the repositories chosen until the user edits them, like the workspace's folder name.
 
 **Branches.** Git won't check out one branch in two worktrees, so each Workspace Worktree gets its
 own branch. It is created automatically when the workspace is created:
 - Tammi suggests a branch name from the task, e.g. `<task-key>-<slug>`. When there are no tasks or
   several tasks, it uses the workspace name instead.
-  - The task key is its reference as in the suggested workspace name, as written, so a JIRA key stays uppercase and
+  - The task key is its reference as in the suggested folder name, as written, so a JIRA key stays uppercase and
     JIRA links the branch to the issue. The slug is the title (or the workspace name) in lowercase words joined by
     hyphens, without punctuation. So `ABC-123` "Add some feature" suggests `ABC-123-add-some-feature`, and
     `acme/api#42` "Fix login" suggests `api-42-fix-login`. It's cut at a word to at most 80 characters.
@@ -200,6 +216,11 @@ own branch. It is created automatically when the workspace is created:
 
 **Submodules.** When a Workspace Worktree is created, Tammi checks out its submodules automatically
 (`git submodule update --init --recursive`).
+
+**Renaming a workspace.** The Workspace View's **Manage Workspace** menu offers **Rename…**, which changes the
+workspace's name (as checked when it's created) in its metadata and index entry, and on its tab. The Workspace Folder
+keeps its name, so worktrees and running agents and terminals aren't affected. The task context file is written again
+with the new name, without reading the tasks again. A workspace that can't be read can't be renamed.
 
 **Deleting a workspace.** The Workspace View and the details tab of a workspace that can't be read both offer it.
 1. Tammi checks what would be lost and always asks the user to confirm. It lists the worktrees with uncommitted changes
@@ -382,8 +403,10 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
 - **General**
   - Default Workspace Parent Folder (defaults to `Workspaces` in the user's home folder)
-  - Suggested workspace name: separator, case and whether to start with the task's reference (see
-    [Name and locate the workspace](#core-flow-creating-a-workspace)), with examples of the names it suggests
+  - Suggested workspace name: the template, with its placeholders listed, a warning for text in braces that isn't
+    one, and examples of the names it suggests (see [Name and locate the workspace](#core-flow-creating-a-workspace))
+  - Suggested folder name: separator, case and whether to start with the task's reference, with examples of the
+    folder names it suggests
   - Log level: Trace, Debug, Information (the default), Warning or Error. It applies straight away. A button opens the
     folder the log files are in (see [Technical Constraints](#technical-constraints)) in the system file manager.
 - **Integrations:** the connected integrations, each with its connection status, in alphabetical order

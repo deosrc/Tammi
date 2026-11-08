@@ -202,6 +202,33 @@ public sealed class WorkspaceTaskListTests : IDisposable
     }
 
     [Fact]
+    public async Task RenameAsync_AfterTheTasksWereRead_RewritesTheTaskContextFile_WithoutReadingThemAgain()
+    {
+        var task = _github.Add(1, "Fix the bug");
+        var workspace = CreateWorkspace(task.Reference);
+        using var list = new WorkspaceTaskList(workspace, _registry);
+        await list.RefreshAsync();
+        _github.Tasks[0] = task with { Title = "Changed" };
+
+        await list.RenameAsync(workspace with { Name = "Renamed" });
+
+        var contents = await File.ReadAllTextAsync(TaskContextFile.PathOf(workspace), CancellationToken);
+        Assert.Contains("\"Renamed\"", contents, StringComparison.Ordinal);
+        Assert.Contains("Fix the bug", contents, StringComparison.Ordinal);
+        Assert.Equal("Renamed", list.Workspace.Name);
+    }
+
+    [Fact]
+    public async Task RenameAsync_WithOtherTasks_Throws()
+    {
+        var workspace = CreateWorkspace();
+        using var list = new WorkspaceTaskList(workspace, _registry);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            list.RenameAsync(workspace with { Name = "Renamed", Tasks = [new TaskReference("github", "GH-1")] }));
+    }
+
+    [Fact]
     public async Task RefreshAsync_NoTasks_WritesTheTaskContextFile()
     {
         var workspace = CreateWorkspace();

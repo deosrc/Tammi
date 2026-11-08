@@ -41,9 +41,14 @@ public sealed class WorkspaceCreator(
         {
             problems.Add($"The Workspace Folder '{request.Folder}' isn't a full path.");
         }
+        else if (WorkspaceFolderNames.Validate(Path.GetFileName(Path.TrimEndingDirectorySeparator(request.Folder)))
+            is { } folderNameProblem)
+        {
+            problems.Add(folderNameProblem);
+        }
         else if (Directory.Exists(request.Folder) || File.Exists(request.Folder))
         {
-            problems.Add($"'{request.Folder}' already exists. Choose another name or parent folder.");
+            problems.Add($"'{request.Folder}' already exists. Choose another folder name or parent folder.");
         }
 
         bool branchIsValid = await worktrees.IsValidBranchNameAsync(request.BranchName ?? string.Empty, cancellationToken)

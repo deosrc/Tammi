@@ -33,7 +33,7 @@ public sealed class WorkspaceBranchNamesTests
         string? name = WorkspaceBranchNames.Suggest([Task("ABC-1", title)], null);
 
         Assert.NotNull(name);
-        Assert.True(name.Length <= WorkspaceNames.MaxSuggestedLength);
+        Assert.True(name.Length <= WorkspaceFolderNames.MaxSuggestedLength);
         Assert.StartsWith("ABC-1-word-", name);
         Assert.EndsWith("-word", name);
     }

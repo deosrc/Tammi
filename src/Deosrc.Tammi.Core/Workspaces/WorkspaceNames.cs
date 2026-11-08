@@ -1,156 +1,119 @@
-using System.Text;
+using System.Text.RegularExpressions;
 using Deosrc.Tammi.Core.Integrations;
-using Deosrc.Tammi.Core.Platform;
-using Deosrc.Tammi.Core.Settings;
 
 namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
-/// Suggests and checks workspace names. A workspace's name is also its Workspace Folder's name, so it must be a valid
-/// folder name on every platform.
+/// Suggests and checks workspace names. A workspace's name is free text, shown on Home and its tab. It's separate from
+/// its Workspace Folder's name (see <see cref="WorkspaceFolderNames"/>).
 /// </summary>
-public static class WorkspaceNames
+/// <remarks>
+/// A name is suggested from a template, e.g. <c>{TaskReference} {TaskTitle}</c>, whose placeholders are filled in from
+/// the workspace's task. Placeholders are written in braces and matched ignoring case. Text in braces that isn't a
+/// placeholder is left as it is.
+/// </remarks>
+public static partial class WorkspaceNames
 {
     /// <summary>
-    /// The longest name <see cref="Suggest"/> makes, in characters. Longer titles are cut at a word, so the Workspace
-    /// Folder's path stays a manageable length. The task's reference is always kept.
+    /// The task's full key, e.g. <c>acme/api#42</c> or <c>ABC-123</c>.
     /// </summary>
-    public const int MaxSuggestedLength = 80;
+    public const string TaskKey = "TaskKey";
 
     /// <summary>
-    /// Suggests a name for a workspace with these tasks: the task's title (and reference) written in
-    /// <paramref name="format"/>, when there's exactly one task. With no tasks or several, the user enters the name.
+    /// The task's short reference (see <see cref="TaskReference.ShortKey"/>), e.g. <c>api#42</c> or <c>ABC-123</c>.
     /// </summary>
-    /// <returns>The suggested name, or <see langword="null"/> if there's none.</returns>
-    public static string? Suggest(IReadOnlyList<TaskInfo> tasks, WorkspaceNameFormat format)
+    public const string TaskReference = "TaskReference";
+
+    /// <summary>
+    /// The task's title, e.g. <c>Fix login</c>.
+    /// </summary>
+    public const string TaskTitle = "TaskTitle";
+
+    /// <summary>
+    /// The owner of the repository the task belongs to, e.g. <c>acme</c> for <c>acme/api#42</c>. Only for tasks that
+    /// belong to a repository, such as GitHub issues.
+    /// </summary>
+    public const string RepositoryOwner = "RepositoryOwner";
+
+    /// <summary>
+    /// The name of the repository the task belongs to, e.g. <c>api</c> for <c>acme/api#42</c>. Only for tasks that
+    /// belong to a repository, such as GitHub issues.
+    /// </summary>
+    public const string RepositoryName = "RepositoryName";
+
+    /// <summary>
+    /// Every placeholder, in the order they're listed on the Settings screen.
+    /// </summary>
+    public static IReadOnlyList<string> Placeholders { get; } =
+        [TaskReference, TaskKey, TaskTitle, RepositoryOwner, RepositoryName];
+
+    private static readonly HashSet<string> Known = new(Placeholders, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Writes a placeholder as it's used in the template, e.g. <c>{TaskTitle}</c>.
+    /// </summary>
+    public static string Format(string name) => "{" + name + "}";
+
+    /// <summary>
+    /// Suggests a name for a workspace with these tasks: <paramref name="template"/> filled in from the task, when
+    /// there's exactly one.
+    /// </summary>
+    /// <returns>
+    /// The suggested name, or <see langword="null"/> if there's none: there isn't exactly one task, the template is
+    /// blank, it uses a placeholder the task has no value for (e.g. <see cref="RepositoryName"/> for a JIRA issue), or
+    /// it leaves nothing but spaces. The Create Workspace flow then uses the Workspace Folder's name.
+    /// </returns>
+    public static string? Suggest(IReadOnlyList<TaskInfo> tasks, string? template)
     {
         ArgumentNullException.ThrowIfNull(tasks);
-        ArgumentNullException.ThrowIfNull(format);
-        return tasks is [var task]
-            ? FromTitle(task.Title, format, format.IncludeTaskReference ? ShortReference(task.Key) : null)
-            : null;
+        if (tasks is not [var task] || string.IsNullOrWhiteSpace(template))
+        {
+            return null;
+        }
+
+        var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            [TaskKey] = task.Key,
+            [TaskReference] = Integrations.TaskReference.ShortKey(task.Key),
+            [TaskTitle] = task.Title,
+            [RepositoryOwner] = RepositoryPart(task.RepositoryUrl, fromEnd: 2),
+            [RepositoryName] = RepositoryPart(task.RepositoryUrl, fromEnd: 1),
+        };
+
+        var missing = false;
+        string expanded = Placeholder().Replace(template, match =>
+        {
+            if (!values.TryGetValue(match.Groups[1].Value, out string? value))
+            {
+                return match.Value;
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                missing = true;
+                return match.Value;
+            }
+
+            return value;
+        });
+
+        // Values can hold line breaks and runs of spaces (e.g. a title pasted from somewhere), which a name shouldn't.
+        string name = Whitespace().Replace(expanded, " ").Trim();
+        return missing || name.Length == 0 ? null : name;
     }
 
     /// <summary>
-    /// The part of a task's key used in its suggested name: the key after its last <c>/</c>, so a GitHub issue
-    /// <c>acme/api#42</c> gives <c>api#42</c>, and a JIRA issue <c>ABC-123</c> stays <c>ABC-123</c>.
+    /// The text in braces in <paramref name="template"/> that isn't a placeholder, e.g. a mistyped one.
     /// </summary>
-    public static string ShortReference(string key)
-    {
-        ArgumentNullException.ThrowIfNull(key);
-        return key[(key.LastIndexOf('/') + 1)..];
-    }
-
-    /// <summary>
-    /// Writes a task's title, after its reference if there's one, as a workspace name in <paramref name="format"/>
-    /// that's a valid folder name.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// With hyphens or underscores, the words are the runs of letters and digits, so punctuation is left out
-    /// (apostrophes are dropped, so "don't" stays one word). With spaces, punctuation is kept, except characters a
-    /// folder name can't have, which separate words.
-    /// </para>
-    /// <para>
-    /// A name longer than <see cref="MaxSuggestedLength"/> is cut at the last word that fits, or within a word if that
-    /// would leave too little of the title.
-    /// </para>
-    /// </remarks>
-    /// <param name="title">The task's title.</param>
-    /// <param name="format">How to write the name.</param>
-    /// <param name="reference">The task's reference to start with, e.g. <c>ABC-123</c>, or <see langword="null"/>.</param>
-    /// <returns>The name, or <see langword="null"/> if nothing of the title and reference is left.</returns>
-    public static string? FromTitle(string? title, WorkspaceNameFormat format, string? reference = null)
-    {
-        ArgumentNullException.ThrowIfNull(format);
-        string separator = format.Separator switch
-        {
-            WorkspaceNameSeparator.Underscores => "_",
-            WorkspaceNameSeparator.Spaces => " ",
-            _ => "-",
-        };
-
-        List<string> referenceWords = Words(reference, format);
-        List<string> titleWords = Words(title, format);
-        var name = new StringBuilder(string.Join(separator, referenceWords));
-        foreach (string word in titleWords)
-        {
-            int length = name.Length + (name.Length > 0 ? separator.Length : 0) + word.Length;
-            if (length > MaxSuggestedLength)
-            {
-                // Cut within the word unless enough of the name is already there.
-                if (name.Length < MaxSuggestedLength / 2)
-                {
-                    if (name.Length > 0)
-                    {
-                        name.Append(separator);
-                    }
-
-                    name.Append(word.AsSpan(0, MaxSuggestedLength - name.Length));
-                }
-
-                break;
-            }
-
-            if (name.Length > 0)
-            {
-                name.Append(separator);
-            }
-
-            name.Append(word);
-        }
-
-        string result = name.ToString().Trim().TrimEnd('.', ' ');
-        result = format.Case switch
-        {
-            WorkspaceNameCase.Lowercase => result.ToLowerInvariant(),
-            WorkspaceNameCase.Uppercase => result.ToUpperInvariant(),
-            _ => result,
-        };
-        return FolderNames.IsValid(result) ? result : null;
-    }
-
-    private static List<string> Words(string? text, WorkspaceNameFormat format)
-    {
-        var words = new List<string>();
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return words;
-        }
-
-        bool spaces = format.Separator == WorkspaceNameSeparator.Spaces;
-        var word = new StringBuilder();
-        foreach (char c in text)
-        {
-            bool separates = spaces
-                ? char.IsWhiteSpace(c) || FolderNames.ContainsInvalidCharacter(c.ToString())
-                : !char.IsLetterOrDigit(c) && c is not ('\'' or '\u2019');
-            if (!separates)
-            {
-                // Apostrophes join words in hyphenated and underscored names, but don't appear in them.
-                if (spaces || c is not ('\'' or '\u2019'))
-                {
-                    word.Append(c);
-                }
-            }
-            else if (word.Length > 0)
-            {
-                words.Add(word.ToString());
-                word.Clear();
-            }
-        }
-
-        if (word.Length > 0)
-        {
-            words.Add(word.ToString());
-        }
-
-        return words;
-    }
+    public static IEnumerable<string> FindUnknown(string? template) =>
+        Placeholder().Matches(template ?? string.Empty)
+            .Select(match => match.Groups[1].Value)
+            .Where(name => !Known.Contains(name))
+            .Distinct();
 
     /// <summary>
     /// Returns why <paramref name="name"/> can't be a workspace's name, or <see langword="null"/> if it can.
-    /// Surrounding spaces are ignored, because they're removed when the workspace is created.
+    /// Surrounding spaces are ignored, because they're removed when the name is saved.
     /// </summary>
     public static string? Validate(string? name)
     {
@@ -160,32 +123,31 @@ public static class WorkspaceNames
             return "Enter a name for the workspace.";
         }
 
-        if (name is "." or "..")
+        if (name.Any(char.IsControl))
         {
-            return "The name can't be '.' or '..'.";
-        }
-
-        if (FolderNames.ContainsInvalidCharacter(name))
-        {
-            return $"The name can't contain {string.Join(' ', FolderNames.InvalidCharacters)} or control characters, "
-                + "because it's also the Workspace Folder's name.";
-        }
-
-        if (name.EndsWith('.'))
-        {
-            return "The name can't end with a full stop, because Windows doesn't allow it in a folder name.";
-        }
-
-        if (FolderNames.IsReservedOnWindows(name))
-        {
-            return $"'{name}' can't be a folder name on Windows, which reserves it for a device.";
-        }
-
-        if (FolderNames.IsTooLong(name))
-        {
-            return "The name is too long for a folder name.";
+            return "The name can't contain line breaks, tabs or other control characters.";
         }
 
         return null;
     }
+
+    /// <summary>
+    /// A segment of a repository's web page path, counted from the end: 1 for its name, 2 for its owner.
+    /// </summary>
+    private static string? RepositoryPart(Uri? repositoryUrl, int fromEnd)
+    {
+        if (repositoryUrl is null)
+        {
+            return null;
+        }
+
+        string[] segments = repositoryUrl.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length >= 2 ? Uri.UnescapeDataString(segments[^fromEnd]) : null;
+    }
+
+    [GeneratedRegex(@"\{([A-Za-z]+)\}")]
+    private static partial Regex Placeholder();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex Whitespace();
 }

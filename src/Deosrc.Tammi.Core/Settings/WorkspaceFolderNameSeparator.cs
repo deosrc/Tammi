@@ -1,9 +1,9 @@
 namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
-/// What goes between the words of a suggested workspace name.
+/// What goes between the words of a suggested Workspace Folder name.
 /// </summary>
-public enum WorkspaceNameSeparator
+public enum WorkspaceFolderNameSeparator
 {
     /// <summary>
     /// <c>jira-123-add-some-feature</c>. Punctuation is left out.

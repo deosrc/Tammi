@@ -54,6 +54,54 @@ public sealed class WorkspaceStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task RenameAsync_SavesTheNewName_KeepingTheFolder()
+    {
+        var workspace = CreateWorkspace("fix-login");
+        await CreateStore().SaveAsync(workspace, Token);
+        var store = CreateStore();
+        var changes = 0;
+        store.Changed += () => changes++;
+
+        var renamed = await store.RenameAsync(workspace.Id, "  api#42: Fix login  ", Token);
+
+        Assert.Equal("api#42: Fix login", renamed.Name);
+        Assert.Equal(workspace.Folder, renamed.Folder);
+        Assert.Equal("api#42: Fix login", (await CreateStore().LoadAsync(workspace.Folder, Token)).Name);
+        var listing = Assert.Single(await CreateStore().ListAsync(Token));
+        Assert.Equal("api#42: Fix login", listing.Name);
+        Assert.Equal(1, changes);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("two\nlines")]
+    public async Task RenameAsync_WithAnInvalidName_Throws(string name)
+    {
+        var workspace = CreateWorkspace("fix-login");
+        var store = CreateStore();
+        await store.SaveAsync(workspace, Token);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => store.RenameAsync(workspace.Id, name, Token));
+    }
+
+    [Fact]
+    public async Task RenameAsync_UnknownWorkspace_Throws()
+    {
+        await Assert.ThrowsAsync<WorkspaceNotFoundException>(() => CreateStore().RenameAsync("missing", "Name", Token));
+    }
+
+    [Fact]
+    public async Task RenameAsync_FolderMissing_Throws()
+    {
+        var workspace = CreateWorkspace("fix-login");
+        var store = CreateStore();
+        await store.SaveAsync(workspace, Token);
+        Directory.Delete(workspace.Folder, recursive: true);
+
+        await Assert.ThrowsAsync<WorkspaceNotFoundException>(() => store.RenameAsync(workspace.Id, "Name", Token));
+    }
+
+    [Fact]
     public async Task SaveAsync_WritesVersionedMetadataWithoutFolder()
     {
         var workspace = CreateWorkspace("Fix login");

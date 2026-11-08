@@ -79,33 +79,33 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void Defaults_SuggestLowercaseHyphenatedNamesWithTheTaskReference()
+    public void Defaults_SuggestLowercaseHyphenatedFolderNamesWithTheTaskReference()
     {
         Assert.Equal(
-            new WorkspaceNameFormat
+            new WorkspaceFolderNameFormat
             {
-                Separator = WorkspaceNameSeparator.Hyphens,
-                Case = WorkspaceNameCase.Lowercase,
+                Separator = WorkspaceFolderNameSeparator.Hyphens,
+                Case = WorkspaceFolderNameCase.Lowercase,
                 IncludeTaskReference = true,
             },
-            new AppSettings().General.WorkspaceNameFormat);
+            new AppSettings().General.WorkspaceFolderNameFormat);
     }
 
     [Fact]
-    public async Task UpdateAsync_SavesTheWorkspaceNameFormat_ByName()
+    public async Task UpdateAsync_SavesTheWorkspaceFolderNameFormat_ByName()
     {
-        var format = new WorkspaceNameFormat
+        var format = new WorkspaceFolderNameFormat
         {
-            Separator = WorkspaceNameSeparator.Spaces,
-            Case = WorkspaceNameCase.AsWritten,
+            Separator = WorkspaceFolderNameSeparator.Spaces,
+            Case = WorkspaceFolderNameCase.AsWritten,
             IncludeTaskReference = false,
         };
 
         await CreateStore().UpdateAsync(
-            settings => settings with { General = settings.General with { WorkspaceNameFormat = format } },
+            settings => settings with { General = settings.General with { WorkspaceFolderNameFormat = format } },
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(format, CreateStore().Current.General.WorkspaceNameFormat);
+        Assert.Equal(format, CreateStore().Current.General.WorkspaceFolderNameFormat);
         string json = File.ReadAllText(SettingsPath);
         Assert.Contains("\"Spaces\"", json);
         Assert.Contains("\"AsWritten\"", json);
@@ -152,22 +152,69 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void Load_WithoutAWorkspaceNameFormat_UsesTheDefault()
+    public void Load_WithoutAWorkspaceFolderNameFormat_UsesTheDefault()
     {
         WriteSettingsFile("""{"version":1,"general":{"defaultWorkspaceParentFolder":"/tmp"}}""");
 
-        Assert.Equal(new WorkspaceNameFormat(), CreateStore().Current.General.WorkspaceNameFormat);
+        Assert.Equal(new WorkspaceFolderNameFormat(), CreateStore().Current.General.WorkspaceFolderNameFormat);
     }
 
     [Fact]
-    public void Load_WithAnUnknownWorkspaceNameFormatNumber_UsesTheDefault()
+    public void Load_WithAnUnknownWorkspaceFolderNameFormatNumber_UsesTheDefault()
     {
-        WriteSettingsFile("""{"version":1,"general":{"workspaceNameFormat":{"separator":9,"case":9}}}""");
+        WriteSettingsFile("""{"version":2,"general":{"workspaceFolderNameFormat":{"separator":9,"case":9}}}""");
 
-        WorkspaceNameFormat format = CreateStore().Current.General.WorkspaceNameFormat;
+        WorkspaceFolderNameFormat format = CreateStore().Current.General.WorkspaceFolderNameFormat;
 
-        Assert.Equal(WorkspaceNameSeparator.Hyphens, format.Separator);
-        Assert.Equal(WorkspaceNameCase.Lowercase, format.Case);
+        Assert.Equal(WorkspaceFolderNameSeparator.Hyphens, format.Separator);
+        Assert.Equal(WorkspaceFolderNameCase.Lowercase, format.Case);
+    }
+
+    [Fact]
+    public void Load_Version1_MovesTheWorkspaceNameFormatToTheFolderNameFormat()
+    {
+        WriteSettingsFile("""
+            {
+              "version": 1,
+              "general": { "WorkspaceNameFormat": { "separator": "Spaces", "case": "AsWritten", "includeTaskReference": false } }
+            }
+            """);
+
+        var settings = new SettingsStore(new TestAppPaths(ConfigDirectory)).Current.General;
+
+        Assert.Equal(
+            new WorkspaceFolderNameFormat
+            {
+                Separator = WorkspaceFolderNameSeparator.Spaces,
+                Case = WorkspaceFolderNameCase.AsWritten,
+                IncludeTaskReference = false,
+            },
+            settings.WorkspaceFolderNameFormat);
+        Assert.Equal(GeneralSettings.DefaultWorkspaceNameTemplate, settings.WorkspaceNameTemplate);
+    }
+
+    [Fact]
+    public void Defaults_SuggestTheWorkspaceNameFromTheTaskReferenceAndTitle()
+    {
+        Assert.Equal("{TaskReference} {TaskTitle}", new AppSettings().General.WorkspaceNameTemplate);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesTheWorkspaceNameTemplate_KeepingABlankOne()
+    {
+        await CreateStore().UpdateAsync(
+            settings => settings with { General = settings.General with { WorkspaceNameTemplate = "" } },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("", CreateStore().Current.General.WorkspaceNameTemplate);
+    }
+
+    [Fact]
+    public void Load_WithANullWorkspaceNameTemplate_UsesTheDefault()
+    {
+        WriteSettingsFile("""{"version":2,"general":{"workspaceNameTemplate":null}}""");
+
+        Assert.Equal(GeneralSettings.DefaultWorkspaceNameTemplate, CreateStore().Current.General.WorkspaceNameTemplate);
     }
 
     [Fact]

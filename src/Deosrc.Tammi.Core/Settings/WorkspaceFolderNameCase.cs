@@ -1,9 +1,9 @@
 namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
-/// The letter case of a suggested workspace name.
+/// The letter case of a suggested Workspace Folder name.
 /// </summary>
-public enum WorkspaceNameCase
+public enum WorkspaceFolderNameCase
 {
     /// <summary>
     /// All lower case.
