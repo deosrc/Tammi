@@ -30,6 +30,16 @@ public interface IGitRepositoryReader
     IReadOnlyList<CommitInfo> ReadHistory(string path, HistoryOptions? options = null);
 
     /// <summary>
+    /// Opens the history of the repository at <paramref name="path"/> to read a page at a time, newest first in
+    /// topological order (children before parents). Use it for long histories, e.g. the git graph.
+    /// </summary>
+    /// <param name="path">The repository's working directory.</param>
+    /// <param name="options">Which commits to return. <see cref="HistoryOptions.MaxCount"/> is ignored.</param>
+    /// <returns>The cursor, which keeps the repository open until it's disposed.</returns>
+    /// <exception cref="GitRepositoryNotFoundException">There's no repository at <paramref name="path"/>.</exception>
+    IGitHistoryCursor OpenHistory(string path, HistoryOptions? options = null);
+
+    /// <summary>
     /// Reads the remotes of the repository at <paramref name="path"/>, in name order.
     /// </summary>
     /// <param name="path">The repository's working directory.</param>

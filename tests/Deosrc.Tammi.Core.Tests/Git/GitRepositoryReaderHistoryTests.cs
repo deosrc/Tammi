@@ -85,6 +85,97 @@ public sealed class GitRepositoryReaderHistoryTests : IDisposable
         Assert.Empty(_reader.ReadHistory(repo, new HistoryOptions { AllRefs = true }));
     }
 
+    [Fact]
+    public async Task ReadHistory_StartingPoints_WalksFromThemAndSkipsMissingNames()
+    {
+        string clone = await CloneAsync();
+        await _repos.RunAsync(clone, "switch", "-c", "first");
+        await _repos.CommitFileAsync(clone, "first.txt", "first", "On first");
+        await _repos.RunAsync(clone, "switch", "-c", "second", "main");
+        await _repos.CommitFileAsync(clone, "second.txt", "second", "On second");
+        await _repos.RunAsync(clone, "switch", "-c", "third", "main");
+        await _repos.CommitFileAsync(clone, "third.txt", "third", "On third");
+
+        IReadOnlyList<CommitInfo> history = _reader.ReadHistory(
+            clone,
+            new HistoryOptions { StartingPoints = ["first", "missing", "origin/main", "second"] });
+
+        Assert.Equal(["Initial commit", "On first", "On second"], history.Select(commit => commit.Subject).Order());
+    }
+
+    [Fact]
+    public async Task ReadHistory_IncludeUpstreams_WalksFromTheBranchesUpstreams()
+    {
+        string clone = await CloneAsync();
+        await _repos.RunAsync(clone, "switch", "-c", "other");
+        await _repos.CommitFileAsync(clone, "other.txt", "other", "Pushed on other");
+        await _repos.RunAsync(clone, "push", "-u", "origin", "other");
+        await _repos.RunAsync(clone, "reset", "--hard", "HEAD~1");
+
+        IReadOnlyList<CommitInfo> without = _reader.ReadHistory(
+            clone,
+            new HistoryOptions { StartingPoints = ["HEAD"] });
+        IReadOnlyList<CommitInfo> fromHead = _reader.ReadHistory(
+            clone,
+            new HistoryOptions { StartingPoints = ["HEAD"], IncludeUpstreams = true });
+        await _repos.RunAsync(clone, "switch", "main");
+        IReadOnlyList<CommitInfo> fromName = _reader.ReadHistory(
+            clone,
+            new HistoryOptions { StartingPoints = ["other"], IncludeUpstreams = true });
+
+        Assert.DoesNotContain(without, commit => commit.Subject == "Pushed on other");
+        Assert.Contains(fromHead, commit => commit.Subject == "Pushed on other");
+        Assert.Contains(fromName, commit => commit.Subject == "Pushed on other");
+    }
+
+    [Fact]
+    public async Task OpenHistory_ReadsPagesInTheSameOrderAsOneRead()
+    {
+        string clone = await CloneAsync();
+        await _repos.RunAsync(clone, "switch", "-c", "other");
+        await _repos.CommitFileAsync(clone, "other.txt", "other", "On other");
+        await _repos.RunAsync(clone, "switch", "main");
+        for (int i = 0; i < 4; i++)
+        {
+            await _repos.CommitFileAsync(clone, $"{i}.txt", $"{i}", $"Commit {i}");
+        }
+
+        await _repos.RunAsync(clone, "merge", "--no-edit", "other");
+        var options = new HistoryOptions { AllRefs = true, MaxCount = null };
+        IReadOnlyList<CommitInfo> all = _reader.ReadHistory(clone, options);
+
+        using IGitHistoryCursor cursor = _reader.OpenHistory(clone, options);
+        var pages = new List<CommitInfo>();
+        while (!cursor.IsComplete)
+        {
+            pages.AddRange(cursor.ReadNext(3));
+        }
+
+        Assert.Equal(all.Select(commit => commit.Sha), pages.Select(commit => commit.Sha));
+        Assert.Empty(cursor.ReadNext(3));
+    }
+
+    [Fact]
+    public async Task OpenHistory_EmptyRepository_IsComplete()
+    {
+        string repo = _repos.PathTo("empty");
+        await _repos.RunAsync(_repos.Root, "init", repo);
+
+        using IGitHistoryCursor cursor = _reader.OpenHistory(repo);
+
+        Assert.True(cursor.IsComplete);
+        Assert.Empty(cursor.ReadNext(10));
+    }
+
+    [Fact]
+    public void OpenHistory_NoRepository_Throws()
+    {
+        string folder = _repos.PathTo("not-a-repository");
+        Directory.CreateDirectory(folder);
+
+        Assert.Throws<GitRepositoryNotFoundException>(() => _reader.OpenHistory(folder));
+    }
+
     private async Task<string> CloneAsync()
     {
         string remote = await _repos.CreateRemoteAsync("repo");

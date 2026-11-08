@@ -27,33 +27,24 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
     public IReadOnlyList<CommitInfo> ReadHistory(string path, HistoryOptions? options = null)
     {
         options ??= new HistoryOptions();
-        using Repository repository = Open(path);
+        using IGitHistoryCursor cursor = OpenHistory(path, options);
+        return cursor.ReadNext(options.MaxCount ?? int.MaxValue);
+    }
 
-        object? startingPoints = options.AllRefs
-            ? repository.Refs.Select(reference => reference.ResolveToDirectReference()?.Target)
-                .OfType<Commit>()
-                .Concat(repository.Tags.Select(tag => tag.PeeledTarget).OfType<Commit>())
-                .Distinct()
-                .ToArray()
-            : repository.Head.Tip;
-
-        if (startingPoints is null or Commit[] { Length: 0 })
+    /// <inheritdoc />
+    public IGitHistoryCursor OpenHistory(string path, HistoryOptions? options = null)
+    {
+        options ??= new HistoryOptions();
+        Repository repository = Open(path);
+        try
         {
-            return [];
+            return new GitHistoryCursor(repository, FindStartingPoints(repository, options));
         }
-
-        IEnumerable<Commit> commits = repository.Commits.QueryBy(new CommitFilter
+        catch
         {
-            IncludeReachableFrom = startingPoints,
-            SortBy = CommitSortStrategies.Topological | CommitSortStrategies.Time,
-        });
-
-        if (options.MaxCount is int maxCount)
-        {
-            commits = commits.Take(maxCount);
+            repository.Dispose();
+            throw;
         }
-
-        return commits.Select(ToCommitInfo).ToArray();
     }
 
     /// <inheritdoc />
@@ -221,7 +212,61 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
         return ReadStatus(submoduleRepository);
     }
 
-    private static CommitInfo ToCommitInfo(Commit commit) => new(
+    private static Commit[] FindStartingPoints(Repository repository, HistoryOptions options)
+    {
+        if (options.AllRefs)
+        {
+            return repository.Refs.Select(reference => reference.ResolveToDirectReference()?.Target)
+                .OfType<Commit>()
+                .Concat(repository.Tags.Select(tag => tag.PeeledTarget).OfType<Commit>())
+                .Distinct()
+                .ToArray();
+        }
+
+        IReadOnlyList<string> names = options.StartingPoints.Count == 0 ? ["HEAD"] : options.StartingPoints;
+        var commits = new List<Commit>();
+        foreach (string name in names)
+        {
+            if (Resolve(repository, name) is { } commit)
+            {
+                commits.Add(commit);
+            }
+
+            if (options.IncludeUpstreams && FindLocalBranch(repository, name)?.TrackedBranch?.Tip is { } upstream)
+            {
+                commits.Add(upstream);
+            }
+        }
+
+        return commits.Distinct().ToArray();
+    }
+
+    private static Commit? Resolve(Repository repository, string name)
+    {
+        try
+        {
+            return repository.Lookup(name)?.Peel<Commit>();
+        }
+        catch (Exception ex) when (ex is LibGit2SharpException or ArgumentException)
+        {
+            // Not something git can resolve to a commit, e.g. an invalid name or a tag of a tree.
+            return null;
+        }
+    }
+
+    // The local branch a starting point names: HEAD's branch (unless it's detached), or a local branch by name.
+    private static Branch? FindLocalBranch(Repository repository, string name)
+    {
+        if (name == "HEAD")
+        {
+            return repository.Info.IsHeadDetached ? null : repository.Head;
+        }
+
+        Branch? branch = repository.Branches[name];
+        return branch is { IsRemote: false } ? branch : null;
+    }
+
+    internal static CommitInfo ToCommitInfo(Commit commit) => new(
         commit.Sha,
         commit.Parents.Select(parent => parent.Sha).ToArray(),
         ToSignature(commit.Author),
