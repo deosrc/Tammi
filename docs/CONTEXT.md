@@ -367,10 +367,10 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     (see [Tools](#tools)).
   - The tools (see [Tools](#tools)). First Terminal, with the terminal shell's settings (below). Then the other
     predefined tools, each with whether its executable was found (and where), what it opens, its scope (folder tools)
-    and its command. Then the custom tools, added as a folder or file tool, then edited, reordered and removed like
-    Custom Agents. Each shows whether its executable was found, the placeholders it can use, warnings for placeholders
-    it can't use or that don't exist, and the command it starts. A **Look again** button finds the executables and icons
-    again, e.g. after installing a tool.
+    and its command. Then the custom tools, added as a folder or file tool (which can't be changed afterwards), then
+    edited, reordered and removed like Custom Agents. Each shows its kind, whether its executable was found, the
+    placeholders it can use, warnings for placeholders it can't use or that don't exist, and the command it starts. A
+    **Look again** button finds the executables and icons again, e.g. after installing a tool.
   - Each tool but Terminal has a switch beside its name that enables it. A disabled tool's card is collapsed to its
     icon, switch and name.
   - Terminal shell: executable and arguments. Leaving the executable empty uses the platform shell, with its own

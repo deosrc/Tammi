@@ -166,6 +166,8 @@
                 <span class="agent-definition-name">@(string.IsNullOrWhiteSpace(tool.Name) ? "Unnamed tool" : tool.Name)</span>
                 @if (tool.Enabled)
                 {
+                    @* A tool is a folder or file tool from when it's added: it can't be changed. *@
+                    <span class="badge">@ToolText.Label(tool.Kind)</span>
                     @FoundBadge(executable)
                     <button type="button" class="button button-secondary" disabled="@(index == 0)" @onclick="() => MoveAsync(index, -1)"
                             title="Move up" aria-label="Move @tool.Name up">↑</button>
@@ -179,17 +181,6 @@
             @if (tool.Enabled)
             {
                 <div class="settings-form">
-                    <div class="settings-field">
-                        <label for="tool-@index-kind">Opens</label>
-                        <select id="tool-@index-kind" value="@tool.Kind"
-                                @onchange="e => UpdateCustomAsync(index, t => t with { Kind = Parse(e, t.Kind) })">
-                            @foreach (var kind in ToolText.Kinds)
-                            {
-                                <option value="@kind">@ToolText.Label(kind)</option>
-                            }
-                        </select>
-                    </div>
-
                     <div class="settings-field">
                         <label for="tool-@index-name">Name</label>
                         <input id="tool-@index-name"

@@ -19,11 +19,6 @@ public static class ToolText
     public static IReadOnlyList<ToolScope> Scopes { get; } = Enum.GetValues<ToolScope>();
 
     /// <summary>
-    /// The kinds of tool, in the order they're offered.
-    /// </summary>
-    public static IReadOnlyList<ToolKind> Kinds { get; } = Enum.GetValues<ToolKind>();
-
-    /// <summary>
     /// A generic icon's name.
     /// </summary>
     public static string Label(ToolIcon icon) => icon switch
@@ -47,12 +42,12 @@ public static class ToolText
     };
 
     /// <summary>
-    /// What a kind of tool opens.
+    /// A kind of tool's name, e.g. "Folder tool".
     /// </summary>
     public static string Label(ToolKind kind) => kind switch
     {
-        ToolKind.File => "Files",
-        _ => "Folders",
+        ToolKind.File => "File tool",
+        _ => "Folder tool",
     };
 
     /// <summary>
