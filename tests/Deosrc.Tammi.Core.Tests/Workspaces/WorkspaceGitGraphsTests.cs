@@ -45,6 +45,18 @@ public sealed class WorkspaceGitGraphsTests : IDisposable
     }
 
     [Fact]
+    public void Open_SameRepositoryOfAReloadedWorkspace_ReturnsTheSameGraph()
+    {
+        WorkspaceGitGraph first = _graphs.Open(WorkspaceWith("one"), Api);
+
+        WorkspaceGitGraph again = _graphs.Open(WorkspaceWith("one"), Api with { });
+
+        Assert.Same(first, again);
+        Assert.Single(_graphs.For("one"));
+        Assert.Equal(["one"], _changed);
+    }
+
+    [Fact]
     public async Task Open_UsesTheScopeFromTheSettings()
     {
         await _settings.UpdateAsync(

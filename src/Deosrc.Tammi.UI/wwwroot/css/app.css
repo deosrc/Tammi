@@ -2627,7 +2627,27 @@ label.task-choice {
   overflow-wrap: anywhere;
 }
 
-/* A repository or submodule name in the side panel that opens its git graph. */
+/* A repository card, or a submodule in it, that opens its git graph when clicked. A submodule's hover is drawn inside
+   its parent's, so the part that opens is clear. */
+.git-status-opens-graph {
+  cursor: pointer;
+}
+
+.git-status-card.git-status-opens-graph:hover {
+  border-color: var(--git-status-tone);
+}
+
+.git-status-submodule.git-status-opens-graph {
+  margin: 0 calc(-1 * var(--space-1));
+  padding: 0 var(--space-1);
+  border-radius: var(--radius);
+}
+
+.git-status-submodule.git-status-opens-graph:hover {
+  background: var(--color-surface-hover);
+}
+
+/* A repository or submodule name in the side panel, which opens its git graph through its card. */
 .git-status-link {
   padding: 0;
   border: none;

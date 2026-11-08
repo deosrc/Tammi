@@ -285,8 +285,9 @@ own branch. It is created automatically when the workspace is created:
 - **Git Graph:** a main area tab named `Git: <repository folder>` (e.g. `Git: api`), or `Git: <repository
   folder>/<submodule path>` for a submodule (e.g. `Git: api/libs/core`). It's opened from the **+** menu's **Git**
   item, which lists **Repository: `<name>`** for each repository and **Submodule: `<name>/<path>`** for each
-  checked-out submodule (nested ones too), or by clicking a repository's or submodule's name in the side panel. Each
-  repository or submodule has one graph tab: opening it again shows the open one.
+  checked-out submodule (nested ones too), or by clicking a repository's card in the side panel (a checked-out
+  submodule's part of the card opens the submodule's graph). Each repository or submodule has at most one graph tab
+  at a time: opening it again, either way, shows the open one.
   - It lists commits newest first in topological order (children before parents), each with its lane and dot, its
     branch and tag labels, its subject, author, date and (if shown) short commit id. Merges join lanes, and lanes that
     end are reused, so the graph stays narrow. HEAD's dot is a ring, the branch HEAD is on is highlighted, a
