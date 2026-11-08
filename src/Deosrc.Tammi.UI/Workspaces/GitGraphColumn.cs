@@ -5,7 +5,7 @@ namespace Deosrc.Tammi.UI.Workspaces;
 /// </summary>
 public enum GitGraphColumn
 {
-    /// <summary>The commit's lane and dot.</summary>
+    /// <summary>The commit's lane and dot. It's always shown.</summary>
     Graph,
 
     /// <summary>The commit's branch and tag labels, and its subject. It's always shown.</summary>

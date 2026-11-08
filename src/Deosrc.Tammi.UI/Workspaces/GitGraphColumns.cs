@@ -20,9 +20,11 @@ public sealed class GitGraphColumns
         [.. Enum.GetValues<GitGraphColumn>().Where(column => !_hidden.Contains(column))];
 
     /// <summary>
-    /// Whether a column can be hidden. Description can't, since it takes the space the others leave.
+    /// Whether a column can be hidden. Graph can't, since it's what the view is for, and nor can Description, since it
+    /// takes the space the others leave.
     /// </summary>
-    public static bool CanHide(GitGraphColumn column) => column != GitGraphColumn.Description;
+    public static bool CanHide(GitGraphColumn column) =>
+        column is not (GitGraphColumn.Graph or GitGraphColumn.Description);
 
     /// <summary>
     /// Whether a column is shown.
@@ -30,7 +32,7 @@ public sealed class GitGraphColumns
     public bool IsVisible(GitGraphColumn column) => !_hidden.Contains(column);
 
     /// <summary>
-    /// Shows a hidden column, or hides a shown one. Description is always shown.
+    /// Shows a hidden column, or hides a shown one. Graph and Description are always shown.
     /// </summary>
     public void Toggle(GitGraphColumn column)
     {

@@ -66,7 +66,9 @@
                      @oncontextmenu="CloseColumnsMenu" @oncontextmenu:preventDefault="true"></div>
                 <ul class="menu git-graph-columns-menu" role="menu" aria-label="Columns" @onkeydown="OnColumnsMenuKeyDown"
                     style="@FormattableString.Invariant($"left: {menuAt.X}px; top: {menuAt.Y}px")">
-                    @foreach (var column in Enum.GetValues<GitGraphColumn>())
+                    @* Graph is always shown, so it isn't offered. Description is, greyed out, as the column the
+                       others give their space to. *@
+                    @foreach (var column in Enum.GetValues<GitGraphColumn>().Where(column => column != GitGraphColumn.Graph))
                     {
                         var visible = Columns.IsVisible(column);
                         <li role="none" @key="column">
