@@ -18,6 +18,60 @@ public class AgentTests
     }
 
     [Fact]
+    public void ReadTerminalOutput_FollowsTheStateAndSessionTheAgentReports()
+    {
+        var changes = 0;
+        var agent = new Agent(AgentDefinition.OpenCode, "/work", new FakePtySession(), sessionId: "ses_launch");
+        agent.StateChanged += _ => changes++;
+        var sessionChanges = 0;
+        agent.SessionIdChanged += _ => sessionChanges++;
+
+        Read(agent, "state=working:id=ses_launch:app=opencode");
+        Assert.Equal(AgentState.Working, agent.State);
+        Read(agent, "state=blocked:id=ses_launch:kind=permission");
+        Assert.Equal(AgentState.NeedsInput, agent.State);
+        Read(agent, "state=error");
+        Assert.Equal(AgentState.Failed, agent.State);
+        Read(agent, "state=done");
+        Assert.Equal(AgentState.Idle, agent.State);
+        Read(agent, "state=working:id=ses_other");
+        Read(agent, "state=clear:id=ses_other");
+        Read(agent, "state=unknown");
+        Read(agent, "state=idle:id=not-valid;--flag");
+
+        Assert.Equal(AgentState.Idle, agent.State);
+        Assert.Equal("ses_other", agent.SessionId);
+        Assert.Equal(1, sessionChanges);
+        Assert.Equal(6, changes);
+    }
+
+    [Fact]
+    public void ReadTerminalOutput_IsIgnoredForAgentsThatDontReportInTheTerminal()
+    {
+        var agent = CreateAgent(new FakePtySession());
+
+        Read(agent, "state=working");
+
+        Assert.Equal(AgentState.Running, agent.State);
+    }
+
+    [Fact]
+    public async Task ReadTerminalOutput_IsIgnoredOnceTheProcessHasEnded()
+    {
+        var session = new FakePtySession();
+        var agent = new Agent(AgentDefinition.OpenCode, "/work", session);
+        session.Exit(0);
+        await WaitForEndAsync(agent);
+
+        Read(agent, "state=working");
+
+        Assert.Equal(AgentState.Exited, agent.State);
+    }
+
+    private static void Read(Agent agent, string report) =>
+        agent.ReadTerminalOutput(System.Text.Encoding.UTF8.GetBytes($"\x1b]7501;{report}\x07"));
+
+    [Fact]
     public async Task State_IsExited_WhenProcessExitsWithZero()
     {
         var session = new FakePtySession();

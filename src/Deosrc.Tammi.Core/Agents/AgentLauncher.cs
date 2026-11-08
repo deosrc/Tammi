@@ -48,7 +48,7 @@ public sealed class AgentLauncher(IPtyService ptyService, AgentHookServer? hookS
         }
 
         var sessionId = definition.CanResume && definition.SessionIdArguments.Count > 0
-            ? Guid.NewGuid().ToString()
+            ? definition.NewSessionId()
             : null;
         return Start(definition, workingDirectory, size, definition.BuildArguments(initialPrompt, sessionId), sessionId);
     }

@@ -22,6 +22,7 @@ public sealed class TerminalSession
     private readonly Lock _lock = new();
     private readonly Queue<byte[]> _chunks = new();
     private readonly int _historyLimit;
+    private readonly Action<ReadOnlySpan<byte>>? _observer;
     private TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     // Positions count every byte of output since the session started. _start is the first one still kept.
@@ -36,13 +37,21 @@ public sealed class TerminalSession
     /// <param name="historyLimit">
     /// How many bytes of output to keep. A little more can be kept, because output is dropped a chunk at a time.
     /// </param>
-    public TerminalSession(IPtySession pty, int historyLimit = DefaultHistoryLimit)
+    /// <param name="observer">
+    /// Called with each chunk of output as it's read, in order and one at a time, on a background thread, or
+    /// <c>null</c> for none. It must be quick and mustn't throw.
+    /// </param>
+    public TerminalSession(
+        IPtySession pty,
+        int historyLimit = DefaultHistoryLimit,
+        Action<ReadOnlySpan<byte>>? observer = null)
     {
         ArgumentNullException.ThrowIfNull(pty);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(historyLimit);
 
         Pty = pty;
         _historyLimit = historyLimit;
+        _observer = observer;
         OutputEnded = ReadOutputAsync();
     }
 
@@ -144,6 +153,7 @@ public sealed class TerminalSession
             int count;
             while ((count = await Pty.ReadAsync(buffer).ConfigureAwait(false)) > 0)
             {
+                Observe(buffer.AsSpan(0, count));
                 Append(buffer.AsSpan(0, count).ToArray());
             }
         }
@@ -161,6 +171,18 @@ public sealed class TerminalSession
             }
 
             changed.TrySetResult();
+        }
+    }
+
+    private void Observe(ReadOnlySpan<byte> output)
+    {
+        try
+        {
+            _observer?.Invoke(output);
+        }
+        catch (Exception)
+        {
+            // Watching the output must never stop it being kept.
         }
     }
 

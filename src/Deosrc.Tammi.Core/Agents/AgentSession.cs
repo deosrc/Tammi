@@ -27,10 +27,25 @@ public sealed record AgentSession(string Id, string AgentName, string WorkingDir
     }
 
     /// <summary>
-    /// Whether <paramref name="id"/> is an ID Tammi could have given a session: a UUID. Other IDs aren't resumed, so a
-    /// changed file can't pass the agent other arguments in place of the ID.
+    /// What opencode's session IDs start with.
     /// </summary>
-    public static bool IsValidId(string? id) => Guid.TryParseExact(id, "D", out _);
+    public const string OpenCodeIdPrefix = "ses_";
+
+    /// <summary>
+    /// Whether <paramref name="id"/> is an ID Tammi could have given a session: a UUID, or opencode's format (see
+    /// <see cref="OpenCodeIdPrefix"/> and then up to 64 letters and digits). Other IDs aren't resumed, so a changed
+    /// file can't pass the agent other arguments (e.g. an option) in place of the ID.
+    /// </summary>
+    public static bool IsValidId(string? id) =>
+        Guid.TryParseExact(id, "D", out _)
+        || (id is not null
+            && id.Length > OpenCodeIdPrefix.Length
+            && id.Length <= OpenCodeIdPrefix.Length + 64
+            && id.StartsWith(OpenCodeIdPrefix, StringComparison.Ordinal)
+            && id.AsSpan(OpenCodeIdPrefix.Length).IndexOfAnyExcept(IdCharacters) < 0);
+
+    private static readonly System.Buffers.SearchValues<char> IdCharacters =
+        System.Buffers.SearchValues.Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
 
     /// <summary>
     /// Finds the session's Agent Definition among <paramref name="definitions"/>, by name.

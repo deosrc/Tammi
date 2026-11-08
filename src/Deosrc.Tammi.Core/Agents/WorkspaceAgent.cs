@@ -18,7 +18,7 @@ public sealed class WorkspaceAgent : IWorkspaceProcess
         WorkspaceId = workspaceId;
         Name = name;
         Agent = agent;
-        Session = new TerminalSession(agent.Session);
+        Session = new TerminalSession(agent.Session, observer: agent.ReadTerminalOutput);
         StartOrder = MainAreaTabOrder.Next();
     }
 

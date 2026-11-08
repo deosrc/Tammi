@@ -72,15 +72,29 @@ public class AgentDefinitionTests
     }
 
     [Fact]
-    public void OpenCode_TakesPromptAsOption_AndHasNoHooksOrResume()
+    public void OpenCode_TakesPromptAsOption_SetsSessionAndResumesWithIt()
     {
         var definition = AgentDefinition.OpenCode;
 
         Assert.Equal("opencode", definition.Command);
-        Assert.Equal(["--prompt", "Read tasks.md"], definition.BuildArguments("Read tasks.md", "ignored-id"));
-        Assert.Empty(definition.BuildArguments(null));
+        Assert.Equal(["--prompt", "Read tasks.md"], definition.BuildArguments("Read tasks.md"));
+        Assert.Equal(
+            ["--session", "ses_abc", "--prompt", "Read tasks.md"],
+            definition.BuildArguments("Read tasks.md", "ses_abc"));
+        Assert.Equal(["--session", "ses_abc"], definition.BuildResumeArguments("ses_abc"));
         Assert.Null(definition.Hooks);
-        Assert.False(definition.CanResume);
+        Assert.True(definition.ReportsStateInTerminal);
+        Assert.True(definition.CanResume);
+    }
+
+    [Fact]
+    public void NewSessionId_MatchesWhatTheAgentAccepts()
+    {
+        var opencode = AgentDefinition.OpenCode.NewSessionId();
+        Assert.StartsWith("ses_", opencode);
+        Assert.Equal(30, opencode.Length);
+        Assert.True(AgentSession.IsValidId(opencode));
+        Assert.True(Guid.TryParse(AgentDefinition.ClaudeCode.NewSessionId(), out _));
     }
 
     [Fact]

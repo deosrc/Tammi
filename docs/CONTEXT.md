@@ -638,17 +638,17 @@ are left to other tools for now.
     the agent fails and says why. The predefined templates are each a single line.
 - **Claude Code** is the first Supported Agent, and **opencode** the second. Others (e.g. Codex CLI, Gemini CLI) can
   be added as Custom Agents, and may become Supported Agents later.
-  - opencode takes the initial prompt as `--prompt <prompt>`. Unlike Claude Code it has **no hooks** (it extends itself
-    with JavaScript plugins, which would mean writing files) so it only ever shows Running, and **its sessions can't be
-    resumed** (it makes up its own session IDs and can't be given one at launch, and without hooks Tammi can't learn
-    it). It also has no logo of its own in Tammi yet, so it shows the generic agent icon.
+  - opencode takes the initial prompt as `--prompt <prompt>`. Unlike Claude Code it has **no hooks**: it reports its
+    state and session in its terminal output instead (see Terminal state reports below), and Tammi sets the session's ID with
+    `--session <id>`, which opencode creates if needed, but only accepts IDs starting with `ses_`. So Tammi makes up
+    `ses_` and 26 hex digits for it. It has no logo of its own in Tammi yet, so it shows the generic agent icon.
 - **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or
   status events (e.g. Claude Code hooks), Tammi uses them for richer states. In keeping with the
   principles, hooks are supplied when Tammi launches the agent (e.g. through CLI arguments), never by
   changing repository files.
 - **States**, shown on Home and in the Workspace View:
 
-  | State | Meaning | Needs hooks |
+  | State | Meaning | Needs reports |
   |-------|---------|-------------|
   | Working | The agent is busy | Yes |
   | Needs input | The agent is waiting on the user (e.g. a question or permission prompt) | Yes |
@@ -658,7 +658,14 @@ are left to other tools for now.
   | Exited | The process ended normally, or the user stopped it | No |
   | Error | The process crashed, was killed by something other than Tammi, or exited with a non-zero code | No |
 
-  Agents with hooks use Working / Needs input / Idle / Failed while running. Agents without hooks show Running.
+  Agents with hooks, or that report their state in their terminal output, use Working / Needs input / Idle / Failed
+  while running. Other agents show Running.
+- **Terminal state reports:** opencode writes an `OSC 7501` escape sequence to its terminal whenever its state
+  changes (`ESC ] 7501 ; state=<state> : id=<session id> : … BEL`). Tammi reads it from the agent's output as it
+  arrives, whether or not its terminal is shown, and never changes what the terminal shows. Output that isn't such a
+  sequence, or that Tammi doesn't understand, is ignored. `working` is Working, `blocked` (a permission, question or
+  sign-in) is Needs input, `error` is Failed, and `idle`, `done` and `clear` are Idle. Its `id` is the Agent Session
+  the state is for, and Tammi follows it like a hook's session ID. An agent shows Running until its first report.
 - **Hooks:** each Agent Definition says whether its agent has hooks, and how they're supplied and read. Only Supported
   Agents have them for now. Custom Agents have none, and show Running.
   - Tammi runs a small HTTP server on the loopback address (`127.0.0.1`, on a port chosen when it's first needed).
