@@ -131,7 +131,7 @@ Workspaces never hold full clones. Each repository in a workspace is a worktree 
 so several workspaces can work on the same repository at once without cloning it again.
 
 **Finding Local Repositories.** The catalogue's Local Repositories come from the Monitored Folders and the manually
-added local repositories in the Git settings. A repository found by both, or in two overlapping Monitored Folders, is
+added local repositories in the Repositories settings. A repository found by both, or in two overlapping Monitored Folders, is
 listed once.
 - A folder is a repository when it has a `.git` folder, or a `.git` file that doesn't belong to a linked worktree.
 - Scanning a Monitored Folder looks up to 20 folders down. It doesn't look inside repositories (so submodules and
@@ -342,6 +342,7 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     the same service again gives the same ID, and workspace tasks from it find their source again. The same service
     can't be connected twice.
 - **Git**
+  - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that Tammi uses
   - **Author:** the name and email address git records on commits (`user.name` and `user.email` in the user's global
     git config, `git config --global`). Tammi uses the git CLI and the user's own config, so these apply to every git
     tool on the computer, and the section says so. Clearing one unsets it.
@@ -358,11 +359,11 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
       or unknown when the token can't list keys), with an Add button. Tammi adds it through GitHub's API, titled with
       the computer's and key's names. If the token isn't allowed to, Tammi copies the public key and opens GitHub's
       page for adding a key, and says why. JIRA has no SSH keys.
+- **Repositories**
   - Monitored Folder(s), each with how many repositories were found in it
   - Manually added local repositories
   - The Repository Catalogue's size, with a Rescan button
   - Status refresh interval for workspaces that aren't open (whole minutes from 1 to 1440, default 5)
-  - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that Tammi uses
 - **Agents**
   - **Supported Agents** are always listed, and can't be edited or removed. Each one shows whether its CLI is ready:
     Tammi finds the command and runs it to get its version (e.g. `claude --version`). If that fails, it says why
