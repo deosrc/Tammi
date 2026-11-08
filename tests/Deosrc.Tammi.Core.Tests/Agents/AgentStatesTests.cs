@@ -24,6 +24,7 @@ public class AgentStatesTests
     [InlineData(AgentState.Working, true)]
     [InlineData(AgentState.NeedsInput, true)]
     [InlineData(AgentState.Idle, true)]
+    [InlineData(AgentState.Failed, true)]
     [InlineData(AgentState.Exited, false)]
     [InlineData(AgentState.Error, false)]
     public void IsRunning_IsTrueWhileProcessRuns(AgentState state, bool expected)

@@ -24,5 +24,6 @@ public static class AgentStates
     /// states its hooks report.
     /// </summary>
     public static bool IsRunning(this AgentState state) =>
-        state is AgentState.Running or AgentState.Working or AgentState.NeedsInput or AgentState.Idle;
+        state is AgentState.Running or AgentState.Working or AgentState.NeedsInput or AgentState.Idle
+            or AgentState.Failed;
 }

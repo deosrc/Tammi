@@ -653,11 +653,12 @@ are left to other tools for now.
   | Working | The agent is busy | Yes |
   | Needs input | The agent is waiting on the user (e.g. a question or permission prompt) | Yes |
   | Idle | The agent has finished its turn | Yes |
+  | Failed | The agent reported an error, but its process is still running and the user can carry on | Yes |
   | Running | The process is running, but finer detail isn't available | No |
   | Exited | The process ended normally, or the user stopped it | No |
   | Error | The process crashed, was killed by something other than Tammi, or exited with a non-zero code | No |
 
-  Agents with hooks use Working / Needs input / Idle while running. Agents without hooks show Running.
+  Agents with hooks use Working / Needs input / Idle / Failed while running. Agents without hooks show Running.
 - **Hooks:** each Agent Definition says whether its agent has hooks, and how they're supplied and read. Only Supported
   Agents have them for now. Custom Agents have none, and show Running.
   - Tammi runs a small HTTP server on the loopback address (`127.0.0.1`, on a port chosen when it's first needed).

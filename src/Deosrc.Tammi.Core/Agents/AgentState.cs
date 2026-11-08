@@ -4,7 +4,7 @@ namespace Deosrc.Tammi.Core.Agents;
 /// What an agent is doing, as shown on Home and in the Workspace View.
 /// </summary>
 /// <remarks>
-/// <see cref="Working"/>, <see cref="NeedsInput"/> and <see cref="Idle"/> come from the agent's hooks, so only agents
+/// <see cref="Working"/>, <see cref="NeedsInput"/>, <see cref="Idle"/> and <see cref="Failed"/> come from the agent's hooks, so only agents
 /// whose definition has <see cref="AgentDefinition.Hooks"/> use them. The others show <see cref="Running"/> while their
 /// process runs (see <c>docs/CONTEXT.md</c>).
 /// </remarks>
@@ -39,4 +39,10 @@ public enum AgentState
     /// The agent has finished its turn. Reported by its hooks.
     /// </summary>
     Idle,
+
+    /// <summary>
+    /// The agent hit an error, e.g. a failed request, but its process is still running and the user can carry on.
+    /// Reported by its hooks. Not the same as <see cref="Error"/>, where the process has ended.
+    /// </summary>
+    Failed,
 }
