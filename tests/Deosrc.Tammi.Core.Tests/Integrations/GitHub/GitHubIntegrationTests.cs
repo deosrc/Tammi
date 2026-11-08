@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Deosrc.Tammi.Core.Integrations;
 using Deosrc.Tammi.Core.Integrations.GitHub;
@@ -574,7 +575,7 @@ public class GitHubIntegrationTests : IDisposable
         using var httpClient = new HttpClient(handler);
         var github = new GitHubIntegration(
             new GitHubIntegrationOptions { ApiUrl = new Uri("https://github.example.com/api/v3") },
-            _store, httpClient, _time);
+            _store, httpClient, NullLogger.Instance, _time);
         await github.Credentials.SaveAsync(Token, CancellationToken);
 
         Assert.True(github.TryParseTaskReference("https://github.example.com/acme/api/issues/7", out string? key));
@@ -634,7 +635,7 @@ public class GitHubIntegrationTests : IDisposable
         $"search/issues?q={Uri.EscapeDataString(query)}{sort}&per_page={perPage}";
 
     private GitHubIntegration Create(GitHubIntegrationOptions? options = null) =>
-        new(options ?? new GitHubIntegrationOptions(), _store, _httpClient, _time);
+        new(options ?? new GitHubIntegrationOptions(), _store, _httpClient, NullLogger.Instance, _time);
 
     private async Task<GitHubIntegration> CreateAuthenticatedAsync(GitHubIntegrationOptions? options = null)
     {

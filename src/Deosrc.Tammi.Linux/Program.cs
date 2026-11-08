@@ -9,8 +9,8 @@ using Deosrc.Tammi.Core.Terminals;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.Linux.PlatformServices;
 using Deosrc.Tammi.UI;
+using Deosrc.Tammi.UI.Logging;
 using Deosrc.Tammi.UI.Workspaces;
-using Microsoft.Extensions.Logging;
 
 [assembly: SupportedOSPlatform("linux")]
 
@@ -31,6 +31,7 @@ internal static class Program
         builder.RootComponents.Add<Routes>("#app");
 
         var app = builder.Build();
+        app.Services.UseTammiLogging();
         var windowStateStore = app.Services.GetRequiredService<WindowStateStore>();
         var windowState = windowStateStore.Load() ?? DefaultWindowState;
 
@@ -58,6 +59,7 @@ internal static class Program
         Task.WhenAll(
             app.Services.GetRequiredService<WorkspaceTerminals>().DisposeAsync().AsTask(),
             agents.DisposeAsync().AsTask()).GetAwaiter().GetResult();
+        app.Services.StopTammiLogging();
     }
 
     /// <summary>

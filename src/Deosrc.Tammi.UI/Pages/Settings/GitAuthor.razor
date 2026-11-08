@@ -1,0 +1,107 @@
+@using Deosrc.Tammi.Core.Git
+@inject IGitUserConfig GitUserConfig
+
+@* The commit author in the user's global git config. It isn't an app setting, so it's read from and saved to git. *@
+<div class="settings-field">
+    <h2 class="settings-field-title">Author</h2>
+    <p class="settings-help">
+        The name and email address git records on your commits. They're saved in your global git config, so they
+        apply to every git tool on this computer, not only Tammi. Leave one empty to remove it.
+    </p>
+</div>
+
+@if (_loadError is not null)
+{
+    <p class="error">@_loadError</p>
+}
+else if (_identity is null)
+{
+    <p class="placeholder">Reading your git config…</p>
+}
+else
+{
+    <div class="settings-field">
+        <label for="git-author-name">Name</label>
+        @* Recreated after each change, so the input shows the saved value, e.g. without surrounding spaces. *@
+        <input @key="_revision"
+               id="git-author-name"
+               class="settings-text"
+               autocomplete="name"
+               value="@_identity.Name"
+               @onchange="OnNameChanged" />
+    </div>
+
+    <div class="settings-field">
+        <label for="git-author-email">Email</label>
+        <input @key="_revision"
+               id="git-author-email"
+               type="email"
+               class="settings-text"
+               autocomplete="email"
+               value="@_identity.Email"
+               @onchange="OnEmailChanged" />
+    </div>
+
+    @if (_saveError is not null)
+    {
+        <p class="error">@_saveError</p>
+    }
+}
+
+@code {
+    private GitIdentity? _identity;
+    private string? _loadError;
+    private string? _saveError;
+    private int _revision;
+
+    /// <summary>
+    /// Raised when the author changes, e.g. so a new SSH key can default to the email address.
+    /// </summary>
+    [Parameter]
+    public EventCallback<GitIdentity> IdentityChanged { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _identity = await GitUserConfig.GetIdentityAsync();
+            await IdentityChanged.InvokeAsync(_identity);
+        }
+        catch (GitException ex)
+        {
+            _loadError = $"Couldn't read your git config. {ex.Message}";
+        }
+    }
+
+    private Task OnNameChanged(ChangeEventArgs e) =>
+        SaveAsync(value => GitUserConfig.SetNameAsync(value), e.Value?.ToString());
+
+    private Task OnEmailChanged(ChangeEventArgs e) =>
+        SaveAsync(value => GitUserConfig.SetEmailAsync(value), e.Value?.ToString());
+
+    private async Task SaveAsync(Func<string?, Task> save, string? value)
+    {
+        try
+        {
+            await save(value);
+            _saveError = null;
+        }
+        catch (GitException ex)
+        {
+            _saveError = $"Couldn't save your git config. {ex.Message}";
+        }
+
+        // Shows what git saved, which might differ from what was typed (e.g. trimmed), or not have changed.
+        try
+        {
+            _identity = await GitUserConfig.GetIdentityAsync();
+            await IdentityChanged.InvokeAsync(_identity);
+        }
+        catch (GitException ex)
+        {
+            _loadError = $"Couldn't read your git config. {ex.Message}";
+        }
+
+        _revision++;
+    }
+}

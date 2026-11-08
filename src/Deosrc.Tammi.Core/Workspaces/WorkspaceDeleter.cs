@@ -1,5 +1,7 @@
 using Deosrc.Tammi.Core.Git;
 using Deosrc.Tammi.Core.Platform;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Deosrc.Tammi.Core.Workspaces;
 
@@ -18,8 +20,14 @@ namespace Deosrc.Tammi.Core.Workspaces;
 /// new changes, or something new appears in the folder, deleting stops and the workspace can be checked again.
 /// </para>
 /// </remarks>
-public sealed class WorkspaceDeleter(IWorkspaceStore store, IGitWorktreeService worktrees, IGitRepositoryReader reader)
+public sealed class WorkspaceDeleter(
+    IWorkspaceStore store,
+    IGitWorktreeService worktrees,
+    IGitRepositoryReader reader,
+    ILogger<WorkspaceDeleter>? logger = null)
 {
+    private readonly ILogger _logger = logger ?? NullLogger<WorkspaceDeleter>.Instance;
+
     /// <summary>
     /// Works out what deleting a workspace would remove, and the work that would be lost.
     /// </summary>
@@ -73,18 +81,31 @@ public sealed class WorkspaceDeleter(IWorkspaceStore store, IGitWorktreeService 
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        if (plan.Scope == WorkspaceDeletionScope.Folder)
+        _logger.LogInformation(
+            "Deleting the workspace {Name} ({Id}) in {Folder}: {Scope}.", plan.Name, plan.WorkspaceId, plan.Folder,
+            plan.Scope);
+        try
         {
-            await EnsureUnchangedAsync(plan, cancellationToken).ConfigureAwait(false);
-            foreach (var worktree in plan.Worktrees)
+            if (plan.Scope == WorkspaceDeletionScope.Folder)
             {
-                await RemoveWorktreeAsync(plan, worktree, cancellationToken).ConfigureAwait(false);
+                await EnsureUnchangedAsync(plan, cancellationToken).ConfigureAwait(false);
+                foreach (var worktree in plan.Worktrees)
+                {
+                    await RemoveWorktreeAsync(plan, worktree, cancellationToken).ConfigureAwait(false);
+                }
+
+                await Task.Run(() => DeleteFolder(plan), cancellationToken).ConfigureAwait(false);
             }
 
-            await Task.Run(() => DeleteFolder(plan), cancellationToken).ConfigureAwait(false);
+            await store.RemoveFromIndexAsync(plan.WorkspaceId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (WorkspaceDeletionException ex)
+        {
+            _logger.LogError(ex, "Couldn't delete the workspace {Name} ({Id}).", plan.Name, plan.WorkspaceId);
+            throw;
         }
 
-        await store.RemoveFromIndexAsync(plan.WorkspaceId, cancellationToken).ConfigureAwait(false);
+        _logger.LogInformation("Deleted the workspace {Name} ({Id}).", plan.Name, plan.WorkspaceId);
         return await FindBranchesAsync(plan, cancellationToken).ConfigureAwait(false);
     }
 
@@ -105,9 +126,16 @@ public sealed class WorkspaceDeleter(IWorkspaceStore store, IGitWorktreeService 
                 await worktrees.DeleteBranchAsync(branch.LocalRepositoryPath, branch.Branch, cancellationToken)
                     .ConfigureAwait(false);
                 results.Add(new BranchDeletionResult(branch, null));
+                _logger.LogInformation(
+                    "Deleted the branch {Branch} from {Repository}.", branch.Branch, branch.LocalRepositoryPath);
             }
             catch (GitException ex)
             {
+                _logger.LogWarning(
+                    "Couldn't delete the branch {Branch} from {Repository}: {Message}",
+                    branch.Branch,
+                    branch.LocalRepositoryPath,
+                    ex.Message);
                 results.Add(new BranchDeletionResult(branch, ex.Message));
             }
         }

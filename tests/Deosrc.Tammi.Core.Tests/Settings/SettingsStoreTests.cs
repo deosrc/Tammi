@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging;
 using Deosrc.Tammi.Core.Agents;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Settings;
@@ -158,6 +159,33 @@ public sealed class SettingsStoreTests : IDisposable
 
         Assert.Equal(WorkspaceNameSeparator.Hyphens, format.Separator);
         Assert.Equal(WorkspaceNameCase.Lowercase, format.Case);
+    }
+
+    [Fact]
+    public void Defaults_LogFromInformation()
+    {
+        Assert.Equal(LogLevel.Information, new AppSettings().General.LogLevel);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesTheLogLevel_ByName()
+    {
+        await CreateStore().UpdateAsync(
+            settings => settings with { General = settings.General with { LogLevel = LogLevel.Debug } },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(LogLevel.Debug, CreateStore().Current.General.LogLevel);
+        Assert.Contains("\"logLevel\": \"Debug\"", File.ReadAllText(SettingsPath));
+    }
+
+    [Theory]
+    [InlineData("9")]
+    [InlineData("\"None\"")]
+    public void Load_WithAnUnknownOrNoLogLevel_LogsFromInformation(string logLevel)
+    {
+        WriteSettingsFile($$$"""{"version":1,"general":{"logLevel":{{{logLevel}}}}}""");
+
+        Assert.Equal(LogLevel.Information, CreateStore().Current.General.LogLevel);
     }
 
     [Fact]
@@ -613,5 +641,7 @@ public sealed class SettingsStoreTests : IDisposable
         public string DataDirectory => throw new NotSupportedException();
 
         public string CacheDirectory => throw new NotSupportedException();
+
+        public string LogDirectory => throw new NotSupportedException();
     }
 }

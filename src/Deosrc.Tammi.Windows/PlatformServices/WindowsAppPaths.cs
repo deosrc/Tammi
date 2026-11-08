@@ -19,4 +19,6 @@ internal sealed class WindowsAppPaths : IAppPaths
     public string DataDirectory { get; } = Path.Combine(Root, "Data");
 
     public string CacheDirectory { get; } = Path.Combine(Root, "Cache");
+
+    public string LogDirectory { get; } = Path.Combine(Root, "Logs");
 }

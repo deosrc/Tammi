@@ -11,6 +11,9 @@
             a classic token with the <code>repo</code> scope for private repositories. GitHub's search only finds
             private issues when a fine-grained token can read contents too. On github.com, the link below fills in
             these permissions: choose the token's owner and its repositories (All repositories is simplest).
+            To let Tammi add SSH keys from Settings → Git, also give it read and write access to the account's Git SSH
+            keys (classic tokens: <code>write:public_key</code>). Without it, Tammi opens GitHub's page for adding a
+            key instead.
         </text>
         @* The link needs the server, so it waits until a GitHub Enterprise Server URL is entered. *@
         @if (GitHub is not null)

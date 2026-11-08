@@ -1,4 +1,6 @@
 using Deosrc.Tammi.Core.Credentials;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Deosrc.Tammi.Core.Integrations;
 
@@ -21,12 +23,15 @@ namespace Deosrc.Tammi.Core.Integrations;
 public sealed class TaskFinder
 {
     private readonly IntegrationRegistry _registry;
+    private readonly ILogger _logger;
 
     /// <param name="registry">The connected integrations.</param>
-    public TaskFinder(IntegrationRegistry registry)
+    /// <param name="logger">Logs the sources that fail.</param>
+    public TaskFinder(IntegrationRegistry registry, ILogger<TaskFinder>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         _registry = registry;
+        _logger = logger ?? NullLogger<TaskFinder>.Instance;
     }
 
     /// <summary>
@@ -94,7 +99,7 @@ public sealed class TaskFinder
     private static bool IsLink(string text) =>
         Uri.TryCreate(text, UriKind.Absolute, out Uri? url) && url.Scheme is "https" or "http";
 
-    private static async Task<TaskSearchResults> SearchAllAsync(
+    private async Task<TaskSearchResults> SearchAllAsync(
         TaskSearchKind kind,
         IEnumerable<(ITaskIntegration Source, Func<Task<IReadOnlyList<TaskInfo>>> Search)> searches,
         CancellationToken cancellationToken)
@@ -111,6 +116,8 @@ public sealed class TaskFinder
             }
             catch (Exception ex) when (ex is IntegrationException or CredentialStoreException)
             {
+                _logger.LogWarning(
+                    "Couldn't get {SearchKind} tasks from {Source}: {Message}", kind, search.Source.Id, ex.Message);
                 return (Tasks: (IReadOnlyList<TaskInfo>)[], Error: new TaskSourceError(
                     search.Source.Id,
                     search.Source.Name,

@@ -8,9 +8,10 @@
 
   <ItemGroup>
     <PackageReference Include="Photino.Blazor" />
-    <!-- Photino.Blazor targets net9.0; pin its Blazor dependencies to the .NET 10 versions used by Deosrc.Tammi.UI. -->
+    <!-- Photino.Blazor targets net9.0; pin its Blazor dependencies to the .NET 10 versions used by Deosrc.Tammi.UI.
+         Its Microsoft.Extensions.Logging.Console dependency is pinned by Directory.Packages.props, but isn't used:
+         Tammi logs to the console through Serilog. -->
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
   </ItemGroup>
 
   <ItemGroup>
