@@ -4,19 +4,10 @@ namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// A process running in a workspace's embedded terminal, shown as a tab in its Workspace View: a terminal or an agent.
+/// Its <see cref="IMainAreaTab.Name"/> is unique among the workspace's open processes of its kind.
 /// </summary>
-public interface IWorkspaceProcess
+public interface IWorkspaceProcess : IMainAreaTab
 {
-    /// <summary>
-    /// The ID of the workspace the process belongs to.
-    /// </summary>
-    string WorkspaceId { get; }
-
-    /// <summary>
-    /// The name its tab shows, unique among the workspace's open processes of its kind.
-    /// </summary>
-    string Name { get; }
-
     /// <summary>
     /// The folder the process was started in.
     /// </summary>
@@ -31,9 +22,4 @@ public interface IWorkspaceProcess
     /// Whether the process has ended.
     /// </summary>
     bool HasExited { get; }
-
-    /// <summary>
-    /// Orders processes by when they started, across terminals and agents: a later process has a higher number.
-    /// </summary>
-    long StartOrder { get; }
 }

@@ -1,10 +1,10 @@
 namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
-/// Hands out <see cref="IWorkspaceProcess.StartOrder"/> numbers, so terminals and agents can be listed together in the
-/// order they started.
+/// Hands out <see cref="IMainAreaTab.StartOrder"/> numbers, so terminals, agents and git graphs can be listed together
+/// in the order they started or opened.
 /// </summary>
-internal static class WorkspaceProcessOrder
+internal static class MainAreaTabOrder
 {
     private static long _last;
 

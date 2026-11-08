@@ -17,7 +17,7 @@ public sealed class WorkspaceTerminal : IWorkspaceProcess
         Name = name;
         WorkingDirectory = workingDirectory;
         Session = new TerminalSession(pty);
-        StartOrder = WorkspaceProcessOrder.Next();
+        StartOrder = MainAreaTabOrder.Next();
     }
 
     /// <summary>

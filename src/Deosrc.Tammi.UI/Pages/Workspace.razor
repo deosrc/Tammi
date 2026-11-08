@@ -94,7 +94,7 @@ else
                 <SidePanelSection Title="Agents">
                     @if (_listing?.Workspace is { } agentsWorkspace)
                     {
-                        <WorkspaceAgentsSection Workspace="agentsWorkspace" Shown="_shown" OnShow="ShowProcess" />
+                        <WorkspaceAgentsSection Workspace="agentsWorkspace" Shown="_shown" OnShow="ShowTab" />
                     }
                 </SidePanelSection>
                 <SidePanelSection Title="Repositories">
@@ -159,29 +159,30 @@ else
                             </svg>
                         </button>
                     </div>
-                    @foreach (var process in _processes)
+                    @foreach (var tab in _tabs)
                     {
-                        var shown = ReferenceEquals(process, _shown);
-                        <div class="session-tab @(shown ? "active" : null)" @key="process">
+                        var shown = ReferenceEquals(tab, _shown);
+                        <div class="session-tab @(shown ? "active" : null)" @key="tab">
                             <button type="button" class="session-tab-label" role="tab"
-                                    aria-selected="@(shown ? "true" : "false")" title="@process.WorkingDirectory"
-                                    @onclick="() => ShowProcess(process)">
-                                @if (process is WorkspaceAgent agent)
+                                    aria-selected="@(shown ? "true" : "false")"
+                                    title="@((tab as IWorkspaceProcess)?.WorkingDirectory)"
+                                    @onclick="() => ShowTab(tab)">
+                                @if (tab is WorkspaceAgent agent)
                                 {
                                     @* Agents' tabs show their state, so one that needs the user stands out. *@
                                     <span class="agent-state-dot @AgentStateText.ToneClass(agent.State)"
                                           title="@AgentStateText.Label(agent.State)"></span>
                                 }
-                                <span class="tab-label-text">@process.Name</span>
-                                @if (process.HasExited)
+                                <span class="tab-label-text">@tab.Name</span>
+                                @if (tab is IWorkspaceProcess { HasExited: true })
                                 {
                                     <span class="session-tab-status">
-                                        @(process is WorkspaceAgent { State: AgentState.Error } ? "Error" : "Exited")
+                                        @(tab is WorkspaceAgent { State: AgentState.Error } ? "Error" : "Exited")
                                     </span>
                                 }
                             </button>
-                            <button type="button" class="tab-close" title="Close @process.Name"
-                                    aria-label="Close @process.Name" @onclick="() => CloseProcessAsync(process)">
+                            <button type="button" class="tab-close" title="Close @tab.Name"
+                                    aria-label="Close @tab.Name" @onclick="() => CloseTabAsync(tab)">
                                 &times;
                             </button>
                         </div>
@@ -226,9 +227,9 @@ else
             {
                 <p class="error workspace-main-error">@_startError</p>
             }
-            @if (_shown is not null)
+            @if (_shown is IWorkspaceProcess shownProcess)
             {
-                <Terminal @key="_shown" Session="_shown.Session" Class="workspace-terminal" />
+                <Terminal @key="shownProcess" Session="shownProcess.Session" Class="workspace-terminal" />
             }
             else
             {
@@ -256,9 +257,9 @@ else
     private string? _openSubmenu;
     private string? _startError;
 
-    // The workspace's terminals and agents, in the order they started.
-    private IReadOnlyList<IWorkspaceProcess> _processes = [];
-    private IWorkspaceProcess? _shown;
+    // The workspace's main area tabs after the dashboard, in the order they started.
+    private IReadOnlyList<IMainAreaTab> _tabs = [];
+    private IMainAreaTab? _shown;
     private string _deletingName = "";
 
     // Keeps running while the tab is open, so it isn't disposed with the page.
@@ -297,7 +298,7 @@ else
         }
 
         _tab = WorkspaceTabs.Find(WorkspaceId);
-        UpdateProcesses();
+        UpdateTabs();
         await LoadAsync();
     }
 
@@ -396,14 +397,14 @@ else
         }
     });
 
-    private void UpdateProcesses()
+    private void UpdateTabs()
     {
-        _processes = [.. Terminals.For(WorkspaceId).Concat<IWorkspaceProcess>(Agents.For(WorkspaceId))
-            .OrderBy(process => process.StartOrder)];
+        _tabs = [.. Terminals.For(WorkspaceId).Concat<IMainAreaTab>(Agents.For(WorkspaceId))
+            .OrderBy(tab => tab.StartOrder)];
 
-        // Show the terminal or agent the view was showing last time, or the dashboard if it wasn't showing one or it
-        // has been closed.
-        _shown = ViewState.GetShown(WorkspaceId) is { } shown && _processes.Contains(shown) ? shown : null;
+        // Show the tab the view was showing last time, or the dashboard if it wasn't showing one or it has been
+        // closed.
+        _shown = ViewState.GetShown(WorkspaceId) is { } shown && _tabs.Contains(shown) ? shown : null;
         ViewState.SetShown(WorkspaceId, _shown);
     }
 
@@ -413,11 +414,11 @@ else
         _shown = null;
     }
 
-    private void ShowProcess(IWorkspaceProcess process)
+    private void ShowTab(IMainAreaTab tab)
     {
-        ViewState.SetShown(WorkspaceId, process);
-        _shown = process;
-        UpdateProcesses();
+        ViewState.SetShown(WorkspaceId, tab);
+        _shown = tab;
+        UpdateTabs();
     }
 
     private void StartTerminal(WorkspaceRepository? repository)
@@ -431,14 +432,14 @@ else
 
         try
         {
-            ShowProcess(Terminals.Start(workspace, repository));
+            ShowTab(Terminals.Start(workspace, repository));
         }
         catch (Exception ex) when (ex is IOException or System.Runtime.InteropServices.ExternalException)
         {
             _startError = $"Couldn't start a terminal. {ex.Message}";
         }
 
-        UpdateProcesses();
+        UpdateTabs();
     }
 
     private async Task StartAgentAsync(AgentDefinition definition, WorkspaceRepository? repository)
@@ -452,7 +453,7 @@ else
 
         try
         {
-            ShowProcess(await Agents.StartAsync(workspace, definition, repository));
+            ShowTab(await Agents.StartAsync(workspace, definition, repository));
         }
         catch (Exception ex) when (ex is IOException or ArgumentException
             or System.Runtime.InteropServices.ExternalException)
@@ -460,27 +461,27 @@ else
             _startError = $"Couldn't start {definition.Name}. {ex.Message}";
         }
 
-        UpdateProcesses();
+        UpdateTabs();
     }
 
-    private async Task CloseProcessAsync(IWorkspaceProcess process)
+    private async Task CloseTabAsync(IMainAreaTab tab)
     {
-        if (ReferenceEquals(process, _shown))
+        if (ReferenceEquals(tab, _shown))
         {
             // Show the next tab, or the previous one if it was the last, or else the dashboard.
-            var index = _processes.ToList().IndexOf(process);
-            var next = index + 1 < _processes.Count ? _processes[index + 1] : index > 0 ? _processes[index - 1] : null;
+            var index = _tabs.ToList().IndexOf(tab);
+            var next = index + 1 < _tabs.Count ? _tabs[index + 1] : index > 0 ? _tabs[index - 1] : null;
             ViewState.SetShown(WorkspaceId, next);
         }
 
         // Closing an agent's tab stops it. Its session can still be resumed.
-        var closing = process switch
+        var closing = tab switch
         {
             WorkspaceAgent agent => Agents.CloseAsync(agent),
             WorkspaceTerminal terminal => Terminals.CloseAsync(terminal),
             _ => Task.CompletedTask,
         };
-        UpdateProcesses();
+        UpdateTabs();
         await closing;
     }
 
@@ -584,7 +585,7 @@ else
             return;
         }
 
-        UpdateProcesses();
+        UpdateTabs();
         StateHasChanged();
     });
 
