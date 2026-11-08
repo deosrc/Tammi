@@ -1,4 +1,4 @@
-namespace Deosrc.Tammi.UI.Workspaces;
+namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// How a git graph's details show the selected commit's changed files.

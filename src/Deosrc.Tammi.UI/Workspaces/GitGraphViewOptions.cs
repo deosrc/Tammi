@@ -1,16 +1,29 @@
 using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Settings;
 
 namespace Deosrc.Tammi.UI.Workspaces;
 
 /// <summary>
 /// How the git graphs show their commits, chosen from their header's right-click menu (which columns are shown, and
-/// which labels the rows have) and in their details (how changed files are listed). Every graph shows the same, until
-/// the app closes. The Commit column is hidden until the user shows it, every label is shown, files are listed, and the
-/// Authors section is open.
+/// which labels the rows have) and in their details (how changed files are shown, and whether Authors is collapsed).
+/// Every graph shows the same. How changed files are shown is kept in the settings; the rest lasts until the app closes.
+/// The Commit column is hidden until the user shows it, every label is shown, and the Authors section is open.
 /// </summary>
-public sealed class GitGraphViewOptions
+public sealed class GitGraphViewOptions : IDisposable
 {
     private readonly HashSet<GitGraphColumn> _hidden = [GitGraphColumn.Commit];
+    private readonly ISettingsStore _settings;
+    private GitGraphFileView _fileView;
+
+    /// <summary>
+    /// Creates the options, showing changed files as the settings say.
+    /// </summary>
+    public GitGraphViewOptions(ISettingsStore settings)
+    {
+        _settings = settings;
+        _fileView = settings.Current.Git.GraphFileView;
+        _settings.Changed += OnSettingsChanged;
+    }
 
     /// <summary>
     /// Raised when an option changes, on the thread that changed it.
@@ -36,7 +49,7 @@ public sealed class GitGraphViewOptions
     /// <summary>
     /// How the details show the selected commit's changed files.
     /// </summary>
-    public GitGraphFileView FileView { get; private set; } = GitGraphFileView.List;
+    public GitGraphFileView FileView => _fileView;
 
     /// <summary>
     /// Whether the details' Authors section is collapsed, showing only the author's name.
@@ -88,13 +101,43 @@ public sealed class GitGraphViewOptions
     }
 
     /// <summary>
-    /// Lists the changed files, or shows them in their folders.
+    /// Lists the changed files, or shows them in their folders, and keeps the choice in the settings. The graphs show
+    /// it straight away. If the settings can't be saved, they show it until the app closes.
     /// </summary>
-    public void SetFileView(GitGraphFileView view)
+    public async Task SetFileViewAsync(GitGraphFileView view)
     {
-        if (view != FileView)
+        if (view == _fileView)
         {
-            FileView = view;
+            return;
+        }
+
+        _fileView = view;
+        Changed?.Invoke();
+        try
+        {
+            await _settings.UpdateAsync(settings => settings with
+            {
+                Git = settings.Git with { GraphFileView = view },
+            });
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Not kept for next time, which only means the details show files the old way after a restart.
+        }
+    }
+
+    /// <summary>
+    /// Stops following the settings.
+    /// </summary>
+    public void Dispose() => _settings.Changed -= OnSettingsChanged;
+
+    // The settings changed, e.g. by another graph's choice being saved. Only a different choice changes the graphs.
+    private void OnSettingsChanged()
+    {
+        var view = _settings.Current.Git.GraphFileView;
+        if (view != _fileView)
+        {
+            _fileView = view;
             Changed?.Invoke();
         }
     }

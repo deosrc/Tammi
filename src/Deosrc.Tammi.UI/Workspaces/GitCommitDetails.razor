@@ -1,5 +1,6 @@
 @implements IAsyncDisposable
 @using Deosrc.Tammi.Core.Git
+@using Deosrc.Tammi.Core.Settings
 @using Deosrc.Tammi.Core.Windowing
 @inject IJSRuntime JS
 @inject GitGraphViewOptions Options
@@ -81,7 +82,7 @@
                     <div class="segmented segmented-small git-commit-file-view" role="group" aria-label="Show files as">
                         <button type="button" class="segmented-option" title="As a list" aria-label="As a list"
                                 aria-pressed="@(Options.FileView == GitGraphFileView.List ? "true" : "false")"
-                                @onclick="() => Options.SetFileView(GitGraphFileView.List)">
+                                @onclick="() => Options.SetFileViewAsync(GitGraphFileView.List)">
                             <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <path d="M9 6h11M9 12h11M9 18h11" />
                                 <path d="M4 6h.01M4 12h.01M4 18h.01" />
@@ -89,7 +90,7 @@
                         </button>
                         <button type="button" class="segmented-option" title="As a tree" aria-label="As a tree"
                                 aria-pressed="@(Options.FileView == GitGraphFileView.Tree ? "true" : "false")"
-                                @onclick="() => Options.SetFileView(GitGraphFileView.Tree)">
+                                @onclick="() => Options.SetFileViewAsync(GitGraphFileView.Tree)">
                             <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <path d="M4 4h6M7 4v14h5M7 11h5" />
                                 <path d="M14 11h6M14 18h6" />

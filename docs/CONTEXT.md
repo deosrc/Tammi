@@ -324,8 +324,9 @@ own branch. It is created automatically when the workspace is created:
       as a tree of folders, each with a folder icon and, after its name, the same counts for the files in it, which
       start closed and open and close, with folders holding only one folder joined (e.g. `src/app`). Each file keeps
       its A, M, D or R.
-    - Like the columns, the list or tree choice and whether Authors is collapsed are shared by every graph until the
-      app closes. Diffs are a separate Git operation.
+    - Every graph shows files the same way, and the list or tree choice is kept in the settings, so it's the same
+      after a restart. Like the columns, whether Authors is collapsed is shared by every graph until the app closes.
+      Diffs are a separate Git operation.
   - The split between the list and the details is resizable: drag it, or focus it and use Left and Right. Double-click
     resets it. The details' width is kept as a fixed width in pixels (see [Layout state](#technical-constraints)), so
     every graph opens with it, even after a restart. Each side keeps a minimum width: when the window is too narrow

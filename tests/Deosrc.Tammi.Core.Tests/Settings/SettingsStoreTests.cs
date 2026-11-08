@@ -41,6 +41,7 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.Equal(Path.Combine(home, "Workspaces"), settings.General.DefaultWorkspaceParentFolder);
         Assert.Equal(TimeSpan.FromMinutes(5), settings.Git.StatusRefreshInterval);
         Assert.Equal(GitGraphScope.WorkspaceBranch, settings.Git.GraphScope);
+        Assert.Equal(GitGraphFileView.List, settings.Git.GraphFileView);
     }
 
     [Fact]
@@ -64,6 +65,7 @@ public sealed class SettingsStoreTests : IDisposable
             {
                 StatusRefreshInterval = TimeSpan.FromMinutes(15),
                 GraphScope = GitGraphScope.Everything,
+                GraphFileView = GitGraphFileView.Tree,
             },
         }, TestContext.Current.CancellationToken);
 
@@ -71,6 +73,7 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.Equal(parentFolder, reloaded.General.DefaultWorkspaceParentFolder);
         Assert.Equal(TimeSpan.FromMinutes(15), reloaded.Git.StatusRefreshInterval);
         Assert.Equal(GitGraphScope.Everything, reloaded.Git.GraphScope);
+        Assert.Equal(GitGraphFileView.Tree, reloaded.Git.GraphFileView);
     }
 
     [Fact]

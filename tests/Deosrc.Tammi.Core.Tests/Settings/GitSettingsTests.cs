@@ -13,8 +13,17 @@ public sealed class GitSettingsTests
     }
 
     [Fact]
-    public void Equals_ComparesTheGraphScope()
+    public void Normalize_UnknownGraphFileView_IsTheList()
+    {
+        var settings = new GitSettings { GraphFileView = (GitGraphFileView)42 }.Normalize();
+
+        Assert.Equal(GitGraphFileView.List, settings.GraphFileView);
+    }
+
+    [Fact]
+    public void Equals_ComparesTheGraphScopeAndFileView()
     {
         Assert.NotEqual(new GitSettings(), new GitSettings { GraphScope = GitGraphScope.Everything });
+        Assert.NotEqual(new GitSettings(), new GitSettings { GraphFileView = GitGraphFileView.Tree });
     }
 }

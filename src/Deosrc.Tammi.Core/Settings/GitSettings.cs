@@ -48,6 +48,12 @@ public sealed record GitSettings
     public GitGraphScope GraphScope { get; init; } = GitGraphScope.WorkspaceBranch;
 
     /// <summary>
+    /// How a git graph's details show the selected commit's changed files, as the user last chose in one.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<GitGraphFileView>))]
+    public GitGraphFileView GraphFileView { get; init; } = GitGraphFileView.List;
+
+    /// <summary>
     /// Replaces out-of-range values, and values this version of Tammi doesn't know, with valid ones, and writes each
     /// folder as a full path, once.
     /// </summary>
@@ -61,6 +67,7 @@ public sealed record GitSettings
                 ? MaxStatusRefreshInterval
                 : StatusRefreshInterval,
         GraphScope = Enum.IsDefined(GraphScope) ? GraphScope : GitGraphScope.WorkspaceBranch,
+        GraphFileView = Enum.IsDefined(GraphFileView) ? GraphFileView : GitGraphFileView.List,
     };
 
     /// <summary>
@@ -71,9 +78,10 @@ public sealed record GitSettings
         && MonitoredFolders.SequenceEqual(other.MonitoredFolders)
         && LocalRepositories.SequenceEqual(other.LocalRepositories)
         && StatusRefreshInterval == other.StatusRefreshInterval
-        && GraphScope == other.GraphScope;
+        && GraphScope == other.GraphScope
+        && GraphFileView == other.GraphFileView;
 
     /// <inheritdoc />
     public override int GetHashCode() =>
-        HashCode.Combine(MonitoredFolders.Count, LocalRepositories.Count, StatusRefreshInterval, GraphScope);
+        HashCode.Combine(MonitoredFolders.Count, LocalRepositories.Count, StatusRefreshInterval, GraphScope, GraphFileView);
 }
