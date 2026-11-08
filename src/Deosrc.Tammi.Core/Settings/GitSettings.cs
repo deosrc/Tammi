@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Deosrc.Tammi.Core.Catalogue;
 using Deosrc.Tammi.Core.Platform;
 
@@ -41,7 +42,14 @@ public sealed record GitSettings
     public TimeSpan StatusRefreshInterval { get; init; } = DefaultStatusRefreshInterval;
 
     /// <summary>
-    /// Replaces out-of-range values with valid ones, and writes each folder as a full path, once.
+    /// Which commits a git graph shows when it opens. Each graph can switch while it's open.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<GitGraphScope>))]
+    public GitGraphScope GraphScope { get; init; } = GitGraphScope.WorkspaceBranch;
+
+    /// <summary>
+    /// Replaces out-of-range values, and values this version of Tammi doesn't know, with valid ones, and writes each
+    /// folder as a full path, once.
     /// </summary>
     public GitSettings Normalize() => this with
     {
@@ -52,6 +60,7 @@ public sealed record GitSettings
             : StatusRefreshInterval > MaxStatusRefreshInterval
                 ? MaxStatusRefreshInterval
                 : StatusRefreshInterval,
+        GraphScope = Enum.IsDefined(GraphScope) ? GraphScope : GitGraphScope.WorkspaceBranch,
     };
 
     /// <summary>
@@ -61,9 +70,10 @@ public sealed record GitSettings
         other is not null
         && MonitoredFolders.SequenceEqual(other.MonitoredFolders)
         && LocalRepositories.SequenceEqual(other.LocalRepositories)
-        && StatusRefreshInterval == other.StatusRefreshInterval;
+        && StatusRefreshInterval == other.StatusRefreshInterval
+        && GraphScope == other.GraphScope;
 
     /// <inheritdoc />
     public override int GetHashCode() =>
-        HashCode.Combine(MonitoredFolders.Count, LocalRepositories.Count, StatusRefreshInterval);
+        HashCode.Combine(MonitoredFolders.Count, LocalRepositories.Count, StatusRefreshInterval, GraphScope);
 }

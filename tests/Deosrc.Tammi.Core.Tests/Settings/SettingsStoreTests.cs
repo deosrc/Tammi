@@ -40,6 +40,7 @@ public sealed class SettingsStoreTests : IDisposable
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         Assert.Equal(Path.Combine(home, "Workspaces"), settings.General.DefaultWorkspaceParentFolder);
         Assert.Equal(TimeSpan.FromMinutes(5), settings.Git.StatusRefreshInterval);
+        Assert.Equal(GitGraphScope.WorkspaceBranch, settings.Git.GraphScope);
     }
 
     [Fact]
@@ -59,12 +60,17 @@ public sealed class SettingsStoreTests : IDisposable
         await store.UpdateAsync(settings => settings with
         {
             General = settings.General with { DefaultWorkspaceParentFolder = parentFolder },
-            Git = settings.Git with { StatusRefreshInterval = TimeSpan.FromMinutes(15) },
+            Git = settings.Git with
+            {
+                StatusRefreshInterval = TimeSpan.FromMinutes(15),
+                GraphScope = GitGraphScope.Everything,
+            },
         }, TestContext.Current.CancellationToken);
 
         var reloaded = CreateStore().Current;
         Assert.Equal(parentFolder, reloaded.General.DefaultWorkspaceParentFolder);
         Assert.Equal(TimeSpan.FromMinutes(15), reloaded.Git.StatusRefreshInterval);
+        Assert.Equal(GitGraphScope.Everything, reloaded.Git.GraphScope);
     }
 
     [Fact]
