@@ -3,9 +3,10 @@ using Deosrc.Tammi.Core.Git;
 namespace Deosrc.Tammi.UI.Workspaces;
 
 /// <summary>
-/// How the git graphs show their commits, chosen from their header's right-click menu: which columns are shown, and
-/// which labels the rows have. Every graph shows the same, until the app closes. The Commit column is hidden until the
-/// user shows it, and every label is shown.
+/// How the git graphs show their commits, chosen from their header's right-click menu (which columns are shown, and
+/// which labels the rows have) and in their details (how changed files are listed). Every graph shows the same, until
+/// the app closes. The Commit column is hidden until the user shows it, every label is shown, files are listed, and the
+/// Authors section is open.
 /// </summary>
 public sealed class GitGraphViewOptions
 {
@@ -31,6 +32,16 @@ public sealed class GitGraphViewOptions
     /// Whether the rows show remote-tracking branches.
     /// </summary>
     public bool ShowRemoteBranches { get; private set; } = true;
+
+    /// <summary>
+    /// How the details show the selected commit's changed files.
+    /// </summary>
+    public GitGraphFileView FileView { get; private set; } = GitGraphFileView.List;
+
+    /// <summary>
+    /// Whether the details' Authors section is collapsed, showing only the author's name.
+    /// </summary>
+    public bool AuthorsCollapsed { get; private set; }
 
     /// <summary>
     /// Whether a column can be hidden. Graph can't, since it's what the view is for, and nor can Description, since it
@@ -73,6 +84,27 @@ public sealed class GitGraphViewOptions
             _hidden.Add(column);
         }
 
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Lists the changed files, or shows them in their folders.
+    /// </summary>
+    public void SetFileView(GitGraphFileView view)
+    {
+        if (view != FileView)
+        {
+            FileView = view;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Collapses the details' Authors section if it's open, or opens it.
+    /// </summary>
+    public void ToggleAuthors()
+    {
+        AuthorsCollapsed = !AuthorsCollapsed;
         Changed?.Invoke();
     }
 

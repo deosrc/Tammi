@@ -105,7 +105,7 @@
                                         break;
                                     case GitGraphColumn.Description:
                                         <span class="git-graph-summary">
-                                            @References(row.Commit.Sha, isHead, Options.Shows)
+                                            @References(row.Commit.Sha, isHead)
                                             <span class="git-graph-subject" title="@row.Commit.Subject">@row.Commit.Subject</span>
                                         </span>
                                         break;
@@ -137,82 +137,7 @@
         </div>
 
         <aside class="git-graph-details" id="@_detailsId" aria-label="Commit details">
-            @if (Graph.Selected is not { } selection)
-            {
-                <p class="placeholder">Select a commit to see its details.</p>
-            }
-            else
-            {
-                var commit = selection.Commit;
-                <h2 class="git-graph-details-subject">@commit.Subject</h2>
-                @if (Graph.LabelsFor(commit.Sha).Count > 0 || commit.Sha == Graph.Refs.HeadSha)
-                {
-                    <div class="git-graph-details-refs">@References(commit.Sha, commit.Sha == Graph.Refs.HeadSha, _ => true)</div>
-                }
-                <dl class="git-graph-facts">
-                    <dt>Commit</dt>
-                    <dd class="git-graph-sha-full">@commit.Sha</dd>
-                    <dt>@(commit.ParentShas.Count == 1 ? "Parent" : "Parents")</dt>
-                    <dd>
-                        @if (commit.ParentShas.Count == 0)
-                        {
-                            <span class="placeholder">None</span>
-                        }
-                        @foreach (var parent in commit.ParentShas)
-                        {
-                            <button type="button" class="link-button git-graph-sha" title="@parent"
-                                    @onclick="() => SelectAndRevealAsync(parent)">
-                                @GitGraphText.ShortSha(parent)
-                            </button>
-                        }
-                    </dd>
-                    <dt>Author</dt>
-                    <dd>
-                        @Signature(commit.Author)
-                    </dd>
-                    @if (commit.Committer != commit.Author)
-                    {
-                        <dt>Committer</dt>
-                        <dd>@Signature(commit.Committer)</dd>
-                    }
-                </dl>
-                @if (GitGraphText.Body(commit) is { Length: > 0 } body)
-                {
-                    <pre class="git-graph-message">@body</pre>
-                }
-                <h3 class="git-graph-details-heading">Changed files</h3>
-                @if (Graph.SelectedChangesProblem is { } changesProblem)
-                {
-                    <p class="error">Couldn't read the changed files. @changesProblem</p>
-                }
-                else if (Graph.SelectedChanges is not { } changes)
-                {
-                    <p class="placeholder">Reading changed files…</p>
-                }
-                else if (changes.Count == 0)
-                {
-                    <p class="placeholder">No files changed.</p>
-                }
-                else
-                {
-                    <ul class="git-graph-files">
-                        @foreach (var change in changes)
-                        {
-                            <li class="git-graph-file" @key="change.Path">
-                                <span class="git-graph-file-kind git-graph-file-@change.Kind.ToString().ToLowerInvariant()"
-                                      title="@GitGraphText.Label(change.Kind)">@GitGraphText.Letter(change.Kind)</span>
-                                <span class="git-graph-file-path" title="@change.Path">
-                                    @if (change.OldPath is { } oldPath)
-                                    {
-                                        @oldPath<text> → </text>
-                                    }
-                                    @change.Path
-                                </span>
-                            </li>
-                        }
-                    </ul>
-                }
-            }
+            <GitCommitDetails Graph="Graph" />
         </aside>
     </div>
 </div>
@@ -465,16 +390,16 @@
         return -1;
     }
 
-    // A commit's labels: HEAD when it's detached here, then the branches and tags `shown` keeps. The branch HEAD is on
-    // stands out, and tags have a tag icon.
-    private RenderFragment References(string sha, bool isHead, Func<GitReference, bool> shown) => __builder =>
+    // A commit's labels: HEAD when it's detached here, then the branches and tags the options show. The branch HEAD is
+    // on stands out, and tags have a tag icon.
+    private RenderFragment References(string sha, bool isHead) => __builder =>
     {
         if (isHead && Graph.Refs.HeadBranch is null)
         {
             <span class="git-graph-ref git-graph-ref-detached" title="Detached HEAD">HEAD</span>
         }
 
-        foreach (var reference in Graph.LabelsFor(sha).Where(shown))
+        foreach (var reference in Graph.LabelsFor(sha).Where(Options.Shows))
         {
             var current = reference.Kind == GitReferenceKind.LocalBranch && reference.Name == Graph.Refs.HeadBranch;
             <span class="git-graph-ref @GitGraphText.ReferenceClass(reference.Kind) @(current ? "git-graph-ref-head" : null)"
@@ -575,11 +500,4 @@
 
         StateHasChanged();
     });
-
-    private static RenderFragment Signature(CommitSignature signature) => __builder =>
-    {
-        <span>@signature.Name</span>
-        <span class="placeholder">&lt;@signature.Email&gt;</span>
-        <div class="git-graph-fact-date">@GitGraphText.FullDate(signature.When)</div>
-    };
 }

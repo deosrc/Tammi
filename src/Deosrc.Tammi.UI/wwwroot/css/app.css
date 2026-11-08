@@ -88,6 +88,16 @@
    Base
    --------------------------------------------------------------------------------------------------------------- */
 
+/* Text for screen readers only. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 *,
 *::before,
 *::after {
@@ -2238,20 +2248,6 @@ label.task-choice {
   outline-offset: -2px;
 }
 
-/* A button that looks like a link. */
-.link-button {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--color-focus);
-  font: inherit;
-  cursor: pointer;
-}
-
-.link-button:hover {
-  text-decoration: underline;
-}
-
 .git-graph-body {
   display: flex;
   flex: 1;
@@ -2410,18 +2406,13 @@ label.task-choice {
   font-size: var(--font-size-small);
 }
 
-.git-graph-sha,
-.git-graph-sha-full {
+.git-graph-sha {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: var(--font-size-small);
 }
 
 .git-graph-row .git-graph-sha {
   color: var(--color-text-muted);
-}
-
-.git-graph-sha-full {
-  overflow-wrap: anywhere;
 }
 
 /* Branch and tag labels. */
@@ -2486,10 +2477,12 @@ label.task-choice {
 /* The details panel's width is set by dragging the splitter (GitGraphView.razor.js). Without it, the panel keeps to its
    default, and leaves the list room. */
 .git-graph-details {
+  display: flex;
   flex: none;
+  flex-direction: column;
   width: min(var(--git-graph-details-width, 360px), max(240px, calc(100% - 320px)));
-  overflow: auto;
-  padding: var(--space-4);
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* A thin bar between the list and the details panel, with a wider area to grab. */
@@ -2516,74 +2509,353 @@ label.task-choice {
   box-shadow: 0 0 0 1px var(--color-focus);
 }
 
-.git-graph-details-subject {
-  margin: 0 0 var(--space-2);
-  font-size: 1.1em;
-  overflow-wrap: anywhere;
-}
-
-.git-graph-details-refs {
+/* The selected commit's details (GitCommitDetails): a bar with its short id, its subject, its body (whose height
+   --git-commit-body-height is set by dragging the split below it), and the rest, which scrolls. */
+.git-commit-details {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  margin-bottom: var(--space-3);
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.git-graph-facts {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-1) var(--space-3);
-  margin: 0 0 var(--space-3);
+.git-commit-details-empty {
+  margin: var(--space-4);
 }
 
-.git-graph-facts dt {
-  color: var(--color-text-muted);
-}
-
-.git-graph-facts dd {
+.git-commit-bar {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--space-2);
-  margin: 0;
-  overflow-wrap: anywhere;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-chrome);
 }
 
-.git-graph-fact-date {
-  flex-basis: 100%;
-  color: var(--color-text-muted);
+.git-commit-hash {
+  padding: 2px var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--font-size);
+  cursor: copy;
+}
+
+.git-commit-hash:hover,
+.git-commit-hash:focus-visible {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+/* Beside the id, so the id stays in the middle. */
+.git-commit-copied {
+  position: absolute;
+  left: calc(50% + 4.5em);
+  color: var(--color-success);
   font-size: var(--font-size-small);
+  opacity: 0;
+  transition: opacity 0.15s;
 }
 
-.git-graph-message {
-  margin: 0 0 var(--space-3);
-  font: inherit;
+.git-commit-copied.shown {
+  opacity: 1;
+}
+
+/* As the message writes it: no change of case. */
+.git-commit-subject {
+  flex: none;
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  font-size: 1.3em;
+  font-weight: 600;
+  line-height: 1.3;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+.git-commit-body {
+  flex: none;
+  height: var(--git-commit-body-height, calc(8 * 1.45em + 2 * var(--space-2)));
+  overflow: auto;
+  padding: var(--space-2) var(--space-4);
+  line-height: 1.45;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-.git-graph-details-heading {
-  margin: var(--space-3) 0 var(--space-2);
-  font-size: 1em;
+.git-commit-body:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 
-.git-graph-files {
+/* A thin bar below the body, with a taller area to grab. */
+.git-commit-body-splitter {
+  position: relative;
+  flex: none;
+  height: 1px;
+  background: var(--color-border);
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.git-commit-body-splitter::before {
+  position: absolute;
+  inset: -3px 0;
+  content: "";
+}
+
+.git-commit-body-splitter:hover,
+.git-commit-body-splitter.dragging,
+.git-commit-body-splitter:focus-visible {
+  background: var(--color-focus);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-focus);
+}
+
+/* The sections have the side padding, so the divider between them runs the panel's full width. */
+.git-commit-lower {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-2) 0 var(--space-4);
+}
+
+.git-commit-section {
+  padding: 0 var(--space-4);
+}
+
+/* A divider between the sections. */
+.git-commit-section + .git-commit-section {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.git-commit-heading {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.git-commit-heading:has(.git-commit-collapse) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* The heading of a section that collapses: its chevron and name, which open and close it. */
+.git-commit-collapse {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: -4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.git-commit-collapse:hover {
+  color: var(--color-text);
+}
+
+/* What a collapsed section holds, beside its heading. */
+.git-commit-heading-summary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: var(--font-size);
+  font-weight: 600;
+  letter-spacing: normal;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.git-commit-people[hidden] {
+  display: none;
+}
+
+.git-commit-people {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.git-graph-file {
+.git-commit-person {
   display: flex;
-  gap: var(--space-2);
-  padding: 2px 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  overflow-wrap: anywhere;
 }
 
-.git-graph-file-kind {
+.git-commit-person-name {
+  font-weight: 600;
+}
+
+.git-commit-person-email,
+.git-commit-person-role {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.git-commit-person-role {
+  flex-basis: 100%;
+}
+
+.git-commit-files-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.git-commit-files-heading .git-commit-heading {
+  margin: 0;
+}
+
+/* How many files changed in each way: a coloured icon and a number for each. In a folder's row, they follow its name. */
+.git-commit-counts {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-small);
+  font-weight: normal;
+}
+
+.git-commit-folder .git-commit-counts {
+  align-self: center;
+}
+
+.git-commit-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.git-commit-count-icon {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.git-commit-file-view {
+  flex: none;
+  margin-left: auto;
+}
+
+.segmented-small .segmented-option {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+}
+
+.git-commit-files,
+.git-commit-files ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One file (or, in the tree, folder) to a line. In the tree, each level is indented by --git-commit-tree-depth. */
+.git-commit-file {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 1px 0 1px calc(var(--git-commit-tree-depth, 0) * 16px);
+  white-space: nowrap;
+}
+
+.git-commit-file-kind {
   flex: none;
   width: 1.2em;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-weight: 600;
   text-align: center;
+}
+
+.git-commit-file-name {
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.git-commit-files:not(.git-commit-tree) .git-commit-file-name {
+  font-weight: 600;
+}
+
+.git-commit-file-folder {
+  min-width: 0;
+  overflow: hidden;
+  padding-left: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  text-overflow: ellipsis;
+}
+
+.git-commit-folder {
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.git-commit-folder:hover {
+  background: var(--color-surface-hover);
+}
+
+.git-commit-folder-name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.git-commit-folder-chevron {
+  flex: none;
+  align-self: center;
+  width: 1.2em;
+  color: var(--color-text-muted);
+  transition: transform 0.1s;
+}
+
+.git-commit-folder-chevron.open {
+  transform: rotate(90deg);
+}
+
+.git-commit-folder-icon {
+  flex: none;
+  align-self: center;
+  color: var(--color-text-muted);
 }
 
 .git-graph-file-added {
@@ -2599,11 +2871,6 @@ label.task-choice {
 .git-graph-file-renamed,
 .git-graph-file-typechanged {
   color: var(--color-warning);
-}
-
-.git-graph-file-path {
-  min-width: 0;
-  overflow-wrap: anywhere;
 }
 
 /* A side panel card that does something when it's clicked anywhere: a repository's opens its git graph, an agent's

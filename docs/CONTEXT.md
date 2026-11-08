@@ -310,9 +310,22 @@ own branch. It is created automatically when the workspace is created:
     branch and tag). It starts as Settings → Git says, which defaults to the workspace branch.
   - Large histories stay fast: only the rows in view are drawn, and commits are read 500 at a time as the list
     scrolls. The repository stays open while the tab is, so later pages don't walk the history again.
-  - Selecting a commit (by clicking it, or with Up, Down and Home) shows its details beside the list: its full id,
-    its parents (clicking one selects it), its author and committer, its labels, its full message, and the files it
-    changed compared with its first parent, with renames detected. Diffs are a separate Git operation.
+  - Selecting a commit (by clicking it, or with Up, Down and Home) shows its details beside the list, top to bottom:
+    - a bar with its short id in the middle. Clicking the id copies the full id.
+    - its subject, in larger text, written as in the message.
+    - its message's body, which scrolls. The split below it resizes it, by dragging or by focusing it and using Up and
+      Down, down to three lines. Double-click resets it. Its height is kept like the details' width. A message with
+      no body has neither.
+    - its authors: the author, the committer when they're someone else, and anyone in the message's
+      `Co-authored-by:` trailers. The section collapses to its heading, with the author's name beside it.
+    - after a divider, the files it changed compared with its first parent, with renames detected, and how many were
+      modified, added, deleted and renamed, each as a coloured icon (a pencil, a plus, a trash can and an arrow) and a
+      number, leaving out any with none. A toggle shows them as a list (each file's name in bold, then its folder) or
+      as a tree of folders, each with a folder icon and, after its name, the same counts for the files in it, which
+      start closed and open and close, with folders holding only one folder joined (e.g. `src/app`). Each file keeps
+      its A, M, D or R.
+    - Like the columns, the list or tree choice and whether Authors is collapsed are shared by every graph until the
+      app closes. Diffs are a separate Git operation.
   - The split between the list and the details is resizable: drag it, or focus it and use Left and Right. Double-click
     resets it. The details' width is kept as a fixed width in pixels (see [Layout state](#technical-constraints)), so
     every graph opens with it, even after a restart. Each side keeps a minimum width: when the window is too narrow
@@ -632,10 +645,10 @@ are left to other tools for now.
 - **Window state:** Tammi opens its window at the size it had when it was last closed, maximised if it was then.
   The state is kept in `window-state.json` in the Data folder, apart from the settings. If it's missing or can't be
   read, the window opens at its default size.
-- **Layout state:** the sizes the user gives parts of the window (so far, the width of a Git Graph's commit details)
-  are kept in `layout-state.json` in the Data folder, apart from the window state, which the host writes as the window
-  closes. It's written each time the user finishes resizing. If it's missing or can't be read, the parts have their
-  default sizes.
+- **Layout state:** the sizes the user gives parts of the window (so far, the width of a Git Graph's commit details and
+  the height of its message body) are kept in `layout-state.json` in the Data folder, apart from the window state,
+  which the host writes as the window closes. It's written each time the user finishes resizing. If it's missing or
+  can't be read, the parts have their default sizes.
 - **Credentials** for integrations live in the platform secret store, never in settings or data files:
   - **Windows:** Windows Credential Manager, as generic credentials named `Tammi:<key>`, saved for the local
     machine only.

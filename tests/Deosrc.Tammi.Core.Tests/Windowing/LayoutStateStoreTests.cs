@@ -33,10 +33,14 @@ public sealed class LayoutStateStoreTests : IDisposable
     {
         var store = new LayoutStateStore(DataDirectory);
 
-        Assert.True(await store.UpdateAsync(state => state with { GitGraphDetailsWidth = 512 }, CancellationToken));
+        Assert.True(await store.UpdateAsync(
+            state => state with { GitGraphDetailsWidth = 512, GitGraphMessageHeight = 180 },
+            CancellationToken));
 
         Assert.Equal(512, store.Current.GitGraphDetailsWidth);
-        Assert.Equal(512, new LayoutStateStore(DataDirectory).Current.GitGraphDetailsWidth);
+        var reloaded = new LayoutStateStore(DataDirectory).Current;
+        Assert.Equal(512, reloaded.GitGraphDetailsWidth);
+        Assert.Equal(180, reloaded.GitGraphMessageHeight);
         Assert.False(File.Exists(FilePath + ".tmp"));
     }
 
@@ -69,9 +73,13 @@ public sealed class LayoutStateStoreTests : IDisposable
     public void Current_WidthThatIsntPositive_IsTheDefault(int width)
     {
         Directory.CreateDirectory(DataDirectory);
-        File.WriteAllText(FilePath, $$"""{ "version": 1, "gitGraphDetailsWidth": {{width}} }""");
+        File.WriteAllText(
+            FilePath,
+            $$"""{ "version": 1, "gitGraphDetailsWidth": {{width}}, "gitGraphMessageHeight": {{width}} }""");
 
-        Assert.Null(new LayoutStateStore(DataDirectory).Current.GitGraphDetailsWidth);
+        var state = new LayoutStateStore(DataDirectory).Current;
+        Assert.Null(state.GitGraphDetailsWidth);
+        Assert.Null(state.GitGraphMessageHeight);
     }
 
     [Fact]
