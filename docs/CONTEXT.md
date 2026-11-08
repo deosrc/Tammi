@@ -32,6 +32,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Local Repository** | A catalogue repository with a clone on disk, outside any workspace. Workspaces create their worktrees from it. |
 | **Remote-only Repository** | A catalogue repository known only through an integration, with no clone on disk yet. It must be cloned, which makes it a Local Repository, before it can be added to a workspace. |
 | **Workspace Worktree** | A `git worktree` of a Local Repository, created inside the Workspace Folder. This is how a repository is included in a workspace. |
+| **Git Graph** | A repository's (or submodule's) commits drawn as lanes, with their branches and tags, shown as a main area tab in the Workspace View. |
 | **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
 | **Agent Definition** | A configured agent CLI (e.g. Claude Code) that Tammi can start: name, command, arguments, how to pass the initial prompt, and how to resume a session. |
@@ -280,7 +281,29 @@ own branch. It is created automatically when the workspace is created:
   editing, staging, committing and fetching all update the status, whichever tool does them. Only the repository that
   changed is read again. Closing the tab stops watching, and so does starting to delete the workspace (it starts
   again if the delete is cancelled).
-- **Git operations**, including a git graph view
+- **Git operations**, including the Git Graph
+- **Git Graph:** a main area tab named `Git: <repository folder>` (e.g. `Git: api`), or `Git: <repository
+  folder>/<submodule path>` for a submodule (e.g. `Git: api/libs/core`). It's opened from the **+** menu's **Git**
+  item, which lists **Repository: `<name>`** for each repository and **Submodule: `<name>/<path>`** for each
+  checked-out submodule (nested ones too), or by clicking a repository's or submodule's name in the side panel. Each
+  repository or submodule has one graph tab: opening it again shows the open one.
+  - It lists commits newest first in topological order (children before parents), each with its lane and dot, its
+    branch and tag labels, its subject, author, date and short commit id. Merges join lanes, and lanes that end are
+    reused, so the graph stays narrow. HEAD's dot is a ring, the branch HEAD is on is highlighted, and a detached HEAD
+    has its own label.
+  - A toggle chooses which commits it shows: **Workspace branch** (HEAD, the workspace branch, its upstream and its
+    base branch; HEAD and its branch's upstream for a submodule) or **Everything** (every local and remote-tracking
+    branch and tag). It starts as Settings → Git says, which defaults to the workspace branch.
+  - Large histories stay fast: only the rows in view are drawn, and commits are read 500 at a time as the list
+    scrolls. The repository stays open while the tab is, so later pages don't walk the history again.
+  - Selecting a commit (by clicking it, or with Up, Down and Home) shows its details beside the list: its full id,
+    its parents (clicking one selects it), its author and committer, its labels, its full message, and the files it
+    changed compared with its first parent, with renames detected. Diffs are a separate Git operation.
+  - While it's shown and the workspace's tab is open, it reads the repository's refs again whenever the repository
+    changes, and reads the graph again only if they've changed (e.g. after a commit, fetch or checkout), keeping the
+    selection. A graph that isn't shown does the same when it's next shown. Refresh reads it again on demand.
+  - Like terminals, graph tabs stay when the workspace's tab closes. Closing a graph's tab closes the repository, and
+    deleting the workspace closes its graphs.
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
 - **Agents section:** a card for each of the workspace's open agents, in the order they started, with its
   [state](#agents) as a badge and the card's colour. Clicking its name shows its tab, and a running agent has a
@@ -290,9 +313,10 @@ own branch. It is created automatically when the workspace is created:
   resumed, which opens it in a new tab, or forgotten. A session whose agent can't resume it says why instead.
 - **Main area tabs:** the main area has its own row of tabs, below a small divider. The first is always the
   **dashboard** (an icon, no name), which the view shows until the user opens something else. Then come the
-  workspace's terminals and agents, in the order they started. An agent's tab has a dot coloured by its state. The
-  last is always a **+** tab, which opens a menu of things to start: **Terminal**, then each Agent Definition (in the
-  order agents are offered), each with a submenu of **Workspace** and **Repository: `<name>`** for each repository.
+  workspace's terminals, agents and Git Graphs, in the order they started or opened. An agent's tab has a dot coloured by its state. The
+  last is always a **+** tab, which opens a menu of things to start: **Terminal**, **Git** (see Git Graph), then each
+  Agent Definition (in the order agents are offered). Terminal and each Agent Definition have a submenu of
+  **Workspace** and **Repository: `<name>`** for each repository.
 - **Terminals**: any number of embedded terminals, shown as tabs alongside agent sessions. A new
   terminal opens in the workspace folder by default, or the user can open one in a specific repository.
   The shell defaults to PowerShell on Windows (`pwsh` if installed) and `$SHELL` on Linux, and can be
@@ -342,6 +366,7 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
   - Manually added local repositories
   - The Repository Catalogue's size, with a Rescan button
   - Status refresh interval for workspaces that aren't open (whole minutes from 1 to 1440, default 5)
+  - What a [Git Graph](#workspace-view-tab) shows when it opens: the workspace branch (the default) or everything
   - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that Tammi uses
 - **Agents**
   - **Supported Agents** are always listed, and can't be edited or removed. Each one shows whether its CLI is ready:
