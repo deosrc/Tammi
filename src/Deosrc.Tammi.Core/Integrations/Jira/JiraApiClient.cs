@@ -11,9 +11,16 @@ namespace Deosrc.Tammi.Core.Integrations.Jira;
 /// <see cref="IntegrationException"/>s.
 /// </summary>
 /// <remarks>
+/// <para>
 /// JIRA Cloud API tokens without scopes work at the site's own URL. Tokens with scopes only work through Atlassian's
 /// API gateway (<see cref="GatewayUrl"/>), so when the site rejects a token, the request is tried there too, and the
 /// one that worked is used first from then on.
+/// </para>
+/// <para>
+/// Only <c>myself</c> is known to reject such a token at the site. Other resources, such as searches and issues, treat
+/// the request as anonymous instead, and answer with only what anyone can see (often nothing). So before its first
+/// other request, the client checks which route the token works on by reading <c>myself</c>.
+/// </para>
 /// </remarks>
 internal sealed class JiraApiClient(
     JiraIntegrationOptions options,
@@ -36,6 +43,11 @@ internal sealed class JiraApiClient(
     /// </summary>
     internal static readonly Uri GatewayUrl = new("https://api.atlassian.com/ex/jira/");
 
+    /// <summary>
+    /// The resource that checks the route: the authenticated user, which the site doesn't answer anonymously.
+    /// </summary>
+    private const string RouteCheckPath = "myself";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly Uri _siteApiUrl = new(SiteUrl(options.SiteUrl), "rest/api/2/");
@@ -49,6 +61,19 @@ internal sealed class JiraApiClient(
     /// Whether the token last worked through the gateway rather than at the site.
     /// </summary>
     private volatile bool _preferGateway;
+
+    /// <summary>
+    /// The token a <see cref="RouteCheckPath"/> request last succeeded with, so <see cref="_preferGateway"/> is known
+    /// to suit it. A new token is checked again.
+    /// </summary>
+    private volatile string? _checkedToken;
+
+    /// <summary>
+    /// The route check in progress, shared by the requests that wait for it, and the token it checks.
+    /// </summary>
+    private (string Token, Task Check)? _routeCheck;
+
+    private readonly Lock _routeCheckLock = new();
 
     /// <summary>
     /// The site's base URL, ending in <c>/</c> so relative URLs keep its path.
@@ -66,9 +91,63 @@ internal sealed class JiraApiClient(
     public async Task<T?> GetAsync<T>(string path, bool allowNotFound, CancellationToken cancellationToken)
         where T : class
     {
+        if (options.Deployment == JiraDeployment.Cloud && path != RouteCheckPath)
+        {
+            await CheckRouteAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         using HttpResponseMessage? response = await SendAsync(path, allowNotFound, cancellationToken)
             .ConfigureAwait(false);
         return response is null ? null : await ReadAsync<T>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Waits until the route the token works on is known, checking it if no request has yet.
+    /// </summary>
+    private async Task CheckRouteAsync(CancellationToken cancellationToken)
+    {
+        string token = await credentials.GetRequiredAsync(cancellationToken).ConfigureAwait(false);
+        if (token == _checkedToken)
+        {
+            return;
+        }
+
+        Task check;
+        lock (_routeCheckLock)
+        {
+            // Shared, so it isn't tied to the first caller's cancellation. Each caller still stops waiting on its own.
+            if (_routeCheck is not { } current || current.Token != token)
+            {
+                current = (token, RunRouteCheckAsync());
+                _routeCheck = current;
+            }
+
+            check = current.Check;
+        }
+
+        try
+        {
+            await check.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch when (check.IsFaulted || check.IsCanceled)
+        {
+            // Let a later request check again.
+            lock (_routeCheckLock)
+            {
+                if (_routeCheck?.Check == check)
+                {
+                    _routeCheck = null;
+                }
+            }
+
+            throw;
+        }
+    }
+
+    private async Task RunRouteCheckAsync()
+    {
+        using HttpResponseMessage? response = await SendAsync(RouteCheckPath, allowNotFound: false,
+            CancellationToken.None).ConfigureAwait(false);
     }
 
     private async Task<HttpResponseMessage?> SendAsync(
@@ -76,8 +155,8 @@ internal sealed class JiraApiClient(
         bool allowNotFound,
         CancellationToken cancellationToken)
     {
-        AuthenticationHeaderValue authorization = Authorization(
-            await credentials.GetRequiredAsync(cancellationToken).ConfigureAwait(false));
+        string token = await credentials.GetRequiredAsync(cancellationToken).ConfigureAwait(false);
+        AuthenticationHeaderValue authorization = Authorization(token);
 
         bool viaGateway = _preferGateway && _gatewayApiUrl is not null;
         HttpResponseMessage? response = await SendAsync(
@@ -85,6 +164,7 @@ internal sealed class JiraApiClient(
             cancellationToken).ConfigureAwait(false);
         if (response?.StatusCode != HttpStatusCode.Unauthorized)
         {
+            RouteChecked(path, token);
             return response;
         }
 
@@ -102,6 +182,7 @@ internal sealed class JiraApiClient(
         if (response?.StatusCode != HttpStatusCode.Unauthorized)
         {
             _preferGateway = !viaGateway;
+            RouteChecked(path, token);
             return response;
         }
 
@@ -163,6 +244,14 @@ internal sealed class JiraApiClient(
                     await Task.Delay(wait, timeProvider, cancellationToken).ConfigureAwait(false);
                 }
             }
+        }
+    }
+
+    private void RouteChecked(string path, string token)
+    {
+        if (path == RouteCheckPath)
+        {
+            _checkedToken = token;
         }
     }
 

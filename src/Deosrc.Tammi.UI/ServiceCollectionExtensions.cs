@@ -10,6 +10,7 @@ using Deosrc.Tammi.Core.Terminals;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.Core.Workspaces;
 using Deosrc.Tammi.UI.Workspaces;
+using Microsoft.Extensions.Logging;
 
 namespace Deosrc.Tammi.UI;
 
@@ -34,6 +35,7 @@ public static class ServiceCollectionExtensions
             services.GetRequiredService<ISettingsStore>(),
             services.GetRequiredService<ICredentialStore>(),
             new HttpClient { Timeout = IntegrationRequestTimeout },
+            services.GetRequiredService<ILoggerFactory>(),
             services.GetRequiredService<TimeProvider>()));
         services.AddSingleton(services => services.GetRequiredService<IntegrationManager>().Registry);
         services.AddSingleton<TaskFinder>();

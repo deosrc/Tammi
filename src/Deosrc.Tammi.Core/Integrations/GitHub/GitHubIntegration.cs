@@ -181,7 +181,7 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
         // GitHub matches any of several user:, org: and repo: qualifiers, so each request covers a batch of them.
         IEnumerable<string> searches = scope
             .Chunk(_options.MaxScopeQualifiers)
-            .Select(batch => $"is:issue archived:false {string.Join(' ', batch)} {text.Trim()}");
+            .Select(batch => $"is:issue state:open archived:false {string.Join(' ', batch)} {text.Trim()}");
         return await SearchIssuesAsync([.. searches], sortByUpdated: false, cancellationToken).ConfigureAwait(false);
     }
 

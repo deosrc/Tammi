@@ -2,6 +2,7 @@ using Deosrc.Tammi.Core.Credentials;
 using Deosrc.Tammi.Core.Integrations.GitHub;
 using Deosrc.Tammi.Core.Integrations.Jira;
 using Deosrc.Tammi.Core.Settings;
+using Microsoft.Extensions.Logging;
 
 namespace Deosrc.Tammi.Core.Integrations;
 
@@ -23,6 +24,7 @@ public sealed class IntegrationManager
     private readonly ISettingsStore _settingsStore;
     private readonly ICredentialStore _credentialStore;
     private readonly HttpClient _httpClient;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly TimeProvider _timeProvider;
     private readonly SemaphoreSlim _changeLock = new(1, 1);
     private readonly Lock _statusLock = new();
@@ -37,15 +39,18 @@ public sealed class IntegrationManager
         ISettingsStore settingsStore,
         ICredentialStore credentialStore,
         HttpClient httpClient,
+        ILoggerFactory loggerFactory,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(settingsStore);
         ArgumentNullException.ThrowIfNull(credentialStore);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(timeProvider);
         _settingsStore = settingsStore;
         _credentialStore = credentialStore;
         _httpClient = httpClient;
+        _loggerFactory = loggerFactory;
         _timeProvider = timeProvider;
 
         IntegrationsSettings settings = settingsStore.Current.Integrations;
@@ -385,7 +390,7 @@ public sealed class IntegrationManager
         new GitHubIntegration(settings.ToOptions(), store, _httpClient, _timeProvider);
 
     private IIntegration Create(JiraIntegrationSettings settings, ICredentialStore store) =>
-        new JiraIntegration(settings.ToOptions(), store, _httpClient, _timeProvider);
+        new JiraIntegration(settings.ToOptions(), store, _httpClient, _loggerFactory.CreateLogger<JiraIntegration>(), _timeProvider);
 
     private static IntegrationCredentials CredentialsOf(IIntegration integration) => integration switch
     {
