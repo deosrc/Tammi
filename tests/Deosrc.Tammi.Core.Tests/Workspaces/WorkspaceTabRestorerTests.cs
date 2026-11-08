@@ -47,14 +47,14 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
     public async Task OpenTabs_AreOpenedAgainByANewRestorer()
     {
         var firstRun = NewRun();
-        Assert.Empty(await firstRun.Restorer.RestoreAsync(_workspace));
+        Assert.Empty((await firstRun.Restorer.RestoreAsync(_workspace)).Problems);
         await firstRun.Agents.StartAsync(_workspace, Resumable);
         firstRun.Graphs.Open(_workspace, _workspace.Repositories[0]);
         await WaitForSavedTabsAsync(2);
         await firstRun.DisposeAsync();
 
         var secondRun = NewRun();
-        Assert.Empty(await secondRun.Restorer.RestoreAsync(_workspace));
+        Assert.Empty((await secondRun.Restorer.RestoreAsync(_workspace)).Problems);
 
         Assert.Single(secondRun.Agents.For(_workspace.Id));
         Assert.Equal("Git: api", Assert.Single(secondRun.Graphs.For(_workspace.Id)).Name);
@@ -100,14 +100,52 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
     public async Task RestoreAsync_RepositoryNoLongerInTheWorkspace_ReportsAProblem()
     {
         await new SavedTabsFileStore(Path.Combine(_workspace.MetadataFolder, SavedTabsFileStore.DefaultFileName))
-            .SetAsync([new SavedTab(SavedTab.GitGraphKind, Repository: "gone")], TestContext.Current.CancellationToken);
+            .SetAsync([new SavedTab(SavedTab.GitGraphKind, Repository: "gone")], cancellationToken: TestContext.Current.CancellationToken);
         var run = NewRun();
 
-        var problems = await run.Restorer.RestoreAsync(_workspace);
+        var problems = (await run.Restorer.RestoreAsync(_workspace)).Problems;
 
         Assert.Contains("gone", Assert.Single(problems));
         Assert.Empty(run.Graphs.For(_workspace.Id));
         await run.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task ActiveTab_IsShownAgain()
+    {
+        var firstRun = NewRun();
+        await firstRun.Restorer.RestoreAsync(_workspace);
+        await firstRun.Agents.StartAsync(_workspace, Resumable);
+        var graph = firstRun.Graphs.Open(_workspace, _workspace.Repositories[0]);
+        firstRun.Restorer.SetActive(_workspace.Id, graph);
+        await WaitForSavedTabsAsync(2);
+        await firstRun.DisposeAsync();
+
+        var secondRun = NewRun();
+        var restoration = await secondRun.Restorer.RestoreAsync(_workspace);
+
+        Assert.Same(Assert.Single(secondRun.Graphs.For(_workspace.Id)), restoration.Active);
+        await secondRun.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task ActiveTab_DashboardOrClosedTab_IsntRestored()
+    {
+        var firstRun = NewRun();
+        await firstRun.Restorer.RestoreAsync(_workspace);
+        var graph = firstRun.Graphs.Open(_workspace, _workspace.Repositories[0]);
+        firstRun.Restorer.SetActive(_workspace.Id, graph);
+        await WaitForSavedTabsAsync(1);
+        firstRun.Restorer.SetActive(_workspace.Id, null);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        await firstRun.DisposeAsync();
+
+        var secondRun = NewRun();
+        var restoration = await secondRun.Restorer.RestoreAsync(_workspace);
+
+        Assert.Single(secondRun.Graphs.For(_workspace.Id));
+        Assert.Null(restoration.Active);
+        await secondRun.DisposeAsync();
     }
 
     private async Task WaitForSavedTabsAsync(int count)

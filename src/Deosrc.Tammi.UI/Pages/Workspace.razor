@@ -471,10 +471,15 @@ else
     // Opens the agents and git graphs the workspace had open when Tammi last closed. Only the first time it's loaded.
     private async Task RestoreTabsAsync(Deosrc.Tammi.Core.Workspaces.Workspace workspace)
     {
-        var problems = await TabRestorer.RestoreAsync(workspace);
-        if (problems.Count > 0)
+        var restoration = await TabRestorer.RestoreAsync(workspace);
+        if (restoration.Problems.Count > 0)
         {
-            _startError = string.Join(" ", problems);
+            _startError = string.Join(" ", restoration.Problems);
+        }
+
+        if (restoration.Restored)
+        {
+            ViewState.SetShown(WorkspaceId, restoration.Active);
         }
 
         UpdateTabs();
@@ -758,18 +763,25 @@ else
         // Show the tab the view was showing last time, or the dashboard if it wasn't showing one or it has been
         // closed.
         _shown = ViewState.GetShown(WorkspaceId) is { } shown && _tabs.Contains(shown) ? shown : null;
-        ViewState.SetShown(WorkspaceId, _shown);
+        SetShownTab(_shown);
+    }
+
+    // Remembers the tab the view shows, here and for the next time Tammi starts.
+    private void SetShownTab(IMainAreaTab? tab)
+    {
+        ViewState.SetShown(WorkspaceId, tab);
+        TabRestorer.SetActive(WorkspaceId, tab);
     }
 
     private void ShowDashboard()
     {
-        ViewState.SetShown(WorkspaceId, null);
+        SetShownTab(null);
         _shown = null;
     }
 
     private void ShowTab(IMainAreaTab tab)
     {
-        ViewState.SetShown(WorkspaceId, tab);
+        SetShownTab(tab);
         _shown = tab;
         UpdateTabs();
     }
@@ -824,7 +836,7 @@ else
             // Show the next tab, or the previous one if it was the last, or else the dashboard.
             var index = _tabs.ToList().IndexOf(tab);
             var next = index + 1 < _tabs.Count ? _tabs[index + 1] : index > 0 ? _tabs[index - 1] : null;
-            ViewState.SetShown(WorkspaceId, next);
+            SetShownTab(next);
         }
 
         // Closing an agent's tab stops it. Its session can still be resumed.

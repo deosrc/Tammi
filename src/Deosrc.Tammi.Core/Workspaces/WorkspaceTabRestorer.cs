@@ -43,8 +43,11 @@ public sealed class WorkspaceTabRestorer : IDisposable
     /// tabs. It does this only the first time it's called for a workspace, so a workspace whose tab is closed and
     /// reopened keeps the tabs it has.
     /// </summary>
-    /// <returns>Why tabs couldn't be opened again, one message for each.</returns>
-    public async Task<IReadOnlyList<string>> RestoreAsync(Workspace workspace)
+    /// <returns>
+    /// Why tabs couldn't be opened again (one message for each), and the tab that was shown when Tammi last closed, if
+    /// it was opened again. Nothing is shown from a workspace that was already tracked.
+    /// </returns>
+    public async Task<WorkspaceTabRestoration> RestoreAsync(Workspace workspace)
     {
         ArgumentNullException.ThrowIfNull(workspace);
 
@@ -55,14 +58,15 @@ public sealed class WorkspaceTabRestorer : IDisposable
         {
             if (!_tracked.TryAdd(workspace.Id, tracked))
             {
-                return [];
+                return new WorkspaceTabRestoration([], null, Restored: false);
             }
         }
 
         var problems = new List<string>();
+        var (savedTabs, savedActive) = await tracked.Store.ReadAsync().ConfigureAwait(false);
         try
         {
-            foreach (var saved in await tracked.Store.ListAsync().ConfigureAwait(false))
+            foreach (var saved in savedTabs)
             {
                 try
                 {
@@ -83,8 +87,35 @@ public sealed class WorkspaceTabRestorer : IDisposable
             tracked.Restoring = false;
         }
 
+        // What the user showed while the tabs were opening wins over what was shown before.
+        IMainAreaTab? active;
+        lock (_lock)
+        {
+            tracked.Active ??= savedActive is null ? null : Find(workspace.Id, savedActive);
+            active = tracked.Active;
+        }
+
         await SaveAsync(workspace.Id).ConfigureAwait(false);
-        return problems;
+        return new WorkspaceTabRestoration(problems, active, Restored: true);
+    }
+
+    /// <summary>
+    /// Remembers which tab a workspace's view is showing, so it's shown again after a restart. A terminal or no tab
+    /// (the dashboard) is remembered as the dashboard.
+    /// </summary>
+    public void SetActive(string workspaceId, IMainAreaTab? tab)
+    {
+        lock (_lock)
+        {
+            if (!_tracked.TryGetValue(workspaceId, out var tracked) || ReferenceEquals(tracked.Active, tab))
+            {
+                return;
+            }
+
+            tracked.Active = tab;
+        }
+
+        OnChanged(workspaceId);
     }
 
     /// <summary>
@@ -140,6 +171,25 @@ public sealed class WorkspaceTabRestorer : IDisposable
         }
     }
 
+    private IMainAreaTab? Find(string workspaceId, SavedTab saved) => saved.Kind switch
+    {
+        SavedTab.AgentKind => _agents.For(workspaceId).FirstOrDefault(agent => string.Equals(
+            agent.Agent.SessionId, saved.SessionId, StringComparison.OrdinalIgnoreCase)),
+        SavedTab.GitGraphKind => _graphs.For(workspaceId).FirstOrDefault(graph =>
+            graph.Repository.FolderName == saved.Repository && graph.SubmodulePath == saved.SubmodulePath),
+        _ => null,
+    };
+
+    private static SavedTab? ToSaved(IMainAreaTab? tab) => tab switch
+    {
+        WorkspaceAgent { Agent.SessionId: { } id } => new SavedTab(SavedTab.AgentKind, SessionId: id),
+        WorkspaceGitGraph graph => new SavedTab(
+            SavedTab.GitGraphKind,
+            Repository: graph.Repository.FolderName,
+            SubmodulePath: graph.SubmodulePath),
+        _ => null,
+    };
+
     private void OnChanged(string workspaceId)
     {
         lock (_lock)
@@ -183,13 +233,16 @@ public sealed class WorkspaceTabRestorer : IDisposable
                 .OrderBy(entry => entry.StartOrder)
                 .Select(entry => entry.Tab)
                 .ToArray();
-            if (tracked.Saved is { } saved && saved.SequenceEqual(tabs))
+            // A tab that has closed isn't the one shown.
+            var active = ToSaved(tracked.Active) is { } shown && tabs.Contains(shown) ? shown : null;
+            if (tracked.Saved is { } saved && saved.SequenceEqual(tabs) && tracked.SavedActive == active)
             {
                 return;
             }
 
-            await tracked.Store.SetAsync(tabs).ConfigureAwait(false);
+            await tracked.Store.SetAsync(tabs, active).ConfigureAwait(false);
             tracked.Saved = tabs;
+            tracked.SavedActive = active;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -210,5 +263,10 @@ public sealed class WorkspaceTabRestorer : IDisposable
         public bool Restoring { get; set; } = true;
 
         public IReadOnlyList<SavedTab>? Saved { get; set; }
+
+        public SavedTab? SavedActive { get; set; }
+
+        // The tab the view is showing. Guarded by the restorer's lock.
+        public IMainAreaTab? Active { get; set; }
     }
 }
