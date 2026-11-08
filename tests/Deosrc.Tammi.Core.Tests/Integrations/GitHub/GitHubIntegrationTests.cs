@@ -182,7 +182,7 @@ public class GitHubIntegrationTests : IDisposable
             ("acme", "Organization", "api"),
             ("acme", "Organization", "web"),
             ("friend", "User", "tool"));
-        const string search = "is:issue archived:false user:deosrc org:acme repo:friend/tool login bug";
+        const string search = "is:issue state:open archived:false user:deosrc org:acme repo:friend/tool login bug";
         _api.Respond(SearchPath(search), FakeGitHubApi.Recorded("search.json"));
 
         IReadOnlyList<TaskInfo> tasks = await github.SearchTasksAsync("  login bug ", CancellationToken);
@@ -198,7 +198,7 @@ public class GitHubIntegrationTests : IDisposable
     {
         GitHubIntegration github = await CreateAuthenticatedAsync();
         RespondWithScope(("acme", "Organization", "api"));
-        _api.Respond(SearchPath("is:issue archived:false user:deosrc org:acme bug"), FakeGitHubApi.Recorded("search.json"));
+        _api.Respond(SearchPath("is:issue state:open archived:false user:deosrc org:acme bug"), FakeGitHubApi.Recorded("search.json"));
 
         await github.SearchTasksAsync("bug", CancellationToken);
         await github.SearchTasksAsync("bug", CancellationToken);
@@ -215,8 +215,8 @@ public class GitHubIntegrationTests : IDisposable
     {
         GitHubIntegration github = await CreateAuthenticatedAsync(new GitHubIntegrationOptions { MaxScopeQualifiers = 2 });
         RespondWithScope(("acme", "Organization", "api"), ("other", "Organization", "web"));
-        _api.Respond(SearchPath("is:issue archived:false user:deosrc org:acme bug"), FakeGitHubApi.Recorded("search.json"))
-            .Respond(SearchPath("is:issue archived:false org:other bug"), FakeGitHubApi.Recorded("search-page2.json"));
+        _api.Respond(SearchPath("is:issue state:open archived:false user:deosrc org:acme bug"), FakeGitHubApi.Recorded("search.json"))
+            .Respond(SearchPath("is:issue state:open archived:false org:other bug"), FakeGitHubApi.Recorded("search-page2.json"));
 
         IReadOnlyList<TaskInfo> tasks = await github.SearchTasksAsync("bug", CancellationToken);
 
@@ -239,7 +239,7 @@ public class GitHubIntegrationTests : IDisposable
     {
         GitHubIntegration github = await CreateAuthenticatedAsync();
         RespondWithScope();
-        _api.Respond(SearchPath("is:issue archived:false user:deosrc x"), FakeGitHubApi.Recorded("invalid-query.json"),
+        _api.Respond(SearchPath("is:issue state:open archived:false user:deosrc x"), FakeGitHubApi.Recorded("invalid-query.json"),
             HttpStatusCode.UnprocessableEntity);
 
         var exception = await Assert.ThrowsAsync<IntegrationException>(

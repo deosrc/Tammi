@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Deosrc.Tammi.Core.Credentials;
 using Deosrc.Tammi.Core.Integrations;
@@ -405,6 +406,7 @@ public sealed class IntegrationManagerTests : IDisposable
             settings ?? CreateSettingsStore(),
             credentials ?? _credentials,
             httpClient,
+            NullLoggerFactory.Instance,
             _time);
     }
 

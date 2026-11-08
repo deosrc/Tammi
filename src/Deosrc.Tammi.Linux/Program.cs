@@ -10,6 +10,7 @@ using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.Linux.PlatformServices;
 using Deosrc.Tammi.UI;
 using Deosrc.Tammi.UI.Workspaces;
+using Microsoft.Extensions.Logging;
 
 [assembly: SupportedOSPlatform("linux")]
 
@@ -34,6 +35,7 @@ internal static class Program
         var windowState = windowStateStore.Load() ?? DefaultWindowState;
 
         app.MainWindow
+            .SetLogVerbosity(0)
             .SetTitle(AppInfo.Name)
             .SetMinSize(800, 600)
             // On Linux, Photino sends the maximum size along with the minimum size. Left unset it's -1, which
