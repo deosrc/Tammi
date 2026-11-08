@@ -31,11 +31,14 @@ internal sealed class WindowsFolderPicker : IFolderPicker
         });
     }
 
-    private static nint GetMainWindowHandle()
+    /// <summary>
+    /// The handle of the app's main window, which the pickers are shown over.
+    /// </summary>
+    internal static nint GetMainWindowHandle()
     {
         var window = Microsoft.Maui.Controls.Application.Current?.Windows.FirstOrDefault()?.Handler?.PlatformView
             as Microsoft.UI.Xaml.Window
-            ?? throw new InvalidOperationException("There is no main window to show the folder picker over.");
+            ?? throw new InvalidOperationException("There is no main window to show the picker over.");
         return WindowNative.GetWindowHandle(window);
     }
 }

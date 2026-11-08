@@ -61,7 +61,9 @@ public abstract class ProcessLauncherBase : IProcessLauncher
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var process = Process.Start(CreateStartInfo(request))
+        var startInfo = CreateStartInfo(request);
+        startInfo.CreateNoWindow = request.HideWindow;
+        var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException($"Couldn't start '{request.FileName}'.");
 
         // Keep the Process until it exits, so the runtime still reaps it on Linux, then release it.
@@ -69,6 +71,13 @@ public abstract class ProcessLauncherBase : IProcessLauncher
         process.Exited += (_, _) => process.Dispose();
         return process.Id;
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// This starts the process as <see cref="Start"/> does, which is enough on platforms where a process isn't ended
+    /// with the app that started it.
+    /// </remarks>
+    public virtual void StartDetached(ProcessRequest request) => Start(request);
 
     /// <summary>
     /// Creates the start info for a request, with the executable resolved to a full path.

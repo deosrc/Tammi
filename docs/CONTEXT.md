@@ -40,7 +40,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Agent Session** | One conversation with an agent. Tammi records it so it can be resumed after a restart, with the agent's own resume command. |
 | **Supported Agent** | An agent CLI that Tammi knows how to start, with a built-in Agent Definition (e.g. Claude Code). It's always offered and isn't configured by the user. |
 | **Custom Agent** | An agent CLI the user sets up with their own Agent Definition (e.g. Codex CLI or Gemini CLI). |
-| **Open in…** | Actions that open the workspace or a repository in an external tool (IDE, terminal, file manager, …). |
+| **Tools** | Actions that open the workspace or a repository in a tool (IDE, terminal, file manager, …). |
 
 ## Core Flow: Creating a Workspace
 
@@ -255,7 +255,7 @@ own branch. It is created automatically when the workspace is created:
   - Tasks: the workspace's tasks
   - Agents
   - Repositories: the git status of each repository in the workspace
-  - "Open in…" tools
+  - Tools
 - **Tasks section:** a card for each of the workspace's tasks, in the workspace's order, with its source's logo, its
   short reference (as in suggested names, e.g. `api#42` or `ABC-123`, with the full key as its tooltip), its summary
   and its Task Status, as a chip coloured by its category. Clicking the summary opens the task's page in the browser.
@@ -266,10 +266,11 @@ own branch. It is created automatically when the workspace is created:
     or the source failed (with the error as a tooltip).
   - **GitHub** issues are Open (to do), or Closed, Not planned or Duplicate (done), from the issue's state and why it
     was closed. GitHub has no in-progress state. **JIRA** issues have their own status and its category.
-- **Repositories section:** a card with the git status of each repository, in the workspace's order. The whole card is
-  coloured by what needs attention: danger when the worktree is broken or its status can't be read, warning when it
-  has work that isn't pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its
-  submodules, and success otherwise. Each card has:
+- **Repositories section:** a card with the git status of each repository, in the workspace's order. Right-clicking a
+  card opens a menu with a **Tools** submenu (see [Tools](#tools)). The whole card is coloured by what needs
+  attention: danger when the worktree is broken or its status can't be read, warning when it has work that isn't
+  pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its submodules, and
+  success otherwise. Each card has:
   - a label: Broken, Unreadable, Changed (as on Home), Out of sync (only behind) or Clean
   - its branch (or the commit, when HEAD is detached), and how far it's ahead of and behind its upstream, when it
     tracks one
@@ -383,7 +384,18 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
     Clearing the template restores the default.
 - **Tools**
-  - The external tools offered under "Open in…"
+  - What tools open for a workspace with only one repository: the repository (the default) or the Workspace Folder
+    (see [Tools](#tools)).
+  - The tools (see [Tools](#tools)). First Terminal, with the terminal shell's settings (below). Then the other
+    predefined tools, each with whether its executable was found (and where), what it opens, its scope (folder tools)
+    and its command. Then the custom tools, added as a folder or file tool (which can't be changed afterwards), then
+    edited, reordered and removed like Custom Agents. Each shows its kind, whether its executable was found, the
+    placeholders it can use, warnings for placeholders it can't use or that don't exist, and the command it starts. A
+    **Look again** button finds the executables and icons again, e.g. after installing a tool.
+  - A custom tool's settings are hidden until its card is expanded (with the arrow in its heading), except for a tool
+    that's just been added, so the list stays short.
+  - Each tool but Terminal has a switch beside its name that enables it. A disabled tool's card is collapsed to its
+    icon, switch and name.
   - Terminal shell: executable and arguments. Leaving the executable empty uses the platform shell, with its own
     arguments. Changes apply to terminals started afterwards.
 
@@ -411,26 +423,89 @@ Operations available in the Workspace View:
 applied inside them. Creating and switching branches, stashing, merging, rebasing and history rewrites
 are left to other tools for now.
 
-## Open in… Tools
+## Tools
 
-- Tammi has built-in definitions for common tools: VS Code, Visual Studio (Windows only), JetBrains
-  Rider, the system file manager and the system terminal.
-- Only built-in tools detected as installed are shown.
-- Users can add their own tools.
-- Each tool has: **name**, **executable**, **arguments** (with a `{path}` placeholder for the folder
-  being opened), **enabled/disabled** and **scope**.
-- **Scope** sets what a tool can open: the workspace folder, a single repository, or both. Workspace
-  tools appear in the side panel's tools section. Repository tools appear on each repository's entry
-  in the Repositories section.
-- **Visual Studio** opens solutions, not folders. Tammi finds the `.sln` and `.slnx` files in the
-  workspace's repositories and shows an "Open in…" entry for each one (e.g. "Visual Studio: Api.sln").
+- A **tool** opens the Workspace Folder, a repository or a file in another app. There are two kinds:
+  - **Folder tools** open a folder, e.g. VS Code or the file manager. Each has one entry for each folder its scope
+    includes.
+  - **File tools** open files found in the repositories by their **file patterns**, e.g. Visual Studio for `*.sln`,
+    `*.slnf` and `*.slnx`. Each has an entry for each file found, and none where there aren't any. For the Workspace
+    Folder, every repository is searched. Patterns are looked for in a repository and its subfolders, ten folders
+    deep, skipping hidden folders (e.g. `.git`), `bin`, `obj`, `node_modules`, `packages` and links. A file name
+    pattern (e.g. `*.sln`) matches files in each of them. A path pattern (e.g. `.devcontainer/devcontainer.json`) is a
+    path from each of them, and can name hidden folders. A leading `/` keeps a pattern to the repository's own folder
+    (e.g. `/global.json`). `*` and `?` are wildcards, and case is ignored. A file that several patterns match is found
+    once, matched by the first of them.
+- Each tool has: **kind**, **name**, **file patterns** (file tools only), **executable**, **arguments**, **scope**
+  (folder tools only), **icon** and **enabled/disabled**. The executable is a name on the search path or a full path,
+  with environment variables (`%NAME%`) filled in. Arguments are passed as-is, without a shell, so a path with spaces
+  needs no quoting.
+- The name and arguments can have **placeholders**, filled in for each entry (matched ignoring case):
+  `{PreferredFolder}` (the folder the tool should open: see below), `{LaunchFolder}` (the Workspace Folder or
+  repository the entry is offered for), `{WorkspaceFolder}`,
+  `{RepositoryFolder}` (the repository the entry is offered for, or that the file is in), and, for file tools only,
+  `{FileDirectory}`, `{FileName}`, `{FileNameWithoutExtension}`, `{FilePath}` and `{MatchFolder}` (the folder the
+  pattern matched from: the file's folder for a file name pattern, or where a path pattern starts, e.g. the folder
+  holding `.devcontainer/`). A file tool starts in its `{MatchFolder}`. An entry is left out where a placeholder it
+  uses has no value (e.g. `{RepositoryFolder}` for the Workspace Folder). Other text in braces is left as it is, and
+  Settings warns about it.
+- **Workspaces with one repository:** a setting says what tools open when they're launched at workspace level in a
+  workspace with only one repository: **the repository** (the default) or **the Workspace Folder**. It decides
+  `{PreferredFolder}`: for the Workspace Folder of such a workspace it's the repository, unless the setting says the
+  Workspace Folder; everywhere else it's the same as `{LaunchFolder}`. A folder tool that uses `{PreferredFolder}`
+  opens, starts in and shows that folder. Terminal and the predefined folder tools use it, and new custom folder tools
+  start with it as their argument.
+- **Scope** sets what a folder tool is offered for: the Workspace Folder, the repositories, or both (the default).
+  File tools have no scope: they open the files they find, wherever they find them, so they're offered for both.
+- The side panel's **Tools section** lists each tool once (a file tool once per file it found), in the order tools
+  are offered. Right-clicking a tool opens a menu of each folder it can open: **Workspace**, then
+  **Repository: `<name>`** for each repository (for a file tool, the file's repository). Levels that would start the
+  same command (e.g. a file tool whose arguments only use the file, or Terminal in a workspace with one repository)
+  are one item, the first. Clicking a tool opens its Workspace Folder entry, or its only launch if it has just one;
+  only a tool with several repository launches and none for the Workspace Folder shows the menu instead. Right-clicking a repository's card opens a menu with a
+  **Tools** submenu of every tool that can open that repository. Menus close on Escape or a click outside them, and
+  stay inside the window.
+- Launching a tool from the Tools section (by clicking it, or from its menu) pulses its background once, briefly, to
+  show the click was seen while the tool starts.
+- A tool is only offered when it's enabled and its executable is found (except Terminal, which has none).
+- **Icon:** the application's own icon by default, or one of Tammi's generic icons (application, code editor, IDE,
+  container, folder, terminal), or a custom image file, chosen with the system's file dialog (PNG, SVG, JPEG, GIF,
+  WebP, ICO or BMP, up to 1 MB). When the application's or custom icon can't be found, the tool's generic icon is
+  shown. Application icons are found:
+  - on Linux, from the application's desktop entry (`.desktop` file) in the XDG data folders: the one whose `TryExec`
+    or `Exec` command is the executable, or has its name (ignoring `.sh`). Its `Icon` is a path, or a name looked for in
+    the `hicolor` icon theme and `pixmaps`.
+  - on Windows, as the icon the shell shows for the executable. A batch file (e.g. VS Code's `bin\code.cmd`) uses the
+    icon of the executable with its name in the folder above (`Code.exe`), if there is one.
+- **Predefined tools** come with Tammi, built as ordinary tool definitions. They can be enabled or disabled, but not
+  changed or removed. They're offered first, then the **custom tools**, in the user's order:
+  - **Terminal** is special: it opens one of Tammi's own terminals in a new tab of the Workspace View (in the
+    `{PreferredFolder}`), rather than starting an app, so it's the same as **+** → Terminal, which stays. It has
+    no executable and is always enabled: Settings has no switch for it. It's always first, in Settings and in the
+    tools lists.
+  - **VS Code:** `code {PreferredFolder}`.
+  - **Dev Container:** a file tool for `.devcontainer/devcontainer.json` and `.devcontainer.json`, running
+    `devcontainer open {MatchFolder} --config {FilePath}`. It opens the folder the configuration belongs to (the one
+    holding `.devcontainer.json`, or the parent of the `.devcontainer` folder) in the container the file describes, so
+    each project of a monorepo with its own configuration has its own entry. It needs the `devcontainer` CLI that VS Code's Dev Containers extension installs (its
+    "Install devcontainer CLI" command).
+  - **Visual Studio** (Windows only): a file tool for `*.sln`, `*.slnf` and `*.slnx`, named
+    `Visual Studio - {FileName}`, started through the Visual Studio Version Selector
+    (`%CommonProgramFiles(x86)%\Microsoft Shared\MSEnv\VSLauncher.exe {FilePath}`), which picks the version of Visual
+    Studio each solution was made for.
+  - **Rider:** `rider {PreferredFolder}`, found on the search path (e.g. JetBrains Toolbox's scripts folder).
+  - **File manager:** `explorer {PreferredFolder}` (File Explorer) on Windows, `xdg-open {PreferredFolder}` on Linux.
+- Every other tool is an external app, and **keeps running when Tammi exits**. On Linux they're started in their own session (with
+  `setsid`), without Tammi's terminal or output. On Windows, a batch file (e.g. a launcher script on the search path)
+  runs without a console window. A file tool starts in the file's folder, and a folder tool in its folder.
+- The entries are worked out when the workspace's tab opens, and again when the workspace or the settings change.
 
 ## Agents
 
 - Agents run as **CLI processes inside the embedded terminal component**. The user interacts with them
   through the terminal, just as they would outside Tammi.
 - Agents are **pluggable**. Each Agent Definition has a name, a command and arguments. Supported Agents have
-  built-in definitions; Custom Agents are configured much like an "Open in…" tool.
+  built-in definitions; Custom Agents are configured much like a custom tool.
 - **Working directory:** an agent starts in the Workspace Folder by default, so it can see and change
   every repository. The user can start it in a single Workspace Worktree instead.
 - **Task context:** Tammi writes the workspace's task details (title, description, links) to a markdown

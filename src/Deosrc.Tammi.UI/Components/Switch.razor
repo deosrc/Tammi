@@ -1,0 +1,24 @@
+@* An on/off switch: a checkbox drawn as a sliding toggle. It has no visible label, so it needs Label for screen
+   readers. *@
+<input type="checkbox" role="switch" class="switch" id="@Id" checked="@Checked" aria-label="@Label" title="@Label"
+       @onchange="e => CheckedChanged.InvokeAsync(e.Value is true)" />
+
+@code {
+    /// <summary>
+    /// The switch's ID, unique on the page.
+    /// </summary>
+    [Parameter]
+    public string? Id { get; set; }
+
+    /// <summary>
+    /// What the switch turns on, e.g. "Enable VS Code".
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public bool Checked { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> CheckedChanged { get; set; }
+}

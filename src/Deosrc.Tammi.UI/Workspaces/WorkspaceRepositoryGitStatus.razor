@@ -2,7 +2,7 @@
    danger when it's broken or can't be read, warning when it has work that isn't pushed or is out of sync with its
    upstream, and success when it's clean. *@
 
-<li class="git-status-card @ToneClass">
+<li class="git-status-card @ToneClass" @oncontextmenu="OnContextMenu" @oncontextmenu:preventDefault>
     <div class="git-status-heading">
         <span class="git-status-name" title="@Repository.WorktreePath">@Repository.Repository.FolderName</span>
         @if (Label is { } label)
@@ -38,6 +38,12 @@
 @code {
     [Parameter, EditorRequired]
     public WorkspaceRepositoryStatus Repository { get; set; } = null!;
+
+    /// <summary>
+    /// Called when the card is right-clicked, to open its menu.
+    /// </summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
 
     private string? ToneClass => Repository switch
     {

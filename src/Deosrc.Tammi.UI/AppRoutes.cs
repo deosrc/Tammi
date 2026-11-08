@@ -19,7 +19,7 @@ public static class AppRoutes
         new("Git", SettingsGit),
         new("Repositories", SettingsRepositories),
         new("Agents", Settings + "/agents"),
-        new("Tools", Settings + "/tools"),
+        new("Tools", SettingsTools),
         new("About", About),
     ];
 
@@ -28,6 +28,8 @@ public static class AppRoutes
     public const string SettingsGit = Settings + "/git";
 
     public const string SettingsRepositories = Settings + "/repositories";
+
+    public const string SettingsTools = Settings + "/tools";
 
     public const string About = Settings + "/about";
 
