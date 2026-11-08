@@ -3,6 +3,8 @@ using System.Text.Json.Nodes;
 using Deosrc.Tammi.Core.Integrations;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Storage;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Deosrc.Tammi.Core.Workspaces;
 
@@ -56,6 +58,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
     private readonly string _dataDirectory;
     private readonly IReadOnlyList<Action<JsonObject>> _metadataMigrations;
     private readonly IReadOnlyList<Action<JsonObject>> _indexMigrations;
+    private readonly ILogger _logger;
     private readonly Lock _loadLock = new();
     private readonly SemaphoreSlim _saveLock = new(1, 1);
     private volatile IReadOnlyList<IndexEntry>? _index;
@@ -64,8 +67,8 @@ public sealed class WorkspaceStore : IWorkspaceStore
     /// <summary>
     /// Creates a store with its index in the app's data folder.
     /// </summary>
-    public WorkspaceStore(IAppPaths appPaths)
-        : this(appPaths.DataDirectory, MetadataMigrations, IndexMigrations)
+    public WorkspaceStore(IAppPaths appPaths, ILogger<WorkspaceStore>? logger = null)
+        : this(appPaths.DataDirectory, MetadataMigrations, IndexMigrations, logger)
     {
     }
 
@@ -75,9 +78,11 @@ public sealed class WorkspaceStore : IWorkspaceStore
     internal WorkspaceStore(
         string dataDirectory,
         IReadOnlyList<Action<JsonObject>> metadataMigrations,
-        IReadOnlyList<Action<JsonObject>> indexMigrations)
+        IReadOnlyList<Action<JsonObject>> indexMigrations,
+        ILogger<WorkspaceStore>? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
+        _logger = logger ?? NullLogger<WorkspaceStore>.Instance;
         _dataDirectory = dataDirectory;
         _metadataMigrations = metadataMigrations;
         _indexMigrations = indexMigrations;
@@ -249,6 +254,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
         }
         catch (WorkspaceNotFoundException ex)
         {
+            _logger.LogDebug("The workspace {Name} ({Id}) is missing: {Problem}", entry.Name, entry.Id, ex.Message);
             return new WorkspaceListing(entry.Id, entry.Name, entry.Folder, WorkspaceAvailability.Missing)
             {
                 Problem = ex.Message,
@@ -256,6 +262,8 @@ public sealed class WorkspaceStore : IWorkspaceStore
         }
         catch (InvalidWorkspaceMetadataException ex)
         {
+            _logger.LogWarning(
+                "Couldn't read the workspace {Name} ({Id}): {Problem}", entry.Name, entry.Id, ex.Message);
             return new WorkspaceListing(entry.Id, entry.Name, entry.Folder, WorkspaceAvailability.Unreadable)
             {
                 Problem = ex.Message,
@@ -414,6 +422,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
             {
                 _indexProblem = $"Couldn't read the list of workspaces '{IndexFilePath}', so no workspaces are listed. "
                     + ex.Message;
+                _logger.LogWarning(ex, "{Problem}", _indexProblem);
                 KeepInvalidIndex();
                 index = [];
             }

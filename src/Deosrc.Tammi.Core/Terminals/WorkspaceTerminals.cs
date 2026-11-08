@@ -1,5 +1,7 @@
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Workspaces;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Deosrc.Tammi.Core.Terminals;
 
@@ -7,7 +9,8 @@ namespace Deosrc.Tammi.Core.Terminals;
 /// The terminals of every workspace. They keep running when a workspace's tab closes, so it can show them again when
 /// it reopens, and they all end when this is disposed, as the app closes.
 /// </summary>
-public sealed class WorkspaceTerminals(TerminalLauncher launcher) : IAsyncDisposable
+public sealed class WorkspaceTerminals(TerminalLauncher launcher, ILogger<WorkspaceTerminals>? logger = null)
+    : IAsyncDisposable
 {
     /// <summary>
     /// The name of a terminal started in the Workspace Folder. One started in a repository is named after its folder.
@@ -16,6 +19,7 @@ public sealed class WorkspaceTerminals(TerminalLauncher launcher) : IAsyncDispos
 
     private readonly Lock _lock = new();
     private readonly List<WorkspaceTerminal> _terminals = [];
+    private readonly ILogger _logger = logger ?? NullLogger<WorkspaceTerminals>.Instance;
     private bool _disposed;
 
     /// <summary>
@@ -57,7 +61,17 @@ public sealed class WorkspaceTerminals(TerminalLauncher launcher) : IAsyncDispos
             ObjectDisposedException.ThrowIf(_disposed, this);
 
             // The terminal resizes the session to fit as soon as it's shown.
-            var pty = launcher.Start(folder, PtySize.Default);
+            IPtySession pty;
+            try
+            {
+                pty = launcher.Start(folder, PtySize.Default);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Couldn't start a terminal in {Folder}.", folder);
+                throw;
+            }
+
             terminal = new WorkspaceTerminal(
                 workspace.Id,
                 UniqueName(workspace.Id, repository?.FolderName ?? WorkspaceFolderTerminalName),
@@ -66,8 +80,20 @@ public sealed class WorkspaceTerminals(TerminalLauncher launcher) : IAsyncDispos
             _terminals.Add(terminal);
         }
 
+        _logger.LogInformation(
+            "Started the terminal {Name} (process {ProcessId}) in {Folder}.",
+            terminal.Name,
+            terminal.Session.Pty.ProcessId,
+            folder);
         _ = terminal.Session.Pty.Exited.ContinueWith(
-            _ => Changed?.Invoke(terminal.WorkspaceId),
+            exited =>
+            {
+                _logger.LogInformation(
+                    "The terminal {Name}'s shell exited with {ExitCode}.",
+                    terminal.Name,
+                    exited.IsCompletedSuccessfully ? exited.Result : null);
+                Changed?.Invoke(terminal.WorkspaceId);
+            },
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
