@@ -19,7 +19,7 @@ public sealed class WorkspaceAgent : IWorkspaceProcess
         Name = name;
         Agent = agent;
         Session = new TerminalSession(agent.Session);
-        StartOrder = WorkspaceProcessOrder.Next();
+        StartOrder = MainAreaTabOrder.Next();
     }
 
     /// <inheritdoc />

@@ -1,11 +1,13 @@
-@* One task's card in the side panel's Tasks section: its source, reference, status and summary. Clicking the summary
-   opens the task's page in the browser. *@
+@* One task's card in the side panel's Tasks section: its source, reference, status and summary. Clicking the card
+   opens the task's page in the browser, once the task has been read. Its summary is a button for the keyboard, whose
+   click reaches the card. *@
 @using Deosrc.Tammi.Core.Integrations
 @using Deosrc.Tammi.Core.Platform
 @inject IntegrationRegistry Registry
 @inject IProcessLauncher ProcessLauncher
 
-<li class="workspace-task @CategoryClass">
+<li class="workspace-task @CategoryClass @(WorkspaceTask.Task is null ? null : "card-action")"
+    title="@(WorkspaceTask.Task is { } titled ? $"Open {titled.Key} in the browser" : null)" @onclick="OpenInBrowser">
     <div class="workspace-task-heading">
         <TaskSourceIcon Source="Registry.Find(WorkspaceTask.Reference.Source)" />
         <span class="workspace-task-key" title="@WorkspaceTask.Key">@WorkspaceNames.ShortReference(WorkspaceTask.Key)</span>
@@ -17,8 +19,7 @@
 
     @if (WorkspaceTask.Task is { } info)
     {
-        <button type="button" class="workspace-task-title" title="Open @info.Key in the browser"
-                @onclick="() => ProcessLauncher.Open(info.Url.AbsoluteUri)">
+        <button type="button" class="workspace-task-title card-action-name">
             @info.Title
         </button>
     }
@@ -35,6 +36,14 @@
 @code {
     [Parameter, EditorRequired]
     public WorkspaceTask WorkspaceTask { get; set; } = null!;
+
+    private void OpenInBrowser()
+    {
+        if (WorkspaceTask.Task is { } info)
+        {
+            ProcessLauncher.Open(info.Url.AbsoluteUri);
+        }
+    }
 
     private string? CategoryClass => WorkspaceTask.Task?.StatusCategory switch
     {

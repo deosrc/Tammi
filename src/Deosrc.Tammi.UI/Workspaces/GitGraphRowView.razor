@@ -1,0 +1,70 @@
+@using Deosrc.Tammi.Core.Git
+@* The graph cell of one commit's row: the lanes passing by, joining and leaving the commit, and its dot. Each half of
+   the row is drawn on its own, so the halves of adjoining rows meet at the lanes' centres. *@
+
+<svg class="git-graph-lanes" width="@Width" height="@RowHeight" viewBox="0 0 @Width @RowHeight" aria-hidden="true"
+     focusable="false">
+    @foreach (var line in Row.Lines)
+    {
+        <path d="@PathFor(line)" style="stroke: @ColourVariable(line.Colour)" />
+    }
+    @if (IsHead)
+    {
+        <circle class="git-graph-head" cx="@X(Row.Lane)" cy="@Middle" r="5.5" style="stroke: @ColourVariable(Row.Colour)" />
+    }
+    else
+    {
+        <circle cx="@X(Row.Lane)" cy="@Middle" r="4" style="fill: @ColourVariable(Row.Colour)" />
+    }
+</svg>
+
+@code {
+    /// <summary>
+    /// The width of each lane, in pixels.
+    /// </summary>
+    public const int LaneWidth = 14;
+
+    /// <summary>
+    /// The height of each row, in pixels. The list's rows must be exactly this high.
+    /// </summary>
+    public const int RowHeight = 26;
+
+    /// <summary>
+    /// How many colours the graph's palette has (<c>--color-graph-0</c> and so on).
+    /// </summary>
+    public const int ColourCount = 8;
+
+    private const double Middle = RowHeight / 2.0;
+
+    [Parameter, EditorRequired]
+    public GitGraphRow Row { get; set; } = null!;
+
+    /// <summary>
+    /// The cell's width, the same for every row so the lanes line up.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public int Width { get; set; }
+
+    /// <summary>
+    /// Whether the commit is HEAD, which is drawn as a ring.
+    /// </summary>
+    [Parameter]
+    public bool IsHead { get; set; }
+
+    private static double X(int lane) => lane * LaneWidth + LaneWidth / 2.0;
+
+    private static string ColourVariable(int colour) => $"var(--color-graph-{colour % ColourCount})";
+
+    private static string PathFor(GitGraphLine line)
+    {
+        var (top, bottom) = line.Half == GitGraphLineHalf.Top ? (0.0, Middle) : (Middle, (double)RowHeight);
+        double from = X(line.FromLane), to = X(line.ToLane);
+        if (line.FromLane == line.ToLane)
+        {
+            return FormattableString.Invariant($"M{from} {top}V{bottom}");
+        }
+
+        double bend = (top + bottom) / 2;
+        return FormattableString.Invariant($"M{from} {top}C{from} {bend} {to} {bend} {to} {bottom}");
+    }
+}

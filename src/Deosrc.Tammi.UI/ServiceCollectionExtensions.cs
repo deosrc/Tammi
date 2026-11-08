@@ -60,9 +60,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TerminalLauncher>();
         services.AddSingleton<WorkspaceTerminals>();
         services.AddSingleton<WorkspaceAgents>();
+        services.AddSingleton<WorkspaceGitGraphs>();
         services.AddSingleton<WorkspaceViewState>();
+        services.AddSingleton<GitGraphViewOptions>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();
+        services.AddSingleton<LayoutStateStore>();
         services.AddSingleton<IWorkspaceStore, WorkspaceStore>();
         services.AddSingleton<WorkspaceGitStatusMonitors>();
         services.AddSingleton<WorkspaceTaskLists>();

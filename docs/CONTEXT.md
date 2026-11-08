@@ -34,6 +34,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Local Repository** | A catalogue repository with a clone on disk, outside any workspace. Workspaces create their worktrees from it. |
 | **Remote-only Repository** | A catalogue repository known only through an integration, with no clone on disk yet. It must be cloned, which makes it a Local Repository, before it can be added to a workspace. |
 | **Workspace Worktree** | A `git worktree` of a Local Repository, created inside the Workspace Folder. This is how a repository is included in a workspace. |
+| **Git Graph** | A repository's (or submodule's) commits drawn as lanes, with their branches and tags, shown as a main area tab in the Workspace View. |
 | **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
 | **Agent Definition** | A configured agent CLI (e.g. Claude Code) that Tammi can start: name, command, arguments, how to pass the initial prompt, and how to resume a session. |
@@ -258,7 +259,8 @@ own branch. It is created automatically when the workspace is created:
   - Tools
 - **Tasks section:** a card for each of the workspace's tasks, in the workspace's order, with its source's logo, its
   short reference (as in suggested names, e.g. `api#42` or `ABC-123`, with the full key as its tooltip), its summary
-  and its Task Status, as a chip coloured by its category. Clicking the summary opens the task's page in the browser.
+  and its Task Status, as a chip coloured by its category. Clicking the card, once its task has been read, opens the
+  task's page in the browser.
   - Tasks are read from their sources when the tab opens, and again on Refresh or when integrations are added or
     removed. Switching between open tabs doesn't read them again. Each task is read on its own, so a failing source
     doesn't hold up the others.
@@ -266,6 +268,9 @@ own branch. It is created automatically when the workspace is created:
     or the source failed (with the error as a tooltip).
   - **GitHub** issues are Open (to do), or Closed, Not planned or Duplicate (done), from the issue's state and why it
     was closed. GitHub has no in-progress state. **JIRA** issues have their own status and its category.
+- **Side panel cards** that do something when clicked (a task's, an agent's and a repository's) do it wherever the card
+  is clicked, and show it with a pointer and the card's colour on its border. Each card's name is also a button, so
+  the keyboard can reach it.
 - **Repositories section:** a card with the git status of each repository, in the workspace's order. Right-clicking a
   card opens a menu with a **Tools** submenu (see [Tools](#tools)). The whole card is coloured by what needs
   attention: danger when the worktree is broken or its status can't be read, warning when it has work that isn't
@@ -283,19 +288,71 @@ own branch. It is created automatically when the workspace is created:
   editing, staging, committing and fetching all update the status, whichever tool does them. Only the repository that
   changed is read again. Closing the tab stops watching, and so does starting to delete the workspace (it starts
   again if the delete is cancelled).
-- **Git operations**, including a git graph view
+- **Git operations**, including the Git Graph
+- **Git Graph:** a main area tab named `Git: <repository folder>` (e.g. `Git: api`), or `Git: <repository
+  folder>/<submodule path>` for a submodule (e.g. `Git: api/libs/core`). It's opened from the **+** menu's **Git**
+  item, which lists **Repository: `<name>`** for each repository and **Submodule: `<name>/<path>`** for each
+  checked-out submodule (nested ones too), or by clicking a repository's card in the side panel (a checked-out
+  submodule's part of the card opens the submodule's graph). Each repository or submodule has at most one graph tab
+  at a time: opening it again, either way, shows the open one.
+  - It lists commits newest first in topological order (children before parents), each with its lane and dot, its
+    branch and tag labels, its subject, author, date and (if shown) short commit id. Merges join lanes, and lanes that
+    end are reused, so the graph stays narrow. HEAD's dot is a ring, the branch HEAD is on is highlighted, a
+    detached HEAD has its own label, and tags have a tag icon.
+  - The columns (Graph, Description, Author, Date and Commit) have headings, which stay in view as the list scrolls.
+    Right-clicking the headings opens a menu that shows or hides each column except Graph and Description. The Commit
+    column (the short commit id) is hidden until it's shown. Below a divider, the menu shows or hides the rows' tags
+    and remote-tracking branches (both shown until they're hidden). The details always show every label. Like the
+    widths, these choices are shared by every graph until the app closes.
+    Description takes the space left. Each other column can be resized from its edge towards Description: drag the
+    handle, or focus it and use Left and Right. Double-clicking a handle resets its column. Until it's resized, the
+    Graph column fits the graph's lanes, and a wider graph is cut off at the column's edge. The widths are shared by
+    every graph until the app closes.
+  - A toggle chooses which commits it shows: **Workspace branch** (HEAD, the workspace branch, its upstream and its
+    base branch; HEAD and its branch's upstream for a submodule) or **Everything** (every local and remote-tracking
+    branch and tag). It starts as Settings → Git says, which defaults to the workspace branch.
+  - Large histories stay fast: only the rows in view are drawn, and commits are read 500 at a time as the list
+    scrolls. The repository stays open while the tab is, so later pages don't walk the history again.
+  - Selecting a commit (by clicking it, or with Up, Down and Home) shows its details beside the list, top to bottom:
+    - a bar with its short id in the middle. Clicking the id copies the full id.
+    - its subject, in larger text, written as in the message.
+    - its message's body, which scrolls. The split below it resizes it, by dragging or by focusing it and using Up and
+      Down, down to three lines. Double-click resets it. Its height is kept like the details' width. A message with
+      no body has neither.
+    - its authors: the author, the committer when they're someone else, and anyone in the message's
+      `Co-authored-by:` trailers. The section collapses to its heading, with the author's name beside it.
+    - after a divider, the files it changed compared with its first parent, with renames detected, and how many were
+      modified, added, deleted and renamed, each as a coloured icon (a pencil, a plus, a trash can and an arrow) and a
+      number, leaving out any with none. A toggle shows them as a list (each file's name in bold, then its folder) or
+      as a tree of folders, each with a folder icon and, after its name, the same counts for the files in it, which
+      start closed and open and close, with folders holding only one folder joined (e.g. `src/app`). Each file keeps
+      its A, M, D or R.
+    - Every graph shows files the same way, and the list or tree choice is kept in the settings, so it's the same
+      after a restart. Like the columns, whether Authors is collapsed is shared by every graph until the app closes.
+      Diffs are a separate Git operation.
+  - The split between the list and the details is resizable: drag it, or focus it and use Left and Right. Double-click
+    resets it. The details' width is kept as a fixed width in pixels (see [Layout state](#technical-constraints)), so
+    every graph opens with it, even after a restart. Each side keeps a minimum width: when the window is too narrow
+    for the kept width, the details are narrower for the time being, and go back to it when there's room.
+  - While it's shown and the workspace's tab is open, it reads the repository's refs again whenever the repository
+    changes, and reads the graph again only if they've changed (e.g. after a commit, fetch or checkout), keeping the
+    selection. A graph that isn't shown does the same when it's next shown. Refresh reads it again on demand.
+  - Like terminals, graph tabs stay when the workspace's tab closes. Closing a graph's tab closes the repository, and
+    deleting the workspace closes its graphs.
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
 - **Agents section:** a card for each of the workspace's open agents, in the order they started, with its
-  [state](#agents) as a badge and the card's colour. Clicking its name shows its tab, and a running agent has a
-  **Stop** button. An agent that ended with an error shows its exit code. Below the cards, **Past sessions** lists the
-  workspace's recorded Agent Sessions that aren't running, most recently started first, each with its agent's name,
-  the repository it was started in (if it wasn't the Workspace Folder) and when it was last started. Each one can be
-  resumed, which opens it in a new tab, or forgotten. A session whose agent can't resume it says why instead.
+  [state](#agents) as a badge and the card's colour. Clicking the card shows its tab, and a running agent has a
+  **Stop** button (which only stops it). An agent that ended with an error shows its exit code. Below the cards,
+  **Past sessions** lists the workspace's recorded Agent Sessions that aren't running, most recently started first,
+  each with its agent's name, the repository it was started in (if it wasn't the Workspace Folder) and when it was
+  last started. Each one can be resumed, which opens it in a new tab, or forgotten. A session whose agent can't resume
+  it says why instead.
 - **Main area tabs:** the main area has its own row of tabs, below a small divider. The first is always the
   **dashboard** (an icon, no name), which the view shows until the user opens something else. Then come the
-  workspace's terminals and agents, in the order they started. An agent's tab has a dot coloured by its state. The
-  last is always a **+** tab, which opens a menu of things to start: **Terminal**, then each Agent Definition (in the
-  order agents are offered), each with a submenu of **Workspace** and **Repository: `<name>`** for each repository.
+  workspace's terminals, agents and Git Graphs, in the order they started or opened. An agent's tab has a dot coloured by its state. The
+  last is always a **+** tab, which opens a menu of things to start: **Terminal**, **Git** (see Git Graph), then each
+  Agent Definition (in the order agents are offered). Terminal and each Agent Definition have a submenu of
+  **Workspace** and **Repository: `<name>`** for each repository.
 - **Terminals**: any number of embedded terminals, shown as tabs alongside agent sessions. A new
   terminal opens in the workspace folder by default, or the user can open one in a specific repository.
   The shell defaults to PowerShell on Windows (`pwsh` if installed) and `$SHELL` on Linux, and can be
@@ -360,6 +417,7 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
       or unknown when the token can't list keys), with an Add button. Tammi adds it through GitHub's API, titled with
       the computer's and key's names. If the token isn't allowed to, Tammi copies the public key and opens GitHub's
       page for adding a key, and says why. JIRA has no SSH keys.
+  - What a [Git Graph](#workspace-view-tab) shows when it opens: the workspace branch (the default) or everything
 - **Repositories**
   - Monitored Folder(s), each with how many repositories were found in it
   - Manually added local repositories
@@ -692,6 +750,10 @@ are left to other tools for now.
 - **Window state:** Tammi opens its window at the size it had when it was last closed, maximised if it was then.
   The state is kept in `window-state.json` in the Data folder, apart from the settings. If it's missing or can't be
   read, the window opens at its default size.
+- **Layout state:** the sizes the user gives parts of the window (so far, the width of a Git Graph's commit details and
+  the height of its message body) are kept in `layout-state.json` in the Data folder, apart from the window state,
+  which the host writes as the window closes. It's written each time the user finishes resizing. If it's missing or
+  can't be read, the parts have their default sizes.
 - **Credentials** for integrations live in the platform secret store, never in settings or data files:
   - **Windows:** Windows Credential Manager, as generic credentials named `Tammi:<key>`, saved for the local
     machine only.

@@ -1,11 +1,13 @@
+using System.Text.Json.Serialization;
 using Deosrc.Tammi.Core.Catalogue;
 using Deosrc.Tammi.Core.Platform;
 
 namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
-/// The Repositories section of the Settings screen. It keeps its earlier name, and its <c>git</c> key in
-/// <c>settings.json</c>, from when the section was called Git.
+/// The Repositories section of the Settings screen, and the git graph's options (<see cref="GraphScope"/> on the Git
+/// section, and <see cref="GraphFileView"/>). It keeps its earlier name, and its <c>git</c> key in
+/// <c>settings.json</c>, from when the Repositories section was called Git.
 /// </summary>
 public sealed record GitSettings
 {
@@ -42,7 +44,20 @@ public sealed record GitSettings
     public TimeSpan StatusRefreshInterval { get; init; } = DefaultStatusRefreshInterval;
 
     /// <summary>
-    /// Replaces out-of-range values with valid ones, and writes each folder as a full path, once.
+    /// Which commits a git graph shows when it opens. Each graph can switch while it's open.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<GitGraphScope>))]
+    public GitGraphScope GraphScope { get; init; } = GitGraphScope.WorkspaceBranch;
+
+    /// <summary>
+    /// How a git graph's details show the selected commit's changed files, as the user last chose in one.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<GitGraphFileView>))]
+    public GitGraphFileView GraphFileView { get; init; } = GitGraphFileView.List;
+
+    /// <summary>
+    /// Replaces out-of-range values, and values this version of Tammi doesn't know, with valid ones, and writes each
+    /// folder as a full path, once.
     /// </summary>
     public GitSettings Normalize() => this with
     {
@@ -53,6 +68,8 @@ public sealed record GitSettings
             : StatusRefreshInterval > MaxStatusRefreshInterval
                 ? MaxStatusRefreshInterval
                 : StatusRefreshInterval,
+        GraphScope = Enum.IsDefined(GraphScope) ? GraphScope : GitGraphScope.WorkspaceBranch,
+        GraphFileView = Enum.IsDefined(GraphFileView) ? GraphFileView : GitGraphFileView.List,
     };
 
     /// <summary>
@@ -62,9 +79,11 @@ public sealed record GitSettings
         other is not null
         && MonitoredFolders.SequenceEqual(other.MonitoredFolders)
         && LocalRepositories.SequenceEqual(other.LocalRepositories)
-        && StatusRefreshInterval == other.StatusRefreshInterval;
+        && StatusRefreshInterval == other.StatusRefreshInterval
+        && GraphScope == other.GraphScope
+        && GraphFileView == other.GraphFileView;
 
     /// <inheritdoc />
     public override int GetHashCode() =>
-        HashCode.Combine(MonitoredFolders.Count, LocalRepositories.Count, StatusRefreshInterval);
+        HashCode.Combine(MonitoredFolders.Count, LocalRepositories.Count, StatusRefreshInterval, GraphScope, GraphFileView);
 }

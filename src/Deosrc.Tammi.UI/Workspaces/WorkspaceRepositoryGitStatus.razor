@@ -1,10 +1,15 @@
 @* One repository's card in the side panel's Repositories section. The card's colour says whether it needs attention:
    danger when it's broken or can't be read, warning when it has work that isn't pushed or is out of sync with its
-   upstream, and success when it's clean. *@
+   upstream, and success when it's clean. Clicking the card opens the repository's git graph, or shows it if it's open.
+   Its name is a button for the keyboard, whose click reaches the card. A checked-out submodule's part of the card
+   opens the submodule's graph instead. *@
 
-<li class="git-status-card @ToneClass" @oncontextmenu="OnContextMenu" @oncontextmenu:preventDefault>
+<li class="git-status-card card-action @ToneClass" title="Open the git graph of @Repository.Repository.FolderName"
+    @onclick="() => OnOpenGraph.InvokeAsync(null)" @oncontextmenu="OnContextMenu" @oncontextmenu:preventDefault>
     <div class="git-status-heading">
-        <span class="git-status-name" title="@Repository.WorktreePath">@Repository.Repository.FolderName</span>
+        <button type="button" class="git-status-name card-action-name" title="@Repository.WorktreePath">
+            @Repository.Repository.FolderName
+        </button>
         @if (Label is { } label)
         {
             <span class="git-status-badge">@label</span>
@@ -27,7 +32,7 @@
     }
     else if (Repository.Status is { } status)
     {
-        <GitStatusDetails Status="status" />
+        <GitStatusDetails Status="status" OnOpenGraph="path => OnOpenGraph.InvokeAsync(path)" />
     }
     else
     {
@@ -38,6 +43,13 @@
 @code {
     [Parameter, EditorRequired]
     public WorkspaceRepositoryStatus Repository { get; set; } = null!;
+
+    /// <summary>
+    /// Opens a git graph: the repository's (with <see langword="null"/>), or a submodule's, by its path in the
+    /// repository.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string?> OnOpenGraph { get; set; }
 
     /// <summary>
     /// Called when the card is right-clicked, to open its menu.

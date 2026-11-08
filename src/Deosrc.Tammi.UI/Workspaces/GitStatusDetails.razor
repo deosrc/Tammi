@@ -42,9 +42,24 @@
     <ul class="git-status-submodules">
         @foreach (var submodule in Status.Submodules)
         {
-            <li class="git-status-submodule" @key="submodule.Path">
+            @* A checked-out submodule opens its own git graph, and the click stops here, so the repository's card doesn't
+               open the repository's. Its name is a button for the keyboard, whose click reaches it. *@
+            var path = PathOf(submodule);
+            <li class="git-status-submodule @(submodule.IsInitialized ? "card-action" : null)" @key="submodule.Path"
+                title="@(submodule.IsInitialized ? $"Open the git graph of {path}" : null)"
+                @onclick="() => OpenSubmoduleGraph(submodule, path)"
+                @onclick:stopPropagation="submodule.IsInitialized">
                 <div class="git-status-heading">
-                    <span class="git-status-name" title="@submodule.Name">@submodule.Path</span>
+                    @if (submodule.IsInitialized)
+                    {
+                        <button type="button" class="git-status-name card-action-name" title="@submodule.Name">
+                            @submodule.Path
+                        </button>
+                    }
+                    else
+                    {
+                        <span class="git-status-name" title="@submodule.Name">@submodule.Path</span>
+                    }
                     @if (submodule.Status is { } inner && GitStatusText.NeedsAttention(inner))
                     {
                         <span class="git-status-badge">@(inner.IsChanged ? "Changed" : "Out of sync")</span>
@@ -56,7 +71,7 @@
                 }
                 @if (submodule.Status is { } status)
                 {
-                    <GitStatusDetails Status="status" />
+                    <GitStatusDetails Status="status" SubmodulePath="@PathOf(submodule)" OnOpenGraph="OnOpenGraph" />
                 }
                 else
                 {
@@ -70,4 +85,22 @@
 @code {
     [Parameter, EditorRequired]
     public RepositoryStatus Status { get; set; } = null!;
+
+    /// <summary>
+    /// For a submodule's status, its path in the workspace's repository, with <c>/</c> separators.
+    /// </summary>
+    [Parameter]
+    public string? SubmodulePath { get; set; }
+
+    /// <summary>
+    /// Opens a submodule's git graph, by its path in the workspace's repository.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnOpenGraph { get; set; }
+
+    private Task OpenSubmoduleGraph(SubmoduleStatus submodule, string path) =>
+        submodule.IsInitialized ? OnOpenGraph.InvokeAsync(path) : Task.CompletedTask;
+
+    private string PathOf(SubmoduleStatus submodule) =>
+        SubmodulePath is null ? submodule.Path : $"{SubmodulePath}/{submodule.Path}";
 }
