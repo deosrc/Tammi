@@ -45,6 +45,12 @@ public sealed class IntegrationRegistry
         [.. _integrations.OfType<IRepositoryIntegration>()];
 
     /// <summary>
+    /// The integrations that provide Pull Requests.
+    /// </summary>
+    public IReadOnlyList<IPullRequestIntegration> PullRequestIntegrations =>
+        [.. _integrations.OfType<IPullRequestIntegration>()];
+
+    /// <summary>
     /// Finds an integration by its <see cref="IIntegration.Id"/>, e.g. a task's source.
     /// </summary>
     /// <returns>The integration, or <see langword="null"/> if there is none with that ID, e.g. it was removed.</returns>

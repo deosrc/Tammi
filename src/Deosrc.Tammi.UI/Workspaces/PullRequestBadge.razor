@@ -1,0 +1,73 @@
+@* A Pull Request's badge on a repository's card: coloured by its state, with an icon for its state, its number and, when
+   it has checks, an icon for the most severe of them. Clicking it opens the Pull Request in the browser, and the click
+   stops here, so the card doesn't open its git graph. *@
+@using Deosrc.Tammi.Core.Integrations
+@using Deosrc.Tammi.Core.Platform
+@inject IProcessLauncher ProcessLauncher
+
+<button type="button" class="pull-request-badge @StateClass" title="@PullRequestText.Title(PullRequest)"
+        aria-label="@PullRequestText.Title(PullRequest)"
+        @onclick="OpenInBrowser" @onclick:stopPropagation>
+    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        @switch (PullRequest.State)
+        {
+            case PullRequestState.Draft:
+                <circle cx="6" cy="6" r="2.5" />
+                <circle cx="6" cy="18" r="2.5" />
+                <circle cx="18" cy="18" r="2.5" />
+                <path d="M6 8.5v7M18 6v.01M18 11v.01" />
+                break;
+            case PullRequestState.Merged:
+                <circle cx="6" cy="6" r="2.5" />
+                <circle cx="18" cy="18" r="2.5" />
+                <path d="M6 8.5V21M6 9a9 9 0 0 0 9.5 9" />
+                break;
+            case PullRequestState.Closed:
+                <circle cx="6" cy="6" r="2.5" />
+                <circle cx="6" cy="18" r="2.5" />
+                <circle cx="18" cy="18" r="2.5" />
+                <path d="M6 8.5v7M18 11v4.5M15 3l6 6M21 3l-6 6" />
+                break;
+            default:
+                <circle cx="6" cy="6" r="2.5" />
+                <circle cx="6" cy="18" r="2.5" />
+                <circle cx="18" cy="18" r="2.5" />
+                <path d="M6 8.5v7M18 15.5V9a3 3 0 0 0-3-3h-4M13 3l-3 3 3 3" />
+                break;
+        }
+    </svg>
+    <span class="pull-request-number">#@PullRequest.Number</span>
+    @if (PullRequest.Checks is { } checks)
+    {
+        <svg class="icon icon-small pull-request-checks" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            @switch (checks)
+            {
+                case PullRequestChecks.Succeeded:
+                    <path d="M20 6 9 17l-5-5" />
+                    break;
+                case PullRequestChecks.InProgress:
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 2" />
+                    break;
+                default:
+                    <path d="M18 6 6 18M6 6l12 12" />
+                    break;
+            }
+        </svg>
+    }
+</button>
+
+@code {
+    [Parameter, EditorRequired]
+    public PullRequestInfo PullRequest { get; set; } = null!;
+
+    private string StateClass => PullRequest.State switch
+    {
+        PullRequestState.Draft => "pull-request-draft",
+        PullRequestState.Open => "pull-request-open",
+        PullRequestState.Merged => "pull-request-merged",
+        _ => "pull-request-closed",
+    };
+
+    private void OpenInBrowser() => ProcessLauncher.Open(PullRequest.Url.AbsoluteUri);
+}

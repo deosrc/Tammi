@@ -13,9 +13,11 @@ public static class GitHubTokenTemplate
 {
     /// <summary>
     /// The repository permissions the token needs, all read-only. Contents is needed too: without it, GitHub's issue
-    /// search leaves out private repositories' issues.
+    /// search leaves out private repositories' issues. Pull requests and commit statuses show the Pull Requests of
+    /// workspace branches, with their checks.
     /// </summary>
-    public static IReadOnlyList<string> Permissions { get; } = ["issues", "contents", "metadata"];
+    public static IReadOnlyList<string> Permissions { get; } =
+        ["issues", "contents", "metadata", "pull_requests", "statuses"];
 
     /// <summary>
     /// The link to github.com's new fine-grained token page.
@@ -38,7 +40,7 @@ public static class GitHubTokenTemplate
         string[] query =
         [
             $"name={Uri.EscapeDataString(AppInfo.Name)}",
-            $"description={Uri.EscapeDataString($"Lets {AppInfo.Name} read your issues to build workspaces.")}",
+            $"description={Uri.EscapeDataString($"Lets {AppInfo.Name} read your issues and pull requests to build workspaces.")}",
             .. Permissions.Select(permission => $"{permission}=read"),
         ];
         return new Uri($"{webUrl.GetLeftPart(UriPartial.Authority)}/settings/personal-access-tokens/new?"

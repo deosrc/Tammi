@@ -7,9 +7,10 @@
     @if (ForGitHub)
     {
         <text>
-            A fine-grained token with read access to issues, contents and metadata on the repositories to include, or
-            a classic token with the <code>repo</code> scope for private repositories. GitHub's search only finds
-            private issues when a fine-grained token can read contents too. On github.com, the link below fills in
+            A fine-grained token with read access to issues, contents, metadata, pull requests and commit statuses on
+            the repositories to include, or a classic token with the <code>repo</code> scope for private repositories.
+            GitHub's search only finds private issues when a fine-grained token can read contents too, and pull
+            requests and commit statuses show the workspace branches' pull requests and their checks. On github.com, the link below fills in
             these permissions: choose the token's owner and its repositories (All repositories is simplest).
             To let Tammi add SSH keys from Settings → Git, also give it read and write access to the account's Git SSH
             keys (classic tokens: <code>write:public_key</code>). Without it, Tammi opens GitHub's page for adding a

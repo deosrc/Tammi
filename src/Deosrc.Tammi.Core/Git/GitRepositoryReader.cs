@@ -137,7 +137,7 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
     {
         Branch head = repository.Head;
         bool detached = repository.Info.IsHeadDetached;
-        Branch? upstream = detached ? null : head.TrackedBranch;
+        Branch? upstream = detached ? null : TrackedBranchOf(head);
         BranchTrackingDetails? tracking = upstream?.Tip is null ? null : head.TrackingDetails;
 
         return new RepositoryStatus
@@ -152,6 +152,23 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
             Changes = ReadChanges(repository),
             Submodules = ReadSubmodules(repository),
         };
+    }
+
+    /// <summary>
+    /// The branch's upstream, or <see langword="null"/> when it has none or git can't resolve it, e.g. when its remote
+    /// is a URL rather than a configured remote, as <c>git push -u &lt;url&gt;</c> leaves it. Libgit2 throws for that,
+    /// though git itself only stops showing an upstream.
+    /// </summary>
+    private static Branch? TrackedBranchOf(Branch? branch)
+    {
+        try
+        {
+            return branch?.TrackedBranch;
+        }
+        catch (LibGit2SharpException)
+        {
+            return null;
+        }
     }
 
     private static int CountUnpushedCommits(Repository repository)
@@ -303,7 +320,7 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
                 commits.Add(commit);
             }
 
-            if (options.IncludeUpstreams && FindLocalBranch(repository, name)?.TrackedBranch?.Tip is { } upstream)
+            if (options.IncludeUpstreams && TrackedBranchOf(FindLocalBranch(repository, name))?.Tip is { } upstream)
             {
                 commits.Add(upstream);
             }

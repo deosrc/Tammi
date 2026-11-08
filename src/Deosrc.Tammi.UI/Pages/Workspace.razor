@@ -14,6 +14,7 @@
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceGitStatusMonitors GitStatusMonitors
 @inject WorkspaceTaskLists TaskLists
+@inject WorkspacePullRequestLists PullRequestLists
 @inject WorkspaceTools WorkspaceTools
 @inject ToolImages ToolImages
 @inject NavigationManager Navigation
@@ -137,22 +138,40 @@ else
                     }
                 </SidePanelSection>
                 <SidePanelSection Title="Repositories">
-                    @if (_gitStatus is null || _gitStatus.Repositories.Count == 0)
-                    {
-                        <p class="placeholder">No repositories in this workspace.</p>
-                    }
-                    else
-                    {
-                        <ul class="git-status-list">
-                            @foreach (var repository in _gitStatus.Repositories)
-                            {
-                                <WorkspaceRepositoryGitStatus @key="repository.Repository.FolderName"
-                                                              Repository="repository"
-                                                              OnOpenGraph="path => OpenGraph(repository.Repository, path)"
-                                                              OnContextMenu="e => OpenRepositoryMenu(repository.Repository, e)" />
-                            }
-                        </ul>
-                    }
+                    <Actions>
+                        @if (_gitStatus is { Repositories.Count: > 0 })
+                        {
+                            <button type="button" class="side-panel-section-action"
+                                    title="Read the repositories' git status and pull requests again"
+                                    aria-label="Refresh repositories" disabled="@_refreshingRepositories"
+                                    @onclick="RefreshRepositoriesAsync">
+                                <svg class="icon icon-small @(_refreshingRepositories ? "icon-spin" : null)"
+                                     viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" />
+                                    <path d="M21 3v5h-5" />
+                                </svg>
+                            </button>
+                        }
+                    </Actions>
+                    <ChildContent>
+                        @if (_gitStatus is null || _gitStatus.Repositories.Count == 0)
+                        {
+                            <p class="placeholder">No repositories in this workspace.</p>
+                        }
+                        else
+                        {
+                            <ul class="git-status-list">
+                                @foreach (var repository in _gitStatus.Repositories)
+                                {
+                                    <WorkspaceRepositoryGitStatus @key="repository.Repository.FolderName"
+                                                                  Repository="repository"
+                                                                  PullRequests="_pullRequests?.Find(repository.Repository.FolderName)"
+                                                                  OnOpenGraph="path => OpenGraph(repository.Repository, path)"
+                                                                  OnContextMenu="e => OpenRepositoryMenu(repository.Repository, e)" />
+                                }
+                            </ul>
+                        }
+                    </ChildContent>
                 </SidePanelSection>
                 <SidePanelSection Title="Tools">
                     @if (_toolItems.Count == 0)
@@ -368,6 +387,12 @@ else
     // Kept while the tab is open, so switching tabs doesn't read the tasks again.
     private WorkspaceTaskList? _tasks;
 
+    // Kept while the tab is open, reading again on its own timer.
+    private WorkspacePullRequestList? _pullRequests;
+
+    // Whether the Repositories section's Refresh is reading the git status and pull requests again.
+    private bool _refreshingRepositories;
+
     // What the Workspace Folder and each repository (by folder name) can be opened in.
     private IReadOnlyList<ToolEntry> _workspaceTools = [];
     private IReadOnlyDictionary<string, IReadOnlyList<ToolEntry>> _repositoryTools =
@@ -436,6 +461,7 @@ else
         SettingsStore.Changed -= OnToolsChanged;
         SetGitStatus(null);
         SetTasks(null);
+        SetPullRequests(null);
         _disposed.Cancel();
         _disposed.Dispose();
     }
@@ -459,6 +485,7 @@ else
             _loadedWorkspaceId = WorkspaceId;
             UpdateGitStatus();
             UpdateTasks();
+            UpdatePullRequests();
             _ = UpdateToolsAsync();
         }
     }
@@ -679,6 +706,59 @@ else
         if (_tasks is not null)
         {
             _tasks.Changed += OnMonitorChanged;
+        }
+    }
+
+    /// <summary>
+    /// Reads every repository's git status and pull requests again, for the Repositories section's Refresh. It doesn't
+    /// fetch: the status is compared with the remote-tracking branches as they are.
+    /// </summary>
+    private async Task RefreshRepositoriesAsync()
+    {
+        if (_refreshingRepositories)
+        {
+            return;
+        }
+
+        _refreshingRepositories = true;
+        try
+        {
+            await Task.WhenAll(
+                _gitStatus?.RefreshAsync(_disposed.Token) ?? Task.CompletedTask,
+                _pullRequests?.RefreshAsync() ?? Task.CompletedTask);
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException)
+        {
+            // The page closed, or the workspace started being deleted or its tab closed, meanwhile.
+        }
+        finally
+        {
+            _refreshingRepositories = false;
+        }
+    }
+
+    private void UpdatePullRequests() =>
+        SetPullRequests(!_deleting && _listing?.Workspace is { } workspace
+            && WorkspaceTabs.Find(workspace.Id) is not null
+                ? PullRequestLists.Start(workspace)
+                : null);
+
+    private void SetPullRequests(WorkspacePullRequestList? list)
+    {
+        if (ReferenceEquals(list, _pullRequests))
+        {
+            return;
+        }
+
+        if (_pullRequests is not null)
+        {
+            _pullRequests.Changed -= OnMonitorChanged;
+        }
+
+        _pullRequests = list;
+        if (_pullRequests is not null)
+        {
+            _pullRequests.Changed += OnMonitorChanged;
         }
     }
 
@@ -1110,6 +1190,7 @@ else
         _deleting = false;
         UpdateGitStatus();
         UpdateTasks();
+        UpdatePullRequests();
     }
 
     private void FinishDelete()
@@ -1124,6 +1205,7 @@ else
         _tab = WorkspaceTabs.Find(WorkspaceId);
         UpdateGitStatus();
         UpdateTasks();
+        UpdatePullRequests();
         StateHasChanged();
     });
 

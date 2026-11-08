@@ -61,4 +61,28 @@ public sealed class GitRemoteUrlsTests
     {
         Assert.False(GitRemoteUrls.IsSameRepository(url, "https://github.com/acme/api"));
     }
+
+    [Theory]
+    [InlineData("https://github.com/acme/api.git", "github.com", "acme/api")]
+    [InlineData("https://user@github.example.com:8443/acme/api/?x=1", "github.example.com", "acme/api")]
+    [InlineData("ssh://git@github.com:2222/acme/api.git", "github.com", "acme/api")]
+    [InlineData("git@github.com:acme/api.git", "github.com", "acme/api")]
+    [InlineData("https://bitbucket.example.com/scm/acme/api.git", "bitbucket.example.com", "scm/acme/api")]
+    public void TryGetHostAndPath_ReadsTheHostAndPath(string url, string host, string path)
+    {
+        Assert.True(GitRemoteUrls.TryGetHostAndPath(url, out string? actualHost, out string? actualPath));
+        Assert.Equal((host, path), (actualHost, actualPath));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("/srv/git/acme/api.git")]
+    [InlineData(@"C:\repos\acme\api")]
+    [InlineData("file:///srv/git/acme/api.git")]
+    [InlineData("https://github.com/")]
+    public void TryGetHostAndPath_WithoutAHostAndPath_ReturnsFalse(string? url)
+    {
+        Assert.False(GitRemoteUrls.TryGetHostAndPath(url, out _, out _));
+    }
 }

@@ -33,6 +33,28 @@ public static class GitRemoteUrls
         && string.Equals(normalised, Normalise(repositoryUrl), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Reads the host and path of a remote URL with a host, e.g. <c>github.com</c> and <c>acme/api</c> for
+    /// <c>git@github.com:acme/api.git</c>. The user, port, a trailing <c>/</c> and a trailing <c>.git</c> are left out.
+    /// </summary>
+    /// <returns>Whether the URL has a host and a path, unlike a local path.</returns>
+    public static bool TryGetHostAndPath(
+        string? url,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? host,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? path)
+    {
+        host = path = null;
+        if (Normalise(url) is not { } normalised)
+        {
+            return false;
+        }
+
+        int slash = normalised.IndexOf('/');
+        host = normalised[..slash];
+        path = normalised[(slash + 1)..];
+        return true;
+    }
+
+    /// <summary>
     /// Returns <c>host/path</c> for a URL with a host, without a trailing <c>/</c> or <c>.git</c>, or
     /// <see langword="null"/> for a local path.
     /// </summary>

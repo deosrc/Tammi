@@ -2,7 +2,8 @@
    danger when it's broken or can't be read, warning when it has work that isn't pushed or is out of sync with its
    upstream, and success when it's clean. Clicking the card opens the repository's git graph, or shows it if it's open.
    Its name is a button for the keyboard, whose click reaches the card. A checked-out submodule's part of the card
-   opens the submodule's graph instead. *@
+   opens the submodule's graph instead. A badge for each Pull Request from the workspace branch sits under its name,
+   and opens the Pull Request in the browser. *@
 
 <li class="git-status-card card-action @ToneClass" title="Open the git graph of @Repository.Repository.FolderName"
     @onclick="() => OnOpenGraph.InvokeAsync(null)" @oncontextmenu="OnContextMenu" @oncontextmenu:preventDefault>
@@ -15,6 +16,26 @@
             <span class="git-status-badge">@label</span>
         }
     </div>
+
+    @if (PullRequests is { } pullRequests
+         && (pullRequests.PullRequests.Count > 0 || pullRequests.Problem is not null))
+    {
+        <div class="pull-request-badges">
+            @foreach (var pullRequest in pullRequests.PullRequests)
+            {
+                <PullRequestBadge @key="pullRequest.Url" PullRequest="pullRequest" />
+            }
+            @if (pullRequests.Problem is { } problem)
+            {
+                <span class="pull-request-problem" title="@problem" role="img" aria-label="@problem">
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+                        <path d="M12 9v4M12 17h.01" />
+                    </svg>
+                </span>
+            }
+        </div>
+    }
 
     @if (!Repository.IsLoaded)
     {
@@ -43,6 +64,12 @@
 @code {
     [Parameter, EditorRequired]
     public WorkspaceRepositoryStatus Repository { get; set; } = null!;
+
+    /// <summary>
+    /// The Pull Requests from the repository's workspace branch, or <see langword="null"/> until they're read.
+    /// </summary>
+    [Parameter]
+    public WorkspaceRepositoryPullRequests? PullRequests { get; set; }
 
     /// <summary>
     /// Opens a git graph: the repository's (with <see langword="null"/>), or a submodule's, by its path in the
