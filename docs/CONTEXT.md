@@ -15,6 +15,8 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 
 - **Tammi never requires changes to repositories.** It works without adding files, config or commits
   to any repository. Its own files live in the workspace's `.tammi/` folder and in app data.
+- **Tammi only reads from integrations**, except that it adds SSH keys to an account when the user asks and the
+  token allows it.
 
 ## Glossary
 
@@ -129,7 +131,7 @@ Workspaces never hold full clones. Each repository in a workspace is a worktree 
 so several workspaces can work on the same repository at once without cloning it again.
 
 **Finding Local Repositories.** The catalogue's Local Repositories come from the Monitored Folders and the manually
-added local repositories in the Git settings. A repository found by both, or in two overlapping Monitored Folders, is
+added local repositories in the Repositories settings. A repository found by both, or in two overlapping Monitored Folders, is
 listed once.
 - A folder is a repository when it has a `.git` folder, or a `.git` file that doesn't belong to a linked worktree.
 - Scanning a Monitored Folder looks up to 20 folders down. It doesn't look inside repositories (so submodules and
@@ -340,11 +342,28 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     the same service again gives the same ID, and workspace tasks from it find their source again. The same service
     can't be connected twice.
 - **Git**
+  - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that Tammi uses
+  - **Author:** the name and email address git records on commits (`user.name` and `user.email` in the user's global
+    git config, `git config --global`). Tammi uses the git CLI and the user's own config, so these apply to every git
+    tool on the computer, and the section says so. Clearing one unsets it.
+  - **SSH keys:** the key pairs in the user's SSH folder (`~/.ssh`): each `.pub` file with a private key next to it,
+    with its type, comment and SHA256 fingerprint. Like the author, they're shared with every SSH tool.
+    - **Generate:** Ed25519 (the default) or RSA 4096 with `ssh-keygen`, given a file name (suggested from the type,
+      e.g. `id_ed25519`, and never one that's taken), a comment (the author's email by default) and an optional
+      passphrase, entered twice. Tammi finds `ssh-keygen` on the path, or on Windows in Git for Windows. Without it,
+      keys can't be generated. The SSH folder is created for the user only if it's missing.
+    - **Remove:** deletes both files, after the user confirms. It can't be undone, and Tammi doesn't remove the key
+      from services.
+    - **Copy public key** to the clipboard.
+    - **Add to a service:** for each GitHub integration, the key shows whether it's on the account (added, not added,
+      or unknown when the token can't list keys), with an Add button. Tammi adds it through GitHub's API, titled with
+      the computer's and key's names. If the token isn't allowed to, Tammi copies the public key and opens GitHub's
+      page for adding a key, and says why. JIRA has no SSH keys.
+- **Repositories**
   - Monitored Folder(s), each with how many repositories were found in it
   - Manually added local repositories
   - The Repository Catalogue's size, with a Rescan button
   - Status refresh interval for workspaces that aren't open (whole minutes from 1 to 1440, default 5)
-  - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that Tammi uses
 - **Agents**
   - **Supported Agents** are always listed, and can't be edited or removed. Each one shows whether its CLI is ready:
     Tammi finds the command and runs it to get its version (e.g. `claude --version`). If that fails, it says why
@@ -533,6 +552,10 @@ are left to other tools for now.
     Tammi reads the latest commit of one private repository the token reaches. If that's refused, the integration is
     still connected but shows a warning that private issues won't appear in searches until the token can read
     Contents. Repositories the token wasn't given at all can't be detected, and classic tokens aren't checked.
+  - **SSH keys:** to add SSH keys from Settings → Git, a fine-grained token also needs read and write access to the
+    account's Git SSH keys (classic tokens: `write:public_key`). Tammi doesn't ask for it by default, so the token
+    link leaves it out. Without it, the key's status is unknown, and adding it opens GitHub's page for adding a key with
+    the public key on the clipboard. A key GitHub says is already in use counts as added if it's on the user's account.
 - **Task keys** are GitHub's issue references, `owner/repo#number`. Pull requests aren't tasks.
 - **Finding tasks:**
   - **Assigned:** the user's open issues (`is:open assignee:@me archived:false`). GitHub has no in-progress state, so

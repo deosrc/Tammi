@@ -5,7 +5,8 @@ namespace Deosrc.Tammi.Core.Integrations;
 /// (<see cref="ITaskIntegration"/>), repositories (<see cref="IRepositoryIntegration"/>) or both.
 /// </summary>
 /// <remarks>
-/// Tammi only reads from integrations. Credentials are kept in the platform secret store through
+/// Tammi only reads from integrations, except that it adds SSH keys through an <see cref="ISshKeyIntegration"/> when
+/// the user asks. Credentials are kept in the platform secret store through
 /// <see cref="IntegrationCredentials"/>, never in settings.
 /// </remarks>
 public interface IIntegration

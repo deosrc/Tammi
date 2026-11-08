@@ -10,6 +10,11 @@ internal sealed record RecordedRequest(
     IReadOnlyDictionary<string, string> Headers)
 {
     /// <summary>
+    /// The request's body, or <see langword="null"/> if it has none.
+    /// </summary>
+    public string? Body { get; init; }
+
+    /// <summary>
     /// The value of a query string parameter, unescaped.
     /// </summary>
     public string? Query(string name) =>

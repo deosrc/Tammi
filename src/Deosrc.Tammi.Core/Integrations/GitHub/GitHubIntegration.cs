@@ -22,7 +22,7 @@ namespace Deosrc.Tammi.Core.Integrations.GitHub;
 /// found by its reference or URL.
 /// </para>
 /// </remarks>
-public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
+public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration, ISshKeyIntegration
 {
     /// <summary>
     /// The search for the tasks assigned to the user: their open issues.
@@ -331,6 +331,69 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
         }
 
         return repositories;
+    }
+
+    /// <summary>
+    /// The user's SSH key settings page for adding a key, on github.com or the Enterprise Server.
+    /// </summary>
+    public Uri NewSshKeyUrl => new($"https://{_webHost}/settings/ssh/new");
+
+    /// <summary>
+    /// The message for a token that can't add SSH keys, naming the permission it needs.
+    /// </summary>
+    internal const string SshKeyPermissionMessage =
+        "This token can't add SSH keys. Give it read and write access to the account's Git SSH keys "
+        + "(classic tokens: the write:public_key scope) and authenticate again, or add the key on GitHub.";
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Fine-grained tokens need read access to the account's Git SSH keys, and classic tokens the
+    /// <c>read:public_key</c> scope.
+    /// </remarks>
+    public async Task<IReadOnlyList<string>?> GetSshKeysAsync(CancellationToken cancellationToken = default)
+    {
+        var path = $"user/keys?per_page={_options.PageSize.ToString(CultureInfo.InvariantCulture)}";
+        IReadOnlyList<GitHubSshKey>? keys = await _api.GetListIfAllowedAsync<GitHubSshKey>(path, cancellationToken)
+            .ConfigureAwait(false);
+        return keys?.Select(key => key.Key).ToArray();
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Fine-grained tokens need write access to the account's Git SSH keys, and classic tokens the
+    /// <c>write:public_key</c> scope.
+    /// </remarks>
+    public async Task AddSshKeyAsync(string title, string publicKey, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicKey);
+
+        using HttpResponseMessage response = await _api.SendJsonAsync(
+            HttpMethod.Post, "user/keys", new GitHubNewSshKey(title.Trim(), publicKey.Trim()), cancellationToken)
+            .ConfigureAwait(false);
+        switch (response.StatusCode)
+        {
+            case HttpStatusCode.Created or HttpStatusCode.OK:
+                _logger.LogInformation("Added an SSH key to {Integration}.", Id);
+                return;
+            case HttpStatusCode.Forbidden or HttpStatusCode.NotFound:
+                throw new IntegrationPermissionException(Id, SshKeyPermissionMessage);
+            case HttpStatusCode.UnprocessableEntity when await HasSshKeyAsync(publicKey, cancellationToken)
+                .ConfigureAwait(false):
+                // GitHub refuses a key that's already in use, which is fine if it's on this account.
+                return;
+            default:
+                throw await GitHubApiClient.ErrorAsync(response, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<bool> HasSshKeyAsync(string publicKey, CancellationToken cancellationToken)
+    {
+        string KeyOnly(string key) => string.Join(' ', key.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries).Take(2));
+
+        IReadOnlyList<string>? keys = await GetSshKeysAsync(cancellationToken).ConfigureAwait(false);
+        string wanted = KeyOnly(publicKey);
+        return keys?.Any(key => KeyOnly(key) == wanted) == true;
     }
 
     private async Task<TaskInfo?> GetTaskAsync(GitHubIssueKey key, CancellationToken cancellationToken)

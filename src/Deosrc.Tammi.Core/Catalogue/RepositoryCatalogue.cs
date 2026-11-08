@@ -9,7 +9,7 @@ using Deosrc.Tammi.Core.Settings;
 namespace Deosrc.Tammi.Core.Catalogue;
 
 /// <summary>
-/// Builds the Repository Catalogue from the local sources in the Git settings: the Monitored Folders (scanned with
+/// Builds the Repository Catalogue from the local sources in the Repositories settings: the Monitored Folders (scanned with
 /// <see cref="RepositoryScanner"/>) and the manually added local repositories.
 /// </summary>
 public sealed class RepositoryCatalogue : IRepositoryCatalogue, IDisposable
