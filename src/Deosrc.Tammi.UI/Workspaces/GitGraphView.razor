@@ -2,7 +2,7 @@
 @using Deosrc.Tammi.Core.Git
 @using Deosrc.Tammi.Core.Settings
 @inject IJSRuntime JS
-@inject GitGraphColumns Columns
+@inject GitGraphViewOptions Options
 @* A repository's git graph, shown as a main area tab: the commits, newest first, with their lanes, branches and tags,
    and the selected commit's details beside them. Only the rows in view are rendered, and the history is read a page
    at a time as the list scrolls. *@
@@ -42,8 +42,8 @@
              style="@ListStyle" @onkeydown="OnKeyDownAsync">
             @* Stays at the top as the list scrolls down, and scrolls sideways with it. Each column but Description,
                which takes the space left, has a handle on the edge towards Description that resizes it. Right-clicking
-               it shows or hides columns. *@
-            <div class="git-graph-header" @ref="_header" @oncontextmenu="OpenColumnsMenu"
+               it shows or hides columns and labels. *@
+            <div class="git-graph-header" @ref="_header" @oncontextmenu="OpenViewMenu"
                  @oncontextmenu:preventDefault="true">
                 @foreach (var column in _visibleColumns)
                 {
@@ -60,30 +60,25 @@
                     </span>
                 }
             </div>
-            @if (_columnsMenu is { } menuAt)
+            @if (_viewMenu is { } menuAt)
             {
-                <div class="menu-backdrop" @onclick="CloseColumnsMenu"
-                     @oncontextmenu="CloseColumnsMenu" @oncontextmenu:preventDefault="true"></div>
-                <ul class="menu git-graph-columns-menu" role="menu" aria-label="Columns" @onkeydown="OnColumnsMenuKeyDown"
+                <div class="menu-backdrop" @onclick="CloseViewMenu"
+                     @oncontextmenu="CloseViewMenu" @oncontextmenu:preventDefault="true"></div>
+                <ul class="menu git-graph-view-menu" role="menu" aria-label="View" @onkeydown="OnViewMenuKeyDown"
                     style="@FormattableString.Invariant($"left: {menuAt.X}px; top: {menuAt.Y}px")">
-                    @* Graph is always shown, so it isn't offered. Description is, greyed out, as the column the
-                       others give their space to. *@
+                    @* The columns, then the rows' labels. Graph is always shown, so it isn't offered. Description is,
+                       greyed out, as the column the others give their space to. *@
                     @foreach (var column in Enum.GetValues<GitGraphColumn>().Where(column => column != GitGraphColumn.Graph))
                     {
-                        var visible = Columns.IsVisible(column);
-                        <li role="none" @key="column">
-                            <button type="button" class="menu-item" role="menuitemcheckbox"
-                                    aria-checked="@(visible ? "true" : "false")"
-                                    disabled="@(!GitGraphColumns.CanHide(column))"
-                                    @onclick="() => ToggleColumn(column)">
-                                <svg class="icon icon-small git-graph-columns-check @(visible ? null : "hidden")"
-                                     viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <polyline points="5 12 10 17 19 7" />
-                                </svg>
-                                @column
-                            </button>
-                        </li>
+                        @MenuCheckbox(
+                            column.ToString(),
+                            Options.IsVisible(column),
+                            GitGraphViewOptions.CanHide(column),
+                            () => Options.ToggleColumn(column))
                     }
+                    <li role="separator" class="menu-separator"></li>
+                    @MenuCheckbox("Tags", Options.ShowTags, enabled: true, Options.ToggleTags)
+                    @MenuCheckbox("Remote branches", Options.ShowRemoteBranches, enabled: true, Options.ToggleRemoteBranches)
                 </ul>
             }
             <div role="listbox" aria-label="Commits">
@@ -108,7 +103,7 @@
                                         break;
                                     case GitGraphColumn.Description:
                                         <span class="git-graph-summary">
-                                            @References(row.Commit.Sha, isHead)
+                                            @References(row.Commit.Sha, isHead, Options.Shows)
                                             <span class="git-graph-subject" title="@row.Commit.Subject">@row.Commit.Subject</span>
                                         </span>
                                         break;
@@ -150,7 +145,7 @@
                 <h2 class="git-graph-details-subject">@commit.Subject</h2>
                 @if (Graph.LabelsFor(commit.Sha).Count > 0 || commit.Sha == Graph.Refs.HeadSha)
                 {
-                    <div class="git-graph-details-refs">@References(commit.Sha, commit.Sha == Graph.Refs.HeadSha)</div>
+                    <div class="git-graph-details-refs">@References(commit.Sha, commit.Sha == Graph.Refs.HeadSha, _ => true)</div>
                 }
                 <dl class="git-graph-facts">
                     <dt>Commit</dt>
@@ -226,7 +221,7 @@
 
     private WorkspaceGitGraph? _attached;
     // Where the header's right-click menu is open, in the window, or null when it's closed.
-    private (double X, double Y)? _columnsMenu;
+    private (double X, double Y)? _viewMenu;
     private IReadOnlyList<GitGraphColumn> _visibleColumns = [];
     private readonly string _detailsId = $"git-graph-details-{Guid.NewGuid():N}";
     private ElementReference _list;
@@ -257,8 +252,8 @@
 
     protected override void OnInitialized()
     {
-        _visibleColumns = Columns.Visible;
-        Columns.Changed += OnColumnsChanged;
+        _visibleColumns = Options.VisibleColumns;
+        Options.Changed += OnOptionsChanged;
     }
 
     protected override async Task OnParametersSetAsync()
@@ -306,7 +301,7 @@
     public async ValueTask DisposeAsync()
     {
         _disposed = true;
-        Columns.Changed -= OnColumnsChanged;
+        Options.Changed -= OnOptionsChanged;
         if (_attached is not null)
         {
             _attached.Changed -= OnGraphChanged;
@@ -453,20 +448,45 @@
         return -1;
     }
 
-    // A commit's labels: HEAD when it's detached here, then its branches and tags. The branch HEAD is on stands out.
-    private RenderFragment References(string sha, bool isHead) => __builder =>
+    // A commit's labels: HEAD when it's detached here, then the branches and tags `shown` keeps. The branch HEAD is on
+    // stands out, and tags have a tag icon.
+    private RenderFragment References(string sha, bool isHead, Func<GitReference, bool> shown) => __builder =>
     {
         if (isHead && Graph.Refs.HeadBranch is null)
         {
             <span class="git-graph-ref git-graph-ref-detached" title="Detached HEAD">HEAD</span>
         }
 
-        foreach (var reference in Graph.LabelsFor(sha))
+        foreach (var reference in Graph.LabelsFor(sha).Where(shown))
         {
             var current = reference.Kind == GitReferenceKind.LocalBranch && reference.Name == Graph.Refs.HeadBranch;
             <span class="git-graph-ref @GitGraphText.ReferenceClass(reference.Kind) @(current ? "git-graph-ref-head" : null)"
-                  title="@(current ? $"{reference.Name} (HEAD)" : reference.Name)">@reference.Name</span>
+                  title="@(current ? $"{reference.Name} (HEAD)" : reference.Kind == GitReferenceKind.Tag ? $"Tag {reference.Name}" : reference.Name)">
+                @if (reference.Kind == GitReferenceKind.Tag)
+                {
+                    <svg class="git-graph-ref-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9Z" />
+                        <circle cx="8" cy="8" r="1.5" />
+                    </svg>
+                }
+                <span class="git-graph-ref-name">@reference.Name</span>
+            </span>
         }
+    };
+
+    // An item of the header's menu that's ticked when its option is on.
+    private RenderFragment MenuCheckbox(string label, bool on, bool enabled, Action toggle) => __builder =>
+    {
+        <li role="none" @key="label">
+            <button type="button" class="menu-item" role="menuitemcheckbox" aria-checked="@(on ? "true" : "false")"
+                    disabled="@(!enabled)" @onclick="() => { CloseViewMenu(); toggle(); }">
+                <svg class="icon icon-small git-graph-menu-check @(on ? null : "hidden")" viewBox="0 0 24 24"
+                     aria-hidden="true" focusable="false">
+                    <polyline points="5 12 10 17 19 7" />
+                </svg>
+                @label
+            </button>
+        </li>
     };
 
     // A handle on a column heading's edge that resizes the column: drag it, or focus it and use Left and Right.
@@ -510,32 +530,33 @@
         }
     }
 
-    private void OpenColumnsMenu(MouseEventArgs e) => _columnsMenu = (e.ClientX, e.ClientY);
+    private void OpenViewMenu(MouseEventArgs e) => _viewMenu = (e.ClientX, e.ClientY);
 
-    private void CloseColumnsMenu() => _columnsMenu = null;
+    private void CloseViewMenu() => _viewMenu = null;
 
-    private void OnColumnsMenuKeyDown(KeyboardEventArgs e)
+    private void OnViewMenuKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Escape")
         {
-            CloseColumnsMenu();
+            CloseViewMenu();
         }
     }
 
-    private void ToggleColumn(GitGraphColumn column)
+    // This graph's menu, or another's, changed the options. Rows already shown are rendered again with them.
+    private void OnOptionsChanged() => _ = InvokeAsync(async () =>
     {
-        CloseColumnsMenu();
-        Columns.Toggle(column);
-    }
-
-    // Another graph's menu changed the columns.
-    private void OnColumnsChanged() => _ = InvokeAsync(() =>
-    {
-        if (!_disposed)
+        if (_disposed)
         {
-            _visibleColumns = Columns.Visible;
-            StateHasChanged();
+            return;
         }
+
+        _visibleColumns = Options.VisibleColumns;
+        if (_virtualize is not null)
+        {
+            await _virtualize.RefreshDataAsync();
+        }
+
+        StateHasChanged();
     });
 
     private static RenderFragment Signature(CommitSignature signature) => __builder =>

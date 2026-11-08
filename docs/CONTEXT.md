@@ -289,12 +289,13 @@ own branch. It is created automatically when the workspace is created:
   repository or submodule has one graph tab: opening it again shows the open one.
   - It lists commits newest first in topological order (children before parents), each with its lane and dot, its
     branch and tag labels, its subject, author, date and (if shown) short commit id. Merges join lanes, and lanes that
-    end are reused, so the graph stays narrow. HEAD's dot is a ring, the branch HEAD is on is highlighted, and a
-    detached HEAD has its own label.
+    end are reused, so the graph stays narrow. HEAD's dot is a ring, the branch HEAD is on is highlighted, a
+    detached HEAD has its own label, and tags have a tag icon.
   - The columns (Graph, Description, Author, Date and Commit) have headings, which stay in view as the list scrolls.
     Right-clicking the headings opens a menu that shows or hides each column except Graph and Description. The Commit
-    column (the short commit id) is hidden until it's shown. Like the widths, the choice is shared by every graph until
-    the app closes.
+    column (the short commit id) is hidden until it's shown. Below a divider, the menu shows or hides the rows' tags
+    and remote-tracking branches (both shown until they're hidden). The details always show every label. Like the
+    widths, these choices are shared by every graph until the app closes.
     Description takes the space left. Each other column can be resized from its edge towards Description: drag the
     handle, or focus it and use Left and Right. Double-clicking a handle resets its column. Until it's resized, the
     Graph column fits the graph's lanes, and a wider graph is cut off at the column's edge. The widths are shared by
