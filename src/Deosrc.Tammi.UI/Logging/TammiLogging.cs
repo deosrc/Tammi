@@ -17,8 +17,8 @@ namespace Deosrc.Tammi.UI.Logging;
 /// to daily log files in <see cref="IAppPaths.LogDirectory"/>.
 /// </summary>
 /// <remarks>
-/// Which messages are logged is decided by the <see cref="LogLevelSwitch"/>, so a change applies straight away to
-/// every logger. Serilog itself writes everything it's given.
+/// Which messages are logged is decided by the <see cref="LogLevelSwitch"/>, which follows the log level in the
+/// General settings, so a change applies straight away to every logger. Serilog itself writes everything it's given.
 /// </remarks>
 public static class TammiLogging
 {
@@ -69,6 +69,19 @@ public static class TammiLogging
         var appPaths = services.GetRequiredService<IAppPaths>();
         var settingsStore = services.GetRequiredService<ISettingsStore>();
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(AppCategory);
+
+        // The level follows the settings.
+        var levelSwitch = services.GetRequiredService<LogLevelSwitch>();
+        levelSwitch.MinimumLevel = settingsStore.Current.General.LogLevel;
+        settingsStore.Changed += () =>
+        {
+            var level = settingsStore.Current.General.LogLevel;
+            if (levelSwitch.MinimumLevel != level)
+            {
+                levelSwitch.MinimumLevel = level;
+                logger.Log(level, "Log level changed to {LogLevel}.", level);
+            }
+        };
 
         logger.LogInformation(
             "Tammi {Version} started on {OS} ({Runtime}). Logs are written to {LogDirectory}.",

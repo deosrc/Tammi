@@ -1,3 +1,7 @@
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
+using Deosrc.Tammi.Core.Logging;
+
 namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
@@ -24,10 +28,17 @@ public sealed record GeneralSettings
     public WorkspaceNameFormat WorkspaceNameFormat { get; init; } = new();
 
     /// <summary>
-    /// Replaces a missing folder or name format with the default.
+    /// The lowest level Tammi logs at.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<LogLevel>))]
+    public LogLevel LogLevel { get; init; } = LogLevelSwitch.DefaultLevel;
+
+    /// <summary>
+    /// Replaces a missing folder or name format, or an unknown log level, with the default.
     /// </summary>
     public GeneralSettings Normalize() => this with
     {
+        LogLevel = Enum.IsDefined(LogLevel) && LogLevel != LogLevel.None ? LogLevel : LogLevelSwitch.DefaultLevel,
         WorkspaceNameFormat = (WorkspaceNameFormat ?? new WorkspaceNameFormat()).Normalize(),
         DefaultWorkspaceParentFolder = string.IsNullOrWhiteSpace(DefaultWorkspaceParentFolder)
             ? DefaultDefaultWorkspaceParentFolder
