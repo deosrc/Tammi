@@ -10,167 +10,161 @@
 
 <h1>Repositories</h1>
 
-<div class="settings-form">
-    <div class="settings-field">
-        <h2 class="settings-field-title">Monitored Folders</h2>
-        <p class="settings-help">
-            Folders where you clone repositories. Tammi scans them, and their subfolders, for git repositories to add
-            to the Repository Catalogue.
-        </p>
-        @if (Current.MonitoredFolders.Count == 0)
-        {
-            <p class="placeholder">No Monitored Folders yet.</p>
-        }
-        else
-        {
-            <ul class="settings-list">
-                @foreach (var folder in Current.MonitoredFolders)
-                {
-                    <li class="settings-list-item">
-                        <span class="settings-list-path">@folder</span>
-                        @if (ProblemWith(folder) is { } problem)
-                        {
-                            <span class="error">@problem</span>
-                        }
-                        else if (!Catalogue.IsScanning && Snapshot.ScannedAt is not null)
-                        {
-                            <span class="settings-list-status">@RepositoryCount(CountIn(folder))</span>
-                        }
-                        <button type="button" class="button button-secondary" @onclick="() => RemoveMonitoredFolderAsync(folder)">Remove</button>
-                    </li>
-                }
-            </ul>
-        }
-        @if (_pendingMonitoredFolder is not null)
-        {
-            <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-monitored-folder-title" aria-describedby="confirm-monitored-folder-text">
-                <h3 id="confirm-monitored-folder-title" class="alert-title">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-                        <line x1="12" y1="9" x2="12" y2="13" />
-                        <line x1="12" y1="17" x2="12.01" y2="17" />
-                    </svg>
-                    Folder Conflict
-                </h3>
-                <p id="confirm-monitored-folder-text">
-                    <span class="settings-list-path">@_pendingMonitoredFolder</span> holds
-                    @(_pendingRemovals.Count == 1 ? "this manually added repository" : "these manually added repositories").
-                    The scan will find @(_pendingRemovals.Count == 1 ? "it" : "them"), so adding the folder removes
-                    @(_pendingRemovals.Count == 1 ? "it" : "them") from the manually added repositories. The folder
-                    isn't added until you confirm.
-                </p>
+@* On large screens the Repository Catalogue sits to the right of the settings that fill it. *@
+<div class="settings-columns">
+    <div class="settings-form">
+        <div class="settings-field">
+            <h2 class="settings-field-title">Monitored Folders</h2>
+            <p class="settings-help">
+                Folders where you clone repositories. Tammi scans them, and their subfolders, for git repositories to add
+                to the Repository Catalogue.
+            </p>
+            @if (Current.MonitoredFolders.Count == 0)
+            {
+                <p class="placeholder">No Monitored Folders yet.</p>
+            }
+            else
+            {
                 <ul class="settings-list">
-                    @foreach (var repository in _pendingRemovals)
-                    {
-                        <li class="settings-list-item"><span class="settings-list-path">@repository</span></li>
-                    }
-                </ul>
-                <div class="settings-field-row">
-                    <button type="button" class="button button-warning" @onclick="ConfirmMonitoredFolderAsync">Replace with the monitored folder</button>
-                    <button type="button" class="button button-secondary" @onclick="CancelMonitoredFolder">Cancel</button>
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="settings-field-row">
-                <button type="button" class="button" @onclick="AddMonitoredFolderAsync">Add folder…</button>
-            </div>
-        }
-    </div>
-
-    <div class="settings-field">
-        <h2 class="settings-field-title">Manually added local repositories</h2>
-        <p class="settings-help">Repositories outside the Monitored Folders that you want in the Repository Catalogue.</p>
-        @if (Current.LocalRepositories.Count == 0)
-        {
-            <p class="placeholder">No manually added repositories yet.</p>
-        }
-        else
-        {
-            <ul class="settings-list">
-                @foreach (var repository in Current.LocalRepositories)
-                {
-                    <li class="settings-list-item">
-                        <span class="settings-list-path">@repository</span>
-                        @if (ProblemWith(repository) is { } problem)
-                        {
-                            <span class="error">@problem</span>
-                        }
-                        <button type="button" class="button button-secondary" @onclick="() => RemoveLocalRepositoryAsync(repository)">Remove</button>
-                    </li>
-                }
-            </ul>
-        }
-        @if (_addRepositoryError is not null)
-        {
-            <p class="error">@_addRepositoryError</p>
-        }
-        <div class="settings-field-row">
-            <button type="button" class="button" @onclick="AddLocalRepositoryAsync">Add repository…</button>
-        </div>
-    </div>
-
-    <div class="settings-field">
-        <h2 class="settings-field-title">Repository Catalogue</h2>
-        <div class="settings-field-row">
-            <span>
-                @if (Catalogue.IsScanning)
-                {
-                    <text>Scanning for repositories…</text>
-                }
-                else if (Snapshot.ScannedAt is { } scannedAt)
-                {
-                    <text>@RepositoryCount(Snapshot.Repositories.Count) found, at @scannedAt.ToLocalTime().ToString("t").</text>
-                }
-            </span>
-            <button type="button" class="button button-secondary" disabled="@Catalogue.IsScanning" @onclick="RescanAsync">Rescan</button>
-        </div>
-        @if (_rescanError is not null)
-        {
-            <p class="error">@_rescanError</p>
-        }
-        @if (Snapshot.Repositories.Count > 0)
-        {
-            <details class="settings-details">
-                <summary>Show repositories</summary>
-                <ul class="settings-list">
-                    @foreach (var repository in Snapshot.Repositories)
+                    @foreach (var folder in Current.MonitoredFolders)
                     {
                         <li class="settings-list-item">
-                            <span class="settings-list-name">@repository.Name</span>
-                            <span class="settings-list-path">@repository.Path</span>
+                            <span class="settings-list-path">@folder</span>
+                            @if (ProblemWith(folder) is { } problem)
+                            {
+                                <span class="error">@problem</span>
+                            }
+                            else if (!Catalogue.IsScanning && Snapshot.ScannedAt is not null)
+                            {
+                                <span class="settings-list-status">@RepositoryCount(CountIn(folder))</span>
+                            }
+                            <button type="button" class="button button-secondary" @onclick="() => RemoveMonitoredFolderAsync(folder)">Remove</button>
                         </li>
                     }
                 </ul>
-            </details>
-        }
-        <p class="settings-help">
-            The catalogue is scanned again when these settings change and when folders are added to or removed from
-            a Monitored Folder. Rescan to find repositories added further down.
-        </p>
+            }
+            @if (_pendingMonitoredFolder is not null)
+            {
+                <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-monitored-folder-title" aria-describedby="confirm-monitored-folder-text">
+                    <h3 id="confirm-monitored-folder-title" class="alert-title">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                            <line x1="12" y1="9" x2="12" y2="13" />
+                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                        </svg>
+                        Folder Conflict
+                    </h3>
+                    <p id="confirm-monitored-folder-text">
+                        <span class="settings-list-path">@_pendingMonitoredFolder</span> holds
+                        @(_pendingRemovals.Count == 1 ? "this manually added repository" : "these manually added repositories").
+                        The scan will find @(_pendingRemovals.Count == 1 ? "it" : "them"), so adding the folder removes
+                        @(_pendingRemovals.Count == 1 ? "it" : "them") from the manually added repositories. The folder
+                        isn't added until you confirm.
+                    </p>
+                    <ul class="settings-list">
+                        @foreach (var repository in _pendingRemovals)
+                        {
+                            <li class="settings-list-item"><span class="settings-list-path">@repository</span></li>
+                        }
+                    </ul>
+                    <div class="settings-field-row">
+                        <button type="button" class="button button-warning" @onclick="ConfirmMonitoredFolderAsync">Replace with the monitored folder</button>
+                        <button type="button" class="button button-secondary" @onclick="CancelMonitoredFolder">Cancel</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="settings-field-row">
+                    <button type="button" class="button" @onclick="AddMonitoredFolderAsync">Add folder…</button>
+                </div>
+            }
+        </div>
+
+        <div class="settings-field">
+            <h2 class="settings-field-title">Manually added local repositories</h2>
+            <p class="settings-help">Repositories outside the Monitored Folders that you want in the Repository Catalogue.</p>
+            @if (Current.LocalRepositories.Count == 0)
+            {
+                <p class="placeholder">No manually added repositories yet.</p>
+            }
+            else
+            {
+                <ul class="settings-list">
+                    @foreach (var repository in Current.LocalRepositories)
+                    {
+                        <li class="settings-list-item">
+                            <span class="settings-list-path">@repository</span>
+                            @if (ProblemWith(repository) is { } problem)
+                            {
+                                <span class="error">@problem</span>
+                            }
+                            <button type="button" class="button button-secondary" @onclick="() => RemoveLocalRepositoryAsync(repository)">Remove</button>
+                        </li>
+                    }
+                </ul>
+            }
+            @if (_addRepositoryError is not null)
+            {
+                <p class="error">@_addRepositoryError</p>
+            }
+            <div class="settings-field-row">
+                <button type="button" class="button" @onclick="AddLocalRepositoryAsync">Add repository…</button>
+            </div>
+        </div>
+
+        <div class="settings-field">
+            <label for="status-refresh-interval">Status refresh interval</label>
+            <div class="settings-field-row">
+                @* Recreated after each change, so the input shows the saved value even when that's unchanged, e.g. after
+                   an out-of-range value is clamped back to the current one. *@
+                <input @key="_statusRefreshRevision"
+                       id="status-refresh-interval"
+                       type="number"
+                       class="settings-number"
+                       min="@MinMinutes"
+                       max="@MaxMinutes"
+                       step="1"
+                       value="@StatusRefreshMinutes"
+                       @onchange="OnStatusRefreshIntervalChanged" />
+                <span>minutes</span>
+            </div>
+            <p class="settings-help">
+                How often the git status of workspaces that aren't open in a tab is refreshed
+                (@MinMinutes to @MaxMinutes minutes).
+            </p>
+        </div>
     </div>
 
-    <div class="settings-field">
-        <label for="status-refresh-interval">Status refresh interval</label>
-        <div class="settings-field-row">
-            @* Recreated after each change, so the input shows the saved value even when that's unchanged, e.g. after
-               an out-of-range value is clamped back to the current one. *@
-            <input @key="_statusRefreshRevision"
-                   id="status-refresh-interval"
-                   type="number"
-                   class="settings-number"
-                   min="@MinMinutes"
-                   max="@MaxMinutes"
-                   step="1"
-                   value="@StatusRefreshMinutes"
-                   @onchange="OnStatusRefreshIntervalChanged" />
-            <span>minutes</span>
+    <div class="settings-form settings-aside">
+        <div class="settings-field">
+            <h2 class="settings-field-title">Repository Catalogue</h2>
+            <div class="settings-field-row">
+                <span>
+                    @if (Catalogue.IsScanning)
+                    {
+                        <text>Scanning for repositories…</text>
+                    }
+                    else if (Snapshot.ScannedAt is { } scannedAt)
+                    {
+                        <text>@RepositoryCount(Snapshot.Repositories.Count) found, at @scannedAt.ToLocalTime().ToString("t").</text>
+                    }
+                </span>
+                <button type="button" class="button button-secondary" disabled="@Catalogue.IsScanning" @onclick="RescanAsync">Rescan</button>
+            </div>
+            @if (_rescanError is not null)
+            {
+                <p class="error">@_rescanError</p>
+            }
+            @if (Snapshot.Repositories.Count > 0)
+            {
+                <RepositoryCatalogueTable Repositories="Snapshot.Repositories" />
+            }
+            <p class="settings-help">
+                The catalogue is scanned again when these settings change and when folders are added to or removed from
+                a Monitored Folder. Rescan to find repositories added further down.
+            </p>
         </div>
-        <p class="settings-help">
-            How often the git status of workspaces that aren't open in a tab is refreshed
-            (@MinMinutes to @MaxMinutes minutes).
-        </p>
     </div>
 </div>
 

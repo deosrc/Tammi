@@ -1,0 +1,122 @@
+@using Deosrc.Tammi.Core.Catalogue
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@*
+    The Repository Catalogue's repositories, with sortable and resizable columns. The table is a grid whose columns
+    take the width their contents need. When the page is too narrow for that, they shrink and their text is cut off
+    with an ellipsis, with the full text in a tooltip. A resized column keeps its width until it's double-clicked.
+*@
+<table class="data-table" role="table" aria-label="Repository Catalogue" @ref="_table">
+    <thead role="rowgroup">
+        <tr role="row">
+            @foreach (var column in Columns)
+            {
+                <th role="columnheader" scope="col" aria-sort="@AriaSort(column.Key)">
+                    <button type="button" class="data-table-sort" title="Sort by @column.Title.ToLowerInvariant()" @onclick="() => SortBy(column.Key)">
+                        <span class="data-table-text">@column.Title</span>
+                        <span class="data-table-sort-icon" aria-hidden="true">@SortIcon(column.Key)</span>
+                    </button>
+                    <span class="data-table-resize" role="separator" aria-orientation="vertical" tabindex="0"
+                          aria-label="Resize the @column.Title.ToLowerInvariant() column" title="Drag to resize. Double-click to fit."
+                          data-column="@column.Index"></span>
+                </th>
+            }
+        </tr>
+    </thead>
+    <tbody role="rowgroup">
+        @foreach (var repository in Sorted)
+        {
+            <tr role="row" @key="repository.Path">
+                <td role="cell" title="@repository.Name"><span class="data-table-text">@repository.Name</span></td>
+                <td role="cell" title="@ParentFolder(repository)"><span class="data-table-text data-table-path">@ParentFolder(repository)</span></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private enum SortKey
+    {
+        Name,
+        ParentFolder,
+    }
+
+    private static readonly (SortKey Key, string Title, int Index)[] Columns =
+    [
+        (SortKey.Name, "Name", 0),
+        (SortKey.ParentFolder, "Parent folder", 1),
+    ];
+
+    private ElementReference _table;
+    private IJSObjectReference? _module;
+    private SortKey _sortKey = SortKey.Name;
+    private bool _descending;
+
+    /// <summary>
+    /// The repositories to show.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<CatalogueRepository> Repositories { get; set; } = [];
+
+    private IEnumerable<CatalogueRepository> Sorted
+    {
+        get
+        {
+            // Ties are broken by the other column, so the order is always the same.
+            var comparer = StringComparer.CurrentCultureIgnoreCase;
+            var sorted = _sortKey == SortKey.Name
+                ? Repositories.OrderBy(r => r.Name, comparer).ThenBy(ParentFolder, comparer)
+                : Repositories.OrderBy(ParentFolder, comparer).ThenBy(r => r.Name, comparer);
+            return _descending ? sorted.Reverse() : sorted;
+        }
+    }
+
+    private static string ParentFolder(CatalogueRepository repository) =>
+        Path.GetDirectoryName(repository.Path) ?? repository.Path;
+
+    private void SortBy(SortKey key)
+    {
+        _descending = _sortKey == key && !_descending;
+        _sortKey = key;
+    }
+
+    private string AriaSort(SortKey key) =>
+        _sortKey != key ? "none" : _descending ? "descending" : "ascending";
+
+    private string SortIcon(SortKey key) =>
+        _sortKey != key ? "" : _descending ? "▼" : "▲";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                _module = await JS.InvokeAsync<IJSObjectReference>(
+                    "import", "./_content/Deosrc.Tammi.UI/js/column-resize.js");
+                await _module.InvokeVoidAsync("attach", _table);
+            }
+            catch (JSException)
+            {
+                // The columns can't be resized, but the table still works.
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.InvokeVoidAsync("detach", _table);
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // The web view has gone.
+            }
+        }
+    }
+}
