@@ -19,6 +19,21 @@
 
 <h1>Tools</h1>
 
+<div class="settings-form">
+    <div class="settings-field">
+        <label for="single-repository-target">With only one repository, tools open</label>
+        <select id="single-repository-target" value="@tools.SingleRepositoryTarget"
+                @onchange="e => UpdateToolsAsync(t => t with { SingleRepositoryTarget = Parse(e, t.SingleRepositoryTarget) })">
+            <option value="@SingleRepositoryTarget.Repository">The repository</option>
+            <option value="@SingleRepositoryTarget.Workspace">The Workspace Folder</option>
+        </select>
+        <p class="settings-help">
+            What Terminal and the tools that open <code>{PreferredFolder}</code> open when they're launched for a
+            workspace that has only one repository. With several repositories, they open the Workspace Folder.
+        </p>
+    </div>
+</div>
+
 <h2>Predefined tools</h2>
 
 <p class="settings-help">
@@ -438,7 +453,7 @@
                 : new ToolDefinition
                 {
                     Name = "New tool",
-                    Arguments = [ToolPlaceholders.Format(ToolPlaceholders.LaunchFolder)],
+                    Arguments = [ToolPlaceholders.Format(ToolPlaceholders.PreferredFolder)],
                 },
         ]);
 

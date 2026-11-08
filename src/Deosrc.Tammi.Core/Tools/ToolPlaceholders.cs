@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace Deosrc.Tammi.Core.Tools;
 
 /// <summary>
-/// The placeholders in a tool's name and arguments, e.g. <c>{LaunchFolder}</c>, which are filled in for each folder or
+/// The placeholders in a tool's name and arguments, e.g. <c>{PreferredFolder}</c>, which are filled in for each folder or
 /// file the tool opens.
 /// </summary>
 /// <remarks>
@@ -12,6 +12,13 @@ namespace Deosrc.Tammi.Core.Tools;
 /// </remarks>
 public static partial class ToolPlaceholders
 {
+    /// <summary>
+    /// The folder the tool should open: <see cref="LaunchFolder"/>, except for the Workspace Folder of a workspace with
+    /// only one repository, where it's that repository's Workspace Worktree unless the settings say otherwise (see
+    /// <see cref="SingleRepositoryTarget"/>). The predefined folder tools open it.
+    /// </summary>
+    public const string PreferredFolder = "PreferredFolder";
+
     /// <summary>
     /// The folder the entry is offered for: the Workspace Folder, or the repository's Workspace Worktree.
     /// </summary>
@@ -53,7 +60,8 @@ public static partial class ToolPlaceholders
     /// </summary>
     public static IReadOnlyList<string> All { get; } =
     [
-        LaunchFolder, WorkspaceFolder, RepositoryFolder, FileDirectory, FileName, FileNameWithoutExtension, FilePath,
+        PreferredFolder, LaunchFolder, WorkspaceFolder, RepositoryFolder, FileDirectory, FileName,
+        FileNameWithoutExtension, FilePath,
     ];
 
     private static readonly HashSet<string> Known = new(All, StringComparer.OrdinalIgnoreCase);
@@ -64,10 +72,10 @@ public static partial class ToolPlaceholders
     /// </summary>
     public static IReadOnlyList<string> For(ToolKind kind) => kind == ToolKind.File
         ? All
-        : [LaunchFolder, WorkspaceFolder, RepositoryFolder];
+        : [PreferredFolder, LaunchFolder, WorkspaceFolder, RepositoryFolder];
 
     /// <summary>
-    /// Writes a placeholder as it's used in a tool's settings, e.g. <c>{LaunchFolder}</c>.
+    /// Writes a placeholder as it's used in a tool's settings, e.g. <c>{PreferredFolder}</c>.
     /// </summary>
     public static string Format(string name) => "{" + name + "}";
 

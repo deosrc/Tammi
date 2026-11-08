@@ -7,11 +7,12 @@ namespace Deosrc.Tammi.Core.Tools;
 /// </summary>
 public static class PredefinedTools
 {
-    private static readonly string LaunchFolder = ToolPlaceholders.Format(ToolPlaceholders.LaunchFolder);
+    private static readonly string PreferredFolder = ToolPlaceholders.Format(ToolPlaceholders.PreferredFolder);
 
     /// <summary>
     /// One of Tammi's own terminals, opened in a tab of the Workspace View with the terminal shell from the settings, as
-    /// the New menu's Terminal does. It has no executable, can't be disabled, and is always offered first.
+    /// the New menu's Terminal does, in the <see cref="ToolPlaceholders.PreferredFolder"/>. It has no executable, can't
+    /// be disabled, and is always offered first.
     /// </summary>
     public static ToolDefinition Terminal { get; } = new()
     {
@@ -29,7 +30,7 @@ public static class PredefinedTools
         Id = "vscode",
         Name = "VS Code",
         Executable = "code",
-        Arguments = [LaunchFolder],
+        Arguments = [PreferredFolder],
         Icon = new ToolIconSettings { Generic = ToolIcon.Editor },
     };
 
@@ -74,7 +75,7 @@ public static class PredefinedTools
         Id = "rider",
         Name = "Rider",
         Executable = "rider",
-        Arguments = [LaunchFolder],
+        Arguments = [PreferredFolder],
         Icon = new ToolIconSettings { Generic = ToolIcon.Ide },
     };
 
@@ -88,7 +89,7 @@ public static class PredefinedTools
             Id = "file-manager",
             Name = "File Explorer",
             Executable = "explorer",
-            Arguments = [LaunchFolder],
+            Arguments = [PreferredFolder],
             Icon = new ToolIconSettings { Generic = ToolIcon.Folder },
         }
         : new()
@@ -96,7 +97,7 @@ public static class PredefinedTools
             Id = "file-manager",
             Name = "File manager",
             Executable = "xdg-open",
-            Arguments = [LaunchFolder],
+            Arguments = [PreferredFolder],
             Icon = new ToolIconSettings { Generic = ToolIcon.Folder },
         };
 

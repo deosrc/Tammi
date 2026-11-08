@@ -95,7 +95,10 @@ public class ToolPlaceholdersTests
     public void For_FolderTool_HasNoFilePlaceholders()
     {
         Assert.Equal(
-            [ToolPlaceholders.LaunchFolder, ToolPlaceholders.WorkspaceFolder, ToolPlaceholders.RepositoryFolder],
+            [
+                ToolPlaceholders.PreferredFolder, ToolPlaceholders.LaunchFolder, ToolPlaceholders.WorkspaceFolder,
+                ToolPlaceholders.RepositoryFolder,
+            ],
             ToolPlaceholders.For(ToolKind.Folder));
         Assert.Equal(ToolPlaceholders.All, ToolPlaceholders.For(ToolKind.File));
     }

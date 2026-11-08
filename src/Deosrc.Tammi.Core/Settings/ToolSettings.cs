@@ -22,6 +22,12 @@ public sealed record ToolSettings
     public IReadOnlyList<string> TerminalShellArguments { get; init; } = [];
 
     /// <summary>
+    /// What tools open for a workspace with only one repository, when they're launched for the workspace (see
+    /// <see cref="ToolPlaceholders.PreferredFolder"/>).
+    /// </summary>
+    public SingleRepositoryTarget SingleRepositoryTarget { get; init; } = SingleRepositoryTarget.Repository;
+
+    /// <summary>
     /// The <see cref="ToolDefinition.Id"/>s of the predefined tools (see <see cref="PredefinedTools"/>) that the user
     /// has disabled. Every other predefined tool is enabled.
     /// </summary>
@@ -91,6 +97,9 @@ public sealed record ToolSettings
                 : TerminalShellArguments?.Where(argument => argument is not null).ToArray() ?? [],
             DisabledPredefinedTools = DisabledPredefinedTools?.Where(id => !string.IsNullOrEmpty(id)).Distinct()
                 .ToArray() ?? [],
+            SingleRepositoryTarget = Enum.IsDefined(SingleRepositoryTarget)
+                ? SingleRepositoryTarget
+                : SingleRepositoryTarget.Repository,
             CustomTools = CustomTools?.Where(tool => tool is not null).Select(tool => tool.Normalize()).ToArray() ?? [],
         };
     }
@@ -99,6 +108,7 @@ public sealed record ToolSettings
     public bool Equals(ToolSettings? other) =>
         other is not null
         && TerminalShell == other.TerminalShell
+        && SingleRepositoryTarget == other.SingleRepositoryTarget
         && (TerminalShellArguments is null || other.TerminalShellArguments is null
             ? TerminalShellArguments == other.TerminalShellArguments
             : TerminalShellArguments.SequenceEqual(other.TerminalShellArguments))

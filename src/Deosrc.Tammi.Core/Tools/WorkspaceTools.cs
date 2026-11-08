@@ -58,8 +58,8 @@ public sealed class WorkspaceTools
 
             if (tool.OpensTerminal)
             {
-                var folder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
-                entries.Add(new ToolEntry(tool, tool.Name, folder, repository, null));
+                var (folder, folderRepository) = PreferredFolder(workspace, repository, settings);
+                entries.Add(new ToolEntry(tool, tool.Name, folder, folderRepository, null));
                 continue;
             }
 
@@ -69,8 +69,8 @@ public sealed class WorkspaceTools
             }
 
             entries.AddRange(tool.Kind == ToolKind.File
-                ? FileEntries(tool, executable, workspace, repository)
-                : FolderEntries(tool, executable, workspace, repository));
+                ? FileEntries(tool, executable, workspace, repository, settings)
+                : FolderEntries(tool, executable, workspace, repository, settings));
         }
 
         return entries;
@@ -145,17 +145,23 @@ public sealed class WorkspaceTools
     /// </param>
     /// <param name="launchFolder">The folder the entry is offered for.</param>
     /// <param name="file">The file's full path, for a file tool's entry; otherwise <c>null</c>.</param>
+    /// <param name="preferredFolder">
+    /// The folder the tool should open (see <see cref="ToolPlaceholders.PreferredFolder"/>), or <c>null</c> for
+    /// <paramref name="launchFolder"/>.
+    /// </param>
     public static IReadOnlyDictionary<string, string> PlaceholderValues(
         Workspace workspace,
         WorkspaceRepository? repository,
         string launchFolder,
-        string? file)
+        string? file,
+        string? preferredFolder = null)
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(launchFolder);
 
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
+            [ToolPlaceholders.PreferredFolder] = preferredFolder ?? launchFolder,
             [ToolPlaceholders.LaunchFolder] = launchFolder,
             [ToolPlaceholders.WorkspaceFolder] = workspace.Folder,
         };
@@ -201,33 +207,67 @@ public sealed class WorkspaceTools
         });
     }
 
+    /// <summary>
+    /// The folder a tool should open when it's launched for <paramref name="repository"/> or the Workspace Folder (see
+    /// <see cref="ToolPlaceholders.PreferredFolder"/>), and the repository it is, if any.
+    /// </summary>
+    public static (string Folder, WorkspaceRepository? Repository) PreferredFolder(
+        Workspace workspace,
+        WorkspaceRepository? repository,
+        ToolSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(workspace);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        if (repository is not null)
+        {
+            return (workspace.GetWorktreePath(repository), repository);
+        }
+
+        return workspace.Repositories is [var only] && settings.SingleRepositoryTarget == SingleRepositoryTarget.Repository
+            ? (workspace.GetWorktreePath(only), only)
+            : (workspace.Folder, null);
+    }
+
     private static IEnumerable<ToolEntry> FolderEntries(
         ToolDefinition tool,
         string executable,
         Workspace workspace,
-        WorkspaceRepository? repository)
+        WorkspaceRepository? repository,
+        ToolSettings settings)
     {
-        var folder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
-        if (CreateEntry(tool, executable, folder, repository,
-                PlaceholderValues(workspace, repository, folder, null), folder) is { } entry)
+        var launchFolder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
+        var (preferred, preferredRepository) = PreferredFolder(workspace, repository, settings);
+
+        // A tool that opens the preferred folder is offered for it, and starts in it.
+        var opensPreferred = Uses(tool, ToolPlaceholders.PreferredFolder);
+        var folder = opensPreferred ? preferred : launchFolder;
+        var values = PlaceholderValues(workspace, repository, launchFolder, null, preferred);
+        if (CreateEntry(tool, executable, folder, opensPreferred ? preferredRepository : repository, values, folder)
+            is { } entry)
         {
             yield return entry;
         }
     }
 
+    private static bool Uses(ToolDefinition tool, string placeholder) =>
+        tool.Arguments.Append(tool.Name).SelectMany(ToolPlaceholders.FindUsed).Contains(placeholder);
+
     private static IEnumerable<ToolEntry> FileEntries(
         ToolDefinition tool,
         string executable,
         Workspace workspace,
-        WorkspaceRepository? repository)
+        WorkspaceRepository? repository,
+        ToolSettings settings)
     {
         var launchFolder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
+        var preferred = PreferredFolder(workspace, repository, settings).Folder;
         IEnumerable<WorkspaceRepository> searched = repository is null ? workspace.Repositories : [repository];
         foreach (var fileRepository in searched)
         {
             foreach (var file in ToolFileFinder.Find(workspace.GetWorktreePath(fileRepository), tool.FilePatterns))
             {
-                var values = PlaceholderValues(workspace, fileRepository, launchFolder, file);
+                var values = PlaceholderValues(workspace, fileRepository, launchFolder, file, preferred);
                 if (CreateEntry(tool, executable, file, fileRepository, values, Path.GetDirectoryName(file)) is { } entry)
                 {
                     yield return entry;

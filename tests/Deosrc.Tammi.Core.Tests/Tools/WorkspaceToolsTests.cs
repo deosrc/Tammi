@@ -23,6 +23,8 @@ public sealed class WorkspaceToolsTests : IDisposable
 
     private string ApiFolder => Path.Combine(_folder.Path, "api");
 
+    private Workspace SingleRepository => Workspace with { Repositories = [_api] };
+
     private static ToolDefinition Editor { get; } = new()
     {
         Name = "Editor",
@@ -332,6 +334,86 @@ public sealed class WorkspaceToolsTests : IDisposable
     public void GroupByTool_WithoutEntries_IsEmpty()
     {
         Assert.Empty(WorkspaceTools.GroupByTool(new ToolSettings().Tools, [], [[], []]));
+    }
+
+    [Fact]
+    public void PreferredFolder_WithOneRepository_IsTheRepositoryByDefault()
+    {
+        var tool = Editor with { Arguments = ["{PreferredFolder}", "{LaunchFolder}"] };
+
+        var entry = Assert.Single(External(CreateTools(), SingleRepository, null, Custom(tool)));
+
+        Assert.Equal([ApiFolder, _folder.Path], entry.Request!.Arguments);
+        Assert.Equal(ApiFolder, entry.Path);
+        Assert.Equal(ApiFolder, entry.Request.WorkingDirectory);
+        Assert.Same(_api, entry.Repository);
+    }
+
+    [Fact]
+    public void PreferredFolder_WithOneRepository_CanBeTheWorkspaceFolder()
+    {
+        var settings = Custom(Editor with { Arguments = ["{PreferredFolder}"] }) with
+        {
+            SingleRepositoryTarget = SingleRepositoryTarget.Workspace,
+        };
+
+        var entry = Assert.Single(External(CreateTools(), SingleRepository, null, settings));
+
+        Assert.Equal([_folder.Path], entry.Request!.Arguments);
+        Assert.Equal(_folder.Path, entry.Path);
+        Assert.Null(entry.Repository);
+    }
+
+    [Fact]
+    public void PreferredFolder_WithSeveralRepositories_IsTheWorkspaceFolder()
+    {
+        var entry = Assert.Single(External(
+            CreateTools(), Workspace, null, Custom(Editor with { Arguments = ["{PreferredFolder}"] })));
+
+        Assert.Equal([_folder.Path], entry.Request!.Arguments);
+        Assert.Null(entry.Repository);
+    }
+
+    [Fact]
+    public void PreferredFolder_ForRepository_IsTheRepository()
+    {
+        var entry = Assert.Single(External(
+            CreateTools(), Workspace, _web, Custom(Editor with { Arguments = ["{PreferredFolder}"] })));
+
+        Assert.Equal([Path.Combine(_folder.Path, "web")], entry.Request!.Arguments);
+    }
+
+    [Fact]
+    public void PreferredFolder_ToolsThatDoNotUseIt_OpenTheLaunchFolder()
+    {
+        var entry = Assert.Single(External(CreateTools(), SingleRepository, null, Custom(Editor)));
+
+        Assert.Equal(_folder.Path, entry.Path);
+        Assert.Null(entry.Repository);
+    }
+
+    [Theory]
+    [InlineData(SingleRepositoryTarget.Repository, true)]
+    [InlineData(SingleRepositoryTarget.Workspace, false)]
+    public void Terminal_WithOneRepository_FollowsTheSetting(SingleRepositoryTarget target, bool opensRepository)
+    {
+        var settings = new ToolSettings { SingleRepositoryTarget = target };
+
+        var terminal = CreateTools().GetEntries(SingleRepository, null, settings).First(entry => entry.OpensTerminal);
+
+        Assert.Equal(opensRepository ? _api : null, terminal.Repository);
+        Assert.Equal(opensRepository ? ApiFolder : _folder.Path, terminal.Path);
+    }
+
+    [Fact]
+    public void PredefinedFolderTools_OpenThePreferredFolder()
+    {
+        var entries = External(CreateTools(), SingleRepository, null, new ToolSettings())
+            .Where(entry => entry.Tool.Kind == ToolKind.Folder)
+            .ToArray();
+
+        Assert.NotEmpty(entries);
+        Assert.All(entries, entry => Assert.Equal([ApiFolder], entry.Request!.Arguments));
     }
 
     [Fact]

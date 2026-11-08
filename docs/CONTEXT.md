@@ -363,6 +363,8 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
     Clearing the template restores the default.
 - **Tools**
+  - What tools open for a workspace with only one repository: the repository (the default) or the Workspace Folder
+    (see [Tools](#tools)).
   - The tools (see [Tools](#tools)). First Terminal, with the terminal shell's settings (below). Then the other
     predefined tools, each with whether its executable was found (and where), what it opens, its scope and its
     command. Then the custom tools, added as a folder or file tool, then
@@ -413,11 +415,18 @@ are left to other tools for now.
   **icon** and **enabled/disabled**. The executable is a name on the search path or a full path, with environment
   variables (`%NAME%`) filled in. Arguments are passed as-is, without a shell, so a path with spaces needs no quoting.
 - The name and arguments can have **placeholders**, filled in for each entry (matched ignoring case):
-  `{LaunchFolder}` (the Workspace Folder or repository the entry is offered for), `{WorkspaceFolder}`,
+  `{PreferredFolder}` (the folder the tool should open: see below), `{LaunchFolder}` (the Workspace Folder or
+  repository the entry is offered for), `{WorkspaceFolder}`,
   `{RepositoryFolder}` (the repository the entry is offered for, or that the file is in), and, for file tools only,
   `{FileDirectory}`, `{FileName}`, `{FileNameWithoutExtension}` and `{FilePath}`. An entry is left out where a
   placeholder it uses has no value (e.g. `{RepositoryFolder}` for the Workspace Folder). Other text in braces is left
   as it is, and Settings warns about it.
+- **Workspaces with one repository:** a setting says what tools open when they're launched at workspace level in a
+  workspace with only one repository: **the repository** (the default) or **the Workspace Folder**. It decides
+  `{PreferredFolder}`: for the Workspace Folder of such a workspace it's the repository, unless the setting says the
+  Workspace Folder; everywhere else it's the same as `{LaunchFolder}`. A folder tool that uses `{PreferredFolder}`
+  opens, starts in and shows that folder. Terminal and the predefined folder tools use it, and new custom folder tools
+  start with it as their argument.
 - **Scope** sets what a tool is offered for: the Workspace Folder, the repositories, or both (the default).
 - The side panel's **Tools section** lists each tool once (a file tool once per file it found), in the order tools
   are offered. Clicking a tool opens the Workspace Folder in it, or, if it can only open repositories, shows the menu
@@ -437,11 +446,11 @@ are left to other tools for now.
     icon of the executable with its name in the folder above (`Code.exe`), if there is one.
 - **Predefined tools** come with Tammi, built as ordinary tool definitions. They can be enabled or disabled, but not
   changed or removed. They're offered first, then the **custom tools**, in the user's order:
-  - **Terminal** is special: it opens one of Tammi's own terminals in a new tab of the Workspace View (in the Workspace
-    Folder or the repository), rather than starting an app, so it's the same as **+** → Terminal, which stays. It has
+  - **Terminal** is special: it opens one of Tammi's own terminals in a new tab of the Workspace View (in the
+    `{PreferredFolder}`), rather than starting an app, so it's the same as **+** → Terminal, which stays. It has
     no executable and is always enabled: Settings has no switch for it. It's always first, in Settings and in the
     tools lists.
-  - **VS Code:** `code {LaunchFolder}`.
+  - **VS Code:** `code {PreferredFolder}`.
   - **Dev Container** (repositories only): a file tool for `.devcontainer/devcontainer.json` and `.devcontainer.json`,
     running `devcontainer open {RepositoryFolder}`. It needs the `devcontainer` CLI that VS Code's Dev Containers
     extension installs (its "Install devcontainer CLI" command).
@@ -449,8 +458,8 @@ are left to other tools for now.
     `Visual Studio - {FileName}`, started through the Visual Studio Version Selector
     (`%CommonProgramFiles(x86)%\Microsoft Shared\MSEnv\VSLauncher.exe {FilePath}`), which picks the version of Visual
     Studio each solution was made for.
-  - **Rider:** `rider {LaunchFolder}`, found on the search path (e.g. JetBrains Toolbox's scripts folder).
-  - **File manager:** `explorer {LaunchFolder}` (File Explorer) on Windows, `xdg-open {LaunchFolder}` on Linux.
+  - **Rider:** `rider {PreferredFolder}`, found on the search path (e.g. JetBrains Toolbox's scripts folder).
+  - **File manager:** `explorer {PreferredFolder}` (File Explorer) on Windows, `xdg-open {PreferredFolder}` on Linux.
 - Every other tool is an external app, and **keeps running when Tammi exits**. On Linux they're started in their own session (with
   `setsid`), without Tammi's terminal or output. On Windows, a batch file (e.g. a launcher script on the search path)
   runs without a console window. A file tool starts in the file's folder, and a folder tool in its folder.

@@ -60,6 +60,9 @@ public static class ToolText
     /// </summary>
     public static string Description(string placeholder) => placeholder switch
     {
+        ToolPlaceholders.PreferredFolder =>
+            "the folder the tool should open: as {LaunchFolder}, but the repository for a workspace with only one "
+            + "repository, if that's chosen above",
         ToolPlaceholders.LaunchFolder => "the folder the tool is offered for: the Workspace Folder or the repository",
         ToolPlaceholders.WorkspaceFolder => "the Workspace Folder",
         ToolPlaceholders.RepositoryFolder =>

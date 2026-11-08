@@ -106,6 +106,7 @@ public sealed class SettingsStoreTests : IDisposable
     {
         var tools = new ToolSettings
         {
+            SingleRepositoryTarget = SingleRepositoryTarget.Workspace,
             CustomTools =
             [
                 new ToolDefinition
@@ -136,6 +137,7 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.Contains("\"Custom\"", json);
         Assert.Contains("\"Editor\"", json);
         Assert.Contains("\"rider\"", json);
+        Assert.Contains("\"Workspace\"", json);
         Assert.DoesNotContain("\"id\"", json);
     }
 

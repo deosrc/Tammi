@@ -44,6 +44,18 @@ public class ToolSettingsTests
     }
 
     [Fact]
+    public void SingleRepositoryTarget_IsTheRepositoryByDefault_AndUnknownValuesAreReplaced()
+    {
+        Assert.Equal(SingleRepositoryTarget.Repository, new ToolSettings().SingleRepositoryTarget);
+        Assert.Equal(
+            SingleRepositoryTarget.Repository,
+            new ToolSettings { SingleRepositoryTarget = (SingleRepositoryTarget)9 }.Normalize().SingleRepositoryTarget);
+        Assert.NotEqual(
+            new ToolSettings(),
+            new ToolSettings { SingleRepositoryTarget = SingleRepositoryTarget.Workspace });
+    }
+
+    [Fact]
     public void WithEnabled_ForCustomTool_Throws()
     {
         Assert.Throws<ArgumentException>(() => new ToolSettings().WithEnabled(new ToolDefinition(), false));
