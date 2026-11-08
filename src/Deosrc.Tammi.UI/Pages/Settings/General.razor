@@ -65,22 +65,22 @@
 
     <div class="settings-field">
         <label for="log-level">Log level</label>
-        <div class="settings-field-row">
-            <select id="log-level" value="@Current.LogLevel"
-                    @onchange="e => UpdateGeneralAsync(g => g with { LogLevel = Parse(e, g.LogLevel) })">
-                <option value="@LogLevel.Trace">Trace</option>
-                <option value="@LogLevel.Debug">Debug</option>
-                <option value="@LogLevel.Information">Information</option>
-                <option value="@LogLevel.Warning">Warning</option>
-                <option value="@LogLevel.Error">Error</option>
-            </select>
-            <button type="button" class="button" @onclick="OpenLogFolder">Open logs folder</button>
-        </div>
+        <select id="log-level" value="@Current.LogLevel"
+                @onchange="e => UpdateGeneralAsync(g => g with { LogLevel = Parse(e, g.LogLevel) })">
+            <option value="@LogLevel.Trace">Trace</option>
+            <option value="@LogLevel.Debug">Debug</option>
+            <option value="@LogLevel.Information">Information</option>
+            <option value="@LogLevel.Warning">Warning</option>
+            <option value="@LogLevel.Error">Error</option>
+        </select>
         <p class="settings-help">
             The least important messages Tammi logs. Debug adds details such as each git command, and Trace also adds
             the messages of the frameworks Tammi uses. Changes apply straight away. Logs are written to the console and
-            to <code>@AppPaths.LogDirectory</code>.
+            to the logs folder.
         </p>
+        <div class="settings-field-actions">
+            <button type="button" class="button" @onclick="OpenLogFolder">Open logs folder</button>
+        </div>
         @if (_openLogFolderError is not null)
         {
             <p class="error">@_openLogFolderError</p>
