@@ -119,6 +119,18 @@ public sealed class GitWorktreeServiceRemoveTests : IDisposable
     }
 
     [Fact]
+    public async Task FolderAlreadyDeletedAndUnregistered_DoesNothing()
+    {
+        (string clone, string worktree) = await CreateWorktreeAsync();
+        TempRepositories.DeleteFolder(worktree);
+        await _repos.RunAsync(clone, "worktree", "prune");
+
+        await _service.RemoveWorktreeAsync(clone, worktree, force: true, CancellationToken);
+
+        Assert.DoesNotContain(worktree, await ListWorktreesAsync(clone));
+    }
+
+    [Fact]
     public async Task RepositoryDeleted_NeedsForce()
     {
         (string clone, string worktree) = await CreateWorktreeAsync();

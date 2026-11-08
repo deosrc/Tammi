@@ -176,7 +176,10 @@ public sealed class GitWorktreeService(IGitCli git, IGitRepositoryReader reader)
         switch (check.Health)
         {
             case WorktreeHealth.Missing:
-                if (Directory.Exists(repository))
+                // Git may have forgotten the worktree already (e.g. after `git worktree prune`), and then there's
+                // nothing left to remove.
+                if (Directory.Exists(repository)
+                    && await IsRegisteredAsync(repository, check.Path, cancellationToken).ConfigureAwait(false))
                 {
                     // Unregisters the worktree. Git allows this for a folder that no longer exists.
                     await RemoveRegisteredWorktreeAsync(repository, check.Path, cancellationToken)
@@ -434,6 +437,23 @@ public sealed class GitWorktreeService(IGitCli git, IGitRepositoryReader reader)
                 throw new GitException(
                     $"'{check.Path}' can't be checked for changes: {Describe(check.Health)} Remove it with force to delete it anyway.");
         }
+    }
+
+    /// <summary>Whether the repository lists the worktree (<c>git worktree list</c>).</summary>
+    private async Task<bool> IsRegisteredAsync(
+        string repository,
+        string worktree,
+        CancellationToken cancellationToken)
+    {
+        const string prefix = "worktree ";
+        GitCommandResult result = await git.RunAsync(
+            repository,
+            ["worktree", "list", "--porcelain"],
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return result.OutputLines
+            .Where(line => line.StartsWith(prefix, StringComparison.Ordinal))
+            .Select(line => Path.TrimEndingDirectorySeparator(Path.GetFullPath(line[prefix.Length..])))
+            .Any(path => string.Equals(path, worktree, s_pathComparison));
     }
 
     private async Task RemoveRegisteredWorktreeAsync(

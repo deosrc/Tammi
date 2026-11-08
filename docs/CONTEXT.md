@@ -209,7 +209,8 @@ own branch. It is created automatically when the workspace is created:
 2. Tammi removes each Workspace Worktree (`git worktree remove`), then the Workspace Folder, then the workspace's index
    entry. If a worktree has new changes, or something new appears in the folder, since the user confirmed, it stops
    and the user checks again. Links in the folder are deleted without what they point at. `.tammi/` is deleted last,
-   so a folder that's only partly deleted is still the workspace and can be deleted again.
+   so a folder that's only partly deleted is still the workspace and can be deleted again. A worktree whose folder
+   is already gone is only unregistered, and one git no longer lists (e.g. after `git worktree prune`) is skipped.
 3. Tammi offers to delete the workspace branches from the Local Repositories. Branches that are merged or pushed are
    selected for deletion by default. Others are kept unless the user selects them. Other branches are never offered.
    - **Merged** means the branch's tip is reachable from its base branch (e.g. `origin/main`). Squash and rebase
