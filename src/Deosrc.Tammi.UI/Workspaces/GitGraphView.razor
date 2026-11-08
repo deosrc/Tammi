@@ -1,8 +1,10 @@
 @implements IAsyncDisposable
 @using Deosrc.Tammi.Core.Git
 @using Deosrc.Tammi.Core.Settings
+@using Deosrc.Tammi.Core.Windowing
 @inject IJSRuntime JS
 @inject GitGraphViewOptions Options
+@inject LayoutStateStore LayoutStore
 @* A repository's git graph, shown as a main area tab: the commits, newest first, with their lanes, branches and tags,
    and the selected commit's details beside them. Only the rows in view are rendered, and the history is read a page
    at a time as the list scrolls. *@
@@ -229,6 +231,7 @@
     private ElementReference _body;
     private ElementReference _splitter;
     private IJSObjectReference? _splitterScript;
+    private DotNetObjectReference<GitGraphView>? _self;
     private Virtualize<GitGraphRow>? _virtualize;
     private IJSObjectReference? _module;
     private IJSObjectReference? _listScript;
@@ -290,7 +293,13 @@
                 "import",
                 "./_content/Deosrc.Tammi.UI/Workspaces/GitGraphView.razor.js");
             _listScript = await _module.InvokeAsync<IJSObjectReference>("attach", _list, _header);
-            _splitterScript = await _module.InvokeAsync<IJSObjectReference>("attachSplitter", _body, _splitter);
+            _self = DotNetObjectReference.Create(this);
+            _splitterScript = await _module.InvokeAsync<IJSObjectReference>(
+                "attachSplitter",
+                _body,
+                _splitter,
+                LayoutStore.Current.GitGraphDetailsWidth,
+                _self);
         }
         catch (JSDisconnectedException)
         {
@@ -327,7 +336,15 @@
         {
             // The web view has gone, and the list with it.
         }
+
+        _self?.Dispose();
     }
+
+    // The user resized the details panel: keep the width they chose (null for the default) for next time. Failing to
+    // save only means it opens at its old width after a restart.
+    [JSInvokable]
+    public Task OnDetailsWidthChanged(int? width) =>
+        LayoutStore.UpdateAsync(state => state with { GitGraphDetailsWidth = width });
 
     private string Pressed(GitGraphScope scope) => Graph.Scope == scope ? "true" : "false";
 

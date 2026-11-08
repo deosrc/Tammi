@@ -310,7 +310,9 @@ own branch. It is created automatically when the workspace is created:
     its parents (clicking one selects it), its author and committer, its labels, its full message, and the files it
     changed compared with its first parent, with renames detected. Diffs are a separate Git operation.
   - The split between the list and the details is resizable: drag it, or focus it and use Left and Right. Double-click
-    resets it. The width is shared by every graph until the app closes, and each side keeps a minimum width.
+    resets it. The details' width is kept as a fixed width in pixels (see [Layout state](#technical-constraints)), so
+    every graph opens with it, even after a restart. Each side keeps a minimum width: when the window is too narrow
+    for the kept width, the details are narrower for the time being, and go back to it when there's room.
   - While it's shown and the workspace's tab is open, it reads the repository's refs again whenever the repository
     changes, and reads the graph again only if they've changed (e.g. after a commit, fetch or checkout), keeping the
     selection. A graph that isn't shown does the same when it's next shown. Refresh reads it again on demand.
@@ -625,6 +627,10 @@ are left to other tools for now.
 - **Window state:** Tammi opens its window at the size it had when it was last closed, maximised if it was then.
   The state is kept in `window-state.json` in the Data folder, apart from the settings. If it's missing or can't be
   read, the window opens at its default size.
+- **Layout state:** the sizes the user gives parts of the window (so far, the width of a Git Graph's commit details)
+  are kept in `layout-state.json` in the Data folder, apart from the window state, which the host writes as the window
+  closes. It's written each time the user finishes resizing. If it's missing or can't be read, the parts have their
+  default sizes.
 - **Credentials** for integrations live in the platform secret store, never in settings or data files:
   - **Windows:** Windows Credential Manager, as generic credentials named `Tammi:<key>`, saved for the local
     machine only.
