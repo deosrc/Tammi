@@ -53,7 +53,7 @@ public interface IGitWorktreeService
 
     /// <summary>
     /// Removes a worktree from its Local Repository and deletes its folder (<c>git worktree remove</c>). Its branch is
-    /// kept. A worktree whose folder is already gone is just unregistered.
+    /// kept. A worktree whose folder is already gone is just unregistered, if git still lists it.
     /// </summary>
     /// <param name="repositoryPath">The Local Repository's working directory.</param>
     /// <param name="worktreePath">The worktree folder.</param>
