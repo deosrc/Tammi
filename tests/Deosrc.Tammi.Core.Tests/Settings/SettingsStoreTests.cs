@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Deosrc.Tammi.Core.Agents;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Tools;
 
 namespace Deosrc.Tammi.Core.Tests.Settings;
 
@@ -98,6 +99,34 @@ public sealed class SettingsStoreTests : IDisposable
         string json = File.ReadAllText(SettingsPath);
         Assert.Contains("\"Spaces\"", json);
         Assert.Contains("\"AsWritten\"", json);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesWorkspaceTools_WithIconsAndScopesByName()
+    {
+        var tools = new ToolSettings
+        {
+            CustomTools =
+            [
+                new ToolDefinition
+                {
+                    Name = "Zed",
+                    Icon = ToolIcon.Editor,
+                    Executable = "zed",
+                    Arguments = ["--new", ToolDefinition.PathPlaceholder],
+                    Enabled = false,
+                    Scope = ToolScope.Repository,
+                },
+            ],
+        }.WithBuiltIn(BuiltInTool.Rider, s => s with { Enabled = false, Scope = ToolScope.Workspace });
+
+        await CreateStore().UpdateAsync(settings => settings with { Tools = tools }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(tools, CreateStore().Current.Tools);
+        string json = File.ReadAllText(SettingsPath);
+        Assert.Contains("\"Editor\"", json);
+        Assert.Contains("\"Repository\"", json);
+        Assert.Contains("\"rider\"", json);
     }
 
     [Fact]

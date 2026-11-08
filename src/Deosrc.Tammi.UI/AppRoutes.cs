@@ -18,13 +18,15 @@ public static class AppRoutes
         new("Integrations", SettingsIntegrations),
         new("Git", SettingsGit),
         new("Agents", Settings + "/agents"),
-        new("Tools", Settings + "/tools"),
+        new("Tools", SettingsTools),
         new("About", About),
     ];
 
     public const string SettingsIntegrations = Settings + "/integrations";
 
     public const string SettingsGit = Settings + "/git";
+
+    public const string SettingsTools = Settings + "/tools";
 
     public const string About = Settings + "/about";
 

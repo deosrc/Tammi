@@ -2170,3 +2170,120 @@ label.task-choice {
   border-radius: var(--radius);
   background-color: #1e1e1e;
 }
+
+/* The Workspace View's Tools section: a button for each tool that opens the Workspace Folder. */
+.tool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tool-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tool-item .icon {
+  flex: none;
+}
+
+.tool-item:hover,
+.tool-item:focus-visible {
+  background: var(--color-surface-hover);
+}
+
+/* The tools a repository's card opens it in, as a row of small icon buttons at the bottom of the card. */
+.git-status-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: var(--space-1);
+}
+
+.git-status-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.git-status-tool:hover,
+.git-status-tool:focus-visible {
+  background: color-mix(in srgb, var(--git-status-tone) 15%, transparent);
+  color: var(--color-text);
+}
+
+/* An on/off switch (see Switch.razor): a track with a knob that slides to the end and takes the accent colour when
+   it's on. */
+.switch {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 18px;
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-chrome);
+  appearance: none;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.switch::before {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  content: "";
+  transition: transform 0.15s, background-color 0.15s;
+}
+
+.switch:checked {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.switch:checked::before {
+  background: var(--color-accent-text);
+  transform: translateX(14px);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* A disabled tool's card on the Tools settings page: only its header, with the switch to enable it. */
+.agent-definition-collapsed {
+  padding-bottom: var(--space-3);
+}
+
+.agent-definition-collapsed .agent-definition-header {
+  margin-bottom: 0;
+}
+
+.agent-definition-collapsed .agent-definition-name {
+  color: var(--color-text-muted);
+}

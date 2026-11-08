@@ -38,7 +38,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Agent Session** | One conversation with an agent. Tammi records it so it can be resumed after a restart, with the agent's own resume command. |
 | **Supported Agent** | An agent CLI that Tammi knows how to start, with a built-in Agent Definition (e.g. Claude Code). It's always offered and isn't configured by the user. |
 | **Custom Agent** | An agent CLI the user sets up with their own Agent Definition (e.g. Codex CLI or Gemini CLI). |
-| **Open in…** | Actions that open the workspace or a repository in an external tool (IDE, terminal, file manager, …). |
+| **Tools** | Actions that open the workspace or a repository in a tool (IDE, terminal, file manager, …). |
 
 ## Core Flow: Creating a Workspace
 
@@ -253,7 +253,7 @@ own branch. It is created automatically when the workspace is created:
   - Tasks: the workspace's tasks
   - Agents
   - Repositories: the git status of each repository in the workspace
-  - "Open in…" tools
+  - Tools
 - **Tasks section:** a card for each of the workspace's tasks, in the workspace's order, with its source's logo, its
   short reference (as in suggested names, e.g. `api#42` or `ABC-123`, with the full key as its tooltip), its summary
   and its Task Status, as a chip coloured by its category. Clicking the summary opens the task's page in the browser.
@@ -362,7 +362,10 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
     Clearing the template restores the default.
 - **Tools**
-  - The external tools offered under "Open in…"
+  - The tools (see [Tools](#tools)): each built-in tool, with whether it was found (and its executable) and its
+    scope, and a **Look again** button. Then the custom tools, which are added, edited, reordered and removed like
+    Custom Agents, each showing the command line it opens a folder with. Each tool has a switch beside its name that
+    enables it. A disabled tool's card is collapsed to its icon, switch and name.
   - Terminal shell: executable and arguments. Leaving the executable empty uses the platform shell, with its own
     arguments. Changes apply to terminals started afterwards.
 
@@ -390,26 +393,46 @@ Operations available in the Workspace View:
 applied inside them. Creating and switching branches, stashing, merging, rebasing and history rewrites
 are left to other tools for now.
 
-## Open in… Tools
+## Tools
 
-- Tammi has built-in definitions for common tools: VS Code, Visual Studio (Windows only), JetBrains
-  Rider, the system file manager and the system terminal.
-- Only built-in tools detected as installed are shown.
-- Users can add their own tools.
-- Each tool has: **name**, **executable**, **arguments** (with a `{path}` placeholder for the folder
-  being opened), **enabled/disabled** and **scope**.
-- **Scope** sets what a tool can open: the workspace folder, a single repository, or both. Workspace
-  tools appear in the side panel's tools section. Repository tools appear on each repository's entry
-  in the Repositories section.
+- Tammi has built-in definitions for common tools: the terminal, VS Code, Dev Container, Visual Studio (Windows only),
+  JetBrains Rider and the system file manager, offered in that order.
+- Only built-in tools detected as installed are shown. Each one is looked for on the search path, then where its
+  installer usually puts it (e.g. JetBrains Toolbox's scripts folder for Rider). Visual Studio is found with `vswhere`.
+  The terminal and the file manager are always there. Detection runs once, the first time it's needed, and again when
+  the user clicks **Look again** in Settings.
+- Users can add their own tools: **custom tools**, offered after the built-in ones, in the user's order. They're
+  offered whenever they're enabled, even if their executable can't be found: opening one then says so.
+- Each tool has: **name**, **icon**, **executable**, **arguments** (with a `{path}` placeholder for the full path of
+  the folder being opened), **enabled/disabled** and **scope**. A built-in tool's name, icon, executable and arguments
+  are fixed: only whether it's enabled and its scope can be changed. Arguments are passed as-is, without a shell, so a
+  path with spaces needs no quoting. The path isn't added if no argument has the placeholder.
+- **Scope** sets what a tool can open: the workspace folder, a single repository, or both (the default). Workspace
+  tools appear in the side panel's Tools section. Repository tools appear on each repository's card in the
+  Repositories section, as a row of icon buttons.
+- **Terminal** opens one of Tammi's own terminals in the Workspace View (as **+** → Terminal does), in the Workspace
+  Folder or the repository. Every other tool is an external app.
+- External apps **keep running when Tammi exits**. On Linux they're started in their own session (with `setsid`),
+  without Tammi's terminal or output. On Windows, a batch file (e.g. a launcher script on the search path) runs without
+  a console window. VS Code is started with `Code.exe` rather than its `code.cmd` launcher.
 - **Visual Studio** opens solutions, not folders. Tammi finds the `.sln` and `.slnx` files in the
-  workspace's repositories and shows an "Open in…" entry for each one (e.g. "Visual Studio: Api.sln").
+  workspace's repositories and shows a tool entry for each one (e.g. "Visual Studio: Api.sln"). A repository's
+  card has its own solutions, and the Tools section those of every repository. Solutions are looked for up to
+  three folders deep, skipping hidden folders (e.g. `.git`), `bin`, `obj`, `node_modules`, `packages` and links. Two
+  solutions with the same file name are told apart by their path (e.g. "Visual Studio: api/App.sln").
+- **Dev Container** opens a folder in VS Code inside its dev container. It's only installed when VS Code and its Dev
+  Containers extension are, and only offered for a folder with a dev container configuration
+  (`.devcontainer/devcontainer.json` or `.devcontainer.json`). Configurations in subfolders of `.devcontainer/` aren't
+  offered, since the extension would have the user pick one. The folder in the container is the configuration's
+  `workspaceFolder` (with `${localWorkspaceFolderBasename}` filled in), or `/workspaces/<folder name>`.
+- The entries are worked out when the workspace's tab opens, and again when the workspace or the settings change.
 
 ## Agents
 
 - Agents run as **CLI processes inside the embedded terminal component**. The user interacts with them
   through the terminal, just as they would outside Tammi.
 - Agents are **pluggable**. Each Agent Definition has a name, a command and arguments. Supported Agents have
-  built-in definitions; Custom Agents are configured much like an "Open in…" tool.
+  built-in definitions; Custom Agents are configured much like a custom tool.
 - **Working directory:** an agent starts in the Workspace Folder by default, so it can see and change
   every repository. The user can start it in a single Workspace Worktree instead.
 - **Task context:** Tammi writes the workspace's task details (title, description, links) to a markdown

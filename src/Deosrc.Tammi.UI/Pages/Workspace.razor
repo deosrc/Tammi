@@ -3,6 +3,7 @@
 @using Deosrc.Tammi.Core.Agents
 @using Deosrc.Tammi.Core.Settings
 @using Deosrc.Tammi.Core.Terminals
+@using Deosrc.Tammi.Core.Tools
 @inject WorkspaceTabs WorkspaceTabs
 @inject WorkspaceTerminals Terminals
 @inject WorkspaceAgents Agents
@@ -11,6 +12,7 @@
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceGitStatusMonitors GitStatusMonitors
 @inject WorkspaceTaskLists TaskLists
+@inject WorkspaceTools WorkspaceTools
 @inject NavigationManager Navigation
 
 @if (_tab is null)
@@ -108,13 +110,36 @@ else
                             @foreach (var repository in _gitStatus.Repositories)
                             {
                                 <WorkspaceRepositoryGitStatus @key="repository.Repository.FolderName"
-                                                              Repository="repository" />
+                                                              Repository="repository"
+                                                              Tools="RepositoryTools(repository.Repository)"
+                                                              OnOpen="OpenTool" />
                             }
                         </ul>
                     }
                 </SidePanelSection>
-                <SidePanelSection Title="Open in…">
-                    <p class="placeholder">Tools will appear here.</p>
+                <SidePanelSection Title="Tools">
+                    @if (_workspaceTools.Count == 0)
+                    {
+                        <p class="placeholder">
+                            No tools to open the workspace in. Add or enable them in
+                            <a href="@AppRoutes.SettingsTools">Settings</a>.
+                        </p>
+                    }
+                    else
+                    {
+                        <ul class="tool-list">
+                            @foreach (var entry in _workspaceTools)
+                            {
+                                <li @key="entry">
+                                    <button type="button" class="tool-item" title="@entry.Path"
+                                            @onclick="() => OpenTool(entry)">
+                                        <ToolIconImage Icon="entry.Icon" />
+                                        <span class="tab-label-text">@entry.Label</span>
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    }
                 </SidePanelSection>
             </div>
             <div class="side-panel-footer">
@@ -267,6 +292,14 @@ else
     // Kept while the tab is open, so switching tabs doesn't read the tasks again.
     private WorkspaceTaskList? _tasks;
 
+    // What the Workspace Folder and each repository (by folder name) can be opened in.
+    private IReadOnlyList<ToolEntry> _workspaceTools = [];
+    private IReadOnlyDictionary<string, IReadOnlyList<ToolEntry>> _repositoryTools =
+        new Dictionary<string, IReadOnlyList<ToolEntry>>();
+
+    // Counts updates of the tools, so a slow one doesn't replace a newer one's result.
+    private int _toolsUpdateCount;
+
     // Counts loads, so a slow load that finishes after a newer one (e.g. for another tab) doesn't replace its result.
     private int _loadCount;
 
@@ -279,6 +312,8 @@ else
         WorkspaceStore.Changed += OnWorkspacesChanged;
         Terminals.Changed += OnProcessesChanged;
         Agents.Changed += OnProcessesChanged;
+        SettingsStore.Changed += OnToolsChanged;
+        WorkspaceTools.InstalledChanged += OnToolsChanged;
     }
 
     private IReadOnlyList<AgentDefinition> AgentDefinitions => SettingsStore.Current.Agents.Definitions;
@@ -307,6 +342,8 @@ else
         WorkspaceStore.Changed -= OnWorkspacesChanged;
         Terminals.Changed -= OnProcessesChanged;
         Agents.Changed -= OnProcessesChanged;
+        SettingsStore.Changed -= OnToolsChanged;
+        WorkspaceTools.InstalledChanged -= OnToolsChanged;
         SetGitStatus(null);
         SetTasks(null);
         _disposed.Cancel();
@@ -332,6 +369,60 @@ else
             _loadedWorkspaceId = WorkspaceId;
             UpdateGitStatus();
             UpdateTasks();
+            _ = UpdateToolsAsync();
+        }
+    }
+
+    private IReadOnlyList<ToolEntry> RepositoryTools(WorkspaceRepository repository) =>
+        _repositoryTools.TryGetValue(repository.FolderName, out var tools) ? tools : [];
+
+    // Finds what the workspace and its repositories can be opened in. It reads their folders (for solutions and dev
+    // container configurations), so it's done in the background.
+    private async Task UpdateToolsAsync()
+    {
+        var update = ++_toolsUpdateCount;
+        IReadOnlyList<ToolEntry> workspaceTools = [];
+        var repositoryTools = new Dictionary<string, IReadOnlyList<ToolEntry>>();
+        if (_listing?.Workspace is { } workspace)
+        {
+            var settings = SettingsStore.Current.Tools;
+            var installed = await WorkspaceTools.GetInstalledAsync();
+            (workspaceTools, repositoryTools) = await Task.Run(() => (
+                WorkspaceTools.GetEntries(workspace, null, settings, installed),
+                workspace.Repositories.ToDictionary(
+                    repository => repository.FolderName,
+                    repository => WorkspaceTools.GetEntries(workspace, repository, settings, installed))));
+        }
+
+        if (update != _toolsUpdateCount || _disposed.IsCancellationRequested)
+        {
+            return;
+        }
+
+        _workspaceTools = workspaceTools;
+        _repositoryTools = repositoryTools;
+        StateHasChanged();
+    }
+
+    private void OnToolsChanged() => InvokeAsync(UpdateToolsAsync);
+
+    private void OpenTool(ToolEntry entry)
+    {
+        _startError = null;
+        if (entry.Kind == ToolEntryKind.Terminal)
+        {
+            StartTerminal(entry.Repository);
+            return;
+        }
+
+        try
+        {
+            WorkspaceTools.Open(entry);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException
+            or System.ComponentModel.Win32Exception)
+        {
+            _startError = $"Couldn't open {entry.Label}. {ex.Message}";
         }
     }
 
