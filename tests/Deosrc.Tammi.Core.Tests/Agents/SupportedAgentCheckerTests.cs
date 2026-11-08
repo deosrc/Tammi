@@ -111,6 +111,14 @@ public class SupportedAgentCheckerTests
         Assert.Contains(SupportedAgent.ClaudeCode, SupportedAgent.All);
     }
 
+    [Fact]
+    public void OpenCode_ChecksOpenCodeVersion()
+    {
+        Assert.Same(AgentDefinition.OpenCode, SupportedAgent.OpenCode.Definition);
+        Assert.Equal(["--version"], SupportedAgent.OpenCode.VersionArguments);
+        Assert.Contains(SupportedAgent.OpenCode, SupportedAgent.All);
+    }
+
     private sealed class FakeProcessLauncher : IProcessLauncher
     {
         public string? Path { get; init; } = "/bin/test-agent";

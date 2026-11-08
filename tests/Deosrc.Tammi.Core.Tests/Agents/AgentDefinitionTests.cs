@@ -72,6 +72,18 @@ public class AgentDefinitionTests
     }
 
     [Fact]
+    public void OpenCode_TakesPromptAsOption_AndHasNoHooksOrResume()
+    {
+        var definition = AgentDefinition.OpenCode;
+
+        Assert.Equal("opencode", definition.Command);
+        Assert.Equal(["--prompt", "Read tasks.md"], definition.BuildArguments("Read tasks.md", "ignored-id"));
+        Assert.Empty(definition.BuildArguments(null));
+        Assert.Null(definition.Hooks);
+        Assert.False(definition.CanResume);
+    }
+
+    [Fact]
     public void ClaudeCode_TakesPromptAsPositionalArgument()
     {
         Assert.True(AgentDefinition.ClaudeCode.AcceptsInitialPrompt);

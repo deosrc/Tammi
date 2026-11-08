@@ -38,9 +38,9 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Pull Request** | A request, on the service hosting a repository (e.g. a GitHub pull request), to merge a branch into another. It's a draft, open, merged or closed (declined), and its checks (e.g. CI builds) passed, are in progress or failed. Tammi shows those from each workspace branch. |
 | **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
-| **Agent Definition** | A configured agent CLI (e.g. Claude Code) that Tammi can start: name, command, arguments, how to pass the initial prompt, and how to resume a session. |
+| **Agent Definition** | A configured agent CLI (e.g. Claude Code or opencode) that Tammi can start: name, command, arguments, how to pass the initial prompt, and how to resume a session. |
 | **Agent Session** | One conversation with an agent. Tammi records it so it can be resumed after a restart, with the agent's own resume command. |
-| **Supported Agent** | An agent CLI that Tammi knows how to start, with a built-in Agent Definition (e.g. Claude Code). It's always offered and isn't configured by the user. |
+| **Supported Agent** | An agent CLI that Tammi knows how to start, with a built-in Agent Definition (e.g. Claude Code or opencode). It's always offered and isn't configured by the user. |
 | **Custom Agent** | An agent CLI the user sets up with their own Agent Definition (e.g. Codex CLI or Gemini CLI). |
 | **Tools** | Actions that open the workspace or a repository in a tool (IDE, terminal, file manager, …). |
 
@@ -636,8 +636,12 @@ are left to other tools for now.
     `claude.cmd`, installed with npm) runs through `cmd.exe`, so Tammi also escapes `cmd.exe`'s special characters.
     `cmd.exe` can't pass on line breaks, so a template with several lines can't be sent to a batch file: starting
     the agent fails and says why. The predefined templates are each a single line.
-- **Claude Code** is the first Supported Agent. Others (e.g. Codex CLI, Gemini CLI) can be added as Custom Agents,
-  and may become Supported Agents later.
+- **Claude Code** is the first Supported Agent, and **opencode** the second. Others (e.g. Codex CLI, Gemini CLI) can
+  be added as Custom Agents, and may become Supported Agents later.
+  - opencode takes the initial prompt as `--prompt <prompt>`. Unlike Claude Code it has **no hooks** (it extends itself
+    with JavaScript plugins, which would mean writing files) so it only ever shows Running, and **its sessions can't be
+    resumed** (it makes up its own session IDs and can't be given one at launch, and without hooks Tammi can't learn
+    it). It also has no logo of its own in Tammi yet, so it shows the generic agent icon.
 - **Status** comes from the process (running, exited and exit code). Where an agent offers hooks or
   status events (e.g. Claude Code hooks), Tammi uses them for richer states. In keeping with the
   principles, hooks are supplied when Tammi launches the agent (e.g. through CLI arguments), never by

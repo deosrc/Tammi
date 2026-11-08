@@ -18,9 +18,15 @@ public sealed record SupportedAgent(AgentDefinition Definition, IReadOnlyList<st
         new(AgentDefinition.ClaudeCode, ["--version"], "https://code.claude.com/docs/en/setup");
 
     /// <summary>
+    /// opencode.
+    /// </summary>
+    public static SupportedAgent OpenCode { get; } =
+        new(AgentDefinition.OpenCode, ["--version"], "https://opencode.ai/docs/#install");
+
+    /// <summary>
     /// The Supported Agents, in the order they're offered.
     /// </summary>
-    public static IReadOnlyList<SupportedAgent> All { get; } = [ClaudeCode];
+    public static IReadOnlyList<SupportedAgent> All { get; } = [ClaudeCode, OpenCode];
 
     /// <summary>
     /// The agent's name, e.g. "Claude Code".

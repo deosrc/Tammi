@@ -340,7 +340,7 @@ public sealed class SettingsStoreTests : IDisposable
         var settings = new AppSettings();
 
         Assert.Empty(settings.Agents.CustomDefinitions);
-        Assert.Equal([AgentDefinition.ClaudeCode], settings.Agents.Definitions);
+        Assert.Equal([AgentDefinition.ClaudeCode, AgentDefinition.OpenCode], settings.Agents.Definitions);
         Assert.Null(settings.Tools.TerminalShell);
         Assert.Empty(settings.Tools.TerminalShellArguments);
     }
@@ -367,7 +367,7 @@ public sealed class SettingsStoreTests : IDisposable
         var reloaded = CreateStore().Current.Agents;
         Assert.Equal(definitions, reloaded.CustomDefinitions);
         Assert.False(reloaded.CustomDefinitions[1].AcceptsInitialPrompt);
-        Assert.Equal([AgentDefinition.ClaudeCode, .. definitions], reloaded.Definitions);
+        Assert.Equal([AgentDefinition.ClaudeCode, AgentDefinition.OpenCode, .. definitions], reloaded.Definitions);
     }
 
     [Fact]

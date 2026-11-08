@@ -124,6 +124,24 @@ public sealed record AgentDefinition
     };
 
     /// <summary>
+    /// The definition for opencode, a Supported Agent (see <see cref="SupportedAgent.OpenCode"/>). The initial prompt
+    /// is passed with <c>--prompt</c>, which starts the interactive terminal UI with that prompt.
+    /// </summary>
+    /// <remarks>
+    /// Differences from <see cref="ClaudeCode"/>:
+    /// <list type="bullet">
+    /// <item>No hooks: opencode extends itself with JavaScript plugins rather than HTTP hooks, and Tammi never writes
+    /// files for an agent. So it shows Running while its process runs, never Working, Needs input or Idle.</item>
+    /// <item>No resuming sessions: opencode makes up its own session IDs (<c>ses_…</c>) and can't be given one at
+    /// launch, and without hooks Tammi can't learn it. (<c>opencode --session &lt;id&gt;</c> resumes one by hand.)</item>
+    /// </list>
+    /// </remarks>
+    public static AgentDefinition OpenCode { get; } = new("opencode", "opencode")
+    {
+        PromptArguments = ["--prompt", PromptPlaceholder],
+    };
+
+    /// <summary>
     /// The arguments to start the agent with.
     /// </summary>
     /// <param name="initialPrompt">
