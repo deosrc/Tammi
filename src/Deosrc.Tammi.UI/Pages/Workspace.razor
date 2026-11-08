@@ -9,6 +9,7 @@
 @inject WorkspaceTerminals Terminals
 @inject WorkspaceAgents Agents
 @inject WorkspaceGitGraphs GitGraphs
+@inject WorkspaceTabRestorer TabRestorer
 @inject ISettingsStore SettingsStore
 @inject WorkspaceViewState ViewState
 @inject IWorkspaceStore WorkspaceStore
@@ -460,7 +461,23 @@ else
             UpdateGitStatus();
             UpdateTasks();
             _ = UpdateToolsAsync();
+            if (listing?.Workspace is { } workspace)
+            {
+                await RestoreTabsAsync(workspace);
+            }
         }
+    }
+
+    // Opens the agents and git graphs the workspace had open when Tammi last closed. Only the first time it's loaded.
+    private async Task RestoreTabsAsync(Deosrc.Tammi.Core.Workspaces.Workspace workspace)
+    {
+        var problems = await TabRestorer.RestoreAsync(workspace);
+        if (problems.Count > 0)
+        {
+            _startError = string.Join(" ", problems);
+        }
+
+        UpdateTabs();
     }
 
     private IReadOnlyList<ToolEntry> RepositoryTools(WorkspaceRepository repository) =>

@@ -6,6 +6,7 @@
 @inject WorkspaceTerminals Terminals
 @inject WorkspaceAgents Agents
 @inject WorkspaceGitGraphs GitGraphs
+@inject WorkspaceTabRestorer TabRestorer
 
 @* The Delete Workspace flow: check for work that would be lost, confirm, delete, then offer to delete the branches. *@
 <div class="delete-workspace">
@@ -245,6 +246,7 @@
             // The terminals and agents end first, so no process is still using the folders being deleted, and the git
             // graphs close their repositories. Nothing here is cancelled if the flow is closed, e.g. by showing another
             // tab, so it doesn't stop half-way.
+            TabRestorer.Forget(WorkspaceId);
             GitGraphs.CloseAll(WorkspaceId);
             await Task.WhenAll(Terminals.CloseAllAsync(WorkspaceId), Agents.CloseAllAsync(WorkspaceId));
             branches = await Deleter.DeleteAsync(_plan!, CancellationToken.None);
