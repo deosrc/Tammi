@@ -70,7 +70,7 @@ internal class FakeHttpApi(string baseUrl) : HttpMessageHandler
 
     private string Normalise(string pathAndQuery) => new Uri(_baseUrl, pathAndQuery).AbsoluteUri;
 
-    protected override Task<HttpResponseMessage> SendAsync(
+    protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
@@ -79,7 +79,10 @@ internal class FakeHttpApi(string baseUrl) : HttpMessageHandler
             request.Method,
             url,
             request.Headers.Authorization?.ToString(),
-            request.Headers.ToDictionary(header => header.Key, header => string.Join(", ", header.Value))));
+            request.Headers.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)))
+        {
+            Body = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken),
+        });
 
         if (!_responses.TryGetValue(url.AbsoluteUri, out Queue<Func<HttpResponseMessage>>? queue))
         {
@@ -87,6 +90,6 @@ internal class FakeHttpApi(string baseUrl) : HttpMessageHandler
         }
 
         Func<HttpResponseMessage> respond = queue.Count > 1 ? queue.Dequeue() : queue.Peek();
-        return Task.FromResult(respond());
+        return respond();
     }
 }

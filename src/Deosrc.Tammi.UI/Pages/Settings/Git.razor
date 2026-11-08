@@ -18,6 +18,10 @@
 </dl>
 
 <div class="settings-form">
+    <GitAuthor IdentityChanged="identity => _authorEmail = identity.Email" />
+
+    <SshKeys Email="@_authorEmail" />
+
     <div class="settings-field">
         <h2 class="settings-field-title">Monitored Folders</h2>
         <p class="settings-help">
@@ -191,6 +195,7 @@
     private static readonly int MaxMinutes = (int)GitSettings.MaxStatusRefreshInterval.TotalMinutes;
 
     private int _statusRefreshRevision;
+    private string? _authorEmail;
     private string? _addRepositoryError;
     private string? _rescanError;
     private string? _pendingMonitoredFolder;

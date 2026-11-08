@@ -73,6 +73,77 @@ internal sealed partial class GitHubApiClient(
     }
 
     /// <summary>
+    /// Sends a request with a JSON body, e.g. to create a resource.
+    /// </summary>
+    /// <param name="method">The request's method, e.g. POST.</param>
+    /// <param name="path">The path relative to the API URL.</param>
+    /// <param name="body">The request's body, sent as JSON.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>
+    /// The response, which the caller disposes. It doesn't throw for an error status, except when GitHub rejects the
+    /// token or a rate limit is reached, so the caller can handle the statuses it expects.
+    /// </returns>
+    public async Task<HttpResponseMessage> SendJsonAsync<TBody>(
+        HttpMethod method,
+        string path,
+        TBody body,
+        CancellationToken cancellationToken)
+    {
+        string json = JsonSerializer.Serialize(body, JsonOptions);
+        return (await SendAsync(
+            new Uri(_apiUrl, path), allowNotFound: false, cancellationToken, returnFailures: true, method, json)
+            .ConfigureAwait(false))!;
+    }
+
+    /// <summary>
+    /// Reads a response's JSON body.
+    /// </summary>
+    /// <exception cref="IntegrationException">The body isn't the JSON expected.</exception>
+    public static Task<T> ReadJsonAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken) =>
+        ReadAsync<T>(response, cancellationToken);
+
+    /// <summary>
+    /// Turns an error response into an exception with GitHub's message.
+    /// </summary>
+    public static async Task<IntegrationException> ErrorAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken) =>
+        Error(response, await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
+
+    /// <summary>
+    /// Reads every page of a list that the token might not be allowed to read.
+    /// </summary>
+    /// <param name="path">The path of the first page, relative to the API URL, with any query string.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The items, or <see langword="null"/> if GitHub answers the first page with 403 or 404.</returns>
+    public async Task<IReadOnlyList<TItem>?> GetListIfAllowedAsync<TItem>(
+        string path,
+        CancellationToken cancellationToken)
+    {
+        Uri? next = new(_apiUrl, path);
+        var items = new List<TItem>();
+        while (next is not null)
+        {
+            using HttpResponseMessage response = (await SendAsync(
+                next, allowNotFound: false, cancellationToken, returnFailures: true).ConfigureAwait(false))!;
+            if (!response.IsSuccessStatusCode)
+            {
+                if (items.Count == 0 && response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+                {
+                    return null;
+                }
+
+                throw await ErrorAsync(response, cancellationToken).ConfigureAwait(false);
+            }
+
+            items.AddRange(await ReadAsync<IReadOnlyList<TItem>>(response, cancellationToken).ConfigureAwait(false));
+            next = NextPage(response);
+        }
+
+        return items;
+    }
+
+    /// <summary>
     /// Reads every page of a list, following GitHub's <c>Link</c> header.
     /// </summary>
     /// <param name="path">The path of the first page, relative to the API URL, with any query string.</param>
@@ -106,12 +177,16 @@ internal sealed partial class GitHubApiClient(
         Uri url,
         bool allowNotFound,
         CancellationToken cancellationToken,
-        bool returnFailures = false)
+        bool returnFailures = false,
+        HttpMethod? method = null,
+        string? json = null)
     {
+        method ??= HttpMethod.Get;
         string token = await credentials.GetRequiredAsync(cancellationToken).ConfigureAwait(false);
         for (int attempt = 0; ; attempt++)
         {
-            HttpResponseMessage response = await SendOnceAsync(url, token, cancellationToken).ConfigureAwait(false);
+            HttpResponseMessage response = await SendOnceAsync(method, url, json, token, cancellationToken)
+                .ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
                 return response;
@@ -171,9 +246,19 @@ internal sealed partial class GitHubApiClient(
         }
     }
 
-    private async Task<HttpResponseMessage> SendOnceAsync(Uri url, string token, CancellationToken cancellationToken)
+    private async Task<HttpResponseMessage> SendOnceAsync(
+        HttpMethod method,
+        Uri url,
+        string? json,
+        string token,
+        CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var request = new HttpRequestMessage(method, url);
+        if (json is not null)
+        {
+            request.Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        }
+
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         request.Headers.UserAgent.Add(new ProductInfoHeaderValue(AppInfo.Name, AppInfo.Version));
@@ -184,7 +269,7 @@ internal sealed partial class GitHubApiClient(
             HttpResponseMessage response = await httpClient
                 .SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken)
                 .ConfigureAwait(false);
-            logger.LogDebug("GET {Url} returned {StatusCode}.", url, (int)response.StatusCode);
+            logger.LogDebug("{Method} {Url} returned {StatusCode}.", method, url, (int)response.StatusCode);
             return response;
         }
         catch (HttpRequestException exception)

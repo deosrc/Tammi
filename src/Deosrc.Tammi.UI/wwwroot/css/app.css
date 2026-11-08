@@ -2084,6 +2084,36 @@ label.task-choice {
   background: var(--color-error);
 }
 
+/* SSH keys in the Git settings: each key's details, actions and services stacked in its list item. */
+.settings-list-item.ssh-key {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
+.ssh-key-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.ssh-key-summary .settings-list-path {
+  flex-basis: 100%;
+  font-size: var(--font-size-small);
+}
+
+.ssh-key p,
+.ssh-key .alert {
+  margin: 0;
+}
+
+.ssh-key-generate {
+  margin: var(--space-4) 0 0;
+  gap: var(--space-4);
+}
+
 /* Third-party software list on the About page */
 
 .third-party-list {

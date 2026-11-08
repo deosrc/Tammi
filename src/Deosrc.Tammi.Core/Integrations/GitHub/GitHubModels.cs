@@ -50,6 +50,14 @@ internal sealed record GitHubAccount(string Login, string? Type = null)
     public bool IsOrganization => string.Equals(Type, "Organization", StringComparison.OrdinalIgnoreCase);
 }
 
+/// <param name="Key">The public key, without its comment.</param>
+internal sealed record GitHubSshKey(long Id, string Key, string? Title = null);
+
+/// <summary>
+/// The body of a request to add an SSH key to the user's account.
+/// </summary>
+internal sealed record GitHubNewSshKey(string Title, string Key);
+
 /// <remarks>
 /// Each of <see cref="Errors"/> is usually an object with a <c>message</c>, but can be a plain string.
 /// </remarks>
