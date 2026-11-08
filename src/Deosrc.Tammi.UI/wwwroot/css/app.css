@@ -2312,6 +2312,11 @@ label.task-choice {
   width: 100%;
 }
 
+/* The button that chooses a tool's custom icon image, below the icon select. */
+.tool-icon-picker {
+  margin-top: var(--space-2);
+}
+
 /* The custom icon image chosen for a tool, beside the button that chooses it. */
 .tool-icon-path {
   overflow: hidden;
