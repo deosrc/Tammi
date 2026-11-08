@@ -19,8 +19,8 @@ public interface IProcessLauncher
     /// Runs a process to completion and captures its output.
     /// </summary>
     /// <remarks>
-    /// The process gets no input: its standard input is closed straight away. Cancelling kills the process and its
-    /// children, and throws <see cref="OperationCanceledException"/>.
+    /// The process gets no window and no input: its standard input is closed straight away. Cancelling kills the
+    /// process and its children, and throws <see cref="OperationCanceledException"/>.
     /// </remarks>
     /// <exception cref="FileNotFoundException">The executable can't be found.</exception>
     Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken = default);
