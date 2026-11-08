@@ -265,6 +265,76 @@ public sealed class WorkspaceToolsTests : IDisposable
     }
 
     [Fact]
+    public void GroupByTool_FolderTool_HasWorkspaceAndEachRepository()
+    {
+        var items = Group(Custom(Editor));
+
+        var editor = Assert.Single(items, item => item.Tool == Editor);
+        Assert.Equal("Editor", editor.Label);
+        Assert.Null(editor.FilePath);
+        Assert.Equal(_folder.Path, editor.WorkspaceEntry!.Path);
+        Assert.Equal([_api, _web], editor.RepositoryEntries.Select(entry => entry.Repository));
+        Assert.Equal([_folder.Path, ApiFolder, Path.Combine(_folder.Path, "web")], editor.Entries.Select(e => e.Path));
+    }
+
+    [Fact]
+    public void GroupByTool_RepositoryOnlyTool_IsListedWithoutWorkspaceEntry()
+    {
+        var items = Group(Custom(Editor with { Scope = ToolScope.Repository }));
+
+        var editor = Assert.Single(items, item => item.Tool.Name == "Editor");
+        Assert.Null(editor.WorkspaceEntry);
+        Assert.Equal("Editor", editor.Label);
+        Assert.Equal(2, editor.Entries.Count);
+    }
+
+    [Fact]
+    public void GroupByTool_WorkspaceOnlyTool_HasNoRepositoryEntries()
+    {
+        var editor = Assert.Single(
+            Group(Custom(Editor with { Scope = ToolScope.Workspace })), item => item.Tool.Name == "Editor");
+
+        Assert.NotNull(editor.WorkspaceEntry);
+        Assert.Empty(editor.RepositoryEntries);
+    }
+
+    [Fact]
+    public void GroupByTool_FileTool_HasItemForEachFile_WithItsRepositorysEntry()
+    {
+        var api = _folder.AddFile(Path.Combine("api", "Api.sln"));
+        var web = _folder.AddFile(Path.Combine("web", "Web.sln"));
+
+        var items = Group(Custom(SolutionTool)).Where(item => item.Tool.Kind == ToolKind.File).ToArray();
+
+        Assert.Equal([api, web], items.Select(item => item.FilePath));
+        Assert.Equal(["IDE - Api", "IDE - Web"], items.Select(item => item.Label));
+        Assert.All(items, item => Assert.Equal(item.FilePath, item.WorkspaceEntry!.Path));
+        Assert.Same(_api, Assert.Single(items[0].RepositoryEntries).Repository);
+        Assert.Same(_web, Assert.Single(items[1].RepositoryEntries).Repository);
+        Assert.All(items, item => Assert.All(item.Entries, entry => Assert.Equal(item.FilePath, entry.Path)));
+    }
+
+    [Fact]
+    public void GroupByTool_FollowsToolOrder_TerminalFirst()
+    {
+        _folder.AddFile(Path.Combine("api", "Api.sln"));
+        var settings = Custom(SolutionTool, Editor);
+
+        var items = Group(settings);
+
+        Assert.Equal(["Terminal", "IDE - Api", "Editor"], items.Select(item => item.Label));
+        Assert.True(items[0].Tool.OpensTerminal);
+        Assert.Null(items[0].WorkspaceEntry!.Repository);
+        Assert.Equal([_api, _web], items[0].RepositoryEntries.Select(entry => entry.Repository));
+    }
+
+    [Fact]
+    public void GroupByTool_WithoutEntries_IsEmpty()
+    {
+        Assert.Empty(WorkspaceTools.GroupByTool(new ToolSettings().Tools, [], [[], []]));
+    }
+
+    [Fact]
     public void Open_Terminal_Throws()
     {
         var entry = new ToolEntry(PredefinedTools.Terminal, "Terminal", "/work", null, null);
@@ -307,6 +377,16 @@ public sealed class WorkspaceToolsTests : IDisposable
 
         Assert.Throws<FileNotFoundException>(() => new WorkspaceTools(launcher).Open(entry));
         Assert.Empty(launcher.Detached);
+    }
+
+    // Groups the entries of the Workspace Folder and both repositories, as the Tools section lists them.
+    private IReadOnlyList<ToolItem> Group(ToolSettings settings)
+    {
+        var tools = CreateTools();
+        return WorkspaceTools.GroupByTool(
+            settings.Tools,
+            tools.GetEntries(Workspace, null, settings),
+            [tools.GetEntries(Workspace, _api, settings), tools.GetEntries(Workspace, _web, settings)]);
     }
 
     // The entries of the tools that start an executable: every entry but the Terminal tool's, which is always there.

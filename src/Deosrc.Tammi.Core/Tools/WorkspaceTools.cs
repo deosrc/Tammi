@@ -77,6 +77,66 @@ public sealed class WorkspaceTools
     }
 
     /// <summary>
+    /// Groups the entries of the Workspace Folder and its repositories by tool, so each tool is listed once with the
+    /// levels it can be launched at.
+    /// </summary>
+    /// <param name="tools">The tools, in the order they're offered (see <see cref="ToolSettings.Tools"/>).</param>
+    /// <param name="workspaceEntries">The Workspace Folder's entries (see <see cref="GetEntries"/>).</param>
+    /// <param name="repositoryEntries">Each repository's entries, in the workspace's repository order.</param>
+    /// <returns>
+    /// An item for each folder tool, and for each file a file tool opens, ordered as <paramref name="tools"/> and then
+    /// by file. A file's entries for the Workspace Folder and for its repository are matched by the file's path.
+    /// </returns>
+    public static IReadOnlyList<ToolItem> GroupByTool(
+        IReadOnlyList<ToolDefinition> tools,
+        IReadOnlyList<ToolEntry> workspaceEntries,
+        IEnumerable<IReadOnlyList<ToolEntry>> repositoryEntries)
+    {
+        ArgumentNullException.ThrowIfNull(tools);
+        ArgumentNullException.ThrowIfNull(workspaceEntries);
+        ArgumentNullException.ThrowIfNull(repositoryEntries);
+
+        var groups = new Dictionary<(int Tool, string? File), (ToolEntry? Workspace, List<ToolEntry> Repositories)>();
+        (int, string?) Key(ToolEntry entry)
+        {
+            var index = IndexOf(tools, entry.Tool);
+            return (index < 0 ? int.MaxValue : index, entry.Tool.Kind == ToolKind.File ? entry.Path : null);
+        }
+
+        foreach (var entry in workspaceEntries)
+        {
+            var key = Key(entry);
+            if (!groups.ContainsKey(key))
+            {
+                groups[key] = (entry, []);
+            }
+        }
+
+        foreach (var entry in repositoryEntries.SelectMany(entries => entries))
+        {
+            var key = Key(entry);
+            if (!groups.TryGetValue(key, out var group))
+            {
+                group = (null, []);
+                groups[key] = group;
+            }
+
+            group.Repositories.Add(entry);
+        }
+
+        return groups
+            .OrderBy(group => group.Key.Tool)
+            .ThenBy(group => group.Key.File, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var (workspace, repositories) = group.Value;
+                var first = workspace ?? repositories[0];
+                return new ToolItem(first.Tool, first.Label, group.Key.File, workspace, repositories);
+            })
+            .ToArray();
+    }
+
+    /// <summary>
     /// The placeholders' values for an entry.
     /// </summary>
     /// <param name="workspace">The workspace.</param>
@@ -194,6 +254,19 @@ public sealed class WorkspaceTools
 
         return new ToolEntry(tool, label, path, repository,
             new ProcessRequest(executable, arguments!) { WorkingDirectory = workingDirectory });
+    }
+
+    private static int IndexOf(IReadOnlyList<ToolDefinition> tools, ToolDefinition tool)
+    {
+        for (var i = 0; i < tools.Count; i++)
+        {
+            if (Equals(tools[i], tool))
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     private static bool IsBatchFile(string path) =>

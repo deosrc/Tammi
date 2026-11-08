@@ -112,14 +112,13 @@ else
                             {
                                 <WorkspaceRepositoryGitStatus @key="repository.Repository.FolderName"
                                                               Repository="repository"
-                                                              Tools="RepositoryTools(repository.Repository)"
-                                                              OnOpen="OpenTool" />
+                                                              OnContextMenu="e => OpenRepositoryMenu(repository.Repository, e)" />
                             }
                         </ul>
                     }
                 </SidePanelSection>
                 <SidePanelSection Title="Tools">
-                    @if (_workspaceTools.Count == 0)
+                    @if (_toolItems.Count == 0)
                     {
                         <p class="placeholder">
                             No tools to open the workspace in. Add or enable them in
@@ -128,14 +127,18 @@ else
                     }
                     else
                     {
+                        @* Clicking a tool opens the Workspace Folder in it. Right-clicking it offers every folder it can
+                           open. *@
                         <ul class="tool-list">
-                            @foreach (var entry in _workspaceTools)
+                            @foreach (var item in _toolItems)
                             {
-                                <li @key="entry">
-                                    <button type="button" class="tool-item" title="@entry.Path"
-                                            @onclick="() => OpenTool(entry)">
-                                        <ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" />
-                                        <span class="tab-label-text">@entry.Label</span>
+                                <li @key="item">
+                                    <button type="button" class="tool-item" title="@(item.FilePath ?? item.Label)"
+                                            aria-haspopup="@(item.WorkspaceEntry is null ? "menu" : null)"
+                                            @onclick="e => OnToolClicked(item, e)"
+                                            @oncontextmenu="e => OpenToolMenu(item, e)" @oncontextmenu:preventDefault>
+                                        <ToolImageView Image="item.Entries[0].Image" Fallback="item.Tool.Icon.Generic" />
+                                        <span class="tab-label-text">@item.Label</span>
                                     </button>
                                 </li>
                             }
@@ -148,7 +151,7 @@ else
                 <div class="menu-anchor menu-anchor-wide" @onkeydown="OnManageMenuKeyDown">
                     <button type="button" class="button button-secondary button-icon" aria-haspopup="menu"
                             aria-expanded="@(_manageMenuOpen ? "true" : "false")"
-                            @onclick="() => _manageMenuOpen = !_manageMenuOpen">
+                            @onclick="ToggleManageMenu">
                         Manage Workspace
                         <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             <polyline points="6 15 12 9 18 15"></polyline>
@@ -264,6 +267,13 @@ else
                 </div>
             }
         </div>
+        @if (_contextMenu is { } contextMenu)
+        {
+            <ContextMenu @key="contextMenu" X="contextMenu.X" Y="contextMenu.Y" Label="@contextMenu.Label"
+                         OnClose="CloseContextMenu">
+                @contextMenu.Items
+            </ContextMenu>
+        }
     </div>
 }
 
@@ -298,7 +308,15 @@ else
     private IReadOnlyDictionary<string, IReadOnlyList<ToolEntry>> _repositoryTools =
         new Dictionary<string, IReadOnlyList<ToolEntry>>();
 
+    // The Tools section's tools, each with the levels it can be launched at.
+    private IReadOnlyList<ToolItem> _toolItems = [];
+
+    // The open right-click menu, if any, and whether its Tools submenu is open.
+    private ContextMenuState? _contextMenu;
+    private bool _contextSubmenuOpen;
+
     // Counts updates of the tools, so a slow one doesn't replace a newer one's result.
+
     private int _toolsUpdateCount;
 
     // Counts loads, so a slow load that finishes after a newer one (e.g. for another tab) doesn't replace its result.
@@ -382,9 +400,10 @@ else
         var update = ++_toolsUpdateCount;
         IReadOnlyList<ToolEntry> workspaceTools = [];
         var repositoryTools = new Dictionary<string, IReadOnlyList<ToolEntry>>();
+        var settings = SettingsStore.Current.Tools;
+        var tools = settings.Tools;
         if (_listing?.Workspace is { } workspace)
         {
-            var settings = SettingsStore.Current.Tools;
             (workspaceTools, repositoryTools) = await Task.Run(() => (
                 WorkspaceTools.GetEntries(workspace, null, settings),
                 workspace.Repositories.ToDictionary(
@@ -399,6 +418,7 @@ else
 
         _workspaceTools = workspaceTools;
         _repositoryTools = repositoryTools;
+        UpdateToolItems(tools);
         StateHasChanged();
 
         // The icons are shown once they're found. Until then, each tool shows its generic icon.
@@ -410,9 +430,16 @@ else
 
         if (update == _toolsUpdateCount && !_disposed.IsCancellationRequested)
         {
+            UpdateToolItems(tools);
             StateHasChanged();
         }
     }
+
+    private void UpdateToolItems(IReadOnlyList<ToolDefinition> tools) =>
+        _toolItems = WorkspaceTools.GroupByTool(
+            tools,
+            _workspaceTools,
+            (_listing?.Workspace?.Repositories ?? []).Select(RepositoryTools));
 
     private async Task<IReadOnlyList<ToolEntry>> WithImagesAsync(IReadOnlyList<ToolEntry> entries)
     {
@@ -427,8 +454,95 @@ else
 
     private void OnToolsChanged() => InvokeAsync(UpdateToolsAsync);
 
+    private void OnToolClicked(ToolItem item, MouseEventArgs e)
+    {
+        if (item.WorkspaceEntry is { } entry)
+        {
+            OpenTool(entry);
+        }
+        else
+        {
+            // It can only be launched in a repository, so it offers them.
+            OpenToolMenu(item, e);
+        }
+    }
+
+    private void OpenToolMenu(ToolItem item, MouseEventArgs e) => OpenContextMenu(e, item.Label, ToolMenuItems(item));
+
+    // A tool's right-click menu: each folder it can be launched in.
+    private RenderFragment ToolMenuItems(ToolItem item) => __builder =>
+    {
+        foreach (var entry in item.Entries)
+        {
+            var workspace = ReferenceEquals(entry, item.WorkspaceEntry);
+            <li role="none">
+                <button type="button" class="menu-item" role="menuitem" title="@entry.Path"
+                        @onclick="() => OpenTool(entry)">
+                    @(workspace ? WorkspaceFolderIcon : RepositoryIcon)
+                    @(workspace ? "Workspace" : $"Repository: {entry.Repository?.FolderName}")
+                </button>
+            </li>
+        }
+    };
+
+    private void OpenRepositoryMenu(WorkspaceRepository repository, MouseEventArgs e) =>
+        OpenContextMenu(e, repository.FolderName, RepositoryMenuItems(repository));
+
+    // A repository card's right-click menu: a Tools submenu of what the repository can be opened in.
+    private RenderFragment RepositoryMenuItems(WorkspaceRepository repository) => __builder =>
+    {
+        var tools = RepositoryTools(repository);
+        <li role="none" class="menu-submenu-anchor" @onmouseenter="() => _contextSubmenuOpen = true">
+            <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
+                    aria-expanded="@(_contextSubmenuOpen ? "true" : "false")"
+                    @onclick="() => _contextSubmenuOpen = !_contextSubmenuOpen">
+                <span class="tab-label-text">Tools</span>
+                <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <polyline points="9 6 15 12 9 18"></polyline>
+                </svg>
+            </button>
+            @if (_contextSubmenuOpen)
+            {
+                <ul class="menu menu-submenu" role="menu" aria-label="Tools">
+                    @if (tools.Count == 0)
+                    {
+                        <li role="none">
+                            <button type="button" class="menu-item" role="menuitem" disabled>No tools</button>
+                        </li>
+                    }
+                    @foreach (var entry in tools)
+                    {
+                        <li role="none">
+                            <button type="button" class="menu-item" role="menuitem" title="@entry.Path"
+                                    @onclick="() => OpenTool(entry)">
+                                <ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" />
+                                <span class="tab-label-text">@entry.Label</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        </li>
+    };
+
+    // Opens a right-click menu at the pointer. Only one menu is open at a time.
+    private void OpenContextMenu(MouseEventArgs e, string label, RenderFragment items)
+    {
+        _manageMenuOpen = false;
+        CloseNewMenu();
+        _contextSubmenuOpen = false;
+        _contextMenu = new ContextMenuState(e.ClientX, e.ClientY, label, items);
+    }
+
+    private void CloseContextMenu()
+    {
+        _contextMenu = null;
+        _contextSubmenuOpen = false;
+    }
+
     private void OpenTool(ToolEntry entry)
     {
+        CloseContextMenu();
         _startError = null;
         if (entry.OpensTerminal)
         {
@@ -672,6 +786,7 @@ else
 
     private void ToggleNewMenu()
     {
+        CloseContextMenu();
         _newMenuOpen = !_newMenuOpen;
         _openSubmenu = null;
     }
@@ -700,6 +815,12 @@ else
         UpdateProcesses();
         StateHasChanged();
     });
+
+    private void ToggleManageMenu()
+    {
+        CloseContextMenu();
+        _manageMenuOpen = !_manageMenuOpen;
+    }
 
     private void OnManageMenuKeyDown(KeyboardEventArgs e)
     {
@@ -750,4 +871,7 @@ else
         await LoadAsync();
         StateHasChanged();
     });
+
+    // A right-click menu: where it opens, its name and its items. Each one is a new key, so it's fitted again.
+    internal sealed record ContextMenuState(double X, double Y, string Label, RenderFragment Items);
 }

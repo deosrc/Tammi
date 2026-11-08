@@ -2206,32 +2206,6 @@ label.task-choice {
   background: var(--color-surface-hover);
 }
 
-/* The tools a repository's card opens it in, as a row of small icon buttons at the bottom of the card. */
-.git-status-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-  margin-top: var(--space-1);
-}
-
-.git-status-tool {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3px;
-  border: none;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-}
-
-.git-status-tool:hover,
-.git-status-tool:focus-visible {
-  background: color-mix(in srgb, var(--git-status-tone) 15%, transparent);
-  color: var(--color-text);
-}
-
 /* An on/off switch (see Switch.razor): a track with a knob that slides to the end and takes the accent colour when
    it's on. */
 .switch {
@@ -2324,4 +2298,23 @@ label.task-choice {
   font-size: var(--font-size-small);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* A menu opened by a right-click (see ContextMenu.razor), at the pointer rather than below a button. */
+.menu-context {
+  position: fixed;
+}
+
+.menu-context:focus {
+  outline: none;
+}
+
+/* A menu item that can't be chosen, e.g. "No tools". */
+.menu-item:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.menu-item:disabled:hover {
+  background: none;
 }

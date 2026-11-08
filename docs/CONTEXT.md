@@ -264,10 +264,11 @@ own branch. It is created automatically when the workspace is created:
     or the source failed (with the error as a tooltip).
   - **GitHub** issues are Open (to do), or Closed, Not planned or Duplicate (done), from the issue's state and why it
     was closed. GitHub has no in-progress state. **JIRA** issues have their own status and its category.
-- **Repositories section:** a card with the git status of each repository, in the workspace's order. The whole card is
-  coloured by what needs attention: danger when the worktree is broken or its status can't be read, warning when it
-  has work that isn't pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its
-  submodules, and success otherwise. Each card has:
+- **Repositories section:** a card with the git status of each repository, in the workspace's order. Right-clicking a
+  card opens a menu with a **Tools** submenu (see [Tools](#tools)). The whole card is coloured by what needs
+  attention: danger when the worktree is broken or its status can't be read, warning when it has work that isn't
+  pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its submodules, and
+  success otherwise. Each card has:
   - a label: Broken, Unreadable, Changed (as on Home), Out of sync (only behind) or Clean
   - its branch (or the commit, when HEAD is detached), and how far it's ahead of and behind its upstream, when it
     tracks one
@@ -417,9 +418,13 @@ are left to other tools for now.
   `{FileDirectory}`, `{FileName}`, `{FileNameWithoutExtension}` and `{FilePath}`. An entry is left out where a
   placeholder it uses has no value (e.g. `{RepositoryFolder}` for the Workspace Folder). Other text in braces is left
   as it is, and Settings warns about it.
-- **Scope** sets what a tool is offered for: the Workspace Folder, the repositories, or both (the default). Workspace
-  tools appear in the side panel's Tools section. Repository tools appear on each repository's card in the
-  Repositories section, as a row of icon buttons.
+- **Scope** sets what a tool is offered for: the Workspace Folder, the repositories, or both (the default).
+- The side panel's **Tools section** lists each tool once (a file tool once per file it found), in the order tools
+  are offered. Clicking a tool opens the Workspace Folder in it, or, if it can only open repositories, shows the menu
+  below. Right-clicking it opens a menu of each folder it can open: **Workspace**, then **Repository: `<name>`** for
+  each repository (for a file tool, the file's repository). Right-clicking a repository's card opens a menu with a
+  **Tools** submenu of every tool that can open that repository. Menus close on Escape or a click outside them, and
+  stay inside the window.
 - A tool is only offered when it's enabled and its executable is found (except Terminal, which has none).
 - **Icon:** the application's own icon by default, or one of Tammi's generic icons (application, code editor, IDE,
   container, folder, terminal), or a custom image file, chosen with the system's file dialog (PNG, SVG, JPEG, GIF,

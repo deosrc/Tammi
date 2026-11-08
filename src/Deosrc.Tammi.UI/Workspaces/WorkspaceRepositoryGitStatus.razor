@@ -1,10 +1,8 @@
-@using Deosrc.Tammi.Core.Tools
-
 @* One repository's card in the side panel's Repositories section. The card's colour says whether it needs attention:
    danger when it's broken or can't be read, warning when it has work that isn't pushed or is out of sync with its
    upstream, and success when it's clean. *@
 
-<li class="git-status-card @ToneClass">
+<li class="git-status-card @ToneClass" @oncontextmenu="OnContextMenu" @oncontextmenu:preventDefault>
     <div class="git-status-heading">
         <span class="git-status-name" title="@Repository.WorktreePath">@Repository.Repository.FolderName</span>
         @if (Label is { } label)
@@ -35,19 +33,6 @@
     {
         <p class="git-status-problem" title="@Repository.Problem">Couldn't read the status.</p>
     }
-
-    @if (Tools.Count > 0)
-    {
-        <div class="git-status-tools" role="group" aria-label="Open @Repository.Repository.FolderName in">
-            @foreach (var entry in Tools)
-            {
-                <button type="button" class="git-status-tool" @key="entry" title="Open in @entry.Label: @entry.Path"
-                        aria-label="Open in @entry.Label" @onclick="() => OnOpen.InvokeAsync(entry)">
-                    <ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" Class="icon-small" />
-                </button>
-            }
-        </div>
-    }
 </li>
 
 @code {
@@ -55,16 +40,10 @@
     public WorkspaceRepositoryStatus Repository { get; set; } = null!;
 
     /// <summary>
-    /// What the repository can be opened in, shown as buttons at the bottom of the card.
+    /// Called when the card is right-clicked, to open its menu.
     /// </summary>
     [Parameter]
-    public IReadOnlyList<ToolEntry> Tools { get; set; } = [];
-
-    /// <summary>
-    /// Called when one of <see cref="Tools"/> is clicked.
-    /// </summary>
-    [Parameter]
-    public EventCallback<ToolEntry> OnOpen { get; set; }
+    public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
 
     private string? ToneClass => Repository switch
     {
