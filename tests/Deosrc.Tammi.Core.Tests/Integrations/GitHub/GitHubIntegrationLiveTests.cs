@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Deosrc.Tammi.Core.Integrations;
 using Deosrc.Tammi.Core.Integrations.GitHub;
 using Deosrc.Tammi.Core.Tests.Credentials;
@@ -57,7 +58,8 @@ public sealed class GitHubIntegrationLiveTests : IDisposable
         }
 
         var github = new GitHubIntegration(
-            new GitHubIntegrationOptions(), new InMemoryCredentialStore(), _httpClient, TimeProvider.System);
+            new GitHubIntegrationOptions(), new InMemoryCredentialStore(), _httpClient, NullLogger.Instance,
+            TimeProvider.System);
         await github.Credentials.SaveAsync(token, CancellationToken);
         return github;
     }

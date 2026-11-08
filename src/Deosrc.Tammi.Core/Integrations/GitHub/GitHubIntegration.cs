@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
 using Deosrc.Tammi.Core.Credentials;
+using Microsoft.Extensions.Logging;
 
 namespace Deosrc.Tammi.Core.Integrations.GitHub;
 
@@ -30,6 +31,7 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
 
     private readonly GitHubIntegrationOptions _options;
     private readonly GitHubApiClient _api;
+    private readonly ILogger _logger;
     private readonly string _webHost;
     private readonly TimeProvider _timeProvider;
     private readonly Lock _scopeLock = new();
@@ -39,16 +41,19 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
     /// <param name="options">How to connect to GitHub.</param>
     /// <param name="credentialStore">Where the access token is kept.</param>
     /// <param name="httpClient">Sends the requests. The caller owns it.</param>
+    /// <param name="logger">Logs the requests and searches.</param>
     /// <param name="timeProvider">Times waits for rate limits to reset.</param>
     public GitHubIntegration(
         GitHubIntegrationOptions options,
         ICredentialStore credentialStore,
         HttpClient httpClient,
+        ILogger logger,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(credentialStore);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentOutOfRangeException.ThrowIfLessThan(options.PageSize, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(options.PageSize, 100);
@@ -62,7 +67,8 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
         _options = options;
         _timeProvider = timeProvider;
         Credentials = new IntegrationCredentials(credentialStore, options.Id);
-        _api = new GitHubApiClient(options, Credentials, httpClient, timeProvider);
+        _logger = logger;
+        _api = new GitHubApiClient(options, Credentials, httpClient, logger, timeProvider);
 
         // github.com serves its API from api.github.com. GitHub Enterprise Server serves both from one host.
         _webHost = string.Equals(options.ApiUrl.Host, "api.github.com", StringComparison.OrdinalIgnoreCase)
@@ -225,10 +231,18 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
 
                 if (tasks.Count >= _options.MaxSearchResults)
                 {
-                    return tasks;
+                    break;
                 }
             }
+
+            if (tasks.Count >= _options.MaxSearchResults)
+            {
+                break;
+            }
         }
+
+        _logger.LogDebug(
+            "Found {Count} tasks for searches {Searches} at {Url}.", tasks.Count, searches, _options.ApiUrl);
 
         return tasks;
     }
