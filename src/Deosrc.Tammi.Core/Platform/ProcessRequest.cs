@@ -26,4 +26,10 @@ public sealed record ProcessRequest(string FileName, IReadOnlyList<string> Argum
     /// Environment variables to set for the process. A <c>null</c> value removes the variable.
     /// </summary>
     public IReadOnlyDictionary<string, string?> Environment { get; init; } = new Dictionary<string, string?>();
+
+    /// <summary>
+    /// Whether a console process started with <see cref="IProcessLauncher.Start"/> gets no console window, e.g. a
+    /// batch file that starts a desktop tool. Windows that the process opens itself are still shown.
+    /// </summary>
+    public bool HideWindow { get; init; }
 }

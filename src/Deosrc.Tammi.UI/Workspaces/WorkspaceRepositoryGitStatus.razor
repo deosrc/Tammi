@@ -5,7 +5,7 @@
    opens the submodule's graph instead. *@
 
 <li class="git-status-card card-action @ToneClass" title="Open the git graph of @Repository.Repository.FolderName"
-    @onclick="() => OnOpenGraph.InvokeAsync(null)">
+    @onclick="() => OnOpenGraph.InvokeAsync(null)" @oncontextmenu="OnContextMenu" @oncontextmenu:preventDefault>
     <div class="git-status-heading">
         <button type="button" class="git-status-name card-action-name" title="@Repository.WorktreePath">
             @Repository.Repository.FolderName
@@ -50,6 +50,12 @@
     /// </summary>
     [Parameter]
     public EventCallback<string?> OnOpenGraph { get; set; }
+
+    /// <summary>
+    /// Called when the card is right-clicked, to open its menu.
+    /// </summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
 
     private string? ToneClass => Repository switch
     {

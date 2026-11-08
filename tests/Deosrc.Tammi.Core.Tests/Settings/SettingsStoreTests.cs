@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Deosrc.Tammi.Core.Agents;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Tools;
 
 namespace Deosrc.Tammi.Core.Tests.Settings;
 
@@ -108,6 +109,46 @@ public sealed class SettingsStoreTests : IDisposable
         string json = File.ReadAllText(SettingsPath);
         Assert.Contains("\"Spaces\"", json);
         Assert.Contains("\"AsWritten\"", json);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesTools_WithEnumsByName()
+    {
+        var tools = new ToolSettings
+        {
+            SingleRepositoryTarget = SingleRepositoryTarget.Workspace,
+            CustomTools =
+            [
+                new ToolDefinition
+                {
+                    Kind = ToolKind.File,
+                    Name = "Zed - {FileName}",
+                    FilePatterns = ["*.rs"],
+                    Executable = "zed",
+                    Arguments = ["--new", "{FilePath}"],
+                    Enabled = false,
+                    Scope = ToolScope.Repository,
+                    Icon = new ToolIconSettings
+                    {
+                        Source = ToolIconSource.Custom,
+                        Generic = ToolIcon.Editor,
+                        CustomPath = "/icons/zed.png",
+                    },
+                },
+            ],
+        }.WithEnabled(PredefinedTools.Rider, false);
+
+        await CreateStore().UpdateAsync(settings => settings with { Tools = tools }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(tools, CreateStore().Current.Tools);
+        string json = File.ReadAllText(SettingsPath);
+        Assert.Contains("\"File\"", json);
+        Assert.Contains("\"Repository\"", json);
+        Assert.Contains("\"Custom\"", json);
+        Assert.Contains("\"Editor\"", json);
+        Assert.Contains("\"rider\"", json);
+        Assert.Contains("\"Workspace\"", json);
+        Assert.DoesNotContain("\"id\"", json);
     }
 
     [Fact]

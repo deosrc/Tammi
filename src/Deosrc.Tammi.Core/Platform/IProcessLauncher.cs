@@ -1,7 +1,8 @@
 namespace Deosrc.Tammi.Core.Platform;
 
 /// <summary>
-/// Starts external processes: command-line tools such as <c>git</c>, and desktop tools for "Open in…".
+/// Starts external processes: command-line tools such as <c>git</c>, and desktop tools from the Workspace View's Tools
+/// section.
 /// </summary>
 /// <remarks>
 /// Agents and terminals don't use this service, because they need a PTY. They use <see cref="IPtyService"/>.
@@ -31,6 +32,13 @@ public interface IProcessLauncher
     /// <returns>The ID of the started process.</returns>
     /// <exception cref="FileNotFoundException">The executable can't be found.</exception>
     int Start(ProcessRequest request);
+
+    /// <summary>
+    /// Starts a desktop tool without waiting for it, so that it keeps running after Tammi exits, e.g. to open a folder
+    /// in an IDE. It doesn't share Tammi's terminal or output, if Tammi has them.
+    /// </summary>
+    /// <exception cref="FileNotFoundException">The executable can't be found.</exception>
+    void StartDetached(ProcessRequest request);
 
     /// <summary>
     /// Opens a file, folder or URL with the system's default application, e.g. a folder in the file manager.

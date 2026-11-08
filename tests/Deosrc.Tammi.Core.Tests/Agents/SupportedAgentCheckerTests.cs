@@ -139,6 +139,8 @@ public class SupportedAgentCheckerTests
 
         public int Start(ProcessRequest request) => throw new NotSupportedException();
 
+        public void StartDetached(ProcessRequest request) => throw new NotSupportedException();
+
         public void Open(string target) => throw new NotSupportedException();
     }
 }

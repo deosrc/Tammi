@@ -1,0 +1,29 @@
+@using Deosrc.Tammi.Core.Tools
+
+@* A tool's scope on the Tools settings page: whether it's offered for the Workspace Folder, the repositories or both. *@
+<div class="settings-field">
+    <label for="@Id">Offered for</label>
+    <select id="@Id" value="@Scope" @onchange="OnScopeChanged">
+        @foreach (var scope in ToolText.Scopes)
+        {
+            <option value="@scope">@ToolText.Label(scope)</option>
+        }
+    </select>
+</div>
+
+@code {
+    /// <summary>
+    /// The select's ID, unique on the page.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = "";
+
+    [Parameter]
+    public ToolScope Scope { get; set; }
+
+    [Parameter]
+    public EventCallback<ToolScope> ScopeChanged { get; set; }
+
+    private Task OnScopeChanged(ChangeEventArgs e) =>
+        Enum.TryParse<ToolScope>(e.Value?.ToString(), out var scope) ? ScopeChanged.InvokeAsync(scope) : Task.CompletedTask;
+}

@@ -8,6 +8,7 @@ using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Ssh;
 using Deosrc.Tammi.Core.Terminals;
+using Deosrc.Tammi.Core.Tools;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.Core.Workspaces;
 using Deosrc.Tammi.UI.Components;
@@ -54,6 +55,8 @@ public static class ServiceCollectionExtensions
             services.GetRequiredService<IPtyService>(),
             services.GetRequiredService<AgentHookServer>()));
         services.AddSingleton<SupportedAgentChecker>();
+        services.AddSingleton<ToolImages>();
+        services.AddSingleton<WorkspaceTools>();
         services.AddSingleton<TerminalLauncher>();
         services.AddSingleton<WorkspaceTerminals>();
         services.AddSingleton<WorkspaceAgents>();

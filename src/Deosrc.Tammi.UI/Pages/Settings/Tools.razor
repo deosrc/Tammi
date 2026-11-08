@@ -3,42 +3,351 @@
 @inherits SettingsSectionBase
 @using Deosrc.Tammi.Core.Platform
 @using Deosrc.Tammi.Core.Settings
+@using Deosrc.Tammi.Core.Tools
+@implements IDisposable
 @inject IPtyService PtyService
+@inject WorkspaceTools WorkspaceTools
+@inject ToolImages ToolImages
+@inject IFilePicker FilePicker
+
+@{
+    // Read once, so the whole page shows the same settings. A change being saved replaces them on another thread,
+    // and could otherwise do so part-way through rendering (e.g. removing the tool the loop is showing).
+    var tools = SettingsStore.Current.Tools;
+    var allTools = tools.Tools;
+}
 
 <h1>Tools</h1>
 
-<h2>Terminal shell</h2>
-
 <div class="settings-form">
     <div class="settings-field">
-        <label for="terminal-shell">Executable</label>
-        @* Recreated after each change, so it shows the saved value even when that's unchanged, e.g. after spaces are
-           trimmed. *@
-        <input @key="_shellRevision"
-               id="terminal-shell"
-               class="settings-path"
-               value="@Current.TerminalShell"
-               placeholder="@DefaultShell.FileName"
-               @onchange="OnTerminalShellChanged" />
+        <label for="single-repository-target">With only one repository, tools open</label>
+        <select id="single-repository-target" value="@tools.SingleRepositoryTarget"
+                @onchange="e => UpdateToolsAsync(t => t with { SingleRepositoryTarget = Parse(e, t.SingleRepositoryTarget) })">
+            <option value="@SingleRepositoryTarget.Repository">The repository</option>
+            <option value="@SingleRepositoryTarget.Workspace">The Workspace Folder</option>
+        </select>
         <p class="settings-help">
-            The shell that new terminals run: a name on the search path, or a full path. Leave it empty to use the
-            platform's default shell (@DefaultShell.FileName).
+            What Terminal and the tools that open <code>{PreferredFolder}</code> open when they're launched for a
+            workspace that has only one repository. With several repositories, they open the Workspace Folder.
         </p>
     </div>
+</div>
 
-    <div class="settings-field">
-        <label for="terminal-shell-arguments">Arguments</label>
-        <textarea id="terminal-shell-arguments"
-                  class="settings-arguments"
-                  rows="3"
-                  disabled="@(Current.TerminalShell is null)"
-                  placeholder="@(Current.TerminalShell is null ? ArgumentLines.Format(DefaultShell.Arguments) : null)"
-                  value="@ArgumentLines.Format(Current.TerminalShellArguments)"
-                  @onchange="OnTerminalShellArgumentsChanged"></textarea>
+<h2>Predefined tools</h2>
+
+<p class="settings-help">
+    Tools that come with Tammi. The Workspace View offers them to open the Workspace Folder, a repository or a file in:
+    workspace tools in the side panel's Tools section, and repository tools on each repository's card. A tool is only
+    offered when its executable is found. Predefined tools can be turned on and off, but not changed. Terminal is always
+    on, and comes first.
+</p>
+
+<ul class="agent-definition-list">
+    @* The Terminal tool is always enabled, so it has no switch. It has the terminal shell's settings instead. *@
+    <li class="agent-definition">
+        <div class="agent-definition-header">
+            <ToolImageView Image="ImageOf(PredefinedTools.Terminal)" Fallback="PredefinedTools.Terminal.Icon.Generic" />
+            <span class="agent-definition-name">@PredefinedTools.Terminal.Name</span>
+        </div>
+
         <p class="settings-help">
-            One argument on each line, passed as it is, without quotes. The default shell uses its own arguments.
+            Opens one of Tammi's own terminals in a new tab of the Workspace View, in the Workspace Folder or a
+            repository, as the New menu's Terminal does. It's always on.
         </p>
-    </div>
+
+        <div class="settings-form">
+            <div class="settings-field">
+                <label for="terminal-shell">Shell</label>
+                @* Recreated after each change, so it shows the saved value even when that's unchanged, e.g. after
+                   spaces are trimmed. *@
+                <input @key="_shellRevision"
+                       id="terminal-shell"
+                       class="settings-path settings-input-wide"
+                       value="@Current.TerminalShell"
+                       placeholder="@DefaultShell.FileName"
+                       @onchange="OnTerminalShellChanged" />
+                <p class="settings-help">
+                    The shell that new terminals run: a name on the search path, or a full path. Leave it empty to use
+                    the platform's default shell (@DefaultShell.FileName).
+                </p>
+            </div>
+
+            <div class="settings-field">
+                <label for="terminal-shell-arguments">Shell arguments</label>
+                <textarea id="terminal-shell-arguments"
+                          class="settings-arguments"
+                          rows="3"
+                          disabled="@(Current.TerminalShell is null)"
+                          placeholder="@(Current.TerminalShell is null ? ArgumentLines.Format(DefaultShell.Arguments) : null)"
+                          value="@ArgumentLines.Format(Current.TerminalShellArguments)"
+                          @onchange="OnTerminalShellArgumentsChanged"></textarea>
+                <p class="settings-help">
+                    One argument on each line, passed as it is, without quotes. The default shell uses its own
+                    arguments.
+                </p>
+            </div>
+        </div>
+    </li>
+
+    @foreach (var tool in allTools.Where(tool => tool.IsPredefined && !tool.OpensTerminal))
+    {
+        var executable = WorkspaceTools.FindExecutable(tool);
+        <li class="agent-definition @(tool.Enabled ? null : "agent-definition-collapsed")" @key="tool.Id">
+            <div class="agent-definition-header">
+                <Switch Id="@($"predefined-{tool.Id}-enabled")" Checked="tool.Enabled" Label="@($"Enable {tool.Name}")"
+                        CheckedChanged="enabled => UpdateToolsAsync(t => t.WithEnabled(tool, enabled))" />
+                <ToolImageView Image="ImageOf(tool)" Fallback="tool.Icon.Generic" />
+                <span class="agent-definition-name">@tool.Name</span>
+                @if (tool.Enabled)
+                {
+                    @FoundBadge(executable)
+                }
+            </div>
+
+            @if (tool.Enabled)
+            {
+                <dl class="settings-values agent-status">
+                    <dt>Opens</dt>
+                    <dd>
+                        @if (tool.Kind == ToolKind.File)
+                        {
+                            @:Files matching <code>@string.Join(", ", tool.FilePatterns)</code>
+                        }
+                        else
+                        {
+                            @:Folders
+                        }
+                    </dd>
+                    @if (tool.Kind == ToolKind.Folder)
+                    {
+                        <dt>Offered for</dt>
+                        <dd>@ToolText.Label(tool.Scope)</dd>
+                    }
+                    <dt>Command</dt>
+                    <dd><code>@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
+                    @if (executable is not null)
+                    {
+                        <dt>Executable</dt>
+                        <dd><code>@executable</code></dd>
+                    }
+                </dl>
+            }
+        </li>
+    }
+</ul>
+
+<div class="settings-actions">
+    <button type="button" class="button button-secondary" @onclick="LookAgain">Look again</button>
+    <span class="settings-help">Finds the tools' executables and icons again, e.g. after installing one.</span>
+</div>
+
+<h2>Custom tools</h2>
+
+<p class="settings-help">
+    Any other tool, set up by you, offered after the predefined ones, in this order. A <strong>folder tool</strong> opens
+    the Workspace Folder or a repository. A <strong>file tool</strong> has an entry for each file it finds in the
+    repositories, e.g. each solution, and isn't offered where there are none.
+</p>
+
+<ul class="agent-definition-list">
+    @for (var i = 0; i < tools.CustomTools.Count; i++)
+    {
+        var index = i;
+        var tool = tools.CustomTools[index];
+        var executable = WorkspaceTools.FindExecutable(tool);
+        var unavailable = ToolText.UnavailablePlaceholders(tool);
+        var unknown = ToolText.UnknownPlaceholders(tool);
+        var expanded = tool.Enabled && _expanded.Contains(index);
+        <li class="agent-definition @(tool.Enabled ? expanded ? null : "agent-definition-folded" : "agent-definition-collapsed")">
+            <div class="agent-definition-header">
+                <Switch Id="@($"tool-{index}-enabled")" Checked="tool.Enabled" Label="@($"Enable {tool.Name}")"
+                        CheckedChanged="enabled => UpdateCustomAsync(index, t => t with { Enabled = enabled })" />
+                <ToolImageView Image="ImageOf(tool)" Fallback="tool.Icon.Generic" />
+                <span class="agent-definition-name">@(string.IsNullOrWhiteSpace(tool.Name) ? "Unnamed tool" : tool.Name)</span>
+                @if (tool.Enabled)
+                {
+                    @* A tool is a folder or file tool from when it's added: it can't be changed. *@
+                    <span class="badge">@ToolText.Label(tool.Kind)</span>
+                    @FoundBadge(executable)
+                    <button type="button" class="button button-secondary" disabled="@(index == 0)" @onclick="() => MoveAsync(index, -1)"
+                            title="Move up" aria-label="Move @tool.Name up">↑</button>
+                    <button type="button" class="button button-secondary" disabled="@(index == tools.CustomTools.Count - 1)"
+                            @onclick="() => MoveAsync(index, 1)" title="Move down"
+                            aria-label="Move @tool.Name down">↓</button>
+                    <button type="button" class="button button-secondary" @onclick="() => RemoveAsync(index)">Remove</button>
+                    <button type="button" class="button button-secondary button-icon" aria-expanded="@(expanded ? "true" : "false")"
+                            aria-controls="tool-@index-settings" title="@(expanded ? "Hide settings" : "Show settings")"
+                            aria-label="@(expanded ? "Hide" : "Show") @tool.Name settings" @onclick="() => ToggleExpanded(index)">
+                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <polyline points="@(expanded ? "6 15 12 9 18 15" : "6 9 12 15 18 9")"></polyline>
+                        </svg>
+                    </button>
+                }
+            </div>
+
+            @if (expanded)
+            {
+                <div class="settings-form" id="tool-@index-settings">
+                    <div class="settings-field">
+                        <label for="tool-@index-name">Name</label>
+                        <input id="tool-@index-name"
+                               class="settings-input-wide"
+                               value="@tool.Name"
+                               @onchange="e => UpdateCustomAsync(index, t => t with { Name = Text(e) })" />
+                        <p class="settings-help">
+                            Shown for each of the tool's entries. It can have placeholders, e.g.
+                            <code>Visual Studio - {FileNameWithoutExtension}</code>.
+                        </p>
+                    </div>
+
+                    @if (tool.Kind == ToolKind.File)
+                    {
+                        <div class="settings-field">
+                            <label for="tool-@index-patterns">File patterns</label>
+                            <textarea id="tool-@index-patterns"
+                                      class="settings-arguments"
+                                      rows="3"
+                                      value="@ArgumentLines.Format(tool.FilePatterns)"
+                                      @onchange="e => UpdateCustomAsync(index, t => t with { FilePatterns = ArgumentLines.Parse(Text(e)) })"></textarea>
+                            <p class="settings-help">
+                                One pattern on each line, each looked for in every repository and its subfolders,
+                                @ToolFileFinder.DefaultMaxDepth deep, leaving out hidden, <code>bin</code>,
+                                <code>obj</code>, <code>node_modules</code> and <code>packages</code> folders. A file
+                                name (e.g. <code>*.sln</code>) matches files in each of them. A path (e.g.
+                                <code>.devcontainer/devcontainer.json</code>) is a path from each of them, and can name
+                                hidden folders; start it with <code>/</code> to only look in the repository's own
+                                folder. <code>*</code> and <code>?</code> are wildcards, and case is ignored.
+                            </p>
+                            @if (tool.FilePatterns.Count == 0)
+                            {
+                                <p class="warning">This tool isn't offered until it has a file pattern.</p>
+                            }
+                        </div>
+                    }
+
+                    <div class="settings-field">
+                        <label for="tool-@index-executable">Executable</label>
+                        <input id="tool-@index-executable"
+                               class="settings-path settings-input-wide"
+                               value="@tool.Executable"
+                               @onchange="e => UpdateCustomAsync(index, t => t with { Executable = Text(e) })" />
+                        <p class="settings-help">
+                            A name on the search path, or a full path. Environment variables written as
+                            <code>%NAME%</code> are filled in.
+                        </p>
+                        @if (string.IsNullOrWhiteSpace(tool.Executable))
+                        {
+                            <p class="warning">This tool isn't offered until it has an executable.</p>
+                        }
+                        else if (executable is null)
+                        {
+                            <p class="warning">Couldn't find this executable, so the tool isn't offered.</p>
+                        }
+                    </div>
+
+                    <div class="settings-field">
+                        <label for="tool-@index-arguments">Arguments</label>
+                        <textarea id="tool-@index-arguments"
+                                  class="settings-arguments"
+                                  rows="2"
+                                  value="@ArgumentLines.Format(tool.Arguments)"
+                                  @onchange="e => UpdateCustomAsync(index, t => t with { Arguments = ArgumentLines.Parse(Text(e)) })"></textarea>
+                        <p class="settings-help">One argument on each line, passed as it is, without quotes.</p>
+                    </div>
+
+                    <div class="settings-field">
+                        <span class="settings-field-label">Placeholders</span>
+                        <dl class="settings-values tool-placeholders">
+                            @foreach (var placeholder in ToolPlaceholders.For(tool.Kind))
+                            {
+                                <dt><code>@ToolPlaceholders.Format(placeholder)</code></dt>
+                                <dd>@ToolText.Description(placeholder)</dd>
+                            }
+                        </dl>
+                        <p class="settings-help">
+                            Filled in in the name and arguments for each entry. An entry is left out where a placeholder
+                            it uses has no value, e.g. <code>{RepositoryFolder}</code> for the Workspace Folder.
+                        </p>
+                        @if (unavailable.Count > 0)
+                        {
+                            <p class="warning">
+                                @string.Join(", ", unavailable.Select(ToolPlaceholders.Format)) can only be used by file
+                                tools, so this tool isn't offered.
+                            </p>
+                        }
+                        @if (unknown.Count > 0)
+                        {
+                            <p class="warning">
+                                @string.Join(", ", unknown.Select(ToolPlaceholders.Format)) isn't a placeholder, so it's
+                                passed as it is.
+                            </p>
+                        }
+                    </div>
+
+                    @* File tools open the files they find, wherever they find them, so only folder tools have a
+                       scope. *@
+                    @if (tool.Kind == ToolKind.Folder)
+                    {
+                        <ToolScopeField Id="@($"tool-{index}-scope")" Scope="tool.Scope"
+                                        ScopeChanged="scope => UpdateCustomAsync(index, t => t with { Scope = scope })" />
+                    }
+
+                    <div class="settings-field">
+                        <label for="tool-@index-icon">Icon</label>
+                        <select id="tool-@index-icon" value="@IconChoice(tool.Icon)"
+                                @onchange="e => UpdateCustomAsync(index, t => t with { Icon = ParseIconChoice(Text(e), t.Icon) })">
+                            <option value="@ApplicationIconChoice">Application's icon</option>
+                            @foreach (var icon in ToolText.Icons)
+                            {
+                                <option value="@GenericIconChoice(icon)">@ToolText.Label(icon)</option>
+                            }
+                            <option value="@CustomIconChoice">Custom image…</option>
+                        </select>
+                        @if (tool.Icon.Source == ToolIconSource.Custom)
+                        {
+                            <div class="settings-field-row tool-icon-picker">
+                                <button type="button" class="button button-secondary"
+                                        @onclick="() => PickCustomIconAsync(index)">
+                                    Choose image…
+                                </button>
+                                <span class="settings-path tool-icon-path" title="@tool.Icon.CustomPath">
+                                    @(tool.Icon.CustomPath ?? "No image chosen")
+                                </span>
+                            </div>
+                            <p class="settings-help">
+                                A PNG, SVG, JPEG, GIF, WebP, ICO or BMP file, up to 1 MB.
+                            </p>
+                            @if (tool.Icon.CustomPath is not null && ImageOf(tool) is { DataUri: null })
+                            {
+                                <p class="warning">Couldn't read this image, so the tool shows a generic icon.</p>
+                            }
+                        }
+                        else if (tool.Icon.Source == ToolIconSource.Application)
+                        {
+                            <p class="settings-help">
+                                The icon of the application the executable belongs to. Without one, it shows a generic
+                                icon.
+                            </p>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(tool.Executable))
+                    {
+                        <dl class="settings-values agent-command-preview">
+                            <dt>Opens as</dt>
+                            <dd><code>@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
+                        </dl>
+                    }
+                </div>
+            }
+        </li>
+    }
+</ul>
+
+<div class="settings-actions">
+    <button type="button" class="button" @onclick="() => AddCustomAsync(ToolKind.Folder)">Add folder tool</button>
+    <button type="button" class="button" @onclick="() => AddCustomAsync(ToolKind.File)">Add file tool</button>
 </div>
 
 @if (SaveError is not null)
@@ -46,15 +355,185 @@
     <p class="error">@SaveError</p>
 }
 
-<p class="placeholder">The external tools offered under "Open in…" will appear here.</p>
-
 @code {
+    private const string ApplicationIconChoice = "application";
+    private const string CustomIconChoice = "custom";
+    private const string GenericIconPrefix = "generic:";
+
+    private readonly CancellationTokenSource _disposed = new();
     private ProcessRequest? _defaultShell;
     private int _shellRevision;
+
+    // The tools' icons, once found. A tool whose settings change is a new key, so its icon is found again.
+    private readonly Dictionary<ToolDefinition, ToolImage> _images = [];
 
     private ToolSettings Current => SettingsStore.Current.Tools;
 
     private ProcessRequest DefaultShell => _defaultShell ??= PtyService.GetDefaultShell();
+
+    protected override void OnInitialized() => _ = LoadImagesAsync();
+
+    public void Dispose()
+    {
+        _disposed.Cancel();
+        _disposed.Dispose();
+    }
+
+    private RenderFragment FoundBadge(string? executable) => executable is null
+        ? @<span class="badge badge-error" title="The executable can't be found">✗ Not found</span>
+        : @<span class="badge badge-success" title="@executable">✓ Found</span>;
+
+    private ToolImage? ImageOf(ToolDefinition tool) => _images.GetValueOrDefault(tool);
+
+    // Finds the icons of the tools that don't have one yet, and shows each as it's found.
+    private async Task LoadImagesAsync()
+    {
+        foreach (var tool in SettingsStore.Current.Tools.Tools.Where(tool => !_images.ContainsKey(tool)).ToArray())
+        {
+            var image = await ToolImages.GetAsync(tool, WorkspaceTools.FindExecutable(tool));
+            if (_disposed.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _images[tool] = image;
+            StateHasChanged();
+        }
+    }
+
+    private void LookAgain()
+    {
+        ToolImages.Clear();
+        _images.Clear();
+        _ = LoadImagesAsync();
+    }
+
+    private static string Text(ChangeEventArgs e) => e.Value?.ToString() ?? "";
+
+    private static T Parse<T>(ChangeEventArgs e, T fallback) where T : struct, Enum =>
+        Enum.TryParse<T>(e.Value?.ToString(), out var value) ? value : fallback;
+
+    private static string GenericIconChoice(ToolIcon icon) => GenericIconPrefix + icon;
+
+    private static string IconChoice(ToolIconSettings icon) => icon.Source switch
+    {
+        ToolIconSource.Generic => GenericIconChoice(icon.Generic),
+        ToolIconSource.Custom => CustomIconChoice,
+        _ => ApplicationIconChoice,
+    };
+
+    private static ToolIconSettings ParseIconChoice(string choice, ToolIconSettings icon) => choice switch
+    {
+        ApplicationIconChoice => icon with { Source = ToolIconSource.Application },
+        CustomIconChoice => icon with { Source = ToolIconSource.Custom },
+        _ when choice.StartsWith(GenericIconPrefix, StringComparison.Ordinal)
+            && Enum.TryParse<ToolIcon>(choice[GenericIconPrefix.Length..], out var generic) =>
+            icon with { Source = ToolIconSource.Generic, Generic = generic },
+        _ => icon,
+    };
+
+    private async Task PickCustomIconAsync(int index)
+    {
+        var current = index < Current.CustomTools.Count ? Current.CustomTools[index].Icon.CustomPath : null;
+        var path = await FilePicker.PickFileAsync(new FilePickerOptions
+        {
+            Title = "Choose icon image",
+            InitialDirectory = current is null ? null : Path.GetDirectoryName(current),
+            FileTypeName = "Images",
+            Extensions = [.. ImageDataUri.Extensions],
+        });
+        if (path is not null)
+        {
+            await UpdateCustomAsync(index, t => t with { Icon = t.Icon with { CustomPath = path } });
+        }
+    }
+
+    // The custom tools whose settings are shown, by index. They're hidden until shown, except a tool that's just been
+    // added.
+    private readonly HashSet<int> _expanded = [];
+
+    private void ToggleExpanded(int index)
+    {
+        if (!_expanded.Remove(index))
+        {
+            _expanded.Add(index);
+        }
+    }
+
+    private async Task AddCustomAsync(ToolKind kind)
+    {
+        await UpdateCustomToolsAsync(tools =>
+        [
+            .. tools,
+            kind == ToolKind.File
+                ? new ToolDefinition
+                {
+                    Kind = ToolKind.File,
+                    Name = "New tool - " + ToolPlaceholders.Format(ToolPlaceholders.FileName),
+                    Arguments = [ToolPlaceholders.Format(ToolPlaceholders.FilePath)],
+                }
+                : new ToolDefinition
+                {
+                    Name = "New tool",
+                    Arguments = [ToolPlaceholders.Format(ToolPlaceholders.PreferredFolder)],
+                },
+        ]);
+
+        // A new tool shows its settings, so it can be set up.
+        if (SaveError is null)
+        {
+            _expanded.Add(Current.CustomTools.Count - 1);
+        }
+    }
+
+    private async Task RemoveAsync(int index)
+    {
+        await UpdateCustomToolsAsync(tools =>
+            index < tools.Count ? [.. tools.Take(index), .. tools.Skip(index + 1)] : tools);
+        if (SaveError is null)
+        {
+            // The tools after it move up one.
+            var expanded = _expanded.Where(i => i != index).Select(i => i > index ? i - 1 : i).ToArray();
+            _expanded.Clear();
+            _expanded.UnionWith(expanded);
+        }
+    }
+
+    private async Task MoveAsync(int index, int offset)
+    {
+        var target = index + offset;
+        if (target < 0 || target >= Current.CustomTools.Count)
+        {
+            return;
+        }
+
+        await UpdateCustomToolsAsync(tools =>
+        {
+            if (index >= tools.Count || target < 0 || target >= tools.Count)
+            {
+                return tools;
+            }
+
+            var moved = tools.ToList();
+            (moved[index], moved[target]) = (moved[target], moved[index]);
+            return moved;
+        });
+
+        // The tools swap places, so whether their settings are shown goes with them.
+        if (SaveError is null && _expanded.Contains(index) != _expanded.Contains(target))
+        {
+            ToggleExpanded(index);
+            ToggleExpanded(target);
+        }
+    }
+
+    private Task UpdateCustomAsync(int index, Func<ToolDefinition, ToolDefinition> update) =>
+        UpdateCustomToolsAsync(tools => index < tools.Count
+            ? [.. tools.Take(index), update(tools[index]), .. tools.Skip(index + 1)]
+            : tools);
+
+    private Task UpdateCustomToolsAsync(Func<IReadOnlyList<ToolDefinition>, IReadOnlyList<ToolDefinition>> update) =>
+        UpdateToolsAsync(tools => tools with { CustomTools = update(tools.CustomTools) });
 
     private Task OnTerminalShellChanged(ChangeEventArgs e)
     {
@@ -65,6 +544,9 @@
     private Task OnTerminalShellArgumentsChanged(ChangeEventArgs e) =>
         UpdateToolsAsync(tools => tools with { TerminalShellArguments = ArgumentLines.Parse(e.Value?.ToString()) });
 
-    private Task UpdateToolsAsync(Func<ToolSettings, ToolSettings> update) =>
-        UpdateAsync(settings => settings with { Tools = update(settings.Tools) });
+    private async Task UpdateToolsAsync(Func<ToolSettings, ToolSettings> update)
+    {
+        await UpdateAsync(settings => settings with { Tools = update(settings.Tools) });
+        _ = LoadImagesAsync();
+    }
 }

@@ -1,0 +1,32 @@
+@using Deosrc.Tammi.Core.Tools
+
+@* A tool's icon: its application's or custom icon when it has one, or else its generic icon. Until the icon is found,
+   the generic icon is shown. *@
+@if (Image?.DataUri is { } dataUri)
+{
+    <img class="tool-image @Class" src="@dataUri" alt="" aria-hidden="true" />
+}
+else
+{
+    <ToolIconImage Icon="@(Image?.Generic ?? Fallback)" Class="@Class" />
+}
+
+@code {
+    /// <summary>
+    /// The icon, or <c>null</c> while it's being found.
+    /// </summary>
+    [Parameter]
+    public ToolImage? Image { get; set; }
+
+    /// <summary>
+    /// The generic icon shown while <see cref="Image"/> is <c>null</c>.
+    /// </summary>
+    [Parameter]
+    public ToolIcon Fallback { get; set; } = ToolIcon.Application;
+
+    /// <summary>
+    /// More classes for the icon, e.g. <c>icon-small</c>.
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+}
