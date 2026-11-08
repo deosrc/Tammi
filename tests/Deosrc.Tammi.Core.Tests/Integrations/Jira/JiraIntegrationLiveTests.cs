@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Deosrc.Tammi.Core.Integrations;
 using Deosrc.Tammi.Core.Integrations.Jira;
 using Deosrc.Tammi.Core.Tests.Credentials;
@@ -74,6 +75,7 @@ public sealed class JiraIntegrationLiveTests : IDisposable
             },
             new InMemoryCredentialStore(),
             _httpClient,
+            NullLogger.Instance,
             TimeProvider.System);
         await jira.Credentials.SaveAsync(token, CancellationToken);
         return jira;

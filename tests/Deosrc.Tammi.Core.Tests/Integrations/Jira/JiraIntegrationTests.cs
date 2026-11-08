@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Deosrc.Tammi.Core.Integrations;
 using Deosrc.Tammi.Core.Integrations.Jira;
@@ -108,10 +109,10 @@ public class JiraIntegrationTests : IDisposable
     public async Task Calls_ThrowAuthenticationException_WhenTheCredentialsAreRejected()
     {
         JiraIntegration jira = await CreateAuthenticatedAsync();
-        _api.Respond(DefaultSearchPath, "Client must be authenticated to access this resource.",
+        _api.Respond("myself", "Client must be authenticated to access this resource.",
             HttpStatusCode.Unauthorized);
         _api.Respond(TenantInfoUrl, TenantInfo);
-        _api.Respond(GatewayApiUrl + DefaultSearchPath, """{"code":401,"message":"Unauthorized"}""",
+        _api.Respond(GatewayApiUrl + "myself", """{"code":401,"message":"Unauthorized"}""",
             HttpStatusCode.Unauthorized);
 
         var exception = await Assert.ThrowsAsync<IntegrationAuthenticationException>(
@@ -161,6 +162,124 @@ public class JiraIntegrationTests : IDisposable
             _api.Requests.Select(request => request.Url.AbsoluteUri));
         Assert.Null(_api.Requests[1].Authorization);
         Assert.Equal(_api.Requests[0].Authorization, _api.Requests[2].Authorization);
+    }
+
+    [Fact]
+    public async Task Cloud_SearchesThroughTheApiGateway_ForATokenWithScopes()
+    {
+        // The site answers a search with a token with scopes as if it were anonymous: no error, and no issues.
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond("myself", "", HttpStatusCode.Unauthorized);
+        _api.Respond(TenantInfoUrl, TenantInfo);
+        _api.Respond(GatewayApiUrl + "myself", FakeJiraApi.Response("myself.json"));
+        _api.Respond(DefaultSearchPath, """{"issues":[],"isLast":true}""");
+        _api.Respond(GatewayApiUrl + DefaultSearchPath, FakeJiraApi.Response("search-cloud-page2.json"));
+
+        IReadOnlyList<TaskInfo> tasks = await jira.GetAssignedTasksAsync(CancellationToken);
+
+        Assert.Equal(["XYZ-3"], tasks.Select(task => task.Key));
+        Assert.Equal(
+            [
+                "https://acme.atlassian.net/rest/api/2/myself",
+                "https://acme.atlassian.net/_edge/tenant_info",
+                GatewayApiUrl + "myself",
+                GatewayApiUrl + DefaultSearchPath,
+            ],
+            _api.Requests.Select(request => request.Url.AbsoluteUri));
+    }
+
+    [Fact]
+    public async Task Cloud_GetsATaskThroughTheApiGateway_ForATokenWithScopes()
+    {
+        // The site says an issue it won't show anonymously doesn't exist.
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond("myself", "", HttpStatusCode.Unauthorized);
+        _api.Respond(TenantInfoUrl, TenantInfo);
+        _api.Respond(GatewayApiUrl + "myself", FakeJiraApi.Response("myself.json"));
+        _api.Respond(IssuePath, FakeJiraApi.Response("not-found.json"), HttpStatusCode.NotFound);
+        _api.Respond(GatewayApiUrl + IssuePath, FakeJiraApi.Response("issue.json"));
+
+        TaskInfo? task = await jira.GetTaskAsync("ABC-12", CancellationToken);
+
+        Assert.Equal("ABC-12", task?.Key);
+        Assert.Equal(GatewayApiUrl + IssuePath, _api.Requests[^1].Url.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task Cloud_SearchesTheSite_ForATokenWithoutScopes()
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond("myself", FakeJiraApi.Response("myself.json"));
+        _api.Respond(DefaultSearchPath, FakeJiraApi.Response("search-cloud-page2.json"));
+
+        IReadOnlyList<TaskInfo> tasks = await jira.GetAssignedTasksAsync(CancellationToken);
+
+        Assert.Equal(["XYZ-3"], tasks.Select(task => task.Key));
+        Assert.Equal(
+            [
+                "https://acme.atlassian.net/rest/api/2/myself",
+                "https://acme.atlassian.net/rest/api/2/" + DefaultSearchPath,
+            ],
+            _api.Requests.Select(request => request.Url.AbsoluteUri));
+    }
+
+    [Fact]
+    public async Task Cloud_ChecksTheRouteOnce_ForConcurrentRequests()
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond("myself", FakeJiraApi.Response("myself.json"));
+        _api.Respond(DefaultSearchPath, FakeJiraApi.Response("search-cloud-page2.json"));
+        _api.Respond(IssuePath, FakeJiraApi.Response("issue.json"));
+
+        await Task.WhenAll(
+            jira.GetAssignedTasksAsync(CancellationToken),
+            jira.GetTaskAsync("ABC-12", CancellationToken));
+        await jira.GetAssignedTasksAsync(CancellationToken);
+
+        Assert.Single(_api.Requests, request => request.Url.AbsolutePath.EndsWith("/myself", StringComparison.Ordinal));
+        Assert.Equal(4, _api.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Cloud_ChecksTheRouteAgain_ForANewToken()
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond("myself", FakeJiraApi.Response("myself.json"));
+        _api.Respond(DefaultSearchPath, FakeJiraApi.Response("search-cloud-page2.json"));
+        await jira.GetAssignedTasksAsync(CancellationToken);
+
+        await jira.Credentials.SaveAsync("ATATT3xFfGF0other", CancellationToken);
+        await jira.GetAssignedTasksAsync(CancellationToken);
+
+        Assert.Equal(2, _api.Requests.Count(request => request.Url.AbsolutePath.EndsWith("/myself",
+            StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public async Task Cloud_ChecksTheRouteAgain_AfterTheCheckFailed()
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync();
+        _api.Respond("myself", "", HttpStatusCode.InternalServerError)
+            .Respond("myself", FakeJiraApi.Response("myself.json"));
+        _api.Respond(DefaultSearchPath, FakeJiraApi.Response("search-cloud-page2.json"));
+
+        await Assert.ThrowsAsync<IntegrationException>(() => jira.GetAssignedTasksAsync(CancellationToken));
+        IReadOnlyList<TaskInfo> tasks = await jira.GetAssignedTasksAsync(CancellationToken);
+
+        Assert.Equal(["XYZ-3"], tasks.Select(task => task.Key));
+    }
+
+    [Fact]
+    public async Task DataCenter_DoesntCheckTheRoute()
+    {
+        var api = new FakeJiraApi(DataCenterSiteUrl);
+        using var httpClient = new HttpClient(api);
+        JiraIntegration jira = await CreateAuthenticatedAsync(DataCenterOptions(), httpClient);
+        api.Respond(IssuePath, FakeJiraApi.Response("issue.json"));
+
+        await jira.GetTaskAsync("ABC-12", CancellationToken);
+
+        Assert.Single(api.Requests);
     }
 
     [Fact]
@@ -239,7 +358,7 @@ public class JiraIntegrationTests : IDisposable
     [Fact]
     public async Task GetAssignedTasksAsync_ListsTheUsersIssuesThatAreStillToDo()
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
+        JiraIntegration jira = await CreateRouteCheckedAsync();
         _api.Respond(DefaultSearchPath, FakeJiraApi.Response("search-cloud-page2.json"));
 
         IReadOnlyList<TaskInfo> tasks = await jira.GetAssignedTasksAsync(CancellationToken);
@@ -255,7 +374,7 @@ public class JiraIntegrationTests : IDisposable
     [Fact]
     public async Task GetAssignedTasksAsync_ReadsIssuesAsTasks()
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync(CloudOptions() with { MaxSearchResults = 2 });
+        JiraIntegration jira = await CreateRouteCheckedAsync(CloudOptions() with { MaxSearchResults = 2 });
         _api.Respond(CloudSearchPath(JiraIntegration.AssignedJql, maxResults: 2),
             FakeJiraApi.Response("search-cloud.json"));
 
@@ -274,13 +393,13 @@ public class JiraIntegrationTests : IDisposable
     [Fact]
     public async Task SearchTasksAsync_SearchesTheTextOfIssues()
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
+        JiraIntegration jira = await CreateRouteCheckedAsync();
         _api.Respond(CloudSearchPath(JiraIntegration.TextJql("expired session")),
             FakeJiraApi.Response("search-cloud-page2.json"));
 
         await jira.SearchTasksAsync("  expired session ", CancellationToken);
 
-        Assert.Equal("text ~ \"expired session\" ORDER BY updated DESC", Assert.Single(_api.Requests).Query("jql"));
+        Assert.Equal("text ~ \"expired session\" AND statusCategory != \"Done\" ORDER BY updated DESC", Assert.Single(_api.Requests).Query("jql"));
     }
 
     [Theory]
@@ -289,9 +408,9 @@ public class JiraIntegrationTests : IDisposable
     [InlineData("say \"hi\" (now)", "say hi now")]
     [InlineData("a\\b c:d -e +f", "a b c d e f")]
     [InlineData("project = ABC", "project = ABC")]
-    public void TextJql_QuotesTheWords_LeavingOutSpecialCharacters(string text, string phrase)
+    public void TextJql_QuotesTheWords_LeavingOutSpecialCharactersAndDoneIssues(string text, string phrase)
     {
-        Assert.Equal($"text ~ \"{phrase}\" ORDER BY updated DESC", JiraIntegration.TextJql(text));
+        Assert.Equal($"text ~ \"{phrase}\" AND statusCategory != \"Done\" ORDER BY updated DESC", JiraIntegration.TextJql(text));
     }
 
     [Fact]
@@ -305,7 +424,7 @@ public class JiraIntegrationTests : IDisposable
     [Fact]
     public async Task SearchTasksAsync_OnCloud_FollowsPageTokens_UntilTheLastPage()
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
+        JiraIntegration jira = await CreateRouteCheckedAsync();
         string first = CloudSearchPath(LoginJql);
         _api.Respond(first, FakeJiraApi.Response("search-cloud.json"))
             .Respond(first + "&nextPageToken=" + Uri.EscapeDataString(
@@ -321,7 +440,7 @@ public class JiraIntegrationTests : IDisposable
     [Fact]
     public async Task SearchTasksAsync_StopsAtTheMaximumResults()
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync(CloudOptions() with { MaxSearchResults = 1 });
+        JiraIntegration jira = await CreateRouteCheckedAsync(CloudOptions() with { MaxSearchResults = 1 });
         _api.Respond(CloudSearchPath(LoginJql, maxResults: 1), FakeJiraApi.Response("search-cloud.json"));
 
         IReadOnlyList<TaskInfo> tasks = await jira.SearchTasksAsync("login", CancellationToken);
@@ -333,7 +452,7 @@ public class JiraIntegrationTests : IDisposable
     [Fact]
     public async Task SearchTasksAsync_OnCloud_Stops_WhenThePageTokenDoesntChange()
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
+        JiraIntegration jira = await CreateRouteCheckedAsync();
         string first = CloudSearchPath(LoginJql);
         string token = """{"issues":[{"key":"ABC-1","fields":{"summary":"One"}}],"nextPageToken":"t1"}""";
         _api.Respond(first, token).Respond(first + "&nextPageToken=t1", token);
@@ -399,7 +518,7 @@ public class JiraIntegrationTests : IDisposable
     [Fact]
     public async Task Errors_IncludeFieldMessages()
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
+        JiraIntegration jira = await CreateRouteCheckedAsync();
         _api.Respond(CloudSearchPath(JiraIntegration.TextJql("x")), """{"errorMessages":[],"errors":{"jql":"The JQL is too long."}}""",
             HttpStatusCode.BadRequest);
 
@@ -412,7 +531,7 @@ public class JiraIntegrationTests : IDisposable
     [Fact]
     public async Task GetTaskAsync_ReadsTheIssue()
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
+        JiraIntegration jira = await CreateRouteCheckedAsync();
         _api.Respond(IssuePath, FakeJiraApi.Response("issue.json"));
 
         TaskInfo? task = await jira.GetTaskAsync("ABC-12", CancellationToken);
@@ -432,7 +551,7 @@ public class JiraIntegrationTests : IDisposable
     [InlineData("undefined", null)]
     public async Task GetTaskAsync_ReadsTheStatusCategory(string key, TaskStatusCategory? category)
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
+        JiraIntegration jira = await CreateRouteCheckedAsync();
         _api.Respond(IssuePath,
             """{"key":"ABC-12","fields":{"summary":"S","status":{"name":"Custom","statusCategory":{"key":"KEY"}}}}"""
                 .Replace("KEY", key, StringComparison.Ordinal));
@@ -446,7 +565,7 @@ public class JiraIntegrationTests : IDisposable
     [Fact]
     public async Task GetTaskAsync_HasNoStatus_WhenJiraDoesntSay()
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
+        JiraIntegration jira = await CreateRouteCheckedAsync();
         _api.Respond(IssuePath, """{"key":"ABC-12","fields":{"summary":"S"}}""");
 
         TaskInfo? task = await jira.GetTaskAsync("ABC-12", CancellationToken);
@@ -458,7 +577,7 @@ public class JiraIntegrationTests : IDisposable
     [Fact]
     public async Task GetTaskAsync_UsesTheNewKey_OfAMovedIssue()
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
+        JiraIntegration jira = await CreateRouteCheckedAsync();
         _api.Respond("issue/ABC-1?fields=summary,description,updated,status",
             """{"id":"10103","key":"XYZ-3","fields":{"summary":"Moved","description":null}}""");
 
@@ -471,7 +590,7 @@ public class JiraIntegrationTests : IDisposable
     [Fact]
     public async Task GetTaskAsync_ReturnsNull_WhenTheIssueIsMissing()
     {
-        JiraIntegration jira = await CreateAuthenticatedAsync();
+        JiraIntegration jira = await CreateRouteCheckedAsync();
         _api.Respond(IssuePath, FakeJiraApi.Response("not-found.json"), HttpStatusCode.NotFound);
 
         Assert.Null(await jira.GetTaskAsync("ABC-12", CancellationToken));
@@ -613,7 +732,7 @@ public class JiraIntegrationTests : IDisposable
     };
 
     private JiraIntegration Create(JiraIntegrationOptions? options = null, HttpClient? httpClient = null) =>
-        new(options ?? CloudOptions(), _store, httpClient ?? _httpClient, _time);
+        new(options ?? CloudOptions(), _store, httpClient ?? _httpClient, NullLogger.Instance, _time);
 
     private async Task<JiraIntegration> CreateAuthenticatedAsync(
         JiraIntegrationOptions? options = null,
@@ -621,6 +740,19 @@ public class JiraIntegrationTests : IDisposable
     {
         JiraIntegration jira = Create(options, httpClient);
         await jira.Credentials.SaveAsync(Token, CancellationToken);
+        return jira;
+    }
+
+    /// <summary>
+    /// Creates a JIRA Cloud integration whose token is known to work at the site, so its requests go straight there,
+    /// and forgets the request that checked it.
+    /// </summary>
+    private async Task<JiraIntegration> CreateRouteCheckedAsync(JiraIntegrationOptions? options = null)
+    {
+        JiraIntegration jira = await CreateAuthenticatedAsync(options);
+        _api.Respond("myself", FakeJiraApi.Response("myself.json"));
+        await jira.GetAuthenticatedUserAsync(CancellationToken);
+        _api.Requests.Clear();
         return jira;
     }
 

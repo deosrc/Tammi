@@ -55,8 +55,9 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
      - **A link or reference** to a task, e.g. an issue's URL, `owner/repo#42` or `ABC-123`: that task, from each
        source that recognises it. This is the only way to find public tasks outside the user's organisations. A link
        that no source recognises isn't searched.
-     - **Any other text:** a search of the text of the tasks of the user and their organisations (see
-       [Integrations](#integrations)). Tasks already in a workspace are found too, and marked with its name.
+     - **Any other text:** a search of the text of the tasks of the user and their organisations that aren't done:
+       open GitHub issues, and JIRA issues whose status isn't in the Done category (see [Integrations](#integrations)).
+       Tasks already in a workspace are found too, and marked with its name.
    - Search starts when the user stops typing. A source that fails doesn't stop the others: its error is shown
      with their results.
    - Tasks chosen from several searches and sources are kept together in one list.
@@ -534,9 +535,9 @@ are left to other tools for now.
 - **Finding tasks:**
   - **Assigned:** the user's open issues (`is:open assignee:@me archived:false`). GitHub has no in-progress state, so
     every open issue counts as still to do.
-  - **Text search** covers the user's own repositories, the organisations that own repositories they can reach
-    (`org:`), and other users' repositories they collaborate on (`repo:`, so those users' other repositories aren't
-    searched). Tammi reads these from the user's repositories and remembers them for 10 minutes. A search that covers
+  - **Text search** covers the open issues (`state:open`) in the user's own repositories, the organisations that own
+    repositories they can reach (`org:`), and other users' repositories they collaborate on (`repo:`, so those users'
+    other repositories aren't searched). Tammi reads these from the user's repositories and remembers them for 10 minutes. A search that covers
     many accounts and repositories is split into several requests. GitHub's search qualifiers (e.g. `label:bug`) can
     still be added to the text.
   - A task key or an issue's URL finds that issue, in any repository the token can read.
@@ -554,14 +555,18 @@ are left to other tools for now.
     The token can be one without scopes, or one with the JIRA scopes `read:jira-work` and `read:jira-user`. Tokens
     with scopes only work through Atlassian's API gateway (`api.atlassian.com/ex/jira/<cloud ID>`), so when the site
     rejects a token, Tammi reads the site's cloud ID (`_edge/tenant_info`) and tries the gateway, then keeps using
-    whichever worked. When the gateway says a scope is missing, Tammi names the scopes it needs.
+    whichever worked. Only reading the user (`myself`) is rejected at the site: searches and issues answer as if
+    the request were anonymous, so a private project shows nothing. So before anything else, Tammi reads the user to
+    find which route a token works on, and does so again for a new token. When the gateway says a scope is missing,
+    Tammi names the scopes it needs.
   - **Server and Data Center:** a personal access token (JIRA 8.14 or later), kept in the credential store. When
     JIRA wants a CAPTCHA solved after failed logins, Tammi asks the user to log in to JIRA in a browser.
 - **Task keys** are JIRA's issue keys, e.g. `ABC-123`. A moved issue is read with its new key.
 - **Finding tasks:**
   - **Assigned:** the user's issues that are still to do
     (`assignee = currentUser() AND statusCategory = "To Do" ORDER BY updated DESC`).
-  - **Text search** covers the site's issues that the user can see (`text ~ "<words>"`), since a JIRA site is the
+  - **Text search** covers the site's issues that the user can see and that aren't done
+    (`text ~ "<words>" AND statusCategory != "Done" ORDER BY updated DESC`), since a JIRA site is the
     organisation's own. Characters that JQL treats specially are left out of the words.
   - An issue key, or a URL on the site that shows an issue (its page, or a board or search with `selectedIssue`),
     finds that issue.
