@@ -572,5 +572,7 @@ public sealed class SettingsStoreTests : IDisposable
         public string DataDirectory => throw new NotSupportedException();
 
         public string CacheDirectory => throw new NotSupportedException();
+
+        public string LogDirectory => throw new NotSupportedException();
     }
 }

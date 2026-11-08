@@ -583,8 +583,12 @@ are left to other tools for now.
 - **Platforms:** Windows and Linux at minimum, with other platforms possible later
 - Platform-specific services (PTY, file system watching, launching processes, the folder picker and app
   data paths) are reached through interfaces in shared code, with an implementation for each host.
-- **App data** lives in `%LOCALAPPDATA%\Tammi\{Config,Data,Cache}` on Windows, and in the XDG base
-  directories on Linux (`~/.config/tammi`, `~/.local/share/tammi`, `~/.cache/tammi` by default).
+- **App data** lives in `%LOCALAPPDATA%\Tammi\{Config,Data,Cache,Logs}` on Windows, and in the XDG base
+  directories on Linux (`~/.config/tammi`, `~/.local/share/tammi`, `~/.cache/tammi` and `~/.local/state/tammi/logs`
+  by default).
+- **Logging:** Tammi logs to the console and to a log file for each day in the Logs folder, through Serilog. It keeps
+  the last 7 days' files, and starts a new file when one reaches 10 MB. The framework's own messages are only logged
+  from Warning up, unless the log level is Trace.
 - **Window state:** Tammi opens its window at the size it had when it was last closed, maximised if it was then.
   The state is kept in `window-state.json` in the Data folder, apart from the settings. If it's missing or can't be
   read, the window opens at its default size.
