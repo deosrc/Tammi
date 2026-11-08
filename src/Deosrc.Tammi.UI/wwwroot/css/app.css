@@ -2279,17 +2279,12 @@ label.task-choice {
   min-height: 0;
 }
 
-/* The columns the header and every row share. The user's widths (--git-graph-col-*) are set by dragging the header's
-   handles (GitGraphView.razor.js). Until then, the graph fits its lanes (wide enough for its heading) and the others
-   have their defaults. Description
-   takes the space left, down to its minimum, after which the list scrolls sideways. */
+/* The header and every row share the columns shown (--git-graph-columns), set by GitGraphView. The user's widths
+   (--git-graph-col-*) are set by dragging the header's handles (GitGraphView.razor.js). Until then, the graph fits its
+   lanes (wide enough for its heading) and the others have their defaults. Description takes the space left, down to
+   its minimum, after which the list scrolls sideways. */
 .git-graph-list {
   --git-graph-graph-column: var(--git-graph-col-graph, max(var(--git-graph-width), 48px));
-  --git-graph-columns: var(--git-graph-graph-column) minmax(120px, 1fr)
-    var(--git-graph-col-author, 160px) var(--git-graph-col-date, 120px) var(--git-graph-col-sha, 72px);
-  --git-graph-columns-min-width: calc(var(--git-graph-graph-column) + 120px
-    + var(--git-graph-col-author, 160px) + var(--git-graph-col-date, 120px) + var(--git-graph-col-sha, 72px)
-    + 4 * var(--space-3) + var(--space-2) + var(--space-3));
 
   flex: 1;
   min-width: 0;
@@ -2624,4 +2619,23 @@ label.task-choice {
 .git-status-link:hover {
   color: var(--color-focus);
   text-decoration: underline;
+}
+
+/* The header's right-click menu, opened where the pointer is. */
+.git-graph-columns-menu {
+  position: fixed;
+  min-width: 160px;
+}
+
+.git-graph-columns-menu .menu-item:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.git-graph-columns-menu .menu-item:disabled:hover {
+  background: none;
+}
+
+.git-graph-columns-check.hidden {
+  visibility: hidden;
 }

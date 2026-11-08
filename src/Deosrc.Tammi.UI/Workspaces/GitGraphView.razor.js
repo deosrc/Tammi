@@ -13,12 +13,15 @@ export function attach(list, header) {
     }
   };
 
+  // The widths are set on the list's parent, which inherits them to the list: Blazor sets the list's own style, and
+  // would replace them.
+  const target = list.parentElement;
   const applyColumns = () => {
     for (const column of Object.keys(minColumnWidths)) {
       if (columnWidths[column] === undefined) {
-        list.style.removeProperty(`--git-graph-col-${column}`);
+        target.style.removeProperty(`--git-graph-col-${column}`);
       } else {
-        list.style.setProperty(`--git-graph-col-${column}`, `${columnWidths[column]}px`);
+        target.style.setProperty(`--git-graph-col-${column}`, `${columnWidths[column]}px`);
       }
     }
   };

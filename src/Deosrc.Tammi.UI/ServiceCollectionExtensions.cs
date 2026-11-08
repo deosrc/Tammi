@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<WorkspaceAgents>();
         services.AddSingleton<WorkspaceGitGraphs>();
         services.AddSingleton<WorkspaceViewState>();
+        services.AddSingleton<GitGraphColumns>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();
         services.AddSingleton<IWorkspaceStore, WorkspaceStore>();

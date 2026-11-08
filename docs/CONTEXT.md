@@ -288,10 +288,13 @@ own branch. It is created automatically when the workspace is created:
   checked-out submodule (nested ones too), or by clicking a repository's or submodule's name in the side panel. Each
   repository or submodule has one graph tab: opening it again shows the open one.
   - It lists commits newest first in topological order (children before parents), each with its lane and dot, its
-    branch and tag labels, its subject, author, date and short commit id. Merges join lanes, and lanes that end are
-    reused, so the graph stays narrow. HEAD's dot is a ring, the branch HEAD is on is highlighted, and a detached HEAD
-    has its own label.
+    branch and tag labels, its subject, author, date and (if shown) short commit id. Merges join lanes, and lanes that
+    end are reused, so the graph stays narrow. HEAD's dot is a ring, the branch HEAD is on is highlighted, and a
+    detached HEAD has its own label.
   - The columns (Graph, Description, Author, Date and Commit) have headings, which stay in view as the list scrolls.
+    Right-clicking the headings opens a menu that shows or hides each column except Description. The Commit column
+    (the short commit id) is hidden until it's shown. Like the widths, the choice is shared by every graph until the
+    app closes.
     Description takes the space left. Each other column can be resized from its edge towards Description: drag the
     handle, or focus it and use Left and Right. Double-clicking a handle resets its column. Until it's resized, the
     Graph column fits the graph's lanes, and a wider graph is cut off at the column's edge. The widths are shared by

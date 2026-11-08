@@ -2,6 +2,7 @@
 @using Deosrc.Tammi.Core.Git
 @using Deosrc.Tammi.Core.Settings
 @inject IJSRuntime JS
+@inject GitGraphColumns Columns
 @* A repository's git graph, shown as a main area tab: the commits, newest first, with their lanes, branches and tags,
    and the selected commit's details beside them. Only the rows in view are rendered, and the history is read a page
    at a time as the list scrolls. *@
@@ -38,28 +39,51 @@
 
     <div class="git-graph-body" @ref="_body">
         <div class="git-graph-list" tabindex="0" @ref="_list"
-             style="--git-graph-width: @(GraphWidth)px" @onkeydown="OnKeyDownAsync">
+             style="@ListStyle" @onkeydown="OnKeyDownAsync">
             @* Stays at the top as the list scrolls down, and scrolls sideways with it. Each column but Description,
-               which takes the space left, has a handle on the edge towards Description that resizes it. *@
-            <div class="git-graph-header" @ref="_header">
-                <span class="git-graph-heading">
-                    <span class="git-graph-heading-label">Graph</span>
-                    @ColumnHandle("graph", "Graph", end: true)
-                </span>
-                <span class="git-graph-heading"><span class="git-graph-heading-label">Description</span></span>
-                <span class="git-graph-heading">
-                    @ColumnHandle("author", "Author", end: false)
-                    <span class="git-graph-heading-label">Author</span>
-                </span>
-                <span class="git-graph-heading">
-                    @ColumnHandle("date", "Date", end: false)
-                    <span class="git-graph-heading-label">Date</span>
-                </span>
-                <span class="git-graph-heading">
-                    @ColumnHandle("sha", "Commit", end: false)
-                    <span class="git-graph-heading-label">Commit</span>
-                </span>
+               which takes the space left, has a handle on the edge towards Description that resizes it. Right-clicking
+               it shows or hides columns. *@
+            <div class="git-graph-header" @ref="_header" @oncontextmenu="OpenColumnsMenu"
+                 @oncontextmenu:preventDefault="true">
+                @foreach (var column in _visibleColumns)
+                {
+                    <span class="git-graph-heading" @key="column">
+                        @if (column > GitGraphColumn.Description)
+                        {
+                            @ColumnHandle(column, end: false)
+                        }
+                        <span class="git-graph-heading-label">@column</span>
+                        @if (column < GitGraphColumn.Description)
+                        {
+                            @ColumnHandle(column, end: true)
+                        }
+                    </span>
+                }
             </div>
+            @if (_columnsMenu is { } menuAt)
+            {
+                <div class="menu-backdrop" @onclick="CloseColumnsMenu"
+                     @oncontextmenu="CloseColumnsMenu" @oncontextmenu:preventDefault="true"></div>
+                <ul class="menu git-graph-columns-menu" role="menu" aria-label="Columns" @onkeydown="OnColumnsMenuKeyDown"
+                    style="@FormattableString.Invariant($"left: {menuAt.X}px; top: {menuAt.Y}px")">
+                    @foreach (var column in Enum.GetValues<GitGraphColumn>())
+                    {
+                        var visible = Columns.IsVisible(column);
+                        <li role="none" @key="column">
+                            <button type="button" class="menu-item" role="menuitemcheckbox"
+                                    aria-checked="@(visible ? "true" : "false")"
+                                    disabled="@(!GitGraphColumns.CanHide(column))"
+                                    @onclick="() => ToggleColumn(column)">
+                                <svg class="icon icon-small git-graph-columns-check @(visible ? null : "hidden")"
+                                     viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <polyline points="5 12 10 17 19 7" />
+                                </svg>
+                                @column
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
             <div role="listbox" aria-label="Commits">
                 <Virtualize @ref="_virtualize" TItem="GitGraphRow" ItemsProvider="ProvideRowsAsync"
                             ItemSize="GitGraphRowView.RowHeight" OverscanCount="30">
@@ -71,18 +95,34 @@
                         <div class="git-graph-row @(selected ? "selected" : null)" role="option"
                              aria-selected="@(selected ? "true" : "false")" @key="row.Commit.Sha"
                              @onclick="() => Graph.SelectAsync(row.Commit.Sha)">
-                            <span class="git-graph-lane-cell">
-                                <GitGraphRowView Row="row" Width="GraphWidth" IsHead="isHead" />
-                            </span>
-                            <span class="git-graph-summary">
-                                @References(row.Commit.Sha, isHead)
-                                <span class="git-graph-subject" title="@row.Commit.Subject">@row.Commit.Subject</span>
-                            </span>
-                            <span class="git-graph-author" title="@row.Commit.Author.Email">@row.Commit.Author.Name</span>
-                            <span class="git-graph-date" title="@GitGraphText.FullDate(row.Commit.Author.When)">
-                                @GitGraphText.When(row.Commit.Author.When, _now)
-                            </span>
-                            <span class="git-graph-sha">@GitGraphText.ShortSha(row.Commit.Sha)</span>
+                            @foreach (var column in _visibleColumns)
+                            {
+                                @switch (column)
+                                {
+                                    case GitGraphColumn.Graph:
+                                        <span class="git-graph-lane-cell">
+                                            <GitGraphRowView Row="row" Width="GraphWidth" IsHead="isHead" />
+                                        </span>
+                                        break;
+                                    case GitGraphColumn.Description:
+                                        <span class="git-graph-summary">
+                                            @References(row.Commit.Sha, isHead)
+                                            <span class="git-graph-subject" title="@row.Commit.Subject">@row.Commit.Subject</span>
+                                        </span>
+                                        break;
+                                    case GitGraphColumn.Author:
+                                        <span class="git-graph-author" title="@row.Commit.Author.Email">@row.Commit.Author.Name</span>
+                                        break;
+                                    case GitGraphColumn.Date:
+                                        <span class="git-graph-date" title="@GitGraphText.FullDate(row.Commit.Author.When)">
+                                            @GitGraphText.When(row.Commit.Author.When, _now)
+                                        </span>
+                                        break;
+                                    case GitGraphColumn.Commit:
+                                        <span class="git-graph-sha">@GitGraphText.ShortSha(row.Commit.Sha)</span>
+                                        break;
+                                }
+                            }
                         </div>
                     </ItemContent>
                     <Placeholder>
@@ -183,6 +223,9 @@
     private const int MaxLanes = 24;
 
     private WorkspaceGitGraph? _attached;
+    // Where the header's right-click menu is open, in the window, or null when it's closed.
+    private (double X, double Y)? _columnsMenu;
+    private IReadOnlyList<GitGraphColumn> _visibleColumns = [];
     private readonly string _detailsId = $"git-graph-details-{Guid.NewGuid():N}";
     private ElementReference _list;
     private ElementReference _header;
@@ -209,6 +252,12 @@
         var count when Graph.IsComplete => $"{count:N0} commits",
         var count => $"{count:N0}+ commits",
     };
+
+    protected override void OnInitialized()
+    {
+        _visibleColumns = Columns.Visible;
+        Columns.Changed += OnColumnsChanged;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -255,6 +304,7 @@
     public async ValueTask DisposeAsync()
     {
         _disposed = true;
+        Columns.Changed -= OnColumnsChanged;
         if (_attached is not null)
         {
             _attached.Changed -= OnGraphChanged;
@@ -419,13 +469,72 @@
 
     // A handle on a column heading's edge that resizes the column: drag it, or focus it and use Left and Right.
     // `end` puts it on the heading's right edge, otherwise it's on its left edge.
-    private static RenderFragment ColumnHandle(string column, string label, bool end) => __builder =>
+    private static RenderFragment ColumnHandle(GitGraphColumn column, bool end) => __builder =>
     {
         <span class="git-graph-column-handle @(end ? "git-graph-column-handle-end" : "git-graph-column-handle-start")"
-              role="separator" aria-orientation="vertical" aria-label="Resize the @label column" tabindex="0"
-              title="Drag to resize. Double-click to reset." data-column="@column"
+              role="separator" aria-orientation="vertical" aria-label="Resize the @column column" tabindex="0"
+              title="Drag to resize. Double-click to reset." data-column="@ColumnKey(column)"
               data-direction="@(end ? "1" : "-1")"></span>
     };
+
+    // Names the column's width in CSS (--git-graph-col-<key>) and in GitGraphView.razor.js.
+    private static string ColumnKey(GitGraphColumn column) => column switch
+    {
+        GitGraphColumn.Commit => "sha",
+        _ => column.ToString().ToLowerInvariant(),
+    };
+
+    // A column's track in the grid, and its width when the list is at its narrowest. Description takes the space left.
+    private static (string Track, string MinWidth) Track(GitGraphColumn column) => column switch
+    {
+        GitGraphColumn.Graph => ("var(--git-graph-graph-column)", "var(--git-graph-graph-column)"),
+        GitGraphColumn.Description => ("minmax(120px, 1fr)", "120px"),
+        GitGraphColumn.Author => ("var(--git-graph-col-author, 160px)", "var(--git-graph-col-author, 160px)"),
+        GitGraphColumn.Date => ("var(--git-graph-col-date, 120px)", "var(--git-graph-col-date, 120px)"),
+        _ => ("var(--git-graph-col-sha, 72px)", "var(--git-graph-col-sha, 72px)"),
+    };
+
+    // The graph's width, and the columns shown, which the header and every row share.
+    private string ListStyle
+    {
+        get
+        {
+            var tracks = _visibleColumns.Select(Track).ToArray();
+            var minWidth = string.Join(" + ", tracks.Select(track => track.MinWidth));
+            return $"--git-graph-width: {GraphWidth}px; "
+                + $"--git-graph-columns: {string.Join(" ", tracks.Select(track => track.Track))}; "
+                + $"--git-graph-columns-min-width: calc({minWidth} + {tracks.Length - 1} * var(--space-3) "
+                + "+ var(--space-2) + var(--space-3))";
+        }
+    }
+
+    private void OpenColumnsMenu(MouseEventArgs e) => _columnsMenu = (e.ClientX, e.ClientY);
+
+    private void CloseColumnsMenu() => _columnsMenu = null;
+
+    private void OnColumnsMenuKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            CloseColumnsMenu();
+        }
+    }
+
+    private void ToggleColumn(GitGraphColumn column)
+    {
+        CloseColumnsMenu();
+        Columns.Toggle(column);
+    }
+
+    // Another graph's menu changed the columns.
+    private void OnColumnsChanged() => _ = InvokeAsync(() =>
+    {
+        if (!_disposed)
+        {
+            _visibleColumns = Columns.Visible;
+            StateHasChanged();
+        }
+    });
 
     private static RenderFragment Signature(CommitSignature signature) => __builder =>
     {
