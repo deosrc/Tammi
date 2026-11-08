@@ -6,13 +6,21 @@ using Deosrc.Tammi.Core.Settings;
 namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
-/// The choices made so far in the Create Workspace flow: the tasks, the workspace's name and its parent folder, then the
-/// repositories and the branch to create in them.
+/// The choices made so far in the Create Workspace flow: the tasks, the workspace's name, its folder's name and parent
+/// folder, then the repositories and the branch to create in them.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The name follows the tasks (see <see cref="WorkspaceNames.Suggest"/>) until the user edits it. Clearing it makes it
-/// follow them again the next time they change, but doesn't fill it in straight away, so the user can type over it.
+/// The folder name follows the tasks (see <see cref="WorkspaceFolderNames.Suggest"/>) until the user edits it. With no
+/// suggestion from the tasks, it follows the name the user entered instead.
+/// </para>
+/// <para>
+/// The name follows the tasks too (see <see cref="WorkspaceNames.Suggest"/>) until the user edits it. When the template
+/// can't be filled in from the tasks (e.g. there are several), it follows the folder name instead.
+/// </para>
+/// <para>
+/// Clearing either makes it follow again the next time what it follows changes, but doesn't fill it in straight away,
+/// so the user can type over it.
 /// </para>
 /// <para>
 /// The branch name follows the tasks and the name (see <see cref="WorkspaceBranchNames.Suggest"/>) in the same way, and
@@ -30,19 +38,31 @@ public sealed class WorkspaceDraft
     private static readonly StringComparer PathComparer =
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
-    private readonly WorkspaceNameFormat _nameFormat;
+    private readonly WorkspaceFolderNameFormat _folderNameFormat;
+    private readonly string _nameTemplate;
     private string _name = string.Empty;
+    private string _folderName = string.Empty;
     private string _branchName = string.Empty;
 
     /// <param name="parentFolder">
     /// The parent folder to start with, usually the Default Workspace Parent Folder setting.
     /// </param>
-    /// <param name="nameFormat">How the suggested name is written. The default when <see langword="null"/>.</param>
-    public WorkspaceDraft(string parentFolder, WorkspaceNameFormat? nameFormat = null)
+    /// <param name="folderNameFormat">
+    /// How the suggested folder name is written. The default when <see langword="null"/>.
+    /// </param>
+    /// <param name="nameTemplate">
+    /// The template the name is suggested from (see <see cref="WorkspaceNames.Suggest"/>). The default when
+    /// <see langword="null"/>.
+    /// </param>
+    public WorkspaceDraft(
+        string parentFolder,
+        WorkspaceFolderNameFormat? folderNameFormat = null,
+        string? nameTemplate = null)
     {
         ArgumentNullException.ThrowIfNull(parentFolder);
         ParentFolder = parentFolder;
-        _nameFormat = nameFormat ?? new WorkspaceNameFormat();
+        _folderNameFormat = folderNameFormat ?? new WorkspaceFolderNameFormat();
+        _nameTemplate = nameTemplate ?? GeneralSettings.DefaultWorkspaceNameTemplate;
     }
 
     /// <summary>
@@ -51,8 +71,8 @@ public sealed class WorkspaceDraft
     public IReadOnlyList<TaskInfo> Tasks => _tasks;
 
     /// <summary>
-    /// The workspace's name, as entered. Setting it to anything but blank stops it following the tasks, and clearing it makes it
-    /// follow them again.
+    /// The workspace's name, as entered or suggested. Setting it to anything but blank stops it following its
+    /// suggestion, and clearing it makes it follow again.
     /// </summary>
     public string Name
     {
@@ -61,19 +81,46 @@ public sealed class WorkspaceDraft
         {
             _name = value ?? string.Empty;
             IsNameEdited = !string.IsNullOrWhiteSpace(_name);
-            FollowBranchNameSuggestion();
+            FollowSuggestions(name: false, folderName: true);
         }
     }
 
     /// <summary>
-    /// Whether the user entered the <see cref="Name"/>, rather than it being suggested from the tasks.
+    /// Whether the user entered the <see cref="Name"/>, rather than it being suggested.
     /// </summary>
     public bool IsNameEdited { get; private set; }
 
     /// <summary>
-    /// The name suggested for the chosen tasks, or <see langword="null"/> if there's none.
+    /// The name suggested from the chosen tasks, or <see langword="null"/> if the template can't be filled in from them.
+    /// The name then follows the folder name.
     /// </summary>
-    public string? SuggestedName => WorkspaceNames.Suggest(_tasks, _nameFormat);
+    public string? SuggestedName => WorkspaceNames.Suggest(_tasks, _nameTemplate);
+
+    /// <summary>
+    /// The Workspace Folder's name, as entered or suggested. Setting it to anything but blank stops it following its
+    /// suggestion, and clearing it makes it follow again.
+    /// </summary>
+    public string FolderName
+    {
+        get => _folderName;
+        set
+        {
+            _folderName = value ?? string.Empty;
+            IsFolderNameEdited = !string.IsNullOrWhiteSpace(_folderName);
+            FollowSuggestions(name: true, folderName: false);
+        }
+    }
+
+    /// <summary>
+    /// Whether the user entered the <see cref="FolderName"/>, rather than it being suggested.
+    /// </summary>
+    public bool IsFolderNameEdited { get; private set; }
+
+    /// <summary>
+    /// The folder name suggested from the chosen tasks, or <see langword="null"/> if there's none. The folder name then
+    /// follows the name, if the user entered one.
+    /// </summary>
+    public string? SuggestedFolderName => WorkspaceFolderNames.Suggest(_tasks, _folderNameFormat);
 
     /// <summary>
     /// The folder the Workspace Folder is created in, as entered.
@@ -86,25 +133,30 @@ public sealed class WorkspaceDraft
     public string? NameProblem => WorkspaceNames.Validate(_name);
 
     /// <summary>
+    /// Why the <see cref="FolderName"/> can't be used, or <see langword="null"/> if it can.
+    /// </summary>
+    public string? FolderNameProblem => WorkspaceFolderNames.Validate(_folderName);
+
+    /// <summary>
     /// Why the <see cref="ParentFolder"/> can't be used, or <see langword="null"/> if it can. It needn't exist yet.
     /// </summary>
     public string? ParentFolderProblem => ValidateParentFolder(ParentFolder, out _);
 
     /// <summary>
-    /// The Workspace Folder's full path, <c>&lt;parent folder&gt;/&lt;name&gt;</c>, or <see langword="null"/> while
-    /// the name or parent folder can't be used.
+    /// The Workspace Folder's full path, <c>&lt;parent folder&gt;/&lt;folder name&gt;</c>, or <see langword="null"/>
+    /// while the folder name or parent folder can't be used.
     /// </summary>
     public string? Folder =>
-        NameProblem is null && ValidateParentFolder(ParentFolder, out string? parent) is null
-            ? Path.Combine(parent!, _name.Trim())
+        FolderNameProblem is null && ValidateParentFolder(ParentFolder, out string? parent) is null
+            ? Path.Combine(parent!, _folderName.Trim())
             : null;
 
     /// <summary>
     /// Why the Workspace Folder can't be created, e.g. it already exists, or <see langword="null"/> if it can. While
-    /// the name or parent folder can't be used, this is <see langword="null"/> too: see their own problems.
+    /// the folder name or parent folder can't be used, this is <see langword="null"/> too: see their own problems.
     /// </summary>
     public string? FolderProblem => Folder is { } folder && (Directory.Exists(folder) || File.Exists(folder))
-        ? $"'{folder}' already exists. Choose another name or parent folder."
+        ? $"'{folder}' already exists. Choose another folder name or parent folder."
         : null;
 
     /// <summary>
@@ -114,9 +166,9 @@ public sealed class WorkspaceDraft
         ValidateParentFolder(ParentFolder, out string? parent) is null && !Directory.Exists(parent);
 
     /// <summary>
-    /// Whether the name and location can be used, so the flow can go on to the repositories.
+    /// Whether the name, folder name and parent folder can be used, so the flow can go on to the repositories.
     /// </summary>
-    public bool IsLocationValid => Folder is not null && FolderProblem is null;
+    public bool IsLocationValid => NameProblem is null && Folder is not null && FolderProblem is null;
 
     /// <summary>
     /// The chosen repositories, in the order they were chosen.
@@ -283,11 +335,11 @@ public sealed class WorkspaceDraft
     /// <summary>
     /// The request to create the workspace as drafted.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The name or location can't be used.</exception>
+    /// <exception cref="InvalidOperationException">The folder name or parent folder can't be used.</exception>
     public WorkspaceCreationRequest ToCreationRequest() => new()
     {
         Name = _name.Trim(),
-        Folder = Folder ?? throw new InvalidOperationException("The workspace's name or location isn't valid."),
+        Folder = Folder ?? throw new InvalidOperationException("The workspace's folder name or location isn't valid."),
         Tasks = [.. _tasks.Select(task => task.Reference)],
         BranchName = _branchName.Trim(),
         Repositories = [.. _repositories.Select(repository => repository.ToCreationRepository())],
@@ -331,18 +383,31 @@ public sealed class WorkspaceDraft
         return true;
     }
 
-    private void FollowTasks()
+    private void FollowTasks() => FollowSuggestions(name: true, folderName: true);
+
+    /// <summary>
+    /// Updates the names that follow their suggestions, after the tasks or a name changed.
+    /// </summary>
+    /// <remarks>
+    /// The folder name is updated first, since an unedited name can follow it. The folder name only follows the name
+    /// when the user entered the name, so neither follows the other in a loop.
+    /// </remarks>
+    /// <param name="name">Whether to update the name, which is <see langword="false"/> when the user just set it.</param>
+    /// <param name="folderName">Whether to update the folder name, likewise.</param>
+    private void FollowSuggestions(bool name, bool folderName)
     {
-        if (!IsNameEdited)
+        if (folderName && !IsFolderNameEdited)
         {
-            _name = SuggestedName ?? string.Empty;
+            _folderName = SuggestedFolderName
+                ?? (IsNameEdited ? WorkspaceFolderNames.FromTitle(_name, _folderNameFormat) : null)
+                ?? string.Empty;
         }
 
-        FollowBranchNameSuggestion();
-    }
+        if (name && !IsNameEdited)
+        {
+            _name = SuggestedName ?? _folderName.Trim();
+        }
 
-    private void FollowBranchNameSuggestion()
-    {
         if (!IsBranchNameEdited)
         {
             _branchName = SuggestedBranchName ?? string.Empty;

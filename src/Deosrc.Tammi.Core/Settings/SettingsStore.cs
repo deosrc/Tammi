@@ -36,7 +36,7 @@ public sealed class SettingsStore : ISettingsStore
     /// The settings file migrations. The migration at index <c>i</c> upgrades a file from version <c>i + 1</c> to
     /// version <c>i + 2</c>, so the current version is one more than the number of migrations.
     /// </summary>
-    private static readonly IReadOnlyList<Action<JsonObject>> Migrations = [];
+    private static readonly IReadOnlyList<Action<JsonObject>> Migrations = [RenameWorkspaceNameFormat];
 
     private readonly string _directory;
     private readonly IReadOnlyList<Action<JsonObject>> _migrations;
@@ -164,4 +164,22 @@ public sealed class SettingsStore : ISettingsStore
 
     private Task WriteAsync(AppSettings settings, CancellationToken cancellationToken) =>
         VersionedJsonFile.WriteAsync(FilePath, settings, CurrentVersion, cancellationToken);
+
+    /// <summary>
+    /// Version 1 to 2: <c>general.workspaceNameFormat</c> became <c>general.workspaceFolderNameFormat</c>, when the
+    /// workspace's name was split from its Workspace Folder's name and got a template of its own.
+    /// </summary>
+    private static void RenameWorkspaceNameFormat(JsonObject json)
+    {
+        if (json.FirstOrDefault(property => property.Key.Equals("general", StringComparison.OrdinalIgnoreCase))
+                .Value is not JsonObject general
+            || general.FirstOrDefault(property =>
+                    property.Key.Equals("workspaceNameFormat", StringComparison.OrdinalIgnoreCase)).Key is not { } key)
+        {
+            return;
+        }
+
+        general.Remove(key, out JsonNode? format);
+        general["workspaceFolderNameFormat"] = format;
+    }
 }

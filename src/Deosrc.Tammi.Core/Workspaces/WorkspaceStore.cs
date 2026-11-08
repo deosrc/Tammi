@@ -190,6 +190,30 @@ public sealed class WorkspaceStore : IWorkspaceStore
     }
 
     /// <inheritdoc />
+    public async Task<Workspace> RenameAsync(string id, string name, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        if (WorkspaceNames.Validate(name) is { } problem)
+        {
+            throw new ArgumentException(problem, nameof(name));
+        }
+
+        if (Index.FirstOrDefault(entry => entry.Id == id) is not { } entry)
+        {
+            throw new WorkspaceNotFoundException($"The workspace '{id}' isn't in the list of workspaces.", string.Empty);
+        }
+
+        var workspace = await ReadAsync(entry.Folder, cancellationToken).ConfigureAwait(false);
+        if (workspace.Id != id)
+        {
+            throw new InvalidWorkspaceMetadataException(
+                $"The folder '{entry.Folder}' now holds a different workspace, '{workspace.Name}'.", entry.Folder);
+        }
+
+        return await SaveAsync(workspace with { Name = name.Trim() }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<Workspace> AddExistingAsync(string folder, CancellationToken cancellationToken = default)
     {
         var workspace = await LoadAsync(folder, cancellationToken).ConfigureAwait(false);

@@ -204,6 +204,32 @@ public sealed class WorkspaceCreatorTests : IDisposable
     }
 
     [Fact]
+    public async Task Check_NameAFolderCantHave_IsntAProblem()
+    {
+        var problems = await _creator.CheckAsync(Request() with { Name = "api#1: fix / login?" }, Token);
+
+        Assert.Empty(problems);
+    }
+
+    [Fact]
+    public async Task Check_BlankName_IsAProblem()
+    {
+        var problems = await _creator.CheckAsync(Request() with { Name = " " }, Token);
+
+        Assert.Contains(problems, problem => problem.Contains("name for the workspace", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Check_InvalidFolderName_IsAProblem()
+    {
+        var problems = await _creator.CheckAsync(
+            Request() with { Folder = Path.Combine(Path.GetDirectoryName(Folder)!, "ends.") },
+            Token);
+
+        Assert.Contains(problems, problem => problem.Contains("full stop", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Check_FolderExists_IsAProblem()
     {
         Directory.CreateDirectory(Folder);

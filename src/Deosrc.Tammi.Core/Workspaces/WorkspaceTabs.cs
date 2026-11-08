@@ -11,7 +11,7 @@ public sealed class WorkspaceTabs
     private readonly List<WorkspaceTab> _tabs = [];
 
     /// <summary>
-    /// Raised when a tab is opened or closed.
+    /// Raised when a tab is opened, closed or renamed.
     /// </summary>
     public event Action? Changed;
 
@@ -41,6 +41,21 @@ public sealed class WorkspaceTabs
         _tabs.Add(tab);
         Changed?.Invoke();
         return tab;
+    }
+
+    /// <summary>
+    /// Changes the name shown on a workspace's tab, after the workspace was renamed. Nothing happens if it isn't open.
+    /// </summary>
+    public void Rename(string workspaceId, string name)
+    {
+        var index = _tabs.FindIndex(tab => tab.WorkspaceId == workspaceId);
+        if (index < 0 || _tabs[index].Name == name)
+        {
+            return;
+        }
+
+        _tabs[index] = _tabs[index] with { Name = name };
+        Changed?.Invoke();
     }
 
     /// <summary>

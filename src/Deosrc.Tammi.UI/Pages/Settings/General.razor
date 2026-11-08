@@ -27,35 +27,89 @@
     <div class="settings-field">
         <h2 class="settings-field-title">Suggested workspace name</h2>
         <p class="settings-help settings-field-intro">
-            How the name is written when a new workspace has exactly one task. You can still change it.
+            The name a new workspace with exactly one task is given, shown on Home and its tab. You can still change it,
+            when you create the workspace or later.
+        </p>
+        <label for="workspace-name-template">Template</label>
+        @* Recreated after each change, so it shows the saved value even when that's unchanged, e.g. when a cleared
+           template stays cleared. *@
+        <input @key="_nameTemplateRevision"
+               id="workspace-name-template"
+               class="settings-input-wide"
+               autocomplete="off"
+               value="@Current.WorkspaceNameTemplate"
+               @onchange="OnWorkspaceNameTemplateChanged" />
+        <dl class="settings-values tool-placeholders">
+            @foreach (var placeholder in WorkspaceNames.Placeholders)
+            {
+                <dt><code>@WorkspaceNames.Format(placeholder)</code></dt>
+                <dd>@PlaceholderDescription(placeholder)</dd>
+            }
+        </dl>
+        <p class="settings-help">
+            When the template can't be filled in, because the workspace has no tasks or several, or the task has no
+            value for a placeholder (e.g. a JIRA issue has no repository), the name is the folder name. Leave it empty to
+            always use the folder name.
+        </p>
+        @if (WorkspaceNames.FindUnknown(Current.WorkspaceNameTemplate).ToList() is { Count: > 0 } unknown)
+        {
+            <p class="warning">
+                @string.Join(", ", unknown.Select(WorkspaceNames.Format)) @(unknown.Count == 1 ? "isn't a placeholder" : "aren't placeholders"),
+                so @(unknown.Count == 1 ? "it's" : "they're") left as written.
+            </p>
+        }
+        <dl class="settings-preview">
+            @foreach (var example in Examples)
+            {
+                <dt>@example.Key @example.Title</dt>
+                <dd>
+                    @if (WorkspaceNames.Suggest([example], Current.WorkspaceNameTemplate) is { } name)
+                    {
+                        @name
+                    }
+                    else
+                    {
+                        @WorkspaceFolderNames.Suggest([example], FolderNameFormat)
+                        <span class="placeholder"> (the folder name)</span>
+                    }
+                </dd>
+            }
+        </dl>
+    </div>
+
+    <div class="settings-field">
+        <h2 class="settings-field-title">Suggested folder name</h2>
+        <p class="settings-help settings-field-intro">
+            How the Workspace Folder's name is written when a new workspace has exactly one task. Otherwise it's made
+            from the name you enter. You can still change it before the workspace is created.
         </p>
         <div class="settings-options">
-            <label for="workspace-name-separator">Separator</label>
-            <select id="workspace-name-separator" value="@NameFormat.Separator"
-                    @onchange="e => UpdateNameFormatAsync(f => f with { Separator = Parse(e, f.Separator) })">
-                <option value="@WorkspaceNameSeparator.Hyphens">Hyphens</option>
-                <option value="@WorkspaceNameSeparator.Underscores">Underscores</option>
-                <option value="@WorkspaceNameSeparator.Spaces">Spaces</option>
+            <label for="workspace-folder-name-separator">Separator</label>
+            <select id="workspace-folder-name-separator" value="@FolderNameFormat.Separator"
+                    @onchange="e => UpdateFolderNameFormatAsync(f => f with { Separator = Parse(e, f.Separator) })">
+                <option value="@WorkspaceFolderNameSeparator.Hyphens">Hyphens</option>
+                <option value="@WorkspaceFolderNameSeparator.Underscores">Underscores</option>
+                <option value="@WorkspaceFolderNameSeparator.Spaces">Spaces</option>
             </select>
 
-            <label for="workspace-name-case">Case</label>
-            <select id="workspace-name-case" value="@NameFormat.Case"
-                    @onchange="e => UpdateNameFormatAsync(f => f with { Case = Parse(e, f.Case) })">
-                <option value="@WorkspaceNameCase.Lowercase">Lowercase</option>
-                <option value="@WorkspaceNameCase.Uppercase">Uppercase</option>
-                <option value="@WorkspaceNameCase.AsWritten">As written</option>
+            <label for="workspace-folder-name-case">Case</label>
+            <select id="workspace-folder-name-case" value="@FolderNameFormat.Case"
+                    @onchange="e => UpdateFolderNameFormatAsync(f => f with { Case = Parse(e, f.Case) })">
+                <option value="@WorkspaceFolderNameCase.Lowercase">Lowercase</option>
+                <option value="@WorkspaceFolderNameCase.Uppercase">Uppercase</option>
+                <option value="@WorkspaceFolderNameCase.AsWritten">As written</option>
             </select>
         </div>
         <label class="settings-choice">
-            <input type="checkbox" checked="@NameFormat.IncludeTaskReference"
-                   @onchange="e => UpdateNameFormatAsync(f => f with { IncludeTaskReference = e.Value is true })" />
+            <input type="checkbox" checked="@FolderNameFormat.IncludeTaskReference"
+                   @onchange="e => UpdateFolderNameFormatAsync(f => f with { IncludeTaskReference = e.Value is true })" />
             Start with the task's reference
         </label>
         <dl class="settings-preview">
             @foreach (var example in Examples)
             {
                 <dt>@example.Key @example.Title</dt>
-                <dd>@(WorkspaceNames.Suggest([example], NameFormat))</dd>
+                <dd>@(WorkspaceFolderNames.Suggest([example], FolderNameFormat))</dd>
             }
         </dl>
         <p class="settings-help">
@@ -131,17 +185,38 @@
         }
     }
 
-    // Example tasks to preview the name format with, one from each kind of integration.
+    // Example tasks to preview the name template and folder name format with, one from each kind of integration.
     private static readonly IReadOnlyList<TaskInfo> Examples =
     [
         new("example", "JIRA-123", "Add some feature", new Uri("https://example.com/")),
-        new("example", "acme/api#42", "Fix the login page's error message", new Uri("https://example.com/")),
+        new("example", "acme/api#42", "Fix the login page's error message", new Uri("https://example.com/"))
+        {
+            RepositoryUrl = new Uri("https://github.com/acme/api"),
+        },
     ];
 
-    private WorkspaceNameFormat NameFormat => Current.WorkspaceNameFormat;
+    private int _nameTemplateRevision;
 
-    private Task UpdateNameFormatAsync(Func<WorkspaceNameFormat, WorkspaceNameFormat> update) =>
-        UpdateGeneralAsync(general => general with { WorkspaceNameFormat = update(general.WorkspaceNameFormat) });
+    private async Task OnWorkspaceNameTemplateChanged(ChangeEventArgs e)
+    {
+        await UpdateGeneralAsync(general => general with { WorkspaceNameTemplate = e.Value?.ToString()?.Trim() ?? "" });
+        _nameTemplateRevision++;
+    }
+
+    private static string PlaceholderDescription(string placeholder) => placeholder switch
+    {
+        WorkspaceNames.TaskReference => "The task's reference, e.g. api#42 or JIRA-123.",
+        WorkspaceNames.TaskKey => "The task's full key, e.g. acme/api#42 or JIRA-123.",
+        WorkspaceNames.TaskTitle => "The task's title (its summary).",
+        WorkspaceNames.RepositoryOwner => "The owner of the task's repository, e.g. acme. Only for GitHub issues.",
+        WorkspaceNames.RepositoryName => "The name of the task's repository, e.g. api. Only for GitHub issues.",
+        _ => "",
+    };
+
+    private WorkspaceFolderNameFormat FolderNameFormat => Current.WorkspaceFolderNameFormat;
+
+    private Task UpdateFolderNameFormatAsync(Func<WorkspaceFolderNameFormat, WorkspaceFolderNameFormat> update) =>
+        UpdateGeneralAsync(general => general with { WorkspaceFolderNameFormat = update(general.WorkspaceFolderNameFormat) });
 
     private static T Parse<T>(ChangeEventArgs e, T current) where T : struct, Enum =>
         Enum.TryParse(e.Value?.ToString(), out T value) ? value : current;

@@ -52,6 +52,7 @@ public sealed class WorkspaceTaskListsTests : IDisposable
         var list = _lists.Start(workspace);
 
         Assert.Same(list, _lists.Start(workspace with { Name = "Renamed" }));
+        Assert.Equal("Renamed", list.Workspace.Name);
         _github.Gate.SetResult();
     }
 
