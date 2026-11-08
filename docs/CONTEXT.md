@@ -35,6 +35,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Remote-only Repository** | A catalogue repository known only through an integration, with no clone on disk yet. It must be cloned, which makes it a Local Repository, before it can be added to a workspace. |
 | **Workspace Worktree** | A `git worktree` of a Local Repository, created inside the Workspace Folder. This is how a repository is included in a workspace. |
 | **Git Graph** | A repository's (or submodule's) commits drawn as lanes, with their branches and tags, shown as a main area tab in the Workspace View. |
+| **Pull Request** | A request, on the service hosting a repository (e.g. a GitHub pull request), to merge a branch into another. It's a draft, open, merged or closed (declined), and its checks (e.g. CI builds) passed, are in progress or failed. Tammi shows those from each workspace branch. |
 | **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
 | **Agent Definition** | A configured agent CLI (e.g. Claude Code) that Tammi can start: name, command, arguments, how to pass the initial prompt, and how to resume a session. |
@@ -251,6 +252,8 @@ with the new name, without reading the tasks again. A workspace that can't be re
   attention without opening the workspace:
   - **Working directory changes** across the workspace's repositories (e.g. uncommitted changes)
   - **Agent status** for the workspace's AI agents (see [agent states](#agents))
+  - **Pull Requests** from each repository's workspace branch, as the same badges as the Workspace View's
+    [Repositories section](#workspace-view-tab)
 - Each workspace shows a compact summary line (e.g. "2/3 repos changed · 1 agent needs input"). It can
   be expanded to show a breakdown for each repository and agent.
 - A repository counts as **changed** when it has uncommitted changes (staged, unstaged or untracked)
@@ -304,6 +307,21 @@ with the new name, without reading the tasks again. A workspace that can't be re
   - how many uncommitted changes and unpushed commits it has
   - its submodules, nested under it, each with the same details, or "Not checked out"
   - a broken worktree says what's wrong (e.g. "Local Repository moved or deleted") instead
+  - under its name, a badge for each [Pull Request](#github) from its workspace branch, oldest first, coloured by its
+    state (grey for a draft, green for open, purple for merged, red for closed), with an icon for its state, its number
+    and, when it has checks, one icon for the most severe of them (failed, then in progress, then passed). The tooltip
+    gives its repository, title and state. Clicking a badge opens the Pull Request in the browser (not the git graph).
+    A repository with no Pull Requests shows no badge.
+    - Pull Requests are found from the Local Repository's remotes (fetch and push URLs): each remote on a connected
+      integration's service is a repository they can be on, so a fork's branch finds its Pull Request on the
+      `upstream` it was forked from. Only Pull Requests whose branch is in one of those repositories count, so another
+      fork's branch with the same name doesn't.
+    - They're read when the tab opens, every 2 minutes while it's open, when integrations are added or removed, and on
+      Refresh.
+      While they're read again, the badges read before stay. When they can't be read, a warning icon says why (e.g. the
+      token can't read pull requests), beside the badges read before.
+- **Refresh:** the Repositories section's header has a Refresh button, which reads every repository's git status and
+  Pull Requests again. It doesn't fetch. It spins until they've all been read.
 - **Live updates:** while a workspace's tab is open (even when another tab is shown), Tammi watches each worktree's
   folder and its git data in the Local Repository: the worktree's git directory (index, HEAD and its submodules' git
   directories), the Local Repository's refs and the entries directly in its `.git` folder (e.g. `packed-refs`). So
@@ -700,15 +718,15 @@ are left to other tools for now.
 
 ### GitHub
 
-- Provides **tasks** (issues) and **repositories**. It works with github.com and with GitHub Enterprise Server,
+- Provides **tasks** (issues), **repositories** and **Pull Requests**. It works with github.com and with GitHub Enterprise Server,
   given its API URL.
 - **Authentication:** a personal access token (fine-grained, or classic with the `repo` scope for private
-  repositories), kept in the credential store. Fine-grained tokens need read access to issues, contents and metadata
-  on the repositories to include: GitHub's issue search leaves out private repositories' issues unless the token can
-  read their contents. A fine-grained token belongs to one account or organisation, so an organisation's private
+  repositories), kept in the credential store. Fine-grained tokens need read access to issues, contents, metadata, pull
+  requests and commit statuses on the repositories to include: GitHub's issue search leaves out private repositories' issues unless the token can
+  read their contents, and Pull Requests and their checks need the last two. A fine-grained token belongs to one account or organisation, so an organisation's private
   repositories need a token owned by that organisation (or a classic token).
   - For github.com, Settings links to GitHub's new fine-grained token page with the token's name, description and
-    read-only Issues, Contents and Metadata permissions filled in. GitHub can't fill in the owner or repository access,
+    read-only Issues, Contents, Metadata, Pull requests and Commit statuses permissions filled in. GitHub can't fill in the owner or repository access,
     so the user chooses them. An Enterprise Server's link opens its token settings, because servers before 3.20 can't
     fill in the details.
   - GitHub has no way to list a fine-grained token's permissions, so when a fine-grained token is saved or tested,
@@ -729,6 +747,13 @@ are left to other tools for now.
     many accounts and repositories is split into several requests. GitHub's search qualifiers (e.g. `label:bug`) can
     still be added to the text.
   - A task key or an issue's URL finds that issue, in any repository the token can read.
+- **Pull Requests** are read with one GraphQL request for each GitHub repository a workspace repository's remotes
+  point at (`/graphql` on github.com, `/api/graphql` on an Enterprise Server), asking for those whose head branch has
+  the workspace branch's name, up to 20, oldest first. Their checks are GitHub's combined status of the latest
+  commit's check runs and commit statuses. When the token can't read checks, the Pull Request is shown without them.
+  When it can't read pull requests, the repository says so. A repository that doesn't exist or that the token can't see
+  has none, but when none of a workspace repository's GitHub remotes can be found, it says the token can't reach them
+  (a fine-grained token only reaches the repositories chosen for it).
 - **Repositories** are those the user owns, collaborates on or reaches through an organisation. Each has its HTTPS and
   SSH clone URLs.
 - **Rate limits:** when GitHub asks Tammi to wait a few seconds, it waits and retries. For longer waits, the request

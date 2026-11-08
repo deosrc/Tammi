@@ -296,6 +296,21 @@ public sealed class GitRepositoryReaderStatusTests : IDisposable
     }
 
     [Fact]
+    public async Task UpstreamOnARemoteUrl_HasNoUpstream()
+    {
+        // As `git push -u <url> HEAD` leaves it: the upstream's remote is a URL, not a configured remote.
+        string clone = await CloneAsync();
+        await _repos.RunAsync(clone, "config", "branch.main.remote", "https://github.com/acme/api.git");
+
+        RepositoryStatus status = _reader.ReadStatus(clone);
+
+        Assert.Equal("main", status.Branch);
+        Assert.Null(status.Upstream);
+        Assert.Null(status.AheadBy);
+        Assert.False(status.IsChanged);
+    }
+
+    [Fact]
     public async Task EmptyRepository_IsNotChanged()
     {
         string repo = _repos.PathTo("empty");

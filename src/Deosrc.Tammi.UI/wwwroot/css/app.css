@@ -37,6 +37,7 @@
   --color-warning-border: #d4a72c;
   --color-warning-text: #ffffff;
   --color-error-bg: #ffebe9;
+  --color-merged: #8250df;
   --color-jira: #0052cc;
   --color-claude: #d97757;
 
@@ -71,6 +72,7 @@
     --color-warning-border: #9e6a03;
     --color-warning-text: #1f2328;
     --color-error-bg: #2d1416;
+    --color-merged: #a371f7;
     --color-jira: #4c9aff;
 
     --color-graph-0: #4c9aff;
@@ -1156,6 +1158,71 @@ label.task-choice {
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* A repository's Pull Requests: a filled badge for each, coloured by its state, with its number and an icon for its
+   checks. They're buttons that open the Pull Request, and wrap onto more lines when there are many. */
+.pull-request-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.pull-request-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  padding: 0 var(--space-2) 0 6px;
+  border: none;
+  border-radius: 999px;
+  background: var(--pull-request-tone);
+  /* The surface colour contrasts with the green, purple, red and muted tones in both themes. */
+  color: var(--color-surface);
+  font: inherit;
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.pull-request-badge:hover {
+  background: color-mix(in srgb, var(--pull-request-tone) 85%, var(--color-text));
+}
+
+.pull-request-badge:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.pull-request-badge .icon {
+  stroke-width: 2.5;
+}
+
+.pull-request-draft {
+  --pull-request-tone: var(--color-text-muted);
+}
+
+.pull-request-open {
+  --pull-request-tone: var(--color-success);
+}
+
+.pull-request-merged {
+  --pull-request-tone: var(--color-merged);
+}
+
+.pull-request-closed {
+  --pull-request-tone: var(--color-error);
+}
+
+.pull-request-checks {
+  margin-left: 2px;
+}
+
+.pull-request-problem {
+  display: inline-flex;
+  color: var(--color-error);
 }
 
 /* Ahead and behind counts are filled chips, so they stand out on any card colour. Ahead is work to push (warning);

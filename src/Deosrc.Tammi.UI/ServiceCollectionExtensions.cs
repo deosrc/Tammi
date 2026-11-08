@@ -70,6 +70,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWorkspaceStore, WorkspaceStore>();
         services.AddSingleton<WorkspaceGitStatusMonitors>();
         services.AddSingleton<WorkspaceTaskLists>();
+        services.AddSingleton(services => new WorkspacePullRequestLists(
+            services.GetRequiredService<WorkspaceTabs>(),
+            services.GetRequiredService<IntegrationRegistry>(),
+            services.GetRequiredService<IGitRepositoryReader>(),
+            services.GetRequiredService<TimeProvider>()));
         services.AddSingleton<WorkspaceDeleter>();
         services.AddSingleton<WorkspaceCreator>();
         services.AddSingleton<IRepositoryCatalogue, RepositoryCatalogue>();

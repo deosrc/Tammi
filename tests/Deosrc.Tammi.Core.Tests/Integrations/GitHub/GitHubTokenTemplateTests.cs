@@ -19,11 +19,13 @@ public sealed class GitHubTokenTemplateTests
         var query = HttpUtility.ParseQueryString(GitHubTokenTemplate.GitHubComUrl.Query);
 
         Assert.Equal("Tammi", query["name"]);
-        Assert.Equal("Lets Tammi read your issues to build workspaces.", query["description"]);
+        Assert.Equal("Lets Tammi read your issues and pull requests to build workspaces.", query["description"]);
         Assert.Equal("read", query["issues"]);
         Assert.Equal("read", query["contents"]);
         Assert.Equal("read", query["metadata"]);
-        Assert.Equal(5, query.Count);
+        Assert.Equal("read", query["pull_requests"]);
+        Assert.Equal("read", query["statuses"]);
+        Assert.Equal(7, query.Count);
     }
 
     [Fact]

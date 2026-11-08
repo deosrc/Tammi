@@ -37,9 +37,58 @@ internal sealed partial class GitHubApiClient(
         PropertyNameCaseInsensitive = true,
     };
 
+    private static readonly JsonSerializerOptions GraphQlJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+    };
+
     private readonly Uri _apiUrl = options.ApiUrl.AbsoluteUri.EndsWith('/')
         ? options.ApiUrl
         : new Uri(options.ApiUrl.AbsoluteUri + "/");
+
+    /// <summary>
+    /// The GraphQL API: <c>https://api.github.com/graphql</c> for github.com, and <c>/api/graphql</c> beside an
+    /// Enterprise Server's REST API at <c>/api/v3</c>.
+    /// </summary>
+    internal Uri GraphQlUrl => _apiUrl.AbsolutePath.TrimEnd('/').EndsWith("/v3", StringComparison.OrdinalIgnoreCase)
+        ? new Uri(_apiUrl, "../graphql")
+        : new Uri(_apiUrl, "graphql");
+
+    /// <summary>
+    /// Runs a query on GitHub's GraphQL API.
+    /// </summary>
+    /// <param name="query">The query.</param>
+    /// <param name="variables">Its variables, serialised with camelCase names.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The data and errors GitHub returned. GitHub answers most errors with status 200, so check them.</returns>
+    /// <exception cref="IntegrationException">GitHub returned an error status, or a body Tammi couldn't read.</exception>
+    public async Task<GitHubGraphQlResponse<TData>> QueryAsync<TData>(
+        string query,
+        object variables,
+        CancellationToken cancellationToken)
+        where TData : class
+    {
+        string json = JsonSerializer.Serialize(new { query, variables }, GraphQlJsonOptions);
+        using HttpResponseMessage response = (await SendAsync(
+            GraphQlUrl, allowNotFound: false, cancellationToken, method: HttpMethod.Post, json: json)
+            .ConfigureAwait(false))!;
+        try
+        {
+            Stream content = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            await using (content.ConfigureAwait(false))
+            {
+                return await JsonSerializer.DeserializeAsync<GitHubGraphQlResponse<TData>>(
+                        content, GraphQlJsonOptions, cancellationToken).ConfigureAwait(false)
+                    ?? throw new JsonException("The response is empty.");
+            }
+        }
+        catch (JsonException exception)
+        {
+            throw new IntegrationException($"GitHub returned a response Tammi couldn't read: {exception.Message}",
+                exception);
+        }
+    }
 
     /// <summary>
     /// Reads one resource.

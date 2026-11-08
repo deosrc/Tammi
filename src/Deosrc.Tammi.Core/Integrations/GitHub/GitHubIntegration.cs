@@ -2,12 +2,13 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
 using Deosrc.Tammi.Core.Credentials;
+using Deosrc.Tammi.Core.Git;
 using Microsoft.Extensions.Logging;
 
 namespace Deosrc.Tammi.Core.Integrations.GitHub;
 
 /// <summary>
-/// Reads issues (as tasks) and repositories from GitHub, or from a GitHub Enterprise Server.
+/// Reads issues (as tasks), repositories and Pull Requests from GitHub, or from a GitHub Enterprise Server.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -22,7 +23,8 @@ namespace Deosrc.Tammi.Core.Integrations.GitHub;
 /// found by its reference or URL.
 /// </para>
 /// </remarks>
-public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration, ISshKeyIntegration
+public sealed class GitHubIntegration
+    : ITaskIntegration, IRepositoryIntegration, IPullRequestIntegration, ISshKeyIntegration
 {
     /// <summary>
     /// The search for the tasks assigned to the user: their open issues.
@@ -331,6 +333,161 @@ public sealed class GitHubIntegration : ITaskIntegration, IRepositoryIntegration
         }
 
         return repositories;
+    }
+
+    /// <summary>
+    /// The message for a token that can't read Pull Requests, naming the permission it needs.
+    /// </summary>
+    internal const string PullRequestPermissionMessage =
+        "This token can't read pull requests. Give it read access to Pull requests (classic tokens: the repo scope "
+        + "for private repositories), then authenticate again.";
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// It reads them with one GraphQL request for each repository on this GitHub server that a remote points at.
+    /// Fine-grained tokens need read access to Pull requests. Each Pull Request's checks are read too where the token
+    /// can (fine-grained tokens: Commit statuses, and Checks where GitHub offers it), and are left out otherwise.
+    /// </para>
+    /// <para>
+    /// A repository that doesn't exist, or that the token can't see, has no Pull Requests. But when none of the
+    /// repositories can be found, the token most likely wasn't given them (a fine-grained token only reaches the
+    /// repositories chosen for it), so that's an <see cref="IntegrationPermissionException"/>.
+    /// </para>
+    /// </remarks>
+    public async Task<IReadOnlyList<PullRequestInfo>> GetPullRequestsAsync(
+        IReadOnlyList<string> remoteUrls,
+        string branch,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(remoteUrls);
+        ArgumentException.ThrowIfNullOrWhiteSpace(branch);
+
+        var pullRequests = new List<PullRequestInfo>();
+        List<(string Owner, string Name)> repositories = RepositoriesOnThisServer(remoteUrls);
+        int found = 0;
+        foreach ((string owner, string name) in repositories)
+        {
+            GitHubGraphQlResponse<GitHubPullRequestsQuery.Data> response = await _api
+                .QueryAsync<GitHubPullRequestsQuery.Data>(
+                    GitHubPullRequestsQuery.Text,
+                    new GitHubPullRequestsQuery.Variables(owner, name, branch),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            ThrowIfFailed(response);
+
+            if (response.Data!.Repository is not { } repository)
+            {
+                if (response.ErrorAt("repository")?.Type == "FORBIDDEN")
+                {
+                    throw new IntegrationPermissionException(Id, PullRequestPermissionMessage);
+                }
+
+                // It doesn't exist, or the token can't see it.
+                continue;
+            }
+
+            found++;
+            if (repository.PullRequests is not { } connection)
+            {
+                throw new IntegrationPermissionException(Id, PullRequestPermissionMessage);
+            }
+
+            foreach (GitHubPullRequestsQuery.PullRequest? pullRequest in connection.Nodes ?? [])
+            {
+                if (pullRequest is not null
+                    && remoteUrls.Any(url => GitRemoteUrls.IsSameRepository(url, pullRequest.HeadRepository?.Url))
+                    && ToPullRequest(repository.NameWithOwner, pullRequest) is { } info)
+                {
+                    pullRequests.Add(info);
+                }
+            }
+        }
+
+        if (repositories.Count > 0 && found == 0)
+        {
+            string names = string.Join(" or ", repositories.Select(repository => $"{repository.Owner}/{repository.Name}"));
+            throw new IntegrationPermissionException(Id,
+                $"GitHub can't find {names} with this token. Give the token access to the repository, then "
+                + "authenticate again.");
+        }
+
+        _logger.LogDebug(
+            "Found {Count} pull requests from {Branch} at {Url}.", pullRequests.Count, branch, _options.ApiUrl);
+        return pullRequests;
+    }
+
+    /// <summary>
+    /// The owner and name of each repository on this GitHub server that a remote URL points at, each once, in the
+    /// order of the URLs.
+    /// </summary>
+    private List<(string Owner, string Name)> RepositoriesOnThisServer(IEnumerable<string> remoteUrls)
+    {
+        var repositories = new List<(string Owner, string Name)>();
+        foreach (string url in remoteUrls)
+        {
+            if (GitRemoteUrls.TryGetHostAndPath(url, out string? host, out string? path)
+                && string.Equals(host, _webHost, StringComparison.OrdinalIgnoreCase)
+                && path.Split('/') is [{ Length: > 0 } owner, { Length: > 0 } name]
+                && !repositories.Any(repository =>
+                    string.Equals(repository.Owner, owner, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(repository.Name, name, StringComparison.OrdinalIgnoreCase)))
+            {
+                repositories.Add((owner, name));
+            }
+        }
+
+        return repositories;
+    }
+
+    /// <summary>
+    /// Throws for an answer with no data, or a rate limit. Errors about single fields are left to the caller.
+    /// </summary>
+    private static void ThrowIfFailed<TData>(GitHubGraphQlResponse<TData> response)
+        where TData : class
+    {
+        if (response.Errors?.Any(error => error.Type == "RATE_LIMITED") == true)
+        {
+            throw new IntegrationException("GitHub's rate limit was reached. Try again later.");
+        }
+
+        if (response.Data is null)
+        {
+            string? messages = response.Errors is { Count: > 0 } errors
+                ? string.Join(" ", errors.Select(error => error.Message).OfType<string>())
+                : null;
+            throw new IntegrationException(string.IsNullOrWhiteSpace(messages)
+                ? "GitHub returned no data."
+                : $"GitHub returned an error: {messages}");
+        }
+    }
+
+    /// <returns>The Pull Request, or <see langword="null"/> for one Tammi can't read.</returns>
+    private PullRequestInfo? ToPullRequest(string repository, GitHubPullRequestsQuery.PullRequest pullRequest)
+    {
+        PullRequestState? state = (pullRequest.State, pullRequest.IsDraft) switch
+        {
+            ("OPEN", true) => PullRequestState.Draft,
+            ("OPEN", false) => PullRequestState.Open,
+            ("MERGED", _) => PullRequestState.Merged,
+            ("CLOSED", _) => PullRequestState.Closed,
+            _ => null,
+        };
+        if (state is null || !Uri.TryCreate(pullRequest.Url, UriKind.Absolute, out Uri? url))
+        {
+            return null;
+        }
+
+        return new PullRequestInfo(Id, repository, pullRequest.Number, pullRequest.Title, url, state.Value)
+        {
+            Checks = pullRequest.Commits?.Nodes?.FirstOrDefault()?.Commit?.StatusCheckRollup?.State switch
+            {
+                "SUCCESS" => PullRequestChecks.Succeeded,
+                "PENDING" or "EXPECTED" => PullRequestChecks.InProgress,
+                "FAILURE" or "ERROR" => PullRequestChecks.Failed,
+                _ => null,
+            },
+        };
     }
 
     /// <summary>
