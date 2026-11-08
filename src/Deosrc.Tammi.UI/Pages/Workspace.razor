@@ -13,6 +13,7 @@
 @inject WorkspaceGitStatusMonitors GitStatusMonitors
 @inject WorkspaceTaskLists TaskLists
 @inject WorkspaceTools WorkspaceTools
+@inject ToolImages ToolImages
 @inject NavigationManager Navigation
 
 @if (_tab is null)
@@ -133,7 +134,7 @@ else
                                 <li @key="entry">
                                     <button type="button" class="tool-item" title="@entry.Path"
                                             @onclick="() => OpenTool(entry)">
-                                        <ToolIconImage Icon="entry.Icon" />
+                                        <ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" />
                                         <span class="tab-label-text">@entry.Label</span>
                                     </button>
                                 </li>
@@ -313,7 +314,6 @@ else
         Terminals.Changed += OnProcessesChanged;
         Agents.Changed += OnProcessesChanged;
         SettingsStore.Changed += OnToolsChanged;
-        WorkspaceTools.InstalledChanged += OnToolsChanged;
     }
 
     private IReadOnlyList<AgentDefinition> AgentDefinitions => SettingsStore.Current.Agents.Definitions;
@@ -343,7 +343,6 @@ else
         Terminals.Changed -= OnProcessesChanged;
         Agents.Changed -= OnProcessesChanged;
         SettingsStore.Changed -= OnToolsChanged;
-        WorkspaceTools.InstalledChanged -= OnToolsChanged;
         SetGitStatus(null);
         SetTasks(null);
         _disposed.Cancel();
@@ -376,8 +375,8 @@ else
     private IReadOnlyList<ToolEntry> RepositoryTools(WorkspaceRepository repository) =>
         _repositoryTools.TryGetValue(repository.FolderName, out var tools) ? tools : [];
 
-    // Finds what the workspace and its repositories can be opened in. It reads their folders (for solutions and dev
-    // container configurations), so it's done in the background.
+    // Finds what the workspace and its repositories can be opened in, then their icons. It reads their folders (for
+    // the files that file tools open), so it's done in the background.
     private async Task UpdateToolsAsync()
     {
         var update = ++_toolsUpdateCount;
@@ -386,12 +385,11 @@ else
         if (_listing?.Workspace is { } workspace)
         {
             var settings = SettingsStore.Current.Tools;
-            var installed = await WorkspaceTools.GetInstalledAsync();
             (workspaceTools, repositoryTools) = await Task.Run(() => (
-                WorkspaceTools.GetEntries(workspace, null, settings, installed),
+                WorkspaceTools.GetEntries(workspace, null, settings),
                 workspace.Repositories.ToDictionary(
                     repository => repository.FolderName,
-                    repository => WorkspaceTools.GetEntries(workspace, repository, settings, installed))));
+                    repository => WorkspaceTools.GetEntries(workspace, repository, settings))));
         }
 
         if (update != _toolsUpdateCount || _disposed.IsCancellationRequested)
@@ -402,6 +400,29 @@ else
         _workspaceTools = workspaceTools;
         _repositoryTools = repositoryTools;
         StateHasChanged();
+
+        // The icons are shown once they're found. Until then, each tool shows its generic icon.
+        _workspaceTools = await WithImagesAsync(workspaceTools);
+        foreach (var (folderName, entries) in repositoryTools)
+        {
+            repositoryTools[folderName] = await WithImagesAsync(entries);
+        }
+
+        if (update == _toolsUpdateCount && !_disposed.IsCancellationRequested)
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task<IReadOnlyList<ToolEntry>> WithImagesAsync(IReadOnlyList<ToolEntry> entries)
+    {
+        var withImages = new List<ToolEntry>(entries.Count);
+        foreach (var entry in entries)
+        {
+            withImages.Add(entry with { Image = await ToolImages.GetAsync(entry.Tool, entry.Request.FileName) });
+        }
+
+        return withImages;
     }
 
     private void OnToolsChanged() => InvokeAsync(UpdateToolsAsync);

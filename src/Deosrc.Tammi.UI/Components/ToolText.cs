@@ -1,3 +1,4 @@
+using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Tools;
 
 namespace Deosrc.Tammi.UI.Components;
@@ -8,7 +9,7 @@ namespace Deosrc.Tammi.UI.Components;
 public static class ToolText
 {
     /// <summary>
-    /// The icons a tool can have, in the order they're offered.
+    /// The generic icons a tool can have, in the order they're offered.
     /// </summary>
     public static IReadOnlyList<ToolIcon> Icons { get; } = Enum.GetValues<ToolIcon>();
 
@@ -18,7 +19,12 @@ public static class ToolText
     public static IReadOnlyList<ToolScope> Scopes { get; } = Enum.GetValues<ToolScope>();
 
     /// <summary>
-    /// An icon's name.
+    /// The kinds of tool, in the order they're offered.
+    /// </summary>
+    public static IReadOnlyList<ToolKind> Kinds { get; } = Enum.GetValues<ToolKind>();
+
+    /// <summary>
+    /// A generic icon's name.
     /// </summary>
     public static string Label(ToolIcon icon) => icon switch
     {
@@ -39,4 +45,46 @@ public static class ToolText
         ToolScope.Repository => "Repositories only",
         _ => "Workspace Folder and repositories",
     };
+
+    /// <summary>
+    /// What a kind of tool opens.
+    /// </summary>
+    public static string Label(ToolKind kind) => kind switch
+    {
+        ToolKind.File => "Files",
+        _ => "Folders",
+    };
+
+    /// <summary>
+    /// What a placeholder is replaced with.
+    /// </summary>
+    public static string Description(string placeholder) => placeholder switch
+    {
+        ToolPlaceholders.LaunchFolder => "the folder the tool is offered for: the Workspace Folder or the repository",
+        ToolPlaceholders.WorkspaceFolder => "the Workspace Folder",
+        ToolPlaceholders.RepositoryFolder =>
+            "the repository's folder (only for repositories, or the repository the file is in)",
+        ToolPlaceholders.FileDirectory => "the folder the file is in",
+        ToolPlaceholders.FileName => "the file's name, e.g. Api.sln",
+        ToolPlaceholders.FileNameWithoutExtension => "the file's name without its extension, e.g. Api",
+        ToolPlaceholders.FilePath => "the file's full path",
+        _ => placeholder,
+    };
+
+    /// <summary>
+    /// The placeholders in a tool's name and arguments that it can't use, because they're only for file tools.
+    /// </summary>
+    public static IReadOnlyList<string> UnavailablePlaceholders(ToolDefinition tool) =>
+        Templates(tool).SelectMany(ToolPlaceholders.FindUsed)
+            .Except(ToolPlaceholders.For(tool.Kind))
+            .Distinct()
+            .ToArray();
+
+    /// <summary>
+    /// The text in braces in a tool's name and arguments that isn't a placeholder.
+    /// </summary>
+    public static IReadOnlyList<string> UnknownPlaceholders(ToolDefinition tool) =>
+        Templates(tool).SelectMany(ToolPlaceholders.FindUnknown).Distinct().ToArray();
+
+    private static IEnumerable<string> Templates(ToolDefinition tool) => [tool.Name, .. tool.Arguments];
 }

@@ -2287,3 +2287,22 @@ label.task-choice {
 .agent-definition-collapsed .agent-definition-name {
   color: var(--color-text-muted);
 }
+
+/* A tool's application or custom icon, the size of the line icons it stands in for. */
+.tool-image {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.tool-image.icon-small {
+  width: 14px;
+  height: 14px;
+}
+
+/* The placeholders a custom tool can use, on the Tools settings page. */
+.tool-placeholders {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-small);
+}

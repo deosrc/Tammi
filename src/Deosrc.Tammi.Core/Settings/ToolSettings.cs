@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Tools;
 
@@ -21,42 +22,53 @@ public sealed record ToolSettings
     public IReadOnlyList<string> TerminalShellArguments { get; init; } = [];
 
     /// <summary>
-    /// The user's settings for the built-in tools, by <see cref="BuiltInTool.Id"/>. A tool that isn't here
-    /// has the default settings: it's enabled, with its default scope.
+    /// The <see cref="ToolDefinition.Id"/>s of the predefined tools (see <see cref="PredefinedTools"/>) that the user
+    /// has disabled. Every other predefined tool is enabled.
     /// </summary>
-    public IReadOnlyDictionary<string, BuiltInToolSettings> BuiltInTools { get; init; } =
-        new Dictionary<string, BuiltInToolSettings>();
+    public IReadOnlyList<string> DisabledPredefinedTools { get; init; } = [];
 
     /// <summary>
-    /// The custom tools, in the order they're offered after the built-in ones.
+    /// The custom tools, in the order they're offered after the predefined ones.
     /// </summary>
     public IReadOnlyList<ToolDefinition> CustomTools { get; init; } = [];
 
     /// <summary>
-    /// The user's settings for a built-in tool.
+    /// Every tool, in the order they're offered: the predefined tools, each enabled unless the user has disabled it,
+    /// then the custom tools.
     /// </summary>
-    public BuiltInToolSettings GetBuiltIn(BuiltInTool tool)
+    [JsonIgnore]
+    public IReadOnlyList<ToolDefinition> Tools =>
+    [
+        .. PredefinedTools.All.Select(tool => tool with { Enabled = IsEnabled(tool) }),
+        .. CustomTools,
+    ];
+
+    /// <summary>
+    /// Whether a predefined tool is enabled.
+    /// </summary>
+    public bool IsEnabled(ToolDefinition predefinedTool)
     {
-        ArgumentNullException.ThrowIfNull(tool);
-        return BuiltInTools.TryGetValue(tool.Id, out var settings) ? settings : new BuiltInToolSettings();
+        ArgumentNullException.ThrowIfNull(predefinedTool);
+        return !DisabledPredefinedTools.Contains(predefinedTool.Id);
     }
 
     /// <summary>
-    /// What a built-in tool opens: the user's choice, or else its default scope.
+    /// Enables or disables a predefined tool.
     /// </summary>
-    public ToolScope GetScope(BuiltInTool tool) => GetBuiltIn(tool).Scope ?? tool.DefaultScope;
-
-    /// <summary>
-    /// Changes the settings for a built-in tool.
-    /// </summary>
-    public ToolSettings WithBuiltIn(BuiltInTool tool, Func<BuiltInToolSettings, BuiltInToolSettings> update)
+    public ToolSettings WithEnabled(ToolDefinition predefinedTool, bool enabled)
     {
-        ArgumentNullException.ThrowIfNull(update);
-        var builtInTools = new Dictionary<string, BuiltInToolSettings>(BuiltInTools)
+        ArgumentNullException.ThrowIfNull(predefinedTool);
+        if (predefinedTool.Id is not { } id)
         {
-            [tool.Id] = update(GetBuiltIn(tool)),
+            throw new ArgumentException("Only predefined tools are enabled here.", nameof(predefinedTool));
+        }
+
+        return this with
+        {
+            DisabledPredefinedTools = enabled
+                ? DisabledPredefinedTools.Where(disabled => disabled != id).ToArray()
+                : [.. DisabledPredefinedTools.Where(disabled => disabled != id), id],
         };
-        return this with { BuiltInTools = builtInTools };
     }
 
     /// <summary>
@@ -72,11 +84,8 @@ public sealed record ToolSettings
             TerminalShellArguments = shell is null
                 ? []
                 : TerminalShellArguments?.Where(argument => argument is not null).ToArray() ?? [],
-            BuiltInTools = BuiltInTools?.Where(entry => entry.Value is not null)
-                .ToDictionary(entry => entry.Key, entry => entry.Value with
-                {
-                    Scope = entry.Value.Scope is { } scope && Enum.IsDefined(scope) ? scope : null,
-                }) ?? new Dictionary<string, BuiltInToolSettings>(),
+            DisabledPredefinedTools = DisabledPredefinedTools?.Where(id => !string.IsNullOrEmpty(id)).Distinct()
+                .ToArray() ?? [],
             CustomTools = CustomTools?.Where(tool => tool is not null).Select(tool => tool.Normalize()).ToArray() ?? [],
         };
     }
@@ -88,16 +97,14 @@ public sealed record ToolSettings
         && (TerminalShellArguments is null || other.TerminalShellArguments is null
             ? TerminalShellArguments == other.TerminalShellArguments
             : TerminalShellArguments.SequenceEqual(other.TerminalShellArguments))
-        && (BuiltInTools is null || other.BuiltInTools is null
-            ? BuiltInTools == other.BuiltInTools
-            : BuiltInTools.Count == other.BuiltInTools.Count
-                && BuiltInTools.All(entry =>
-                    other.BuiltInTools.TryGetValue(entry.Key, out var value) && Equals(entry.Value, value)))
+        && (DisabledPredefinedTools is null || other.DisabledPredefinedTools is null
+            ? DisabledPredefinedTools == other.DisabledPredefinedTools
+            : DisabledPredefinedTools.SequenceEqual(other.DisabledPredefinedTools))
         && (CustomTools is null || other.CustomTools is null
             ? CustomTools == other.CustomTools
             : CustomTools.SequenceEqual(other.CustomTools));
 
     /// <inheritdoc />
     public override int GetHashCode() =>
-        HashCode.Combine(TerminalShell, TerminalShellArguments?.Count, BuiltInTools?.Count, CustomTools?.Count);
+        HashCode.Combine(TerminalShell, TerminalShellArguments?.Count, DisabledPredefinedTools?.Count, CustomTools?.Count);
 }

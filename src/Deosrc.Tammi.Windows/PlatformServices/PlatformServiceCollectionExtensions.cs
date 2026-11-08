@@ -19,6 +19,7 @@ internal static class PlatformServiceCollectionExtensions
         services.AddSingleton<ICredentialStore, WindowsCredentialStore>();
         services.AddSingleton<IFolderPicker, WindowsFolderPicker>();
         services.AddSingleton<IPtyService, WindowsPtyService>();
+        services.AddSingleton<IApplicationIconProvider, WindowsApplicationIconProvider>();
         return services;
     }
 }

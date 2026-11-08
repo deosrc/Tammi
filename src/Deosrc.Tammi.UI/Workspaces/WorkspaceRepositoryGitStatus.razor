@@ -41,9 +41,9 @@
         <div class="git-status-tools" role="group" aria-label="Open @Repository.Repository.FolderName in">
             @foreach (var entry in Tools)
             {
-                <button type="button" class="git-status-tool" @key="entry" title="Open in @entry.Label"
+                <button type="button" class="git-status-tool" @key="entry" title="Open in @entry.Label: @entry.Path"
                         aria-label="Open in @entry.Label" @onclick="() => OnOpen.InvokeAsync(entry)">
-                    <ToolIconImage Icon="entry.Icon" Class="icon-small" />
+                    <ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" Class="icon-small" />
                 </button>
             }
         </div>

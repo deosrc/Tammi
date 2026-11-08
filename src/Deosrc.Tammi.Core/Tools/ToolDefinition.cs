@@ -1,89 +1,97 @@
+using System.Text.Json.Serialization;
+
 namespace Deosrc.Tammi.Core.Tools;
 
 /// <summary>
-/// A custom tool: one the user has added on the Settings screen. It's offered whenever it's enabled, even if
-/// its executable can't be found.
+/// A tool that the Workspace View offers to open the Workspace Folder, a repository or a file in. The predefined tools
+/// (see <see cref="PredefinedTools"/>) are built-in definitions. Custom tools are kept in the settings file and edited
+/// on the Settings screen.
 /// </summary>
 /// <remarks>
-/// Two definitions are equal when their values are, including their arguments.
+/// A tool is only offered when its executable is found. Two definitions are equal when their values are, including
+/// their lists.
 /// </remarks>
 public sealed record ToolDefinition
 {
     /// <summary>
-    /// The placeholder in <see cref="Arguments"/> for the full path of the folder being opened.
+    /// Identifies a predefined tool in the settings file, or <c>null</c> for a custom tool. It never changes.
     /// </summary>
-    public const string PathPlaceholder = "{path}";
-
-    /// <summary>
-    /// The name shown to the user.
-    /// </summary>
-    public string Name { get; init; } = string.Empty;
-
-    /// <summary>
-    /// The icon it's shown with.
-    /// </summary>
-    public ToolIcon Icon { get; init; } = ToolIcon.Application;
-
-    /// <summary>
-    /// The executable's name or path. Names are found on the search path, as a shell would find them.
-    /// </summary>
-    public string Executable { get; init; } = string.Empty;
-
-    /// <summary>
-    /// The arguments, each passed to the tool as-is, with <see cref="PathPlaceholder"/> where the folder's path goes.
-    /// </summary>
-    public IReadOnlyList<string> Arguments { get; init; } = [PathPlaceholder];
-
-    /// <summary>
-    /// Whether the tool is offered.
-    /// </summary>
-    public bool Enabled { get; init; } = true;
+    [JsonIgnore]
+    public string? Id { get; init; }
 
     /// <summary>
     /// What the tool opens.
     /// </summary>
+    public ToolKind Kind { get; init; } = ToolKind.Folder;
+
+    /// <summary>
+    /// The name each entry is shown with, with placeholders (see <see cref="ToolPlaceholders"/>), e.g.
+    /// <c>Visual Studio - {FileName}</c>.
+    /// </summary>
+    public string Name { get; init; } = string.Empty;
+
+    /// <summary>
+    /// For a file tool, the files it opens. A pattern with no <c>/</c> (e.g. <c>*.sln</c>) matches file names in the
+    /// repository and its subfolders (see <see cref="ToolFileFinder"/>). A pattern with a <c>/</c> (e.g.
+    /// <c>.devcontainer/devcontainer.json</c>) is a path from the repository's folder. <c>*</c> and <c>?</c> are
+    /// wildcards, and case is ignored. Not used by folder tools.
+    /// </summary>
+    public IReadOnlyList<string> FilePatterns { get; init; } = [];
+
+    /// <summary>
+    /// The executable's name or path. Names are found on the search path, as a shell would find them. Environment
+    /// variables written as <c>%NAME%</c> are filled in.
+    /// </summary>
+    public string Executable { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The arguments, each passed to the tool as-is, with placeholders (see <see cref="ToolPlaceholders"/>).
+    /// </summary>
+    public IReadOnlyList<string> Arguments { get; init; } = [];
+
+    /// <summary>
+    /// Whether the tool is offered for the Workspace Folder, the repositories, or both.
+    /// </summary>
     public ToolScope Scope { get; init; } = ToolScope.Both;
 
     /// <summary>
-    /// Whether any argument has <see cref="PathPlaceholder"/>, so the tool is told which folder to open.
+    /// Which icon the tool is shown with.
     /// </summary>
-    public bool HasPathPlaceholder =>
-        Arguments.Any(argument => argument.Contains(PathPlaceholder, StringComparison.Ordinal));
+    public ToolIconSettings Icon { get; init; } = new();
 
     /// <summary>
-    /// The arguments to open a folder with: <see cref="Arguments"/>, with the folder's path in place of every
-    /// <see cref="PathPlaceholder"/>.
+    /// Whether the tool is offered. For a predefined tool, it comes from the settings (see
+    /// <see cref="Settings.ToolSettings.Tools"/>).
     /// </summary>
-    /// <remarks>
-    /// Each argument is passed to the tool as-is, so a path with spaces needs no quoting. Arguments without the
-    /// placeholder are passed unchanged, and the path isn't added if none has it.
-    /// </remarks>
-    public IReadOnlyList<string> BuildArguments(string path)
-    {
-        ArgumentNullException.ThrowIfNull(path);
-        return ExpandPath(Arguments, path);
-    }
+    public bool Enabled { get; init; } = true;
 
     /// <summary>
-    /// Replaces <see cref="PathPlaceholder"/> with <paramref name="path"/> in each argument.
+    /// Whether this is a predefined tool.
     /// </summary>
-    public static IReadOnlyList<string> ExpandPath(IEnumerable<string> arguments, string path)
-    {
-        ArgumentNullException.ThrowIfNull(arguments);
-        ArgumentNullException.ThrowIfNull(path);
-        return arguments.Select(argument => argument.Replace(PathPlaceholder, path, StringComparison.Ordinal)).ToArray();
-    }
+    [JsonIgnore]
+    public bool IsPredefined => Id is not null;
 
     /// <summary>
-    /// Replaces missing values (e.g. from a settings file written by hand) with empty ones, and trims the executable.
+    /// The executable, with environment variables filled in.
+    /// </summary>
+    [JsonIgnore]
+    public string ExpandedExecutable => Environment.ExpandEnvironmentVariables(Executable.Trim());
+
+    /// <summary>
+    /// Replaces missing and unknown values (e.g. from a settings file written by hand) with defaults, and trims the
+    /// executable.
     /// </summary>
     public ToolDefinition Normalize() => this with
     {
+        Kind = Enum.IsDefined(Kind) ? Kind : ToolKind.Folder,
         Name = Name ?? string.Empty,
+        FilePatterns = FilePatterns?.Where(pattern => !string.IsNullOrWhiteSpace(pattern))
+            .Select(pattern => pattern.Trim())
+            .ToArray() ?? [],
         Executable = Executable?.Trim() ?? string.Empty,
         Arguments = Arguments?.Where(argument => argument is not null).ToArray() ?? [],
-        Icon = Enum.IsDefined(Icon) ? Icon : ToolIcon.Application,
         Scope = Enum.IsDefined(Scope) ? Scope : ToolScope.Both,
+        Icon = (Icon ?? new ToolIconSettings()).Normalize(),
     };
 
     /// <summary>
@@ -96,15 +104,19 @@ public sealed record ToolDefinition
     /// <inheritdoc />
     public bool Equals(ToolDefinition? other) =>
         other is not null
+        && Id == other.Id
+        && Kind == other.Kind
         && Name == other.Name
-        && Icon == other.Icon
         && Executable == other.Executable
-        && Enabled == other.Enabled
         && Scope == other.Scope
-        && (Arguments is null || other.Arguments is null
-            ? Arguments == other.Arguments
-            : Arguments.SequenceEqual(other.Arguments));
+        && Equals(Icon, other.Icon)
+        && Enabled == other.Enabled
+        && SequenceEqual(FilePatterns, other.FilePatterns)
+        && SequenceEqual(Arguments, other.Arguments);
 
     /// <inheritdoc />
-    public override int GetHashCode() => HashCode.Combine(Name, Icon, Executable, Enabled, Scope, Arguments?.Count);
+    public override int GetHashCode() => HashCode.Combine(Id, Kind, Name, Executable, Scope, Enabled, Arguments?.Count);
+
+    private static bool SequenceEqual(IReadOnlyList<string>? first, IReadOnlyList<string>? second) =>
+        first is null || second is null ? first == second : first.SequenceEqual(second);
 }

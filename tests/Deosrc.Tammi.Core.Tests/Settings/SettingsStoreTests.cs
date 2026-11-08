@@ -102,7 +102,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAsync_SavesWorkspaceTools_WithIconsAndScopesByName()
+    public async Task UpdateAsync_SavesTools_WithEnumsByName()
     {
         var tools = new ToolSettings
         {
@@ -110,23 +110,33 @@ public sealed class SettingsStoreTests : IDisposable
             [
                 new ToolDefinition
                 {
-                    Name = "Zed",
-                    Icon = ToolIcon.Editor,
+                    Kind = ToolKind.File,
+                    Name = "Zed - {FileName}",
+                    FilePatterns = ["*.rs"],
                     Executable = "zed",
-                    Arguments = ["--new", ToolDefinition.PathPlaceholder],
+                    Arguments = ["--new", "{FilePath}"],
                     Enabled = false,
                     Scope = ToolScope.Repository,
+                    Icon = new ToolIconSettings
+                    {
+                        Source = ToolIconSource.Custom,
+                        Generic = ToolIcon.Editor,
+                        CustomPath = "/icons/zed.png",
+                    },
                 },
             ],
-        }.WithBuiltIn(BuiltInTool.Rider, s => s with { Enabled = false, Scope = ToolScope.Workspace });
+        }.WithEnabled(PredefinedTools.Rider, false);
 
         await CreateStore().UpdateAsync(settings => settings with { Tools = tools }, TestContext.Current.CancellationToken);
 
         Assert.Equal(tools, CreateStore().Current.Tools);
         string json = File.ReadAllText(SettingsPath);
-        Assert.Contains("\"Editor\"", json);
+        Assert.Contains("\"File\"", json);
         Assert.Contains("\"Repository\"", json);
+        Assert.Contains("\"Custom\"", json);
+        Assert.Contains("\"Editor\"", json);
         Assert.Contains("\"rider\"", json);
+        Assert.DoesNotContain("\"id\"", json);
     }
 
     [Fact]

@@ -362,10 +362,13 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
     Clearing the template restores the default.
 - **Tools**
-  - The tools (see [Tools](#tools)): each built-in tool, with whether it was found (and its executable) and its
-    scope, and a **Look again** button. Then the custom tools, which are added, edited, reordered and removed like
-    Custom Agents, each showing the command line it opens a folder with. Each tool has a switch beside its name that
-    enables it. A disabled tool's card is collapsed to its icon, switch and name.
+  - The tools (see [Tools](#tools)). First the predefined tools, each with whether its executable was found (and
+    where), what it opens, its scope and its command. Then the custom tools, added as a folder or file tool, then
+    edited, reordered and removed like Custom Agents. Each shows whether its executable was found, the placeholders it
+    can use, warnings for placeholders it can't use or that don't exist, and the command it starts. A **Look again**
+    button finds the executables and icons again, e.g. after installing a tool.
+  - Each tool has a switch beside its name that enables it. A disabled tool's card is collapsed to its icon, switch
+    and name.
   - Terminal shell: executable and arguments. Leaving the executable empty uses the platform shell, with its own
     arguments. Changes apply to terminals started afterwards.
 
@@ -395,35 +398,52 @@ are left to other tools for now.
 
 ## Tools
 
-- Tammi has built-in definitions for common tools: VS Code, Dev Container, Visual Studio (Windows only), JetBrains
-  Rider and the system file manager, offered in that order. Tammi's own terminals aren't a tool: they're started from
-  the main area's **+** tab.
-- Only built-in tools detected as installed are shown. Each one is looked for on the search path, then where its
-  installer usually puts it (e.g. JetBrains Toolbox's scripts folder for Rider). Visual Studio is found with `vswhere`.
-  The file manager is always there. Detection runs once, the first time it's needed, and again when the user clicks
-  **Look again** in Settings.
-- Users can add their own tools: **custom tools**, offered after the built-in ones, in the user's order. They're
-  offered whenever they're enabled, even if their executable can't be found: opening one then says so.
-- Each tool has: **name**, **icon**, **executable**, **arguments** (with a `{path}` placeholder for the full path of
-  the folder being opened), **enabled/disabled** and **scope**. A built-in tool's name, icon, executable and arguments
-  are fixed: only whether it's enabled and its scope can be changed. Arguments are passed as-is, without a shell, so a
-  path with spaces needs no quoting. The path isn't added if no argument has the placeholder.
-- **Scope** sets what a tool can open: the workspace folder, a single repository, or both (the default). Workspace
+- A **tool** opens the Workspace Folder, a repository or a file in another app. There are two kinds:
+  - **Folder tools** open a folder, e.g. VS Code or the file manager. Each has one entry for each folder its scope
+    includes.
+  - **File tools** open files found in the repositories by their **file patterns**, e.g. Visual Studio for `*.sln`,
+    `*.slnf` and `*.slnx`. Each has an entry for each file found, and none where there aren't any. For the Workspace
+    Folder, every repository is searched. A file name pattern (e.g. `*.sln`) is looked for in a repository and its
+    subfolders, three folders deep, skipping hidden folders (e.g. `.git`), `bin`, `obj`, `node_modules`, `packages` and
+    links. A path pattern (e.g. `.devcontainer/devcontainer.json`) is only looked for at that path, and can name hidden
+    folders. `*` and `?` are wildcards, and case is ignored.
+- Each tool has: **kind**, **name**, **file patterns** (file tools only), **executable**, **arguments**, **scope**,
+  **icon** and **enabled/disabled**. The executable is a name on the search path or a full path, with environment
+  variables (`%NAME%`) filled in. Arguments are passed as-is, without a shell, so a path with spaces needs no quoting.
+- The name and arguments can have **placeholders**, filled in for each entry (matched ignoring case):
+  `{LaunchFolder}` (the Workspace Folder or repository the entry is offered for), `{WorkspaceFolder}`,
+  `{RepositoryFolder}` (the repository the entry is offered for, or that the file is in), and, for file tools only,
+  `{FileDirectory}`, `{FileName}`, `{FileNameWithoutExtension}` and `{FilePath}`. An entry is left out where a
+  placeholder it uses has no value (e.g. `{RepositoryFolder}` for the Workspace Folder). Other text in braces is left
+  as it is, and Settings warns about it.
+- **Scope** sets what a tool is offered for: the Workspace Folder, the repositories, or both (the default). Workspace
   tools appear in the side panel's Tools section. Repository tools appear on each repository's card in the
   Repositories section, as a row of icon buttons.
+- A tool is only offered when it's enabled and its executable is found.
+- **Icon:** the application's own icon by default, or one of Tammi's generic icons (application, code editor, IDE,
+  container, folder, terminal), or a custom image file (PNG, SVG, JPEG, GIF, WebP, ICO or BMP, up to 1 MB). When the
+  application's or custom icon can't be found, the tool's generic icon is shown. Application icons are found:
+  - on Linux, from the application's desktop entry (`.desktop` file) in the XDG data folders: the one whose `TryExec`
+    or `Exec` command is the executable, or has its name (ignoring `.sh`). Its `Icon` is a path, or a name looked for in
+    the `hicolor` icon theme and `pixmaps`.
+  - on Windows, as the icon the shell shows for the executable. A batch file (e.g. VS Code's `bin\code.cmd`) uses the
+    icon of the executable with its name in the folder above (`Code.exe`), if there is one.
+- **Predefined tools** come with Tammi, built as ordinary tool definitions. They can be enabled or disabled, but not
+  changed or removed. They're offered first, then the **custom tools**, in the user's order:
+  - **VS Code:** `code {LaunchFolder}`.
+  - **Dev Container** (repositories only): a file tool for `.devcontainer/devcontainer.json` and `.devcontainer.json`,
+    running `devcontainer open {RepositoryFolder}`. It needs the `devcontainer` CLI that VS Code's Dev Containers
+    extension installs (its "Install devcontainer CLI" command).
+  - **Visual Studio** (Windows only): a file tool for `*.sln`, `*.slnf` and `*.slnx`, named
+    `Visual Studio - {FileName}`, started through the Visual Studio Version Selector
+    (`%CommonProgramFiles(x86)%\Microsoft Shared\MSEnv\VSLauncher.exe {FilePath}`), which picks the version of Visual
+    Studio each solution was made for.
+  - **Rider:** `rider {LaunchFolder}`, found on the search path (e.g. JetBrains Toolbox's scripts folder).
+  - **File manager:** `explorer {LaunchFolder}` (File Explorer) on Windows, `xdg-open {LaunchFolder}` on Linux.
+- Tammi's own terminals aren't a tool: they're started from the main area's **+** tab.
 - Tools are external apps, and **keep running when Tammi exits**. On Linux they're started in their own session (with
   `setsid`), without Tammi's terminal or output. On Windows, a batch file (e.g. a launcher script on the search path)
-  runs without a console window. VS Code is started with `Code.exe` rather than its `code.cmd` launcher.
-- **Visual Studio** opens solutions, not folders. Tammi finds the `.sln` and `.slnx` files in the
-  workspace's repositories and shows a tool entry for each one (e.g. "Visual Studio: Api.sln"). A repository's
-  card has its own solutions, and the Tools section those of every repository. Solutions are looked for up to
-  three folders deep, skipping hidden folders (e.g. `.git`), `bin`, `obj`, `node_modules`, `packages` and links. Two
-  solutions with the same file name are told apart by their path (e.g. "Visual Studio: api/App.sln").
-- **Dev Container** opens a folder in VS Code inside its dev container. It's only installed when VS Code and its Dev
-  Containers extension are, and only offered for a folder with a dev container configuration
-  (`.devcontainer/devcontainer.json` or `.devcontainer.json`). Configurations in subfolders of `.devcontainer/` aren't
-  offered, since the extension would have the user pick one. The folder in the container is the configuration's
-  `workspaceFolder` (with `${localWorkspaceFolderBasename}` filled in), or `/workspaces/<folder name>`.
+  runs without a console window. A file tool starts in the file's folder, and a folder tool in its folder.
 - The entries are worked out when the workspace's tab opens, and again when the workspace or the settings change.
 
 ## Agents

@@ -4,208 +4,181 @@ using Deosrc.Tammi.Core.Workspaces;
 
 namespace Deosrc.Tammi.Core.Tools;
 
-/// The Workspace View's tools: which built-in tools are installed, what each workspace and repository can be
-/// opened in, and opening them.
-/// opening them.
+/// <summary>
+/// The Workspace View's tools: what the Workspace Folder and each repository can be opened in, and opening them.
 /// </summary>
 public sealed class WorkspaceTools
 {
     private readonly IProcessLauncher _processLauncher;
-    private readonly BuiltInToolFinder _finder;
-    private readonly Lock _lock = new();
-    private Task<IReadOnlyList<InstalledTool>>? _installed;
 
     /// <summary>
     /// Creates the service.
     /// </summary>
-    public WorkspaceTools(IProcessLauncher processLauncher, BuiltInToolFinder finder)
+    public WorkspaceTools(IProcessLauncher processLauncher)
     {
         _processLauncher = processLauncher ?? throw new ArgumentNullException(nameof(processLauncher));
-        _finder = finder ?? throw new ArgumentNullException(nameof(finder));
     }
 
     /// <summary>
-    /// Raised when the installed tools have been looked for again (see <see cref="RefreshInstalledAsync"/>).
+    /// Finds a tool's executable.
     /// </summary>
-    public event Action? InstalledChanged;
-
-    /// <summary>
-    /// The installed built-in tools. They're looked for the first time they're needed, and the result is kept until
-    /// <see cref="RefreshInstalledAsync"/>.
-    /// </summary>
-    public Task<IReadOnlyList<InstalledTool>> GetInstalledAsync()
+    /// <returns>Its full path, or <c>null</c> if it can't be found (so the tool isn't offered).</returns>
+    public string? FindExecutable(ToolDefinition tool)
     {
-        lock (_lock)
-        {
-            return _installed ??= FindInstalledAsync();
-        }
+        ArgumentNullException.ThrowIfNull(tool);
+        var executable = tool.ExpandedExecutable;
+        return string.IsNullOrWhiteSpace(executable) ? null : _processLauncher.FindExecutable(executable);
     }
 
     /// <summary>
-    /// Looks for the installed built-in tools again, e.g. after the user has installed one.
-    /// </summary>
-    public async Task<IReadOnlyList<InstalledTool>> RefreshInstalledAsync()
-    {
-        Task<IReadOnlyList<InstalledTool>> installed;
-        lock (_lock)
-        {
-            installed = _installed = FindInstalledAsync();
-        }
-
-        var result = await installed.ConfigureAwait(false);
-        InstalledChanged?.Invoke();
-        return result;
-    }
-
-    /// <summary>
-    /// What a workspace's Workspace Folder, or one of its repositories, can be opened in.
+    /// What the Workspace Folder, or one of its repositories, can be opened in.
     /// </summary>
     /// <param name="workspace">The workspace.</param>
     /// <param name="repository">The repository, or <c>null</c> for the Workspace Folder.</param>
     /// <param name="settings">The Tools settings.</param>
-    /// <param name="installed">The installed built-in tools (see <see cref="GetInstalledAsync"/>).</param>
     /// <returns>
-    /// The entries of the enabled built-in tools that are installed, then of the enabled custom tools, each in their
-    /// order, for the tools whose scope includes the folder. A tool that opens solutions has an entry for each solution
-    /// in the folder (for the Workspace Folder, in each of its repositories), and none if there aren't any. The dev
-    /// container tool only has an entry when the folder has a dev container configuration.
+    /// The entries of each enabled tool whose executable is found and whose scope includes the folder, in the order of
+    /// <see cref="ToolSettings.Tools"/>. A folder tool has one entry. A file tool has one for each file it finds, in the
+    /// repository or, for the Workspace Folder, in every repository. An entry whose name or arguments use a placeholder
+    /// that has no value there (e.g. <c>{RepositoryFolder}</c> for the Workspace Folder) is left out.
     /// </returns>
-    /// <remarks>It reads the folders, to find solutions and dev container configurations.</remarks>
-    public static IReadOnlyList<ToolEntry> GetEntries(
-        Workspace workspace,
-        WorkspaceRepository? repository,
-        ToolSettings settings,
-        IReadOnlyList<InstalledTool> installed)
+    /// <remarks>It reads the repositories' folders to find files.</remarks>
+    public IReadOnlyList<ToolEntry> GetEntries(Workspace workspace, WorkspaceRepository? repository, ToolSettings settings)
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(settings);
-        ArgumentNullException.ThrowIfNull(installed);
 
-        var isRepository = repository is not null;
-        var folder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
         var entries = new List<ToolEntry>();
-
-        foreach (var (tool, executable) in installed)
+        foreach (var tool in settings.Tools)
         {
-            if (!settings.GetBuiltIn(tool).Enabled || !ToolDefinition.Includes(settings.GetScope(tool), isRepository))
+            if (!tool.Enabled
+                || !ToolDefinition.Includes(tool.Scope, repository is not null)
+                || FindExecutable(tool) is not { } executable)
             {
                 continue;
             }
 
-            switch (tool.Kind)
-            {
-                case BuiltInToolKind.FileManager:
-                    entries.Add(new ToolEntry(
-                        tool.Name, tool.Icon, ToolEntryKind.SystemDefault, folder, repository, null));
-                    break;
-                case BuiltInToolKind.Folder when executable is not null:
-                    entries.Add(ProcessEntry(tool.Name, tool.Icon, folder, repository, executable, folder));
-                    break;
-                case BuiltInToolKind.DevContainer when executable is not null:
-                    if (DevContainerConfig.Find(folder) is { } config)
-                    {
-                        entries.Add(ProcessEntry(
-                            tool.Name, tool.Icon, folder, repository, executable,
-                            "--folder-uri", DevContainerConfig.BuildFolderUri(folder, config.ContainerFolder)));
-                    }
-
-                    break;
-                case BuiltInToolKind.Solution when executable is not null:
-                    entries.AddRange(SolutionEntries(tool, executable, workspace, repository));
-                    break;
-            }
-        }
-
-        foreach (var tool in settings.CustomTools)
-        {
-            if (tool.Enabled && ToolDefinition.Includes(tool.Scope, isRepository))
-            {
-                var name = string.IsNullOrWhiteSpace(tool.Name) ? "Unnamed tool" : tool.Name.Trim();
-                entries.Add(new ToolEntry(
-                    name, tool.Icon, ToolEntryKind.Process, folder, repository,
-                    new ProcessRequest(tool.Executable, tool.BuildArguments(folder)) { WorkingDirectory = folder }));
-            }
+            entries.AddRange(tool.Kind == ToolKind.File
+                ? FileEntries(tool, executable, workspace, repository)
+                : FolderEntries(tool, executable, workspace, repository));
         }
 
         return entries;
     }
 
     /// <summary>
-    /// Opens an entry's folder or solution in its tool. The tool keeps running after Tammi exits.
+    /// The placeholders' values for an entry.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The entry starts a process, but has no request.</exception>
+    /// <param name="workspace">The workspace.</param>
+    /// <param name="repository">
+    /// The repository the entry is offered for or its file is in, or <c>null</c> for the Workspace Folder.
+    /// </param>
+    /// <param name="launchFolder">The folder the entry is offered for.</param>
+    /// <param name="file">The file's full path, for a file tool's entry; otherwise <c>null</c>.</param>
+    public static IReadOnlyDictionary<string, string> PlaceholderValues(
+        Workspace workspace,
+        WorkspaceRepository? repository,
+        string launchFolder,
+        string? file)
+    {
+        ArgumentNullException.ThrowIfNull(workspace);
+        ArgumentNullException.ThrowIfNull(launchFolder);
+
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [ToolPlaceholders.LaunchFolder] = launchFolder,
+            [ToolPlaceholders.WorkspaceFolder] = workspace.Folder,
+        };
+        if (repository is not null)
+        {
+            values[ToolPlaceholders.RepositoryFolder] = workspace.GetWorktreePath(repository);
+        }
+
+        if (file is not null)
+        {
+            values[ToolPlaceholders.FileDirectory] = Path.GetDirectoryName(file) ?? string.Empty;
+            values[ToolPlaceholders.FileName] = Path.GetFileName(file);
+            values[ToolPlaceholders.FileNameWithoutExtension] = Path.GetFileNameWithoutExtension(file);
+            values[ToolPlaceholders.FilePath] = file;
+        }
+
+        return values;
+    }
+
+    /// <summary>
+    /// Opens an entry's folder or file in its tool. The tool keeps running after Tammi exits.
+    /// </summary>
     /// <exception cref="FileNotFoundException">The tool's executable can't be found.</exception>
     public void Open(ToolEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
-        switch (entry.Kind)
+        var request = entry.Request;
+        var executable = _processLauncher.FindExecutable(request.FileName)
+            ?? throw new FileNotFoundException($"Couldn't find the executable '{request.FileName}'.", request.FileName);
+
+        // A batch file (e.g. a launcher script on the search path) would otherwise open a console window alongside the
+        // tool.
+        _processLauncher.StartDetached(request with
         {
-            case ToolEntryKind.SystemDefault:
-                _processLauncher.Open(entry.Path);
-                break;
-            case ToolEntryKind.Process when entry.Request is { } request:
-                if (string.IsNullOrWhiteSpace(request.FileName))
-                {
-                    throw new FileNotFoundException($"{entry.Label} has no executable. Set one in Settings.");
-                }
-
-                var executable = _processLauncher.FindExecutable(request.FileName)
-                    ?? throw new FileNotFoundException(
-                        $"Couldn't find the executable '{request.FileName}'.", request.FileName);
-
-                // A batch file (e.g. a launcher script on the search path) would otherwise open a console window
-                // alongside the tool.
-                _processLauncher.StartDetached(request with
-                {
-                    FileName = executable,
-                    HideWindow = OperatingSystem.IsWindows() && IsBatchFile(executable),
-                });
-                break;
-            default:
-                throw new InvalidOperationException($"{entry.Label} doesn't say how to open {entry.Path}.");
-        }
+            FileName = executable,
+            HideWindow = OperatingSystem.IsWindows() && IsBatchFile(executable),
+        });
     }
 
-    private Task<IReadOnlyList<InstalledTool>> FindInstalledAsync() => Task.Run(() => _finder.FindAsync());
-
-    private static ToolEntry ProcessEntry(
-        string label,
-        ToolIcon icon,
-        string path,
-        WorkspaceRepository? repository,
-        string executable,
-        params string[] arguments) =>
-        new(label, icon, ToolEntryKind.Process, path, repository,
-            new ProcessRequest(executable, arguments)
-            {
-                // A solution's tool starts in the solution's folder.
-                WorkingDirectory = File.Exists(path) ? Path.GetDirectoryName(path) : path,
-            });
-
-    private static IEnumerable<ToolEntry> SolutionEntries(
-        BuiltInTool tool,
+    private static IEnumerable<ToolEntry> FolderEntries(
+        ToolDefinition tool,
         string executable,
         Workspace workspace,
         WorkspaceRepository? repository)
     {
-        IEnumerable<WorkspaceRepository> repositories = repository is null ? workspace.Repositories : [repository];
-        var solutions = repositories
-            .SelectMany(r => SolutionFinder.Find(workspace.GetWorktreePath(r)).Select(path => (Repository: r, Path: path)))
-            .ToArray();
-
-        // Solutions are named by their file, unless another has the same name: they're then told apart by their path
-        // in the folder being opened.
-        var root = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
-        foreach (var (solutionRepository, path) in solutions)
+        var folder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
+        if (CreateEntry(tool, executable, folder, repository,
+                PlaceholderValues(workspace, repository, folder, null), folder) is { } entry)
         {
-            var fileName = Path.GetFileName(path);
-            var name = solutions.Count(other =>
-                    Path.GetFileName(other.Path).Equals(fileName, StringComparison.OrdinalIgnoreCase)) > 1
-                ? Path.GetRelativePath(root, path).Replace('\\', '/')
-                : fileName;
-            yield return ProcessEntry($"{tool.Name}: {name}", tool.Icon, path, solutionRepository, executable, path);
+            yield return entry;
         }
+    }
+
+    private static IEnumerable<ToolEntry> FileEntries(
+        ToolDefinition tool,
+        string executable,
+        Workspace workspace,
+        WorkspaceRepository? repository)
+    {
+        var launchFolder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
+        IEnumerable<WorkspaceRepository> searched = repository is null ? workspace.Repositories : [repository];
+        foreach (var fileRepository in searched)
+        {
+            foreach (var file in ToolFileFinder.Find(workspace.GetWorktreePath(fileRepository), tool.FilePatterns))
+            {
+                var values = PlaceholderValues(workspace, fileRepository, launchFolder, file);
+                if (CreateEntry(tool, executable, file, fileRepository, values, Path.GetDirectoryName(file)) is { } entry)
+                {
+                    yield return entry;
+                }
+            }
+        }
+    }
+
+    private static ToolEntry? CreateEntry(
+        ToolDefinition tool,
+        string executable,
+        string path,
+        WorkspaceRepository? repository,
+        IReadOnlyDictionary<string, string> values,
+        string? workingDirectory)
+    {
+        var name = string.IsNullOrWhiteSpace(tool.Name) ? "Unnamed tool" : tool.Name.Trim();
+        var label = ToolPlaceholders.Expand(name, values);
+        var arguments = tool.Arguments.Select(argument => ToolPlaceholders.Expand(argument, values)).ToArray();
+        if (label is null || arguments.Any(argument => argument is null))
+        {
+            return null;
+        }
+
+        return new ToolEntry(tool, label, path, repository,
+            new ProcessRequest(executable, arguments!) { WorkingDirectory = workingDirectory });
     }
 
     private static bool IsBatchFile(string path) =>

@@ -45,7 +45,7 @@ public static class ServiceCollectionExtensions
             services.GetRequiredService<IPtyService>(),
             services.GetRequiredService<AgentHookServer>()));
         services.AddSingleton<SupportedAgentChecker>();
-        services.AddSingleton<BuiltInToolFinder>();
+        services.AddSingleton<ToolImages>();
         services.AddSingleton<WorkspaceTools>();
         services.AddSingleton<TerminalLauncher>();
         services.AddSingleton<WorkspaceTerminals>();

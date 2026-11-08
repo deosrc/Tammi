@@ -6,24 +6,36 @@ namespace Deosrc.Tammi.Core.Tests.Settings;
 public class ToolSettingsTests
 {
     [Fact]
-    public void GetBuiltIn_WithoutSettings_IsEnabledWithDefaultScope()
+    public void Tools_ArePredefinedThenCustom_AllPredefinedEnabledByDefault()
     {
-        var settings = new ToolSettings();
+        var custom = new ToolDefinition { Name = "Zed", Executable = "zed" };
 
-        Assert.True(settings.GetBuiltIn(BuiltInTool.VsCode).Enabled);
-        Assert.Equal(BuiltInTool.VsCode.DefaultScope, settings.GetScope(BuiltInTool.VsCode));
+        var tools = new ToolSettings { CustomTools = [custom] }.Tools;
+
+        Assert.Equal([.. PredefinedTools.All.Select(tool => tool.Id), null], tools.Select(tool => tool.Id));
+        Assert.All(tools, tool => Assert.True(tool.Enabled));
+        Assert.Same(custom, tools[^1]);
     }
 
     [Fact]
-    public void WithBuiltIn_ChangesOnlyThatTool()
+    public void WithEnabled_DisablesAndEnablesPredefinedTool()
     {
-        var settings = new ToolSettings()
-            .WithBuiltIn(BuiltInTool.Rider, s => s with { Enabled = false })
-            .WithBuiltIn(BuiltInTool.Rider, s => s with { Scope = ToolScope.Repository });
+        var disabled = new ToolSettings().WithEnabled(PredefinedTools.Rider, false);
 
-        Assert.False(settings.GetBuiltIn(BuiltInTool.Rider).Enabled);
-        Assert.Equal(ToolScope.Repository, settings.GetScope(BuiltInTool.Rider));
-        Assert.True(settings.GetBuiltIn(BuiltInTool.VsCode).Enabled);
+        Assert.False(disabled.IsEnabled(PredefinedTools.Rider));
+        Assert.False(disabled.Tools.Single(tool => tool.Id == PredefinedTools.Rider.Id).Enabled);
+        Assert.True(disabled.IsEnabled(PredefinedTools.VsCode));
+        Assert.Equal(["rider"], disabled.WithEnabled(PredefinedTools.Rider, false).DisabledPredefinedTools);
+
+        var enabled = disabled.WithEnabled(PredefinedTools.Rider, true);
+        Assert.True(enabled.IsEnabled(PredefinedTools.Rider));
+        Assert.Empty(enabled.DisabledPredefinedTools);
+    }
+
+    [Fact]
+    public void WithEnabled_ForCustomTool_Throws()
+    {
+        Assert.Throws<ArgumentException>(() => new ToolSettings().WithEnabled(new ToolDefinition(), false));
     }
 
     [Fact]
@@ -32,28 +44,23 @@ public class ToolSettingsTests
         ToolSettings Create() => new ToolSettings
         {
             CustomTools = [new ToolDefinition { Name = "Zed", Executable = "zed" }],
-        }.WithBuiltIn(BuiltInTool.Rider, s => s with { Enabled = false });
+        }.WithEnabled(PredefinedTools.Rider, false);
 
         Assert.Equal(Create(), Create());
-        Assert.NotEqual(Create(), Create().WithBuiltIn(BuiltInTool.Rider, s => s with { Enabled = true }));
+        Assert.NotEqual(Create(), Create().WithEnabled(PredefinedTools.Rider, true));
         Assert.NotEqual(Create(), Create() with { CustomTools = [] });
     }
 
     [Fact]
-    public void Normalize_DropsMissingToolsAndUnknownScopes()
+    public void Normalize_DropsMissingValues()
     {
         var settings = new ToolSettings
         {
-            BuiltInTools = new Dictionary<string, BuiltInToolSettings>
-            {
-                ["rider"] = new() { Scope = (ToolScope)42 },
-                ["vscode"] = null!,
-            },
+            DisabledPredefinedTools = ["rider", null!, "", "rider"],
             CustomTools = [null!, new ToolDefinition { Executable = " zed " }],
         }.Normalize();
 
-        Assert.Null(settings.GetBuiltIn(BuiltInTool.Rider).Scope);
-        Assert.False(settings.BuiltInTools.ContainsKey("vscode"));
+        Assert.Equal(["rider"], settings.DisabledPredefinedTools);
         Assert.Equal([new ToolDefinition { Executable = "zed" }], settings.CustomTools);
     }
 }
