@@ -395,12 +395,13 @@ are left to other tools for now.
 
 ## Tools
 
-- Tammi has built-in definitions for common tools: the terminal, VS Code, Dev Container, Visual Studio (Windows only),
-  JetBrains Rider and the system file manager, offered in that order.
+- Tammi has built-in definitions for common tools: VS Code, Dev Container, Visual Studio (Windows only), JetBrains
+  Rider and the system file manager, offered in that order. Tammi's own terminals aren't a tool: they're started from
+  the main area's **+** tab.
 - Only built-in tools detected as installed are shown. Each one is looked for on the search path, then where its
   installer usually puts it (e.g. JetBrains Toolbox's scripts folder for Rider). Visual Studio is found with `vswhere`.
-  The terminal and the file manager are always there. Detection runs once, the first time it's needed, and again when
-  the user clicks **Look again** in Settings.
+  The file manager is always there. Detection runs once, the first time it's needed, and again when the user clicks
+  **Look again** in Settings.
 - Users can add their own tools: **custom tools**, offered after the built-in ones, in the user's order. They're
   offered whenever they're enabled, even if their executable can't be found: opening one then says so.
 - Each tool has: **name**, **icon**, **executable**, **arguments** (with a `{path}` placeholder for the full path of
@@ -410,11 +411,9 @@ are left to other tools for now.
 - **Scope** sets what a tool can open: the workspace folder, a single repository, or both (the default). Workspace
   tools appear in the side panel's Tools section. Repository tools appear on each repository's card in the
   Repositories section, as a row of icon buttons.
-- **Terminal** opens one of Tammi's own terminals in the Workspace View (as **+** → Terminal does), in the Workspace
-  Folder or the repository. Every other tool is an external app.
-- External apps **keep running when Tammi exits**. On Linux they're started in their own session (with `setsid`),
-  without Tammi's terminal or output. On Windows, a batch file (e.g. a launcher script on the search path) runs without
-  a console window. VS Code is started with `Code.exe` rather than its `code.cmd` launcher.
+- Tools are external apps, and **keep running when Tammi exits**. On Linux they're started in their own session (with
+  `setsid`), without Tammi's terminal or output. On Windows, a batch file (e.g. a launcher script on the search path)
+  runs without a console window. VS Code is started with `Code.exe` rather than its `code.cmd` launcher.
 - **Visual Studio** opens solutions, not folders. Tammi finds the `.sln` and `.slnx` files in the
   workspace's repositories and shows a tool entry for each one (e.g. "Visual Studio: Api.sln"). A repository's
   card has its own solutions, and the Tools section those of every repository. Solutions are looked for up to

@@ -94,9 +94,6 @@ public sealed class WorkspaceTools
 
             switch (tool.Kind)
             {
-                case BuiltInToolKind.Terminal:
-                    entries.Add(new ToolEntry(tool.Name, tool.Icon, ToolEntryKind.Terminal, folder, repository, null));
-                    break;
                 case BuiltInToolKind.FileManager:
                     entries.Add(new ToolEntry(
                         tool.Name, tool.Icon, ToolEntryKind.SystemDefault, folder, repository, null));
@@ -136,10 +133,7 @@ public sealed class WorkspaceTools
     /// <summary>
     /// Opens an entry's folder or solution in its tool. The tool keeps running after Tammi exits.
     /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// The entry opens a terminal, which the Workspace View starts itself (see
-    /// <see cref="Terminals.WorkspaceTerminals"/>).
-    /// </exception>
+    /// <exception cref="InvalidOperationException">The entry starts a process, but has no request.</exception>
     /// <exception cref="FileNotFoundException">The tool's executable can't be found.</exception>
     public void Open(ToolEntry entry)
     {
@@ -169,7 +163,7 @@ public sealed class WorkspaceTools
                 });
                 break;
             default:
-                throw new InvalidOperationException($"{entry.Label} is opened by the Workspace View.");
+                throw new InvalidOperationException($"{entry.Label} doesn't say how to open {entry.Path}.");
         }
     }
 

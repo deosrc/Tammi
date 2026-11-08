@@ -14,9 +14,4 @@ public enum ToolEntryKind
     /// Its <see cref="ToolEntry.Path"/> is opened with the system's default application, i.e. the file manager.
     /// </summary>
     SystemDefault,
-
-    /// <summary>
-    /// A terminal is started in the Workspace View, in the Workspace Folder or the entry's repository.
-    /// </summary>
-    Terminal,
 }

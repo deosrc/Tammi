@@ -8,8 +8,8 @@ namespace Deosrc.Tammi.Core.Tools;
 /// each one.
 /// </summary>
 /// <remarks>
-/// Each tool is looked for on the search path, then where its installer usually puts it. The file manager and the
-/// terminal are always there.
+/// Each tool is looked for on the search path, then where its installer usually puts it. The file manager is always
+/// there.
 /// </remarks>
 public sealed class BuiltInToolFinder
 {
@@ -58,7 +58,7 @@ public sealed class BuiltInToolFinder
 
     private async Task<InstalledTool?> FindAsync(BuiltInTool tool, string? vsCode, CancellationToken cancellationToken)
     {
-        if (tool == BuiltInTool.Terminal || tool == BuiltInTool.FileManager)
+        if (tool == BuiltInTool.FileManager)
         {
             return new InstalledTool(tool, null);
         }

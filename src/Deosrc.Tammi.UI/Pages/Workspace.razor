@@ -409,12 +409,6 @@ else
     private void OpenTool(ToolEntry entry)
     {
         _startError = null;
-        if (entry.Kind == ToolEntryKind.Terminal)
-        {
-            StartTerminal(entry.Repository);
-            return;
-        }
-
         try
         {
             WorkspaceTools.Open(entry);

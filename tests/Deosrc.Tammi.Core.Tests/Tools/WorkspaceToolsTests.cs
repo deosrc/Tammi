@@ -26,7 +26,6 @@ public sealed class WorkspaceToolsTests : IDisposable
 
     private static IReadOnlyList<InstalledTool> AllInstalled { get; } =
     [
-        new(BuiltInTool.Terminal, null),
         new(BuiltInTool.VsCode, CodePath),
         new(BuiltInTool.DevContainer, CodePath),
         new(BuiltInTool.VisualStudio, DevenvPath),
@@ -38,14 +37,14 @@ public sealed class WorkspaceToolsTests : IDisposable
     {
         var entries = WorkspaceTools.GetEntries(Workspace, null, new ToolSettings(), AllInstalled);
 
-        Assert.Equal(["Terminal", "VS Code", BuiltInTool.FileManager.Name], entries.Select(entry => entry.Label));
+        Assert.Equal(["VS Code", BuiltInTool.FileManager.Name], entries.Select(entry => entry.Label));
         Assert.All(entries, entry => Assert.Equal(_folder.Path, entry.Path));
         Assert.All(entries, entry => Assert.Null(entry.Repository));
         Assert.Equal(
-            [ToolEntryKind.Terminal, ToolEntryKind.Process, ToolEntryKind.SystemDefault],
+            [ToolEntryKind.Process, ToolEntryKind.SystemDefault],
             entries.Select(entry => entry.Kind));
 
-        var request = entries[1].Request!;
+        var request = entries[0].Request!;
         Assert.Equal(CodePath, request.FileName);
         Assert.Equal([_folder.Path], request.Arguments);
         Assert.Equal(_folder.Path, request.WorkingDirectory);
@@ -66,9 +65,10 @@ public sealed class WorkspaceToolsTests : IDisposable
     [Fact]
     public void GetEntries_LeavesOutToolsThatAreNotInstalled()
     {
-        var entries = WorkspaceTools.GetEntries(Workspace, null, new ToolSettings(), [new(BuiltInTool.Terminal, null)]);
+        var entries = WorkspaceTools.GetEntries(
+            Workspace, null, new ToolSettings(), [new(BuiltInTool.FileManager, null)]);
 
-        Assert.Equal(["Terminal"], entries.Select(entry => entry.Label));
+        Assert.Equal([BuiltInTool.FileManager.Name], entries.Select(entry => entry.Label));
     }
 
     [Fact]
@@ -86,13 +86,13 @@ public sealed class WorkspaceToolsTests : IDisposable
     {
         var settings = new ToolSettings()
             .WithBuiltIn(BuiltInTool.VsCode, s => s with { Scope = ToolScope.Repository })
-            .WithBuiltIn(BuiltInTool.Terminal, s => s with { Scope = ToolScope.Workspace });
+            .WithBuiltIn(BuiltInTool.FileManager, s => s with { Scope = ToolScope.Workspace });
 
         Assert.Equal(
-            ["Terminal", BuiltInTool.FileManager.Name],
+            [BuiltInTool.FileManager.Name],
             WorkspaceTools.GetEntries(Workspace, null, settings, AllInstalled).Select(entry => entry.Label));
         Assert.Equal(
-            ["VS Code", BuiltInTool.FileManager.Name],
+            ["VS Code"],
             WorkspaceTools.GetEntries(Workspace, _api, settings, AllInstalled).Select(entry => entry.Label));
     }
 
@@ -174,9 +174,9 @@ public sealed class WorkspaceToolsTests : IDisposable
             ],
         };
 
-        var entries = WorkspaceTools.GetEntries(Workspace, null, settings, [new(BuiltInTool.Terminal, null)]);
+        var entries = WorkspaceTools.GetEntries(Workspace, null, settings, [new(BuiltInTool.FileManager, null)]);
 
-        Assert.Equal(["Terminal", "Zed", "Unnamed tool"], entries.Select(entry => entry.Label));
+        Assert.Equal([BuiltInTool.FileManager.Name, "Zed", "Unnamed tool"], entries.Select(entry => entry.Label));
         Assert.Equal("zed", entries[1].Request!.FileName);
         Assert.Equal(["--new", _folder.Path], entries[1].Request!.Arguments);
         Assert.Equal(ToolIcon.Editor, entries[2].Icon);
@@ -244,9 +244,9 @@ public sealed class WorkspaceToolsTests : IDisposable
     }
 
     [Fact]
-    public void Open_Terminal_Throws()
+    public void Open_ProcessWithoutRequest_Throws()
     {
-        var entry = new ToolEntry("Terminal", ToolIcon.Terminal, ToolEntryKind.Terminal, "/work", null, null);
+        var entry = new ToolEntry("Zed", ToolIcon.Editor, ToolEntryKind.Process, "/work", null, null);
 
         Assert.Throws<InvalidOperationException>(() => CreateTools(new RecordingProcessLauncher()).Open(entry));
     }

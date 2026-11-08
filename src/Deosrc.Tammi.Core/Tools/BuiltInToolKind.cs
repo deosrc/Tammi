@@ -26,9 +26,4 @@ public enum BuiltInToolKind
     /// The folder is opened with the system's default application for folders, i.e. the file manager.
     /// </summary>
     FileManager,
-
-    /// <summary>
-    /// The folder is opened in one of Tammi's own terminals, in the Workspace View.
-    /// </summary>
-    Terminal,
 }

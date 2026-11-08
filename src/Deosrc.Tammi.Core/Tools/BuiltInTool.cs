@@ -47,15 +47,9 @@ public sealed record BuiltInTool(string Id, string Name, ToolIcon Icon, BuiltInT
         ToolScope.Both);
 
     /// <summary>
-    /// A terminal, opened in the Workspace View with the terminal shell from the settings.
-    /// </summary>
-    public static BuiltInTool Terminal { get; } =
-        new("terminal", "Terminal", ToolIcon.Terminal, BuiltInToolKind.Terminal, ToolScope.Both);
-
-    /// <summary>
     /// The built-in tools for this platform, in the order they're offered.
     /// </summary>
     public static IReadOnlyList<BuiltInTool> All { get; } = OperatingSystem.IsWindows()
-        ? [Terminal, VsCode, DevContainer, VisualStudio, Rider, FileManager]
-        : [Terminal, VsCode, DevContainer, Rider, FileManager];
+        ? [VsCode, DevContainer, VisualStudio, Rider, FileManager]
+        : [VsCode, DevContainer, Rider, FileManager];
 }
