@@ -80,14 +80,8 @@
         </button>
     </div>
 
-    @* What the running fetch, pull or push reports, or how the last one ended. *@
-    @if (Graph.Syncing is { } syncing)
-    {
-        <p class="git-graph-sync-status" role="status">
-            @SyncingText(syncing)@(Graph.SyncProgress is { } progress ? $" — {progress}" : "")
-        </p>
-    }
-    else if (Graph.SyncProblem is { } syncProblem)
+    @* Only a failed fetch, pull or push is shown: the buttons' spinner says one is running. *@
+    @if (Graph.Syncing is null && Graph.SyncProblem is { } syncProblem)
     {
         <div class="error git-graph-sync-error" role="alert">
             <div class="git-graph-sync-error-body">
@@ -107,10 +101,6 @@
                 </svg>
             </button>
         </div>
-    }
-    else if (Graph.SyncResult is { } syncResult)
-    {
-        <p class="git-graph-sync-status" role="status">@syncResult.</p>
     }
 
     @if (Graph.Problem is { } problem)
@@ -310,13 +300,6 @@
     private string WorkingCounts => Graph.WorkingChanges is null
         ? ""
         : $"{Graph.UnstagedChanges.Count} unstaged, {Graph.StagedChanges.Count} staged";
-
-    private static string SyncingText(GitSyncOperation operation) => operation switch
-    {
-        GitSyncOperation.Fetch => "Fetching…",
-        GitSyncOperation.Pull => "Pulling…",
-        _ => "Pushing…",
-    };
 
     private string CountText => Graph.Rows.Count switch
     {

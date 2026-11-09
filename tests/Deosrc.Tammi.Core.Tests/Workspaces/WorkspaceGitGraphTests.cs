@@ -73,7 +73,6 @@ public sealed class WorkspaceGitGraphTests : IDisposable
 
         Assert.True(worked);
         Assert.Null(graph.SyncProblem);
-        Assert.Equal("Pushed", graph.SyncResult);
         Assert.Null(graph.Syncing);
         Assert.Equal(graph.Rows[0].Commit.Sha, graph.Refs.References.Single(r => r.Name == "origin/main").TargetSha);
     }
@@ -91,7 +90,6 @@ public sealed class WorkspaceGitGraphTests : IDisposable
 
         Assert.False(worked);
         Assert.Equal(GitSyncFailure.Network, graph.SyncProblem?.Failure);
-        Assert.Null(graph.SyncResult);
     }
 
     [Fact]

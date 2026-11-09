@@ -196,20 +196,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public GitSyncOperation? Syncing { get; private set; }
 
     /// <summary>
-    /// What git last reported while <see cref="Syncing"/>, e.g. <c>Receiving objects: 40% (4/10)</c>, or
-    /// <see langword="null"/>.
-    /// </summary>
-    public string? SyncProgress { get; private set; }
-
-    /// <summary>
     /// The last fetch, pull or push that failed, or <see langword="null"/> if the last one worked (or none has run).
     /// </summary>
     public GitSyncException? SyncProblem { get; private set; }
-
-    /// <summary>
-    /// What the last fetch, pull or push that worked did, e.g. <c>Fetched</c>, or <see langword="null"/>.
-    /// </summary>
-    public string? SyncResult { get; private set; }
 
     /// <summary>
     /// Raised when the graph has been read, or the selection has changed. It can be raised on a background thread.
@@ -383,7 +372,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
 
     /// <summary>
     /// Fetches, pulls or pushes, then reads the graph again so the new commits and branches show. Does nothing while
-    /// another of them is running. <see cref="Syncing"/> and <see cref="SyncProgress"/> follow it, and a failure is
+    /// another of them is running. <see cref="Syncing"/> follows it, and a failure is
     /// left in <see cref="SyncProblem"/>.
     /// </summary>
     /// <returns>Whether it worked.</returns>
@@ -395,36 +384,19 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         }
 
         Syncing = operation;
-        SyncProgress = null;
         SyncProblem = null;
-        SyncResult = null;
         Changed?.Invoke();
 
         bool worked = false;
         try
         {
-            // Not Progress<T>, which posts to another thread: a late line would outlive the operation.
-            var progress = new InlineProgress(line =>
-            {
-                if (Syncing is not null)
-                {
-                    SyncProgress = line;
-                    Changed?.Invoke();
-                }
-            });
             Task task = operation switch
             {
-                GitSyncOperation.Fetch => _sync.FetchAsync(Path, progress),
-                GitSyncOperation.Pull => _sync.PullAsync(Path, progress),
-                _ => _sync.PushAsync(Path, progress),
+                GitSyncOperation.Fetch => _sync.FetchAsync(Path),
+                GitSyncOperation.Pull => _sync.PullAsync(Path),
+                _ => _sync.PushAsync(Path),
             };
             await task.ConfigureAwait(false);
-            SyncResult = operation switch
-            {
-                GitSyncOperation.Fetch => "Fetched",
-                GitSyncOperation.Pull => "Pulled",
-                _ => "Pushed",
-            };
             worked = true;
         }
         catch (GitSyncException ex)
@@ -438,7 +410,6 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         finally
         {
             Syncing = null;
-            SyncProgress = null;
             Volatile.Write(ref _syncing, 0);
         }
 
@@ -726,9 +697,4 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
 
     private static bool IsReadError(Exception ex) =>
         ex is GitException or LibGit2SharpException or IOException or UnauthorizedAccessException;
-
-    private sealed class InlineProgress(Action<string> report) : IProgress<string>
-    {
-        public void Report(string value) => report(value);
-    }
 }
