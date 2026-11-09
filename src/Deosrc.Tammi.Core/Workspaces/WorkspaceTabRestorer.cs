@@ -22,6 +22,7 @@ public sealed class WorkspaceTabRestorer : IDisposable
     private readonly Lock _lock = new();
     private readonly Dictionary<string, Tracked> _tracked = [];
     private readonly SemaphoreSlim _saving = new(1, 1);
+    private readonly HashSet<Task> _pendingSaves = [];
 
     /// <summary>
     /// Creates a restorer that follows the agents and graphs.
@@ -129,6 +130,21 @@ public sealed class WorkspaceTabRestorer : IDisposable
         }
     }
 
+    /// <summary>
+    /// Completes when every save that has been started so far has finished, so the saved tabs match the tabs open at
+    /// the time of the call.
+    /// </summary>
+    public Task WhenSavedAsync()
+    {
+        Task[] pending;
+        lock (_lock)
+        {
+            pending = [.. _pendingSaves];
+        }
+
+        return Task.WhenAll(pending);
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {
@@ -200,7 +216,28 @@ public sealed class WorkspaceTabRestorer : IDisposable
             }
         }
 
-        _ = SaveAsync(workspaceId);
+        var save = SaveAsync(workspaceId);
+        if (save.IsCompleted)
+        {
+            return;
+        }
+
+        lock (_lock)
+        {
+            _pendingSaves.Add(save);
+        }
+
+        _ = save.ContinueWith(
+            finished =>
+            {
+                lock (_lock)
+                {
+                    _pendingSaves.Remove(finished);
+                }
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     private async Task SaveAsync(string workspaceId)
