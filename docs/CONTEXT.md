@@ -550,6 +550,21 @@ Operations available in the Workspace View:
 - Stage, unstage and commit
 - View diffs
 
+**Fetch, pull and push** are buttons in each git graph tab, so they apply to the repository or submodule the tab is
+for. They run the `git` CLI, so the user's git config and credential helpers apply, and Tammi never prompts for
+credentials (a git that would need a terminal prompt fails instead).
+- **Fetch** gets every remote, pruning deleted branches, and also fetches the repository's checked-out submodules.
+- **Pull** brings the checked-out branch up to date with its upstream. It follows the user's `pull.rebase` and
+  `pull.ff` config, and merges when neither is set. A conflicted pull is left in the working directory, where the
+  conflicts show in the working changes to resolve.
+- **Push** pushes the checked-out branch. A branch with no upstream is pushed to `origin` (or the only remote) and
+  starts tracking it.
+- Pull and push need a branch, so they fail with a clear message on a detached HEAD (as submodules usually are).
+- While one runs, git's progress is shown under the toolbar and the buttons are disabled. A failure is shown there
+  too, worded for what went wrong (authentication, unreachable remote, conflicts, uncommitted changes that would be
+  overwritten, a rejected push, no remote or upstream), with git's own output under it.
+- When it finishes the graph is read again, and the side panel's status follows from the repository's watched files.
+
 **Submodules are supported** by all of these. Submodules appear in status, and the operations can be
 applied inside them. Creating and switching branches, stashing, merging, rebasing and history rewrites
 are left to other tools for now.
