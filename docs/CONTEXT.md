@@ -373,11 +373,14 @@ with the new name, without reading the tasks again. A workspace that can't be re
   - **Working changes:** the top row of the graph is the changes not yet committed, joined to HEAD by a dashed line,
     with how many files are unstaged and staged. It is only shown while there are changes, and after the last one is
     committed the selection moves to HEAD's commit. Selecting it turns the details into the commit panel: the files with
-    unstaged changes, the staged files below them (select files, with Ctrl-click to add to the selection; the last one selected has its diff shown, which goes when it's
+    unstaged changes, the staged files below them (a toggle in the panel's heading shows both as a list or as a tree of
+    folders, which start open and show how many of their files were modified, added, deleted and renamed, as in a
+    commit's tree, and have a Stage or Unstage button, shown on hover, that moves all their files; the same list or tree
+    choice, kept in the settings, as the changed files of a commit; select files, with Ctrl-click to add to the selection; the last one selected has its diff shown, which goes when it's
     deselected; the
     Stage, Stage all, Unstage and Unstage all buttons move them between the two, as does double-clicking a file), the
     commit message's subject and body (a bar above them resizes the body, down to one row: drag it, or focus it and
-    use Up and Down, and double-click resets it, and the unstaged and staged files share the rest of the height evenly),
+    use Up and Down, and double-click resets it, and the height is kept like the details' width; the unstaged and staged files share the rest of the height evenly),
     and the Commit button, which needs a staged file and a subject. The message is
     kept in git's own `COMMIT_EDITMSG` file in the repository's git directory (a submodule's own, for a submodule) as
     it's typed, and read from there when the panel opens; a commit clears it. Staging, unstaging and committing use the

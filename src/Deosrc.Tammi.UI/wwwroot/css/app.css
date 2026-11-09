@@ -3415,9 +3415,22 @@ label.task-choice {
   min-height: 5em;
 }
 
+.git-working-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .git-working-title {
   margin: 0;
   font-size: 1rem;
+}
+
+.git-working-files ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .git-working-heading {
@@ -3452,7 +3465,7 @@ label.task-choice {
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  padding: 1px var(--space-2);
+  padding: 1px var(--space-2) 1px calc(var(--space-2) + var(--git-commit-tree-depth, 0) * 16px);
   white-space: nowrap;
   cursor: default;
 }
@@ -3602,4 +3615,29 @@ label.task-choice {
 
 .git-graph-list[hidden] {
   display: none;
+}
+
+/* A folder in a working changes tree: the row that opens and closes it, and a button that moves all its files. */
+.git-working-folder {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-right: var(--space-2);
+}
+
+.git-working-folder .git-commit-folder {
+  flex: 1;
+  min-width: 0;
+}
+
+.git-working-folder-action {
+  flex: none;
+  padding: 0 var(--space-2);
+  font-size: 0.8rem;
+  visibility: hidden;
+}
+
+.git-working-folder:hover .git-working-folder-action,
+.git-working-folder:focus-within .git-working-folder-action {
+  visibility: visible;
 }

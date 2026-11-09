@@ -2,13 +2,16 @@
 
 const keyboardStep = 16;
 
-// The body's height as the user last chose it, in pixels, kept while the app is open so the next panel starts with it.
-let chosenHeight = null;
-
 // Makes `splitter`, above the commit message in the panel `root`, resize the message's body `body`: drag it up to make
 // the body taller and down to make it shorter, or focus it and use Up and Down. Double-clicking it goes back to the
 // default. The body always shows at least one row, and the files above keep some room.
-export function attachSplitter(root, body, splitter) {
+//
+// The body starts at `savedHeight`, the height the user chose in pixels (the default when it's null). When the panel is
+// too short for it, the body is shown shorter, and goes back to it when there's room. Only the user's resizing changes
+// it, and then `dotNet.OnMessageHeightChanged` is told the new height (null for the default), to keep it for next time.
+export function attachSplitter(root, body, splitter, savedHeight, dotNet) {
+  let chosenHeight = savedHeight ?? null;
+
   const frameHeight = () => {
     const style = getComputedStyle(body);
     return parseFloat(style.paddingTop) + parseFloat(style.paddingBottom)
@@ -61,8 +64,15 @@ export function attachSplitter(root, body, splitter) {
     show();
   };
 
+  const save = () => {
+    dotNet.invokeMethodAsync("OnMessageHeightChanged", chosenHeight).catch(() => {
+      // The panel has gone: the height is lost, which only means the body opens at its old height next time.
+    });
+  };
+
   let dragStartY = 0;
   let dragStartHeight = 0;
+  let dragStartChosen = null;
 
   const onPointerMove = (e) => choose(dragStartHeight + (dragStartY - e.clientY));
 
@@ -72,6 +82,9 @@ export function attachSplitter(root, body, splitter) {
     splitter.removeEventListener("pointermove", onPointerMove);
     splitter.removeEventListener("pointerup", onPointerUp);
     splitter.removeEventListener("pointercancel", onPointerUp);
+    if (chosenHeight !== dragStartChosen) {
+      save();
+    }
   };
 
   const onPointerDown = (e) => {
@@ -82,6 +95,7 @@ export function attachSplitter(root, body, splitter) {
     e.preventDefault();
     dragStartY = e.clientY;
     dragStartHeight = body.offsetHeight;
+    dragStartChosen = chosenHeight;
     splitter.setPointerCapture(e.pointerId);
     splitter.classList.add("dragging");
     splitter.addEventListener("pointermove", onPointerMove);
@@ -89,18 +103,35 @@ export function attachSplitter(root, body, splitter) {
     splitter.addEventListener("pointercancel", onPointerUp);
   };
 
+  let keyStartChosen;
+
   const onKeyDown = (e) => {
     if (e.key !== "ArrowUp" && e.key !== "ArrowDown") {
       return;
     }
 
     e.preventDefault();
+    keyStartChosen ??= chosenHeight;
     choose(body.offsetHeight + (e.key === "ArrowUp" ? keyboardStep : -keyboardStep));
   };
 
+  // A held key is saved once, when it's let go.
+  const onKeyUp = (e) => {
+    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && keyStartChosen !== undefined) {
+      if (chosenHeight !== keyStartChosen) {
+        save();
+      }
+
+      keyStartChosen = undefined;
+    }
+  };
+
   const onDoubleClick = () => {
-    chosenHeight = null;
-    show();
+    if (chosenHeight !== null) {
+      chosenHeight = null;
+      show();
+      save();
+    }
   };
 
   // A panel that gets shorter or taller may no longer have room for the chosen height.
@@ -109,6 +140,7 @@ export function attachSplitter(root, body, splitter) {
 
   splitter.addEventListener("pointerdown", onPointerDown);
   splitter.addEventListener("keydown", onKeyDown);
+  splitter.addEventListener("keyup", onKeyUp);
   splitter.addEventListener("dblclick", onDoubleClick);
   show();
 
@@ -117,6 +149,7 @@ export function attachSplitter(root, body, splitter) {
       observer.disconnect();
       splitter.removeEventListener("pointerdown", onPointerDown);
       splitter.removeEventListener("keydown", onKeyDown);
+      splitter.removeEventListener("keyup", onKeyUp);
       splitter.removeEventListener("dblclick", onDoubleClick);
       splitter.removeEventListener("pointermove", onPointerMove);
       splitter.removeEventListener("pointerup", onPointerUp);

@@ -1,12 +1,37 @@
 @implements IAsyncDisposable
 @using Deosrc.Tammi.Core.Git
+@using Deosrc.Tammi.Core.Settings
+@using Deosrc.Tammi.Core.Windowing
 @inject IJSRuntime JS
+@inject LayoutStateStore LayoutStore
+@inject GitGraphViewOptions Options
 @* The details panel for the working changes, where a commit is made: the files with unstaged changes, the staged
    files below them (select files and move them between the two with the buttons, or double-click one), the commit
    message's subject and body, which are kept in git's message file as they're typed, and the commit button. *@
 
 <div class="git-working" @ref="_root">
-    <h2 class="git-working-title">Working changes</h2>
+    <div class="git-working-titlebar">
+        <h2 class="git-working-title">Working changes</h2>
+        @* Shows both lists as a list or a tree, the same choice as the changed files of a commit. *@
+        <div class="segmented segmented-small git-commit-file-view" role="group" aria-label="Show files as">
+            <button type="button" class="segmented-option" title="As a list" aria-label="As a list"
+                    aria-pressed="@(Options.FileView == GitGraphFileView.List ? "true" : "false")"
+                    @onclick="() => Options.SetFileViewAsync(GitGraphFileView.List)">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M9 6h11M9 12h11M9 18h11" />
+                    <path d="M4 6h.01M4 12h.01M4 18h.01" />
+                </svg>
+            </button>
+            <button type="button" class="segmented-option" title="As a tree" aria-label="As a tree"
+                    aria-pressed="@(Options.FileView == GitGraphFileView.Tree ? "true" : "false")"
+                    @onclick="() => Options.SetFileViewAsync(GitGraphFileView.Tree)">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M4 4h6M7 4v14h5M7 11h5" />
+                    <path d="M14 11h6M14 18h6" />
+                </svg>
+            </button>
+        </div>
+    </div>
 
     @if (Graph.WorkingChanges is null && Graph.WorkingChangesProblem is { } readProblem)
     {
@@ -58,6 +83,8 @@
 
 @code {
     private readonly List<string> _selected = [];
+    // The tree's closed folders, by list and path. Folders start open.
+    private readonly HashSet<string> _collapsed = [];
     // The selected file whose diff is shown, if any.
     private string? _active;
     private ElementReference _root;
@@ -65,6 +92,7 @@
     private ElementReference _bodyInput;
     private IJSObjectReference? _module;
     private IJSObjectReference? _script;
+    private DotNetObjectReference<GitWorkingChanges>? _self;
     private CancellationTokenSource? _saveDelay;
     private string _subject = "";
     private string _body = "";
@@ -75,7 +103,13 @@
 
     private bool CanCommit => !_committing && Graph.StagedChanges.Count > 0 && _subject.Trim().Length > 0;
 
-    protected override void OnInitialized() => LoadMessage();
+    protected override void OnInitialized()
+    {
+        LoadMessage();
+        Options.Changed += OnOptionsChanged;
+    }
+
+    private void OnOptionsChanged() => _ = InvokeAsync(StateHasChanged);
 
     protected override void OnParametersSet()
     {
@@ -109,7 +143,12 @@
             _module = await JS.InvokeAsync<IJSObjectReference>(
                 "import",
                 "./_content/Deosrc.Tammi.UI/Workspaces/GitWorkingChanges.razor.js");
-            _script = await _module.InvokeAsync<IJSObjectReference>("attachSplitter", _root, _bodyInput, _splitter);
+            _script = await _module.InvokeAsync<IJSObjectReference>("attachSplitter",
+                _root,
+                _bodyInput,
+                _splitter,
+                LayoutStore.Current.GitWorkingMessageHeight,
+                _self ??= DotNetObjectReference.Create(this));
         }
         catch (JSDisconnectedException)
         {
@@ -117,8 +156,14 @@
         }
     }
 
+    // The user resized the message's body: keep the height they chose (null for the default) for next time.
+    [JSInvokable]
+    public Task OnMessageHeightChanged(int? height) =>
+        LayoutStore.UpdateAsync(state => state with { GitWorkingMessageHeight = height });
+
     public async ValueTask DisposeAsync()
     {
+        Options.Changed -= OnOptionsChanged;
         if (_saveDelay is { } pending)
         {
             // Keep what was typed in the last moments.
@@ -143,6 +188,8 @@
         {
             // The web view has gone, and the panel with it.
         }
+
+        _self?.Dispose();
     }
 
     // The selection is by list ('S' for staged, 'U' for unstaged) and path.
@@ -159,24 +206,104 @@
             return;
         }
 
-        <ul class="git-working-files" role="listbox" aria-multiselectable="true">
-            @foreach (var change in files)
+        if (Options.FileView == GitGraphFileView.Tree)
+        {
+            // Maps the tree's nodes (made for a commit's files) back to the working changes.
+            var byPath = files.ToDictionary(change => change.Path);
+            var nodes = CommitFileTree.Build(files.Select(change =>
+                new CommitFileChange(change.Path, staged ? change.Staged : change.Unstaged, change.OldPath)));
+            <ul class="git-working-files git-commit-tree" role="tree" aria-multiselectable="true">
+                @TreeNodes(nodes, byPath, staged, 0)
+            </ul>
+        }
+        else
+        {
+            <ul class="git-working-files" role="listbox" aria-multiselectable="true">
+                @foreach (var change in files)
+                {
+                    @FileRow(change, staged, 0, showFolder: true)
+                }
+            </ul>
+        }
+    };
+
+    private RenderFragment FileRow(FileChange change, bool staged, int depth, bool showFolder) => __builder =>
+    {
+        var key = Key(change, staged);
+        var kind = staged ? change.Staged : change.Unstaged;
+        var isSelected = _selected.Contains(key);
+        <li class="git-working-file @(isSelected ? "selected" : null)" role="@(showFolder ? "option" : "treeitem")"
+            aria-selected="@(isSelected ? "true" : "false")" @key="key" style="--git-commit-tree-depth: @depth"
+            title="@(change.OldPath is { } old ? $"{old} → {change.Path}" : change.Path)"
+            @onclick="e => ToggleAsync(key, e.CtrlKey || e.MetaKey)"
+            @ondblclick="() => MoveAsync(change, staged)">
+            <span class="git-commit-file-kind git-graph-file-@kind.ToString().ToLowerInvariant()"
+                  title="@GitGraphText.Label(kind)">@GitGraphText.Letter(kind)</span>
+            <span class="git-commit-file-name">@CommitFileTree.NameOf(change.Path)</span>
+            @if (showFolder)
             {
-                var key = Key(change, staged);
-                var kind = staged ? change.Staged : change.Unstaged;
-                <li class="git-working-file @(_selected.Contains(key) ? "selected" : null)" role="option"
-                    aria-selected="@(_selected.Contains(key) ? "true" : "false")" @key="key"
-                    title="@(change.OldPath is { } old ? $"{old} → {change.Path}" : change.Path)"
-                    @onclick="e => ToggleAsync(key, e.CtrlKey || e.MetaKey)"
-                    @ondblclick="() => MoveAsync(change, staged)">
-                    <span class="git-commit-file-kind git-graph-file-@kind.ToString().ToLowerInvariant()"
-                          title="@GitGraphText.Label(kind)">@GitGraphText.Letter(kind)</span>
-                    <span class="git-commit-file-name">@System.IO.Path.GetFileName(change.Path)</span>
-                    <span class="git-commit-file-folder">@CommitFileTree.FolderOf(change.Path)</span>
+                <span class="git-commit-file-folder">@CommitFileTree.FolderOf(change.Path)</span>
+            }
+        </li>
+    };
+
+    // A level of a list's tree: folders, which open and close (they start open, since the files are what's being
+    // worked on), then files. Each level is indented by `depth`.
+    private RenderFragment TreeNodes(
+        IReadOnlyList<CommitFileTreeNode> nodes,
+        Dictionary<string, FileChange> byPath,
+        bool staged,
+        int depth) => __builder =>
+    {
+        foreach (var node in nodes)
+        {
+            if (node.IsFolder)
+            {
+                var folderKey = (staged ? "S" : "U") + node.Path;
+                var open = !_collapsed.Contains(folderKey);
+                var folderFiles = CommitFileTree.FilesIn(node).ToList();
+                <li role="treeitem" aria-expanded="@(open ? "true" : "false")" @key="folderKey">
+                    <div class="git-working-folder">
+                    <button type="button" class="git-commit-file git-commit-folder" title="@node.Path"
+                            style="--git-commit-tree-depth: @depth" @onclick="() => ToggleFolder(folderKey)">
+                        <svg class="icon icon-small git-commit-folder-chevron @(open ? "open" : null)" viewBox="0 0 24 24"
+                             aria-hidden="true" focusable="false">
+                            <polyline points="9 6 15 12 9 18"></polyline>
+                        </svg>
+                        <svg class="icon icon-small git-commit-folder-icon" viewBox="0 0 24 24" aria-hidden="true"
+                             focusable="false">
+                            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+                        </svg>
+                        <span class="git-commit-folder-name">@node.Name</span>
+                        <GitFileChangeCounts Kinds="folderFiles.Select(change => change.Kind)" />
+                    </button>
+                    @* Moves every file in the folder to the other list. *@
+                    <button type="button" class="button button-secondary git-working-folder-action"
+                            title="@(staged ? "Unstage" : "Stage") everything in @node.Path"
+                            @onclick="() => MoveFolderAsync(folderFiles.Select(change => byPath[change.Path]).ToList(), staged)">
+                        @(staged ? "Unstage" : "Stage")
+                    </button>
+                    </div>
+                    @if (open)
+                    {
+                        <ul role="group">@TreeNodes(node.Children, byPath, staged, depth + 1)</ul>
+                    }
                 </li>
             }
-        </ul>
+            else
+            {
+                @FileRow(byPath[node.Path], staged, depth, showFolder: false)
+            }
+        }
     };
+
+    private void ToggleFolder(string key)
+    {
+        if (!_collapsed.Remove(key))
+        {
+            _collapsed.Add(key);
+        }
+    }
 
     // Selecting a file shows its diff straight away, and deselecting it takes the diff away. With several files
     // selected, the diff is of the one selected last.
@@ -225,6 +352,9 @@
 
         return Graph.OpenDiffAsync(staged ? GitDiffSource.Staged : GitDiffSource.Unstaged, change.Path, change.OldPath);
     }
+
+    private Task MoveFolderAsync(IReadOnlyCollection<FileChange> files, bool staged) =>
+        staged ? UnstageAsync(files) : StageAsync(files);
 
     private Task MoveAsync(FileChange change, bool staged) => staged ? UnstageAsync([change]) : StageAsync([change]);
 
