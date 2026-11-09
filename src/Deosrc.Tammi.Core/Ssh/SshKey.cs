@@ -28,7 +28,13 @@ public sealed record SshKey(string Name, string PrivateKeyPath, string Algorithm
     /// Whether the file name is one SSH tries on its own (e.g. <c>id_ed25519</c>), rather than only when the SSH
     /// config names the file.
     /// </summary>
-    public bool HasDefaultName => DefaultNames.Contains(Name, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    public bool HasDefaultName => IsDefaultName(Name);
+
+    /// <summary>
+    /// Whether a key file name is one SSH tries on its own (see <see cref="HasDefaultName"/>).
+    /// </summary>
+    public static bool IsDefaultName(string? name) =>
+        DefaultNames.Contains(name?.Trim(), OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 
     /// <summary>
     /// The public key as one line, in the form services such as GitHub accept: algorithm, data and comment.

@@ -129,6 +129,14 @@
                 <label for="ssh-key-name">File name</label>
                 <input id="ssh-key-name" class="settings-text" autocomplete="off" @bind="_name" @bind:after="OnNameEdited" />
                 <p class="settings-help">The private key's file name. The public key gets the same name with .pub after it.</p>
+                @if (!string.IsNullOrWhiteSpace(_name) && !SshKey.IsDefaultName(_name))
+                {
+                    <p class="warning" role="note">
+                        SSH only tries keys with default names, such as id_ed25519, on its own. With this name, git can't use
+                        the key until your SSH config names it. After you generate it, the key shows a warning with an
+                        "Add Host entry" button that adds the entry to @KeyStore.ConfigPath for you.
+                    </p>
+                }
             </div>
             <div class="settings-field">
                 <label for="ssh-key-comment">Comment</label>

@@ -497,7 +497,8 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
       `IdentitiesOnly yes`) for each configured integration's SSH host (GitHub Enterprise Server hosts too), shown as
       ticked hosts the user can untick before confirming. Hosts the key isn't added to start unticked, and hosts
       with an entry naming the key are left out. The entries go before the first `Host *` entry, because SSH uses the
-      first value it finds for each option. The config is created if missing and its other content is kept.
+      first value it finds for each option. The config is created if missing and its other content is kept. The Generate
+      form's file name field warns about a non-default name too, and points to this Host entry option.
   - What a [Git Graph](#workspace-view-tab) shows when it opens: the workspace branch (the default) or everything
 - **Repositories**
   - Monitored Folder(s), each with how many repositories were found in it
