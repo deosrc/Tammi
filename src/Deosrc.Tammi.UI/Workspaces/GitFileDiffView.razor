@@ -1,0 +1,79 @@
+@using Deosrc.Tammi.Core.Git
+@* A file's diff, shown in place of the git graph: the file's path and a close button that goes back to the graph,
+   then the changed lines (unified, with old and new line numbers). *@
+
+<section class="git-diff" aria-label="File diff">
+    <header class="git-diff-header">
+        <span class="git-diff-title" title="@Title">@Title</span>
+        <span class="git-diff-source">@SourceText</span>
+        <button type="button" class="button button-secondary button-icon git-diff-close" title="Close the diff"
+                aria-label="Close the diff" @onclick="Graph.CloseDiff">
+            <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+        </button>
+    </header>
+
+    <div class="git-diff-body">
+        @if (Graph.DiffProblem is { } problem)
+        {
+            <p class="error">Couldn't read the diff. @problem</p>
+        }
+        else if (Graph.ActiveDiff is not { } diff)
+        {
+            <p class="placeholder">Reading the diff…</p>
+        }
+        else if (diff.IsBinary)
+        {
+            <p class="placeholder">This is a binary file, so there's no text to compare.</p>
+        }
+        else if (diff.Hunks.Count == 0)
+        {
+            <p class="placeholder">No changes to show.</p>
+        }
+        else
+        {
+            <table class="git-diff-table">
+                <tbody>
+                    @foreach (var hunk in diff.Hunks)
+                    {
+                        <tr class="git-diff-hunk"><td colspan="3">@hunk.Header</td></tr>
+                        @foreach (var line in hunk.Lines)
+                        {
+                            <tr class="git-diff-line git-diff-@line.Kind.ToString().ToLowerInvariant()">
+                                <td class="git-diff-number">@line.OldNumber</td>
+                                <td class="git-diff-number">@line.NewNumber</td>
+                                <td class="git-diff-text"><span class="git-diff-mark">@Mark(line.Kind)</span>@line.Text</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+            @if (diff.IsTruncated)
+            {
+                <p class="placeholder">The diff is too large to show in full.</p>
+            }
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public WorkspaceGitGraph Graph { get; set; } = null!;
+
+    private string Title => Graph.DiffTarget?.Path ?? "";
+
+    private string SourceText => Graph.DiffTarget?.Source switch
+    {
+        GitDiffSource.Unstaged => "Unstaged changes",
+        GitDiffSource.Staged => "Staged changes",
+        _ => "Commit changes",
+    };
+
+    private static string Mark(DiffLineKind kind) => kind switch
+    {
+        DiffLineKind.Added => "+",
+        DiffLineKind.Removed => "-",
+        _ => " ",
+    };
+}

@@ -154,7 +154,7 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
             new AgentLauncher(_pty),
             _settings,
             new FakeTimeProvider(new DateTimeOffset(2026, 11, 4, 12, 0, 0, TimeSpan.Zero)));
-        var graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), _settings);
+        var graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new GitWorkingTree(new GitCli()), _settings);
         return new Run(agents, graphs, new WorkspaceTabRestorer(agents, graphs));
     }
 

@@ -38,6 +38,15 @@ public static class CommitFileTree
     }
 
     /// <summary>
+    /// Every file in a folder of the tree, however deep.
+    /// </summary>
+    public static IEnumerable<CommitFileChange> FilesIn(CommitFileTreeNode folder)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        return folder.Children.SelectMany(child => child.Change is { } change ? [change] : FilesIn(child));
+    }
+
+    /// <summary>
     /// A file's folder, with <c>/</c> separators, or an empty string at the repository root.
     /// </summary>
     public static string FolderOf(string path)
