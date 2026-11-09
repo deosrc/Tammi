@@ -381,7 +381,9 @@ with the new name, without reading the tasks again. A workspace that can't be re
     Stage, Stage all, Unstage and Unstage all buttons move them between the two, as does double-clicking a file), the
     commit message's subject and body (a bar above them resizes the body, down to one row: drag it, or focus it and
     use Up and Down, and double-click resets it, and the height is kept like the details' width; the unstaged and staged files share the rest of the height evenly),
-    and the Commit button, which needs a staged file and a subject. The message is
+    and the Commit button, which needs a staged file and a subject. A counter at the end of the subject counts down the
+    characters left of a soft limit, 72 unless the Git settings say otherwise: it's green until 10 are left, orange from
+    there to the limit, and red once the subject is over it, which can still be committed. The message is
     kept in git's own `COMMIT_EDITMSG` file in the repository's git directory (a submodule's own, for a submodule) as
     it's typed, and read from there when the panel opens; a commit clears it. Staging, unstaging and committing use the
     git CLI, so hooks run, and a failure is shown under the message.

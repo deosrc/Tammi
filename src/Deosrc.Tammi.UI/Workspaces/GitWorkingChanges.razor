@@ -5,6 +5,7 @@
 @inject IJSRuntime JS
 @inject LayoutStateStore LayoutStore
 @inject GitGraphViewOptions Options
+@inject ISettingsStore Settings
 @* The details panel for the working changes, where a commit is made: the files with unstaged changes, the staged
    files below them (select files and move them between the two with the buttons, or double-click one), the commit
    message's subject and body, which are kept in git's message file as they're typed, and the commit button. *@
@@ -67,8 +68,13 @@
          tabindex="0" title="Drag to resize. Double-click to reset." @ref="_splitter"></div>
 
     <section class="git-working-message" aria-label="Commit message">
-        <input type="text" class="git-working-subject" placeholder="Subject" aria-label="Commit subject"
-               value="@_subject" @oninput="OnSubjectInput" />
+        @* The counter, at the end of the subject, counts down the characters left of the soft limit in the settings. *@
+        <div class="git-working-subject-field">
+            <input type="text" class="git-working-subject" placeholder="Subject" aria-label="Commit subject"
+                   value="@_subject" @oninput="OnSubjectInput" />
+            <span class="git-working-subject-counter git-working-subject-counter-@CounterState"
+                  title="@CounterTitle">@Remaining</span>
+        </div>
         <textarea class="git-working-body" rows="5" @ref="_bodyInput" placeholder="Body (optional)" aria-label="Commit body"
                   value="@_body" @oninput="OnBodyInput"></textarea>
         @if (Graph.WorkingChangesProblem is { } problem && Graph.WorkingChanges is not null)
@@ -82,6 +88,9 @@
 </div>
 
 @code {
+    // How many characters from the limit the counter turns orange.
+    private const int SubjectWarningAt = 10;
+
     private readonly List<string> _selected = [];
     // The tree's closed folders, by list and path. Folders start open.
     private readonly HashSet<string> _collapsed = [];
@@ -101,12 +110,27 @@
     [Parameter, EditorRequired]
     public WorkspaceGitGraph Graph { get; set; } = null!;
 
+    private int Remaining => Settings.Current.Git.SubjectLimit - _subject.Length;
+
+    // Green until 10 characters are left, then orange (up to the limit), and red once over it.
+    private string CounterState => Remaining switch
+    {
+        < 0 => "over",
+        <= SubjectWarningAt => "near",
+        _ => "ok",
+    };
+
+    private string CounterTitle => Remaining >= 0
+        ? $"{Remaining} of {Settings.Current.Git.SubjectLimit} characters left in the subject"
+        : $"The subject is {-Remaining} over the {Settings.Current.Git.SubjectLimit} character limit";
+
     private bool CanCommit => !_committing && Graph.StagedChanges.Count > 0 && _subject.Trim().Length > 0;
 
     protected override void OnInitialized()
     {
         LoadMessage();
         Options.Changed += OnOptionsChanged;
+        Settings.Changed += OnOptionsChanged;
     }
 
     private void OnOptionsChanged() => _ = InvokeAsync(StateHasChanged);
@@ -164,6 +188,7 @@
     public async ValueTask DisposeAsync()
     {
         Options.Changed -= OnOptionsChanged;
+        Settings.Changed -= OnOptionsChanged;
         if (_saveDelay is { } pending)
         {
             // Keep what was typed in the last moments.

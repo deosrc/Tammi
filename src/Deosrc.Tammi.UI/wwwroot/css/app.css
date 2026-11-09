@@ -3521,9 +3521,38 @@ label.task-choice {
   font: inherit;
 }
 
+.git-working-subject-field {
+  position: relative;
+  display: flex;
+}
+
 .git-working-subject {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) 3.5em var(--space-2) var(--space-3);
   font-size: 1.05rem;
+}
+
+/* At the end of the subject's field. */
+.git-working-subject-counter {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.git-working-subject-counter-ok {
+  color: var(--color-success);
+}
+
+.git-working-subject-counter-near {
+  color: var(--color-warning);
+}
+
+.git-working-subject-counter-over {
+  color: var(--color-error);
 }
 
 .git-working-body {
