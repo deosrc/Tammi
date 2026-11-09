@@ -109,6 +109,45 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
     }
 
     /// <inheritdoc />
+    public FileDiff ReadDiff(string path, GitDiffSource source, string file, string? oldPath = null, string? sha = null)
+    {
+        using Repository repository = Open(path);
+        string[] paths = oldPath is null ? [file] : [file, oldPath];
+        var options = new CompareOptions { Similarity = SimilarityOptions.Renames, ContextLines = 3 };
+
+        Patch patch;
+        switch (source)
+        {
+            case GitDiffSource.Commit:
+                Commit commit = repository.Lookup<Commit>(sha)
+                    ?? throw new GitException($"There's no commit {sha} in '{path}'.");
+                patch = repository.Diff.Compare<Patch>(commit.Parents.FirstOrDefault()?.Tree, commit.Tree, paths, options);
+                break;
+            case GitDiffSource.Staged:
+                patch = repository.Diff.Compare<Patch>(repository.Head.Tip?.Tree, DiffTargets.Index, paths, null, options);
+                break;
+            default:
+                patch = repository.Diff.Compare<Patch>(paths, includeUntracked: true, null, options);
+                break;
+        }
+
+        PatchEntryChanges? entry = patch.FirstOrDefault(change => change.Path == file) ?? patch.FirstOrDefault();
+        if (entry is null)
+        {
+            return FileDiff.Empty(file);
+        }
+
+        string? renamedFrom = entry.Status == ChangeKind.Renamed ? entry.OldPath : null;
+        if (entry.IsBinaryComparison)
+        {
+            return new FileDiff(entry.Path, renamedFrom, [], IsBinary: true);
+        }
+
+        (IReadOnlyList<DiffHunk> hunks, bool truncated) = FileDiffParser.Parse(entry.Patch);
+        return new FileDiff(entry.Path, renamedFrom, hunks, IsTruncated: truncated);
+    }
+
+    /// <inheritdoc />
     public IReadOnlyList<GitRemote> ReadRemotes(string path)
     {
         using Repository repository = Open(path);

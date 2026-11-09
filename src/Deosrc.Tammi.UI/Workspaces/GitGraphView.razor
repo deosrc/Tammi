@@ -5,6 +5,7 @@
 @inject IJSRuntime JS
 @inject GitGraphViewOptions Options
 @inject LayoutStateStore LayoutStore
+@inject WorkspaceGitStatusMonitors StatusMonitors
 @* A repository's git graph, shown as a main area tab: the commits, newest first, with their lanes, branches and tags,
    and the selected commit's details beside them. Only the rows in view are rendered, and the history is read a page
    at a time as the list scrolls. *@
@@ -39,7 +40,13 @@
         <p class="error git-graph-problem">Couldn't read the git graph. @problem</p>
     }
 
-    <div class="git-graph-body" @ref="_body">
+    @if (Graph.DiffTarget is not null)
+    {
+        <GitFileDiffView Graph="Graph" />
+    }
+
+    @* The graph stays in the page while a diff is shown, only hidden, so it keeps its scroll position and selection. *@
+    <div class="git-graph-body" @ref="_body" hidden="@(Graph.DiffTarget is not null)">
         <div class="git-graph-list" tabindex="0" @ref="_list"
              style="@ListStyle" @onkeydown="OnKeyDownAsync">
             @* Stays at the top as the list scrolls down, and scrolls sideways with it. Each column but Description,
@@ -83,6 +90,35 @@
                     @MenuCheckbox("Remote branches", Options.ShowRemoteBranches, enabled: true, Options.ToggleRemoteBranches)
                 </ul>
             }
+            @* The changes not yet committed, as a row above the commits, with a dashed line down to HEAD. *@
+            <div class="git-graph-row git-graph-working @(Graph.IsWorkingChangesSelected ? "selected" : null)"
+                 role="option" aria-selected="@(Graph.IsWorkingChangesSelected ? "true" : "false")"
+                 @onclick="Graph.SelectWorkingChangesAsync">
+                @foreach (var column in _visibleColumns)
+                {
+                    @switch (column)
+                    {
+                        case GitGraphColumn.Graph:
+                            <span class="git-graph-lane-cell">
+                                <svg class="git-graph-lanes" width="@GraphWidth" height="@GitGraphRowView.RowHeight"
+                                     viewBox="0 0 @GraphWidth @GitGraphRowView.RowHeight" aria-hidden="true" focusable="false">
+                                    <path class="git-graph-working-line" d="@WorkingLinePath" />
+                                    <circle class="git-graph-working-dot" cx="@WorkingX" cy="@(GitGraphRowView.RowHeight / 2.0)" r="4" />
+                                </svg>
+                            </span>
+                            break;
+                        case GitGraphColumn.Description:
+                            <span class="git-graph-summary">
+                                <span class="git-graph-subject git-graph-working-label">Working changes</span>
+                                <span class="git-graph-working-counts">@WorkingCounts</span>
+                            </span>
+                            break;
+                        default:
+                            <span></span>
+                            break;
+                    }
+                }
+            </div>
             <div role="listbox" aria-label="Commits">
                 <Virtualize @ref="_virtualize" TItem="GitGraphRow" ItemsProvider="ProvideRowsAsync"
                             ItemSize="GitGraphRowView.RowHeight" OverscanCount="30">
@@ -137,7 +173,14 @@
         </div>
 
         <aside class="git-graph-details" id="@_detailsId" aria-label="Commit details">
-            <GitCommitDetails Graph="Graph" />
+            @if (Graph.IsWorkingChangesSelected)
+            {
+                <GitWorkingChanges Graph="Graph" />
+            }
+            else
+            {
+                <GitCommitDetails Graph="Graph" />
+            }
         </aside>
     </div>
 </div>
@@ -163,12 +206,27 @@
     private IReadOnlyList<GitGraphRow> _shownRows = [];
     private GitGraphScope _shownScope;
     private DateTimeOffset _now = DateTimeOffset.Now;
+    private WorkspaceGitStatusMonitor? _monitor;
     private bool _disposed;
 
     [Parameter, EditorRequired]
     public WorkspaceGitGraph Graph { get; set; } = null!;
 
     private int GraphWidth => Math.Clamp(Graph.LaneCount, 1, MaxLanes) * GitGraphRowView.LaneWidth;
+
+    // The working changes' dot is in HEAD's lane, with a dashed line down to HEAD's row.
+    private int WorkingLane => Graph.Rows.FirstOrDefault(row => row.Commit.Sha == Graph.HeadSha)?.Lane is { } lane
+        ? Math.Min(lane, MaxLanes - 1)
+        : 0;
+
+    private double WorkingX => WorkingLane * GitGraphRowView.LaneWidth + GitGraphRowView.LaneWidth / 2.0;
+
+    private string WorkingLinePath => FormattableString.Invariant(
+        $"M{WorkingX} {GitGraphRowView.RowHeight / 2.0}V{GitGraphRowView.RowHeight}");
+
+    private string WorkingCounts => Graph.WorkingChanges is null
+        ? ""
+        : $"{Graph.UnstagedChanges.Count} unstaged, {Graph.StagedChanges.Count} staged";
 
     private string CountText => Graph.Rows.Count switch
     {
@@ -199,6 +257,18 @@
         _attached = Graph;
         _shownScope = Graph.Scope;
         Graph.Changed += OnGraphChanged;
+
+        // The files and refs change as the user works, so keep up with them.
+        if (_monitor is not null)
+        {
+            _monitor.Changed -= OnFilesChanged;
+        }
+
+        _monitor = StatusMonitors.Find(Graph.WorkspaceId);
+        if (_monitor is not null)
+        {
+            _monitor.Changed += OnFilesChanged;
+        }
 
         // The first time, this reads the first page. Coming back to a graph read before, it's read again only if its
         // refs have changed.
@@ -236,6 +306,11 @@
     {
         _disposed = true;
         Options.Changed -= OnOptionsChanged;
+        if (_monitor is not null)
+        {
+            _monitor.Changed -= OnFilesChanged;
+        }
+
         if (_attached is not null)
         {
             _attached.Changed -= OnGraphChanged;
@@ -270,6 +345,15 @@
     [JSInvokable]
     public Task OnDetailsWidthChanged(int? width) =>
         LayoutStore.UpdateAsync(state => state with { GitGraphDetailsWidth = width });
+
+    private void OnFilesChanged()
+    {
+        if (!_disposed)
+        {
+            _ = Graph.RefreshWorkingChangesAsync();
+            _ = Graph.RefreshIfChangedAsync();
+        }
+    }
 
     private string Pressed(GitGraphScope scope) => Graph.Scope == scope ? "true" : "false";
 

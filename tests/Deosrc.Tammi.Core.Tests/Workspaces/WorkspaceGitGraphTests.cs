@@ -12,7 +12,7 @@ public sealed class WorkspaceGitGraphTests : IDisposable
     private readonly WorkspaceGitGraphs _graphs;
 
     public WorkspaceGitGraphTests() =>
-        _graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new InMemorySettingsStore());
+        _graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new GitWorkingTree(_repos.Git), new InMemorySettingsStore());
 
     public void Dispose()
     {
@@ -142,6 +142,67 @@ public sealed class WorkspaceGitGraphTests : IDisposable
         await graph.LoadMoreAsync();
 
         Assert.Empty(graph.Rows);
+    }
+
+    [Fact]
+    public async Task SelectWorkingChangesAsync_StageAndCommit_AddsTheCommitAndClearsTheChanges()
+    {
+        (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();
+        string clone = workspace.GetWorktreePath(repository);
+        TempRepositories.WriteFile(clone, "a.txt", "a");
+        WorkspaceGitGraph graph = _graphs.Open(workspace, repository);
+        await graph.LoadAsync();
+
+        await graph.SelectWorkingChangesAsync();
+
+        Assert.True(graph.IsWorkingChangesSelected);
+        Assert.Equal("a.txt", Assert.Single(graph.UnstagedChanges).Path);
+        Assert.Empty(graph.StagedChanges);
+        Assert.Equal(graph.Rows[0].Commit.Sha, graph.HeadSha);
+
+        await graph.StageAsync(graph.UnstagedChanges);
+
+        Assert.Empty(graph.UnstagedChanges);
+        Assert.Equal("a.txt", Assert.Single(graph.StagedChanges).Path);
+
+        Assert.True(await graph.CommitAsync("Add a"));
+
+        Assert.Equal("Add a", graph.Rows[0].Commit.Subject);
+        Assert.Empty(graph.WorkingChanges!);
+        Assert.Null(graph.WorkingChangesProblem);
+    }
+
+    [Fact]
+    public async Task CommitAsync_NothingStaged_ReportsTheProblem()
+    {
+        (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();
+        WorkspaceGitGraph graph = _graphs.Open(workspace, repository);
+        await graph.LoadAsync();
+        await graph.SelectWorkingChangesAsync();
+
+        Assert.False(await graph.CommitAsync("Nothing"));
+
+        Assert.NotNull(graph.WorkingChangesProblem);
+    }
+
+    [Fact]
+    public async Task OpenDiffAsync_ShowsTheDiffUntilItIsClosed()
+    {
+        (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();
+        string clone = workspace.GetWorktreePath(repository);
+        TempRepositories.WriteFile(clone, "README.md", "changed\n");
+        WorkspaceGitGraph graph = _graphs.Open(workspace, repository);
+        await graph.LoadAsync();
+
+        await graph.OpenDiffAsync(GitDiffSource.Unstaged, "README.md");
+
+        Assert.NotNull(graph.ActiveDiff);
+        Assert.NotEmpty(graph.ActiveDiff.Hunks);
+
+        graph.CloseDiff();
+
+        Assert.Null(graph.ActiveDiff);
+        Assert.Null(graph.DiffTarget);
     }
 
     private static string[] Subjects(WorkspaceGitGraph graph) => [.. graph.Rows.Select(row => row.Commit.Subject)];

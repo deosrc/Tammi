@@ -62,4 +62,17 @@ public interface IGitRepositoryReader
     /// <param name="path">The repository's working directory.</param>
     /// <exception cref="GitRepositoryNotFoundException">There's no repository at <paramref name="path"/>.</exception>
     IReadOnlyList<GitRemote> ReadRemotes(string path);
+
+    /// <summary>
+    /// Reads the changes to one file as hunks of lines.
+    /// </summary>
+    /// <param name="path">The repository's working directory.</param>
+    /// <param name="source">Which two states to compare.</param>
+    /// <param name="file">The file's path relative to the repository root, with <c>/</c> separators.</param>
+    /// <param name="oldPath">For a rename, the path the file was renamed from.</param>
+    /// <param name="sha">For <see cref="GitDiffSource.Commit"/>, the commit's full id.</param>
+    /// <returns>The diff, which has no hunks if the file hasn't changed.</returns>
+    /// <exception cref="GitRepositoryNotFoundException">There's no repository at <paramref name="path"/>.</exception>
+    /// <exception cref="GitException">The repository has no commit <paramref name="sha"/>.</exception>
+    FileDiff ReadDiff(string path, GitDiffSource source, string file, string? oldPath = null, string? sha = null);
 }

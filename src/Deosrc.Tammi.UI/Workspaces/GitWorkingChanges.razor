@@ -1,0 +1,231 @@
+@implements IDisposable
+@using Deosrc.Tammi.Core.Git
+@* The details panel for the working changes, where a commit is made: the files with unstaged changes, the staged
+   files below them (select files and move them between the two with the buttons, or double-click one), the commit
+   message's subject and body, which are kept in git's message file as they're typed, and the commit button. *@
+
+<div class="git-working">
+    <h2 class="git-working-title">Working changes</h2>
+
+    @if (Graph.WorkingChanges is null && Graph.WorkingChangesProblem is { } readProblem)
+    {
+        <p class="error">Couldn't read the changes. @readProblem</p>
+    }
+    else
+    {
+        <section class="git-working-section" aria-label="Unstaged changes">
+            <div class="git-working-heading">
+                <h3>Unstaged <span class="git-working-count">@Graph.UnstagedChanges.Count</span></h3>
+                <button type="button" class="button button-secondary" disabled="@(SelectedIn(staged: false).Count == 0)"
+                        @onclick="() => StageAsync(SelectedIn(staged: false))">Stage</button>
+                <button type="button" class="button button-secondary" disabled="@(Graph.UnstagedChanges.Count == 0)"
+                        @onclick="() => StageAsync(Graph.UnstagedChanges)">Stage all</button>
+            </div>
+            @FileList(Graph.UnstagedChanges, GitDiffSource.Unstaged, staged: false)
+        </section>
+
+        <section class="git-working-section" aria-label="Staged changes">
+            <div class="git-working-heading">
+                <h3>Staged <span class="git-working-count">@Graph.StagedChanges.Count</span></h3>
+                <button type="button" class="button button-secondary" disabled="@(SelectedIn(staged: true).Count == 0)"
+                        @onclick="() => UnstageAsync(SelectedIn(staged: true))">Unstage</button>
+                <button type="button" class="button button-secondary" disabled="@(Graph.StagedChanges.Count == 0)"
+                        @onclick="() => UnstageAsync(Graph.StagedChanges)">Unstage all</button>
+            </div>
+            @FileList(Graph.StagedChanges, GitDiffSource.Staged, staged: true)
+        </section>
+    }
+
+    <section class="git-working-message" aria-label="Commit message">
+        <input type="text" class="git-working-subject" placeholder="Subject" aria-label="Commit subject"
+               value="@_subject" @oninput="OnSubjectInput" />
+        <textarea class="git-working-body" rows="5" placeholder="Body (optional)" aria-label="Commit body"
+                  value="@_body" @oninput="OnBodyInput"></textarea>
+        @if (Graph.WorkingChangesProblem is { } problem && Graph.WorkingChanges is not null)
+        {
+            <p class="error git-working-problem">@problem</p>
+        }
+        <button type="button" class="button git-working-commit" disabled="@(!CanCommit)" @onclick="CommitAsync">
+            @(_committing ? "Committing…" : $"Commit {Graph.StagedChanges.Count} {(Graph.StagedChanges.Count == 1 ? "file" : "files")}")
+        </button>
+    </section>
+</div>
+
+@code {
+    private readonly HashSet<string> _selected = [];
+    private CancellationTokenSource? _saveDelay;
+    private string _subject = "";
+    private string _body = "";
+    private bool _committing;
+
+    [Parameter, EditorRequired]
+    public WorkspaceGitGraph Graph { get; set; } = null!;
+
+    private bool CanCommit => !_committing && Graph.StagedChanges.Count > 0 && _subject.Trim().Length > 0;
+
+    protected override void OnInitialized() => LoadMessage();
+
+    protected override void OnParametersSet()
+    {
+        // The draft changed outside the fields (e.g. cleared by a commit): show it. Typing is saved as it happens, so
+        // it never differs from the fields while there's something to keep.
+        if (_saveDelay is null && Graph.Message != Combine())
+        {
+            LoadMessage();
+        }
+
+        // Files that have moved or gone are no longer selected.
+        var present = Graph.UnstagedChanges.Select(change => Key(change, staged: false))
+            .Concat(Graph.StagedChanges.Select(change => Key(change, staged: true)))
+            .ToHashSet();
+        _selected.RemoveWhere(key => !present.Contains(key));
+    }
+
+    public void Dispose()
+    {
+        if (_saveDelay is { } pending)
+        {
+            // Keep what was typed in the last moments.
+            pending.Cancel();
+            _ = Graph.SaveMessageAsync(Combine());
+        }
+    }
+
+    // The selection is by list ('S' for staged, 'U' for unstaged) and path.
+    private static string Key(FileChange change, bool staged) => (staged ? "S" : "U") + change.Path;
+
+    private List<FileChange> SelectedIn(bool staged) =>
+        [.. (staged ? Graph.StagedChanges : Graph.UnstagedChanges).Where(change => _selected.Contains(Key(change, staged)))];
+
+    private RenderFragment FileList(IReadOnlyList<FileChange> files, GitDiffSource source, bool staged) => __builder =>
+    {
+        if (files.Count == 0)
+        {
+            <p class="placeholder">@(staged ? "Nothing staged." : "No unstaged changes.")</p>
+            return;
+        }
+
+        <ul class="git-working-files" role="listbox" aria-multiselectable="true">
+            @foreach (var change in files)
+            {
+                var key = Key(change, staged);
+                var kind = staged ? change.Staged : change.Unstaged;
+                <li class="git-working-file @(_selected.Contains(key) ? "selected" : null)" role="option"
+                    aria-selected="@(_selected.Contains(key) ? "true" : "false")" @key="key"
+                    title="@(change.OldPath is { } old ? $"{old} → {change.Path}" : change.Path)"
+                    @onclick="e => Toggle(key, e.CtrlKey || e.MetaKey)"
+                    @ondblclick="() => MoveAsync(change, staged)">
+                    <span class="git-commit-file-kind git-graph-file-@kind.ToString().ToLowerInvariant()"
+                          title="@GitGraphText.Label(kind)">@GitGraphText.Letter(kind)</span>
+                    <span class="git-commit-file-name">@System.IO.Path.GetFileName(change.Path)</span>
+                    <span class="git-commit-file-folder">@CommitFileTree.FolderOf(change.Path)</span>
+                    <button type="button" class="button button-secondary git-working-diff" title="View the diff"
+                            @onclick="() => Graph.OpenDiffAsync(source, change.Path, change.OldPath)" @onclick:stopPropagation="true"
+                            @ondblclick:stopPropagation="true">Diff</button>
+                </li>
+            }
+        </ul>
+    };
+
+    private void Toggle(string key, bool add)
+    {
+        if (!add)
+        {
+            bool only = _selected.Count == 1 && _selected.Contains(key);
+            _selected.Clear();
+            if (!only)
+            {
+                _selected.Add(key);
+            }
+
+            return;
+        }
+
+        if (!_selected.Remove(key))
+        {
+            _selected.Add(key);
+        }
+    }
+
+    private Task MoveAsync(FileChange change, bool staged) => staged ? UnstageAsync([change]) : StageAsync([change]);
+
+    private async Task StageAsync(IReadOnlyCollection<FileChange> files)
+    {
+        _selected.Clear();
+        await Graph.StageAsync(files);
+    }
+
+    private async Task UnstageAsync(IReadOnlyCollection<FileChange> files)
+    {
+        _selected.Clear();
+        await Graph.UnstageAsync(files);
+    }
+
+    private async Task CommitAsync()
+    {
+        _committing = true;
+        _saveDelay?.Cancel();
+        _saveDelay = null;
+        try
+        {
+            if (await Graph.CommitAsync(Combine()))
+            {
+                _subject = "";
+                _body = "";
+            }
+        }
+        finally
+        {
+            _committing = false;
+        }
+    }
+
+    private void LoadMessage()
+    {
+        string message = Graph.Message.Replace("\r\n", "\n");
+        int split = message.IndexOf('\n');
+        _subject = split < 0 ? message : message[..split];
+        _body = split < 0 ? "" : message[(split + 1)..].TrimStart('\n');
+    }
+
+    private string Combine() =>
+        _body.Trim().Length == 0 ? _subject : $"{_subject}\n\n{_body}";
+
+    private void OnSubjectInput(ChangeEventArgs e)
+    {
+        _subject = (e.Value as string ?? "").ReplaceLineEndings(" ");
+        SaveSoon();
+    }
+
+    private void OnBodyInput(ChangeEventArgs e)
+    {
+        _body = e.Value as string ?? "";
+        SaveSoon();
+    }
+
+    // Saves the message shortly after the user stops typing.
+    private void SaveSoon()
+    {
+        _saveDelay?.Cancel();
+        var delay = _saveDelay = new CancellationTokenSource();
+        _ = SaveAfterAsync(delay);
+    }
+
+    private async Task SaveAfterAsync(CancellationTokenSource delay)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(400), delay.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        await Graph.SaveMessageAsync(Combine());
+        if (ReferenceEquals(_saveDelay, delay))
+        {
+            _saveDelay = null;
+        }
+    }
+}

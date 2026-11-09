@@ -123,7 +123,8 @@
                         @foreach (var change in changes)
                         {
                             var folder = CommitFileTree.FolderOf(change.Path);
-                            <li class="git-commit-file" @key="change.Path" title="@FileTitle(change)">
+                            <li class="git-commit-file git-commit-file-openable" @key="change.Path" title="@FileTitle(change)"
+                                @onclick="() => OpenDiff(change)">
                                 @Kind(change.Kind)
                                 <span class="git-commit-file-name">@CommitFileTree.NameOf(change.Path)</span>
                                 @if (folder.Length > 0)
@@ -276,6 +277,10 @@
         }
     });
 
+    // Shows the file's changes in this commit in place of the graph.
+    private Task OpenDiff(CommitFileChange change) =>
+        Graph.OpenDiffAsync(GitDiffSource.Commit, change.Path, change.OldPath, Graph.Selected?.Commit.Sha);
+
     private void ToggleFolder(string path)
     {
         if (!_expanded.Remove(path))
@@ -380,7 +385,8 @@
             }
             else
             {
-                <li class="git-commit-file" role="treeitem" style="@indent" title="@FileTitle(node.Change!)" @key="node.Path">
+                <li class="git-commit-file git-commit-file-openable" role="treeitem" style="@indent"
+                    title="@FileTitle(node.Change!)" @key="node.Path" @onclick="() => OpenDiff(node.Change!)">
                     @Kind(node.Change!.Kind)
                     <span class="git-commit-file-name">@node.Name</span>
                 </li>

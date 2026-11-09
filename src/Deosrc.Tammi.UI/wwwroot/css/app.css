@@ -3360,3 +3360,205 @@ label.task-choice {
 .git-graph-menu-check.hidden {
   visibility: hidden;
 }
+
+/* Working changes row: a dashed line from the dot down to HEAD. */
+.git-graph-working-line {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+.git-graph-working-dot {
+  fill: var(--color-surface);
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+}
+
+.git-graph-working-label {
+  font-style: italic;
+}
+
+.git-graph-working-counts {
+  margin-left: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.git-commit-file-openable {
+  cursor: pointer;
+}
+
+.git-commit-file-openable:hover {
+  background: var(--color-surface-hover);
+}
+
+/* The commit panel for the working changes. */
+.git-working {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+  padding: var(--space-3);
+  overflow: auto;
+}
+
+.git-working-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.git-working-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.git-working-heading h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.git-working-count {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.git-working-files {
+  max-height: 14em;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  border: 1px solid var(--color-border);
+}
+
+.git-working-file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 1px var(--space-2);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.git-working-file:hover {
+  background: var(--color-surface-hover);
+}
+
+.git-working-file.selected {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.git-working-file .git-commit-file-folder {
+  flex: 1;
+}
+
+.git-working-diff {
+  flex: none;
+  padding: 0 var(--space-2);
+  font-size: 0.8rem;
+}
+
+.git-working-message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.git-working-subject,
+.git-working-body {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+}
+
+.git-working-body {
+  resize: vertical;
+}
+
+/* A file's diff, in place of the graph. */
+.git-diff {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.git-diff-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.git-diff-title {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-diff-source {
+  flex: 1;
+  color: var(--color-text-muted);
+}
+
+.git-diff-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.git-diff-table {
+  min-width: 100%;
+  border-collapse: collapse;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+.git-diff-number {
+  width: 1%;
+  min-width: 3.5em;
+  padding: 0 var(--space-2);
+  color: var(--color-text-muted);
+  text-align: right;
+  user-select: none;
+}
+
+.git-diff-text {
+  padding: 0 var(--space-2);
+  white-space: pre;
+}
+
+.git-diff-mark {
+  display: inline-block;
+  width: 1.5ch;
+  user-select: none;
+}
+
+.git-diff-hunk td {
+  padding: 2px var(--space-2);
+  color: var(--color-text-muted);
+  background: var(--color-chrome);
+}
+
+.git-diff-added {
+  background: var(--color-success-bg);
+}
+
+.git-diff-removed {
+  background: var(--color-error-bg);
+}
+
+.git-diff-note {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.git-graph-body[hidden] {
+  display: none;
+}

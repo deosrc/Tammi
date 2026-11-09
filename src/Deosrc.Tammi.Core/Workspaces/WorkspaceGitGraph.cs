@@ -25,6 +25,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public const int PageSize = 500;
 
     private readonly IGitRepositoryReader _reader;
+    private readonly IGitWorkingTree _workingTree;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<GitGraphRow> _rows = [];
     private IReadOnlyDictionary<string, IReadOnlyList<GitReference>> _labels =
@@ -39,13 +40,15 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         WorkspaceRepository repository,
         string? submodulePath,
         GitGraphScope scope,
-        IGitRepositoryReader reader)
+        IGitRepositoryReader reader,
+        IGitWorkingTree workingTree)
     {
         WorkspaceId = workspace.Id;
         Repository = repository;
         SubmodulePath = submodulePath;
         Scope = scope;
         _reader = reader;
+        _workingTree = workingTree;
         string worktree = workspace.GetWorktreePath(repository);
         Path = submodulePath is null
             ? worktree
@@ -133,6 +136,57 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public string? SelectedChangesProblem { get; private set; }
 
     /// <summary>
+    /// Whether the working changes are selected, instead of a commit. The details panel is then for making a commit.
+    /// </summary>
+    public bool IsWorkingChangesSelected { get; private set; }
+
+    /// <summary>
+    /// The changed files in the working directory and index, as last read, or <see langword="null"/> before they're
+    /// read or if they couldn't be.
+    /// </summary>
+    public IReadOnlyList<FileChange>? WorkingChanges { get; private set; }
+
+    /// <summary>
+    /// The files with changes in the working directory that aren't staged, in path order.
+    /// </summary>
+    public IReadOnlyList<FileChange> UnstagedChanges => [.. (WorkingChanges ?? []).Where(change => change.IsUnstaged || change.IsConflicted)];
+
+    /// <summary>
+    /// The files with staged changes, in path order.
+    /// </summary>
+    public IReadOnlyList<FileChange> StagedChanges => [.. (WorkingChanges ?? []).Where(change => change.IsStaged)];
+
+    /// <summary>
+    /// The sha of the commit the working changes are on top of, or <see langword="null"/> if there are no commits yet.
+    /// </summary>
+    public string? HeadSha { get; private set; }
+
+    /// <summary>
+    /// The draft message of the next commit, as last read or saved.
+    /// </summary>
+    public string Message { get; private set; } = "";
+
+    /// <summary>
+    /// Why the working changes couldn't be read, or why staging or committing failed, or <see langword="null"/>.
+    /// </summary>
+    public string? WorkingChangesProblem { get; private set; }
+
+    /// <summary>
+    /// The file diff that's shown in place of the graph, or <see langword="null"/> if the graph is shown.
+    /// </summary>
+    public FileDiff? ActiveDiff { get; private set; }
+
+    /// <summary>
+    /// Why the diff couldn't be read, or <see langword="null"/>. Set while <see cref="ActiveDiff"/> is.
+    /// </summary>
+    public string? DiffProblem { get; private set; }
+
+    /// <summary>
+    /// The file path and source of the diff shown, or <see langword="null"/> if the graph is shown.
+    /// </summary>
+    public (string Path, GitDiffSource Source)? DiffTarget { get; private set; }
+
+    /// <summary>
     /// Raised when the graph has been read, or the selection has changed. It can be raised on a background thread.
     /// </summary>
     public event Action? Changed;
@@ -206,7 +260,133 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     /// Selects a commit that's been read, and reads the files it changed. <see langword="null"/>, or a commit that
     /// hasn't been read, clears the selection.
     /// </summary>
-    public Task SelectAsync(string? sha) => RunAsync(() => Select(sha));
+    public Task SelectAsync(string? sha) => RunAsync(() =>
+    {
+        IsWorkingChangesSelected = false;
+        Select(sha);
+    });
+
+    /// <summary>
+    /// Selects the working changes, reads them and the saved commit message.
+    /// </summary>
+    public Task SelectWorkingChangesAsync() => RunAsync(() =>
+    {
+        Selected = null;
+        SelectedChanges = null;
+        SelectedChangesProblem = null;
+        IsWorkingChangesSelected = true;
+        ReadWorkingChanges(readMessage: true);
+    });
+
+    /// <summary>
+    /// Reads the working changes again, e.g. after a file changed. Does nothing until the graph has been read.
+    /// </summary>
+    public Task RefreshWorkingChangesAsync() => RunAsync(() =>
+    {
+        if (_loaded)
+        {
+            ReadWorkingChanges(readMessage: false);
+        }
+    });
+
+    /// <summary>
+    /// Stages the changes to files.
+    /// </summary>
+    public Task StageAsync(IReadOnlyCollection<FileChange> files) =>
+        ChangeIndexAsync(token => _workingTree.StageAsync(Path, PathsOf(files), token));
+
+    /// <summary>
+    /// Unstages the changes to files.
+    /// </summary>
+    public Task UnstageAsync(IReadOnlyCollection<FileChange> files) =>
+        ChangeIndexAsync(token => _workingTree.UnstageAsync(Path, PathsOf(files), token));
+
+    /// <summary>
+    /// Saves the draft of the next commit's message.
+    /// </summary>
+    public async Task SaveMessageAsync(string message)
+    {
+        Message = message;
+        try
+        {
+            await _workingTree.WriteMessageAsync(Path, message).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsReadError(ex))
+        {
+            WorkingChangesProblem = ex.Message;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Commits what's staged, then shows the new commit.
+    /// </summary>
+    /// <returns>Whether the commit was made. If not, <see cref="WorkingChangesProblem"/> says why.</returns>
+    public async Task<bool> CommitAsync(string message)
+    {
+        bool committed = false;
+        try
+        {
+            await _workingTree.CommitAsync(Path, message).ConfigureAwait(false);
+            committed = true;
+            Message = "";
+            WorkingChangesProblem = null;
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            WorkingChangesProblem = ex.Message;
+        }
+
+        if (committed)
+        {
+            await RunAsync(() =>
+            {
+                Reload(0);
+                IsWorkingChangesSelected = true;
+                ReadWorkingChanges(readMessage: false);
+            }).ConfigureAwait(false);
+        }
+        else
+        {
+            await RefreshWorkingChangesAsync().ConfigureAwait(false);
+        }
+
+        return committed;
+    }
+
+    /// <summary>
+    /// Shows the diff of a file in place of the graph.
+    /// </summary>
+    /// <param name="source">Which two states to compare.</param>
+    /// <param name="file">The file's path.</param>
+    /// <param name="oldPath">For a rename, the path the file was renamed from.</param>
+    /// <param name="sha">For <see cref="GitDiffSource.Commit"/>, the commit.</param>
+    public Task OpenDiffAsync(GitDiffSource source, string file, string? oldPath = null, string? sha = null) => RunAsync(() =>
+    {
+        DiffTarget = (file, source);
+        ActiveDiff = null;
+        DiffProblem = null;
+        Changed?.Invoke();
+        try
+        {
+            ActiveDiff = _reader.ReadDiff(Path, source, file, oldPath, sha);
+        }
+        catch (Exception ex) when (IsReadError(ex))
+        {
+            DiffProblem = ex.Message;
+        }
+    });
+
+    /// <summary>
+    /// Shows the graph again.
+    /// </summary>
+    public void CloseDiff()
+    {
+        DiffTarget = null;
+        ActiveDiff = null;
+        DiffProblem = null;
+        Changed?.Invoke();
+    }
 
     /// <summary>
     /// Closes the repository. A read that's under way finishes first, and then closes it. Reads asked for afterwards do
@@ -225,6 +405,45 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
             CloseCursor();
             _gate.Release();
         }
+    }
+
+    private static string[] PathsOf(IEnumerable<FileChange> files) =>
+        [.. files.SelectMany(file => file.OldPath is null ? [file.Path] : new[] { file.Path, file.OldPath }).Distinct()];
+
+    private async Task ChangeIndexAsync(Func<CancellationToken, Task> change)
+    {
+        try
+        {
+            await change(CancellationToken.None).ConfigureAwait(false);
+            WorkingChangesProblem = null;
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            WorkingChangesProblem = ex.Message;
+        }
+
+        await RefreshWorkingChangesAsync().ConfigureAwait(false);
+    }
+
+    private void ReadWorkingChanges(bool readMessage)
+    {
+        try
+        {
+            Deosrc.Tammi.Core.Git.RepositoryStatus status = _reader.ReadStatus(Path);
+            WorkingChanges = [.. status.Changes.OrderBy(change => change.Path, StringComparer.Ordinal)];
+            HeadSha = status.HeadSha;
+            if (readMessage)
+            {
+                Message = _workingTree.ReadMessageAsync(Path).GetAwaiter().GetResult();
+            }
+        }
+        catch (Exception ex) when (ex is GitException or LibGit2SharpException or IOException or UnauthorizedAccessException)
+        {
+            WorkingChanges = null;
+            WorkingChangesProblem = ex.Message;
+        }
+
+        Changed?.Invoke();
     }
 
     // Opens the history again with the current scope and reads at least `count` commits.
@@ -261,6 +480,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         }
 
         ReadPage(Math.Max(count, PageSize));
+        ReadWorkingChanges(readMessage: false);
         if (selected is not null)
         {
             Select(selected);
