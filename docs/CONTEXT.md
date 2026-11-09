@@ -273,6 +273,13 @@ with the new name, without reading the tasks again. A workspace that can't be re
   reason and the option to delete the workspace.
 - Opening a workspace shows it in a **tab**. Several workspaces can be open at once. Opening a workspace that's
   already open shows its tab.
+- **Reopening tabs:** the workspaces open in tabs, their order and the tab that was shown are kept in the app's data
+  folder as they change. When the app starts, it opens those tabs again, and shows the one that was shown, if any.
+  A workspace that's no longer listed, or can't be read, is skipped. Each workspace's own tabs are restored when its
+  tab is first shown (see Workspace View).
+- **One instance:** only one copy of Tammi runs at a time, so the same agents are never started twice. Starting a
+  second copy shows the running copy's window (restoring it if it's minimised) and exits. If the running copy can't be
+  reached, it tells the user Tammi is already running instead.
 - Starts the Create Workspace flow.
 
 ### Workspace View (tab)
