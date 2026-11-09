@@ -15,7 +15,7 @@ public sealed class WorkspaceGitGraphsTests : IDisposable
 
     public WorkspaceGitGraphsTests()
     {
-        _graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), _settings);
+        _graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new GitWorkingTree(new GitCli()), _settings);
         _graphs.Changed += _changed.Add;
     }
 

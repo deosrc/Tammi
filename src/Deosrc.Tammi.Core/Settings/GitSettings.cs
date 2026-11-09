@@ -6,7 +6,7 @@ namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
 /// The Repositories section of the Settings screen, and the git graph's options (<see cref="GraphScope"/> on the Git
-/// section, and <see cref="GraphFileView"/>). It keeps its earlier name, and its <c>git</c> key in
+/// section, <see cref="GraphFileView"/> and <see cref="SubjectLimit"/>). It keeps its earlier name, and its <c>git</c> key in
 /// <c>settings.json</c>, from when the Repositories section was called Git.
 /// </summary>
 public sealed record GitSettings
@@ -25,6 +25,21 @@ public sealed record GitSettings
     /// The <see cref="StatusRefreshInterval"/> used until the user changes it.
     /// </summary>
     public static readonly TimeSpan DefaultStatusRefreshInterval = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// The fewest characters <see cref="SubjectLimit"/> can be.
+    /// </summary>
+    public const int MinSubjectLimit = 1;
+
+    /// <summary>
+    /// The most characters <see cref="SubjectLimit"/> can be.
+    /// </summary>
+    public const int MaxSubjectLimit = 500;
+
+    /// <summary>
+    /// The <see cref="SubjectLimit"/> used until the user changes it.
+    /// </summary>
+    public const int DefaultSubjectLimit = 72;
 
     /// <summary>
     /// The Monitored Folders: local folders scanned for git repositories to add to the Repository Catalogue (see
@@ -56,6 +71,12 @@ public sealed record GitSettings
     public GitGraphFileView GraphFileView { get; init; } = GitGraphFileView.List;
 
     /// <summary>
+    /// How many characters a commit message's subject should have at most. It's a soft limit: the commit panel counts
+    /// the characters left, and still commits a longer subject.
+    /// </summary>
+    public int SubjectLimit { get; init; } = DefaultSubjectLimit;
+
+    /// <summary>
     /// Replaces out-of-range values, and values this version of Tammi doesn't know, with valid ones, and writes each
     /// folder as a full path, once.
     /// </summary>
@@ -70,6 +91,7 @@ public sealed record GitSettings
                 : StatusRefreshInterval,
         GraphScope = Enum.IsDefined(GraphScope) ? GraphScope : GitGraphScope.WorkspaceBranch,
         GraphFileView = Enum.IsDefined(GraphFileView) ? GraphFileView : GitGraphFileView.List,
+        SubjectLimit = SubjectLimit is >= MinSubjectLimit and <= MaxSubjectLimit ? SubjectLimit : DefaultSubjectLimit,
     };
 
     /// <summary>
@@ -81,9 +103,11 @@ public sealed record GitSettings
         && LocalRepositories.SequenceEqual(other.LocalRepositories)
         && StatusRefreshInterval == other.StatusRefreshInterval
         && GraphScope == other.GraphScope
-        && GraphFileView == other.GraphFileView;
+        && GraphFileView == other.GraphFileView
+        && SubjectLimit == other.SubjectLimit;
 
     /// <inheritdoc />
     public override int GetHashCode() =>
-        HashCode.Combine(MonitoredFolders.Count, LocalRepositories.Count, StatusRefreshInterval, GraphScope, GraphFileView);
+        HashCode.Combine(
+            MonitoredFolders.Count, LocalRepositories.Count, StatusRefreshInterval, GraphScope, GraphFileView, SubjectLimit);
 }

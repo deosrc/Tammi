@@ -77,7 +77,7 @@
                     <h3 class="git-commit-heading" id="@($"{_id}-files")">Changed files</h3>
                     @if (Graph.SelectedChanges is { Count: > 0 } counted)
                     {
-                        @Counts(counted)
+                        <GitFileChangeCounts Kinds="counted.Select(change => change.Kind)" />
                     }
                     <div class="segmented segmented-small git-commit-file-view" role="group" aria-label="Show files as">
                         <button type="button" class="segmented-option" title="As a list" aria-label="As a list"
@@ -123,7 +123,8 @@
                         @foreach (var change in changes)
                         {
                             var folder = CommitFileTree.FolderOf(change.Path);
-                            <li class="git-commit-file" @key="change.Path" title="@FileTitle(change)">
+                            <li class="git-commit-file git-commit-file-openable @(IsShown(change) ? "selected" : null)"
+                                @key="change.Path" title="@FileTitle(change)" @onclick="() => ToggleDiff(change)">
                                 @Kind(change.Kind)
                                 <span class="git-commit-file-name">@CommitFileTree.NameOf(change.Path)</span>
                                 @if (folder.Length > 0)
@@ -276,6 +277,20 @@
         }
     });
 
+    private bool IsShown(CommitFileChange change) => Graph.DiffTarget?.Path == change.Path;
+
+    // Selecting a file shows its changes in this commit, and selecting it again takes them away.
+    private Task ToggleDiff(CommitFileChange change)
+    {
+        if (IsShown(change))
+        {
+            Graph.CloseDiff();
+            return Task.CompletedTask;
+        }
+
+        return Graph.OpenDiffAsync(GitDiffSource.Commit, change.Path, change.OldPath, Graph.Selected?.Commit.Sha);
+    }
+
     private void ToggleFolder(string path)
     {
         if (!_expanded.Remove(path))
@@ -283,51 +298,6 @@
             _expanded.Add(path);
         }
     }
-
-    // How many files were modified, added, deleted and renamed, each as its coloured icon and number (with the words
-    // as its tooltip), leaving out those with none.
-    private static RenderFragment Counts(IEnumerable<CommitFileChange> changes) => __builder =>
-    {
-        var kinds = changes.Select(change => change.Kind).ToArray();
-        <span class="git-commit-counts">
-            @foreach (var (kind, label, icon) in CountKinds)
-            {
-                var count = kinds.Count(fileKind => CountsAs(fileKind) == kind);
-                if (count > 0)
-                {
-                    <span class="git-commit-count git-graph-file-@kind.ToString().ToLowerInvariant()" title="@count @label">
-                        <svg class="git-commit-count-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            @icon
-                        </svg>
-                        <span>@count</span>
-                        <span class="visually-hidden">@label</span>
-                    </span>
-                }
-            }
-        </span>
-    };
-
-    // The counts, in order, with their words and icons: a pencil, a plus, a trash can and an arrow.
-    private static readonly (FileChangeKind Kind, string Label, RenderFragment Icon)[] CountKinds =
-    [
-        (FileChangeKind.Modified, "modified",
-            @<g><path d="M4 20h4L19 9l-4-4L4 16Z" /><path d="m13.5 6.5 4 4" /></g>),
-        (FileChangeKind.Added, "added", @<path d="M12 5v14M5 12h14" />),
-        (FileChangeKind.Deleted, "deleted",
-            @<g><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></g>),
-        (FileChangeKind.Renamed, "renamed", @<path d="M5 12h14M13 6l6 6-6 6" />),
-    ];
-
-    // Type changes and conflicts count as modified.
-    private static FileChangeKind CountsAs(FileChangeKind kind) => kind switch
-    {
-        FileChangeKind.TypeChanged or FileChangeKind.Conflicted => FileChangeKind.Modified,
-        _ => kind,
-    };
-
-    // Every file in a folder of the tree, however deep.
-    private static IEnumerable<CommitFileChange> FilesIn(CommitFileTreeNode folder) =>
-        folder.Children.SelectMany(child => child.Change is { } change ? [change] : FilesIn(child));
 
     private static string FileTitle(CommitFileChange change) =>
         change.OldPath is { } oldPath ? $"{oldPath} → {change.Path}" : change.Path;
@@ -370,7 +340,7 @@
                             <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
                         </svg>
                         <span class="git-commit-folder-name">@node.Name</span>
-                        @Counts(FilesIn(node))
+                        <GitFileChangeCounts Kinds="CommitFileTree.FilesIn(node).Select(change => change.Kind)" />
                     </button>
                     @if (open)
                     {
@@ -380,7 +350,9 @@
             }
             else
             {
-                <li class="git-commit-file" role="treeitem" style="@indent" title="@FileTitle(node.Change!)" @key="node.Path">
+                <li class="git-commit-file git-commit-file-openable @(IsShown(node.Change!) ? "selected" : null)"
+                    role="treeitem" aria-selected="@(IsShown(node.Change!) ? "true" : "false")" style="@indent"
+                    title="@FileTitle(node.Change!)" @key="node.Path" @onclick="() => ToggleDiff(node.Change!)">
                     @Kind(node.Change!.Kind)
                     <span class="git-commit-file-name">@node.Name</span>
                 </li>

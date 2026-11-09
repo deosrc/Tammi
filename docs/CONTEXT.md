@@ -375,7 +375,31 @@ with the new name, without reading the tasks again. A workspace that can't be re
       its A, M, D or R.
     - Every graph shows files the same way, and the list or tree choice is kept in the settings, so it's the same
       after a restart. Like the columns, whether Authors is collapsed is shared by every graph until the app closes.
-      Diffs are a separate Git operation.
+    - Selecting a changed file shows its diff (see below), and selecting it again takes the diff away.
+  - **Working changes:** the top row of the graph is the changes not yet committed, joined to HEAD by a dashed line,
+    with how many files are unstaged and staged. It is only shown while there are changes, and after the last one is
+    committed the selection moves to HEAD's commit. Selecting it turns the details into the commit panel: the files with
+    unstaged changes, the staged files below them (a toggle in the panel's heading shows both as a list or as a tree of
+    folders, which start open and show how many of their files were modified, added, deleted and renamed, as in a
+    commit's tree, and have a Stage or Unstage button, shown on hover, that moves all their files; the same list or tree
+    choice, kept in the settings, as the changed files of a commit; select files, with Ctrl-click to add to the selection; the last one selected has its diff shown, which goes when it's
+    deselected; the
+    Stage, Stage all, Unstage and Unstage all buttons move them between the two, as does double-clicking a file), the
+    commit message's subject and body (a bar above them resizes the body, down to one row: drag it, or focus it and
+    use Up and Down, and double-click resets it, and the height is kept like the details' width; the unstaged and staged files share the rest of the height evenly),
+    and the Commit button, which needs a staged file and a subject. A counter at the end of the subject counts down the
+    characters left of a soft limit, 72 unless the Git settings say otherwise: it's green until 10 are left, orange from
+    there to the limit, and red once the subject is over it, which can still be committed. The message is
+    kept in git's own `COMMIT_EDITMSG` file in the repository's git directory (a submodule's own, for a submodule) as
+    it's typed, and read from there when the panel opens; a commit clears it. Staging, unstaging and committing use the
+    git CLI, so hooks run, and a failure is shown under the message. A submodule whose checked-out commit differs from
+    the one the repository records is listed like a file, marked S, and staging it records the commit it has checked out;
+    its diff shows the old and new commit. The submodule's own uncommitted files aren't part of it: commit them from the
+    submodule's own graph tab first.
+  - **Diffs:** a file's diff (a commit's changes to it, or a working change's unstaged or staged changes) is shown in
+    place of the list of commits (the details stay beside it) as unified hunks with old and new line numbers. Deselecting the file, or the close button in its top right, goes back to
+    the list, which keeps its scroll position and selection. Binary files say so instead, and very large diffs are cut
+    short.
   - The split between the list and the details is resizable: drag it, or focus it and use Left and Right. Double-click
     resets it. The details' width is kept as a fixed width in pixels (see [Layout state](#technical-constraints)), so
     every graph opens with it, even after a restart. Each side keeps a minimum width: when the window is too narrow

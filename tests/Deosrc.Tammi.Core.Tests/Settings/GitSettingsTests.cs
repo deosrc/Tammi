@@ -20,10 +20,27 @@ public sealed class GitSettingsTests
         Assert.Equal(GitGraphFileView.List, settings.GraphFileView);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    [InlineData(501)]
+    public void Normalize_SubjectLimitOutOfRange_IsTheDefault(int limit)
+    {
+        Assert.Equal(GitSettings.DefaultSubjectLimit, new GitSettings { SubjectLimit = limit }.Normalize().SubjectLimit);
+    }
+
+    [Fact]
+    public void Normalize_SubjectLimitInRange_IsKept()
+    {
+        Assert.Equal(50, new GitSettings { SubjectLimit = 50 }.Normalize().SubjectLimit);
+        Assert.Equal(72, new GitSettings().SubjectLimit);
+    }
+
     [Fact]
     public void Equals_ComparesTheGraphScopeAndFileView()
     {
         Assert.NotEqual(new GitSettings(), new GitSettings { GraphScope = GitGraphScope.Everything });
         Assert.NotEqual(new GitSettings(), new GitSettings { GraphFileView = GitGraphFileView.Tree });
+        Assert.NotEqual(new GitSettings(), new GitSettings { SubjectLimit = 50 });
     }
 }

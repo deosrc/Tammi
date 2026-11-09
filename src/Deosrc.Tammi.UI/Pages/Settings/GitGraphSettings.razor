@@ -14,6 +14,29 @@
         Which commits a repository's git graph shows when it opens: the workspace branch with its upstream and base
         branch, or every branch and tag. Each graph can switch while it's open.
     </p>
+</div>
+
+@* The commit panel's counter for the subject line. *@
+<div class="settings-field">
+    <label for="git-subject-limit">Commit subject limit</label>
+    <div class="settings-field-row">
+        @* Recreated after each change, so the input shows the saved value even when an out-of-range value is replaced. *@
+        <input @key="_subjectLimitRevision"
+               id="git-subject-limit"
+               type="number"
+               class="settings-number"
+               min="@GitSettings.MinSubjectLimit"
+               max="@GitSettings.MaxSubjectLimit"
+               step="1"
+               value="@SettingsStore.Current.Git.SubjectLimit"
+               @onchange="OnSubjectLimitChanged" />
+        <span>characters</span>
+    </div>
+    <p class="settings-help">
+        How long a commit message's subject should be at most (@GitSettings.MinSubjectLimit to
+        @GitSettings.MaxSubjectLimit characters). The commit panel counts down the characters left, as a guide: a longer
+        subject can still be committed.
+    </p>
     @if (SaveError is not null)
     {
         <p class="error">@SaveError</p>
@@ -21,6 +44,20 @@
 </div>
 
 @code {
+    private int _subjectLimitRevision;
+
+    private async Task OnSubjectLimitChanged(ChangeEventArgs e)
+    {
+        // A value that isn't a whole number in range is replaced by the current one.
+        if (int.TryParse(e.Value?.ToString(), out var limit)
+            && limit is >= GitSettings.MinSubjectLimit and <= GitSettings.MaxSubjectLimit)
+        {
+            await UpdateAsync(settings => settings with { Git = settings.Git with { SubjectLimit = limit } });
+        }
+
+        _subjectLimitRevision++;
+    }
+
     private Task OnGraphScopeChanged(ChangeEventArgs e) =>
         Enum.TryParse(e.Value?.ToString(), out GitGraphScope scope)
             ? UpdateAsync(settings => settings with { Git = settings.Git with { GraphScope = scope } })
