@@ -5,6 +5,7 @@ using Photino.Blazor;
 using Photino.NET;
 using Deosrc.Tammi.Core;
 using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Terminals;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.Linux.PlatformServices;
@@ -25,6 +26,14 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        // Held until the process ends.
+        using var instanceLock = SingleInstanceLock.TryAcquire(new XdgAppPaths().DataDirectory);
+        if (instanceLock is null)
+        {
+            Console.Error.WriteLine(SingleInstanceLock.AlreadyRunningMessage);
+            return;
+        }
+
         var builder = PhotinoBlazorAppBuilder.CreateDefault(CreateFileProvider(), args);
         builder.Services.AddTammiUI();
         builder.Services.AddLinuxPlatformServices();

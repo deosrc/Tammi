@@ -34,6 +34,8 @@ public static class ServiceCollectionExtensions
 
         // One window per app, so the open tabs are shared app-wide.
         services.AddSingleton<WorkspaceTabs>();
+        services.AddSingleton<OpenWorkspaceTabsStore>();
+        services.AddSingleton<WorkspaceTabsKeeper>();
         services.AddSingleton<IGitCli>(services => new GitCli(logger: services.GetRequiredService<ILogger<GitCli>>()));
         services.AddSingleton<IGitUserConfig>(services => new GitUserConfig(services.GetRequiredService<IGitCli>()));
         services.AddSingleton<ISshKeyStore>(services => new SshKeyStore(

@@ -46,4 +46,20 @@ public static class AppRoutes
     /// The path of a workspace's tab.
     /// </summary>
     public static string Workspace(string workspaceId) => WorkspacePrefix + Uri.EscapeDataString(workspaceId);
+
+    /// <summary>
+    /// Gets the workspace a path is the tab of.
+    /// </summary>
+    /// <param name="path">A path relative to the base URI, without its query or fragment.</param>
+    public static string? WorkspaceIdOf(string path)
+    {
+        var trimmed = path.TrimEnd('/');
+        if (!trimmed.StartsWith(WorkspacePrefix, StringComparison.Ordinal) || trimmed.Length == WorkspacePrefix.Length
+            || trimmed.IndexOf('/', WorkspacePrefix.Length) >= 0)
+        {
+            return null;
+        }
+
+        return Uri.UnescapeDataString(trimmed[WorkspacePrefix.Length..]);
+    }
 }

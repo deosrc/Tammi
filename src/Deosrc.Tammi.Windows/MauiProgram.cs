@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Terminals;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.UI;
@@ -11,8 +12,18 @@ namespace Deosrc.Tammi.Windows;
 
 public static class MauiProgram
 {
+    // Held until the process ends.
+    private static SingleInstanceLock? _instanceLock;
+
     public static MauiApp CreateMauiApp()
     {
+        _instanceLock = SingleInstanceLock.TryAcquire(new WindowsAppPaths().DataDirectory);
+        if (_instanceLock is null)
+        {
+            NativeMethods.MessageBox(IntPtr.Zero, SingleInstanceLock.AlreadyRunningMessage, Deosrc.Tammi.Core.AppInfo.Name, 0x30);
+            Environment.Exit(0);
+        }
+
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>();
 
@@ -49,5 +60,11 @@ public static class MauiProgram
         var app = builder.Build();
         app.Services.UseTammiLogging();
         return app;
+    }
+
+    private static class NativeMethods
+    {
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        public static extern int MessageBox(IntPtr window, string text, string caption, uint type);
     }
 }
