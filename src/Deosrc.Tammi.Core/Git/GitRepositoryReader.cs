@@ -112,6 +112,11 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
     public FileDiff ReadDiff(string path, GitDiffSource source, string file, string? oldPath = null, string? sha = null)
     {
         using Repository repository = Open(path);
+        if (ReadSubmoduleDiff(repository, source, file, sha) is { } submoduleDiff)
+        {
+            return submoduleDiff;
+        }
+
         string[] paths = oldPath is null ? [file] : [file, oldPath];
         var options = new CompareOptions { Similarity = SimilarityOptions.Renames, ContextLines = 3 };
 
@@ -236,6 +241,52 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
             IncludeReachableFrom = tip,
             ExcludeReachableFrom = remoteTips,
         }).Count();
+    }
+
+    // The diff of a submodule is the change to the commit recorded for it, as git shows it, or null if the path isn't
+    // a submodule in the states compared.
+    private static FileDiff? ReadSubmoduleDiff(Repository repository, GitDiffSource source, string file, string? sha)
+    {
+        static string? CommitOf(TreeEntry? entry) =>
+            entry?.TargetType == TreeEntryTargetType.GitLink ? entry.Target.Sha : null;
+
+        string? oldCommit;
+        string? newCommit;
+        switch (source)
+        {
+            case GitDiffSource.Commit:
+                Commit commit = repository.Lookup<Commit>(sha)
+                    ?? throw new GitException($"There's no commit {sha} in '{repository.Info.WorkingDirectory}'.");
+                oldCommit = CommitOf(commit.Parents.FirstOrDefault()?.Tree[file]);
+                newCommit = CommitOf(commit.Tree[file]);
+                break;
+            case GitDiffSource.Staged:
+                oldCommit = CommitOf(repository.Head.Tip?.Tree[file]);
+                newCommit = repository.Index[file] is { Mode: Mode.GitLink } staged ? staged.Id.Sha : null;
+                break;
+            default:
+                oldCommit = repository.Index[file] is { Mode: Mode.GitLink } indexed ? indexed.Id.Sha : null;
+                newCommit = repository.Submodules.FirstOrDefault(submodule => submodule.Path == file)?.WorkDirCommitId?.Sha;
+                break;
+        }
+
+        if (oldCommit is null && newCommit is null)
+        {
+            return null;
+        }
+
+        var lines = new List<DiffLine>();
+        if (oldCommit is not null)
+        {
+            lines.Add(new DiffLine(DiffLineKind.Removed, $"Subproject commit {oldCommit}", 1, null));
+        }
+
+        if (newCommit is not null)
+        {
+            lines.Add(new DiffLine(DiffLineKind.Added, $"Subproject commit {newCommit}", null, 1));
+        }
+
+        return new FileDiff(file, null, [new DiffHunk($"@@ Submodule {file} @@", lines)]);
     }
 
     private static FileChange[] ReadChanges(Repository repository)

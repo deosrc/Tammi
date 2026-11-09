@@ -263,7 +263,7 @@
             @onclick="e => ToggleAsync(key, e.CtrlKey || e.MetaKey)"
             @ondblclick="() => MoveAsync(change, staged)">
             <span class="git-commit-file-kind git-graph-file-@kind.ToString().ToLowerInvariant()"
-                  title="@GitGraphText.Label(kind)">@GitGraphText.Letter(kind)</span>
+                  title="@(change.IsSubmodule ? "Submodule commit changed" : GitGraphText.Label(kind))">@(change.IsSubmodule ? "S" : GitGraphText.Letter(kind))</span>
             <span class="git-commit-file-name">@CommitFileTree.NameOf(change.Path)</span>
             @if (showFolder)
             {

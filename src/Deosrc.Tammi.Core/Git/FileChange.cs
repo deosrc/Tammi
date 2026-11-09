@@ -7,8 +7,35 @@ namespace Deosrc.Tammi.Core.Git;
 /// <param name="Staged">The change between HEAD and the index.</param>
 /// <param name="Unstaged">The change between the index and the working directory.</param>
 /// <param name="OldPath">For a staged rename, the path the file was renamed from.</param>
-public sealed record FileChange(string Path, FileChangeKind Staged, FileChangeKind Unstaged, string? OldPath = null)
+/// <param name="IsSubmodule">
+/// Whether the path is a submodule, and the change is to the commit the repository records for it.
+/// </param>
+public sealed record FileChange(
+    string Path,
+    FileChangeKind Staged,
+    FileChangeKind Unstaged,
+    string? OldPath = null,
+    bool IsSubmodule = false)
 {
+    /// <summary>
+    /// The change to the commit a repository records for a submodule, or <see langword="null"/> if the submodule's
+    /// checked-out commit is the recorded one. Files in the submodule that aren't committed aren't part of it.
+    /// </summary>
+    public static FileChange? ForSubmodule(SubmoduleStatus submodule)
+    {
+        ArgumentNullException.ThrowIfNull(submodule);
+        if (submodule.CommitChange == SubmoduleCommitChange.None)
+        {
+            return null;
+        }
+
+        return new FileChange(
+            submodule.Path,
+            submodule.CommitChange.HasFlag(SubmoduleCommitChange.Staged) ? FileChangeKind.Modified : FileChangeKind.None,
+            submodule.CommitChange.HasFlag(SubmoduleCommitChange.Unstaged) ? FileChangeKind.Modified : FileChangeKind.None,
+            IsSubmodule: true);
+    }
+
     /// <summary>
     /// Whether the file has changes in the index.
     /// </summary>

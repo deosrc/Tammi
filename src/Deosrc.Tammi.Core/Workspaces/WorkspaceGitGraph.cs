@@ -437,7 +437,13 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         try
         {
             Deosrc.Tammi.Core.Git.RepositoryStatus status = _reader.ReadStatus(Path);
-            WorkingChanges = [.. status.Changes.OrderBy(change => change.Path, StringComparer.Ordinal)];
+            // A submodule on a different commit from the recorded one is a change to stage and commit too.
+            WorkingChanges =
+            [
+                .. status.Changes
+                    .Concat(status.Submodules.Select(FileChange.ForSubmodule).OfType<FileChange>())
+                    .OrderBy(change => change.Path, StringComparer.Ordinal),
+            ];
             HeadSha = status.HeadSha;
             if (IsWorkingChangesSelected && WorkingChanges.Count == 0)
             {

@@ -386,7 +386,10 @@ with the new name, without reading the tasks again. A workspace that can't be re
     there to the limit, and red once the subject is over it, which can still be committed. The message is
     kept in git's own `COMMIT_EDITMSG` file in the repository's git directory (a submodule's own, for a submodule) as
     it's typed, and read from there when the panel opens; a commit clears it. Staging, unstaging and committing use the
-    git CLI, so hooks run, and a failure is shown under the message.
+    git CLI, so hooks run, and a failure is shown under the message. A submodule whose checked-out commit differs from
+    the one the repository records is listed like a file, marked S, and staging it records the commit it has checked out;
+    its diff shows the old and new commit. The submodule's own uncommitted files aren't part of it: commit them from the
+    submodule's own graph tab first.
   - **Diffs:** a file's diff (a commit's changes to it, or a working change's unstaged or staged changes) is shown in
     place of the list of commits (the details stay beside it) as unified hunks with old and new line numbers. Deselecting the file, or the close button in its top right, goes back to
     the list, which keeps its scroll position and selection. Binary files say so instead, and very large diffs are cut
