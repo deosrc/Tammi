@@ -490,6 +490,15 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
       or unknown when the token can't list keys), with an Add button. Tammi adds it through GitHub's API, titled with
       the computer's and key's names. If the token isn't allowed to, Tammi copies the public key and opens GitHub's
       page for adding a key, and says why. JIRA has no SSH keys.
+    - **Not loaded by SSH:** SSH only tries a key on its own when it has a default file name (`id_ed25519`, `id_rsa`,
+      …). A key with any other name that no `IdentityFile` in `~/.ssh/config` names would never be offered to the
+      remote (git fails with `Permission denied (publickey)`), so the key shows a warning, including keys that were
+      renamed or already there. The default fix is a **Host entry** (`Host <host>`, `IdentityFile`,
+      `IdentitiesOnly yes`) for each configured integration's SSH host (GitHub Enterprise Server hosts too), shown as
+      ticked hosts the user can untick before confirming. Hosts the key isn't added to start unticked, and hosts
+      with an entry naming the key are left out. The entries go before the first `Host *` entry, because SSH uses the
+      first value it finds for each option. The config is created if missing and its other content is kept. The Generate
+      form's file name field warns about a non-default name too, and points to this Host entry option.
   - What a [Git Graph](#workspace-view-tab) shows when it opens: the workspace branch (the default) or everything
 - **Repositories**
   - Monitored Folder(s), each with how many repositories were found in it

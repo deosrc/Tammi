@@ -56,6 +56,40 @@
                         </div>
                     }
 
+                    @if (_unloaded.TryGetValue(key.Name, out var choices))
+                    {
+                        <div class="alert alert-warning ssh-key-unloaded" role="alert">
+                            <p>
+                                SSH won't use this key on its own. It only tries keys with default names, such as id_ed25519,
+                                unless <span class="settings-list-path">@KeyStore.ConfigPath</span> names the file with an
+                                <code>IdentityFile</code>. Git fetch, pull and push fail with "Permission denied (publickey)".
+                            </p>
+                            @if (choices.Count == 0)
+                            {
+                                <p class="settings-help">
+                                    Add a Host entry with <code>IdentityFile ~/.ssh/@key.Name</code> to that file, or rename the key
+                                    to a default name.
+                                </p>
+                            }
+                            else
+                            {
+                                <p>Add a Host entry for this key to your SSH config, before any <code>Host *</code> entry, for:</p>
+                                @foreach (var host in choices.Keys.ToList())
+                                {
+                                    <label class="settings-checkbox">
+                                        <input type="checkbox" checked="@choices[host]" disabled="@_busy"
+                                               @onchange="e => choices[host] = (bool)(e.Value ?? false)" />
+                                        @host
+                                    </label>
+                                }
+                                <div class="settings-field-row">
+                                    <button type="button" class="button" disabled="@(_busy || !choices.ContainsValue(true))"
+                                            @onclick="() => AddHostEntriesAsync(key, choices)">Add Host entry</button>
+                                </div>
+                            }
+                        </div>
+                    }
+
                     @if (_messages.TryGetValue(key.Name, out var message))
                     {
                         <p class="@(message.IsError ? "error" : "settings-help")">@message.Text</p>
@@ -95,6 +129,14 @@
                 <label for="ssh-key-name">File name</label>
                 <input id="ssh-key-name" class="settings-text" autocomplete="off" @bind="_name" @bind:after="OnNameEdited" />
                 <p class="settings-help">The private key's file name. The public key gets the same name with .pub after it.</p>
+                @if (!string.IsNullOrWhiteSpace(_name) && !SshKey.IsDefaultName(_name))
+                {
+                    <p class="warning" role="note">
+                        SSH only tries keys with default names, such as id_ed25519, on its own. With this name, git can't use
+                        the key until your SSH config names it. After you generate it, the key shows a warning with an
+                        "Add Host entry" button that adds the entry to @KeyStore.ConfigPath for you.
+                    </p>
+                }
             </div>
             <div class="settings-field">
                 <label for="ssh-key-comment">Comment</label>
@@ -144,6 +186,9 @@
     private readonly Dictionary<string, string> _serviceErrors = [];
     private readonly Dictionary<string, (string Text, bool IsError)> _messages = [];
 
+    // For each key SSH wouldn't load: the hosts that could get an entry for it, and whether each is ticked.
+    private readonly Dictionary<string, Dictionary<string, bool>> _unloaded = [];
+
     private bool _busy;
     private SshKey? _removing;
 
@@ -170,6 +215,7 @@
         Registry.Changed += OnRegistryChanged;
         await LoadKeysAsync();
         await LoadServiceKeysAsync();
+        UpdateHostChoices();
     }
 
     public void Dispose() => Registry.Changed -= OnRegistryChanged;
@@ -177,6 +223,7 @@
     private void OnRegistryChanged(object? sender, EventArgs e) => _ = InvokeAsync(async () =>
     {
         await LoadServiceKeysAsync();
+        await CheckLoadedAsync();
         StateHasChanged();
     });
 
@@ -186,11 +233,73 @@
         {
             _keys = await KeyStore.ListAsync();
             _listError = null;
+            await CheckLoadedAsync();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _listError = $"Couldn't read your SSH keys. {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// Finds the keys SSH wouldn't load, and the integration hosts that could get an entry for each. Hosts the key
+    /// isn't on are listed but not ticked.
+    /// </summary>
+    private async Task CheckLoadedAsync()
+    {
+        var previous = _unloaded.ToDictionary(pair => pair.Key, pair => pair.Value);
+        _unloaded.Clear();
+        foreach (var key in _keys ?? [])
+        {
+            try
+            {
+                if (await KeyStore.IsLoadedBySshAsync(key))
+                {
+                    continue;
+                }
+
+                var hosts = SshKeyIntegrations.Select(integration => integration.SshHost).Distinct(StringComparer.OrdinalIgnoreCase);
+                var missing = await KeyStore.GetHostsWithoutEntryAsync(key, hosts);
+                previous.TryGetValue(key.Name, out var before);
+                _unloaded[key.Name] = missing.ToDictionary(
+                    host => host,
+                    host => before is not null && before.TryGetValue(host, out bool ticked)
+                        ? ticked
+                        : !SshKeyIntegrations.Any(integration =>
+                            string.Equals(integration.SshHost, host, StringComparison.OrdinalIgnoreCase)
+                            && UploadState(key, integration) == false));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _messages[key.Name] = ($"Couldn't read the SSH config. {ex.Message}", true);
+            }
+        }
+    }
+
+    private void UpdateHostChoices() => _ = InvokeAsync(async () =>
+    {
+        await CheckLoadedAsync();
+        StateHasChanged();
+    });
+
+    private async Task AddHostEntriesAsync(SshKey key, Dictionary<string, bool> choices)
+    {
+        _busy = true;
+        try
+        {
+            var added = await KeyStore.AddHostEntriesAsync(key, choices.Where(pair => pair.Value).Select(pair => pair.Key));
+            _messages[key.Name] = ($"Added {key.Name} to {KeyStore.ConfigPath} for {string.Join(", ", added)}.", false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _messages[key.Name] = ($"Couldn't update the SSH config. {ex.Message}", true);
+        }
+        finally
+        {
+            _busy = false;
+        }
+
+        await CheckLoadedAsync();
     }
 
     private async Task LoadServiceKeysAsync()

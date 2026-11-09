@@ -15,6 +15,12 @@ public interface ISshKeyIntegration : IIntegration
     Uri NewSshKeyUrl { get; }
 
     /// <summary>
+    /// The host name SSH connects to for git on this service, e.g. <c>github.com</c> or an Enterprise Server's host.
+    /// It's what a <c>Host</c> entry in the SSH config names.
+    /// </summary>
+    string SshHost { get; }
+
+    /// <summary>
     /// Lists the public keys on the user's account, without their comments.
     /// </summary>
     /// <returns>The keys, or <see langword="null"/> if the credentials aren't allowed to list them.</returns>
