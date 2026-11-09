@@ -169,6 +169,8 @@ public sealed class WorkspaceGitGraphTests : IDisposable
 
         Assert.Equal("Add a", graph.Rows[0].Commit.Subject);
         Assert.Empty(graph.WorkingChanges!);
+        Assert.False(graph.IsWorkingChangesSelected);
+        Assert.Equal(graph.Rows[0].Commit.Sha, graph.Selected?.Commit.Sha);
         Assert.Null(graph.WorkingChangesProblem);
     }
 

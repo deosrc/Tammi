@@ -1,10 +1,11 @@
-@implements IDisposable
+@implements IAsyncDisposable
 @using Deosrc.Tammi.Core.Git
+@inject IJSRuntime JS
 @* The details panel for the working changes, where a commit is made: the files with unstaged changes, the staged
    files below them (select files and move them between the two with the buttons, or double-click one), the commit
    message's subject and body, which are kept in git's message file as they're typed, and the commit button. *@
 
-<div class="git-working">
+<div class="git-working" @ref="_root">
     <h2 class="git-working-title">Working changes</h2>
 
     @if (Graph.WorkingChanges is null && Graph.WorkingChangesProblem is { } readProblem)
@@ -21,7 +22,7 @@
                 <button type="button" class="button button-secondary" disabled="@(Graph.UnstagedChanges.Count == 0)"
                         @onclick="() => StageAsync(Graph.UnstagedChanges)">Stage all</button>
             </div>
-            @FileList(Graph.UnstagedChanges, GitDiffSource.Unstaged, staged: false)
+            @FileList(Graph.UnstagedChanges, staged: false)
         </section>
 
         <section class="git-working-section" aria-label="Staged changes">
@@ -32,14 +33,18 @@
                 <button type="button" class="button button-secondary" disabled="@(Graph.StagedChanges.Count == 0)"
                         @onclick="() => UnstageAsync(Graph.StagedChanges)">Unstage all</button>
             </div>
-            @FileList(Graph.StagedChanges, GitDiffSource.Staged, staged: true)
+            @FileList(Graph.StagedChanges, staged: true)
         </section>
     }
+
+    @* Resizes the message's body: drag it up to make the body taller, or focus it and use Up and Down. *@
+    <div class="git-working-splitter" role="separator" aria-orientation="horizontal" aria-label="Resize the commit message"
+         tabindex="0" title="Drag to resize. Double-click to reset." @ref="_splitter"></div>
 
     <section class="git-working-message" aria-label="Commit message">
         <input type="text" class="git-working-subject" placeholder="Subject" aria-label="Commit subject"
                value="@_subject" @oninput="OnSubjectInput" />
-        <textarea class="git-working-body" rows="5" placeholder="Body (optional)" aria-label="Commit body"
+        <textarea class="git-working-body" rows="5" @ref="_bodyInput" placeholder="Body (optional)" aria-label="Commit body"
                   value="@_body" @oninput="OnBodyInput"></textarea>
         @if (Graph.WorkingChangesProblem is { } problem && Graph.WorkingChanges is not null)
         {
@@ -52,7 +57,14 @@
 </div>
 
 @code {
-    private readonly HashSet<string> _selected = [];
+    private readonly List<string> _selected = [];
+    // The selected file whose diff is shown, if any.
+    private string? _active;
+    private ElementReference _root;
+    private ElementReference _splitter;
+    private ElementReference _bodyInput;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _script;
     private CancellationTokenSource? _saveDelay;
     private string _subject = "";
     private string _body = "";
@@ -78,16 +90,58 @@
         var present = Graph.UnstagedChanges.Select(change => Key(change, staged: false))
             .Concat(Graph.StagedChanges.Select(change => Key(change, staged: true)))
             .ToHashSet();
-        _selected.RemoveWhere(key => !present.Contains(key));
+        _selected.RemoveAll(key => !present.Contains(key));
+        if (_active is not null && !_selected.Contains(_active))
+        {
+            _ = ShowDiffForSelectionAsync();
+        }
     }
 
-    public void Dispose()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Deosrc.Tammi.UI/Workspaces/GitWorkingChanges.razor.js");
+            _script = await _module.InvokeAsync<IJSObjectReference>("attachSplitter", _root, _bodyInput, _splitter);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The web view has gone.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
     {
         if (_saveDelay is { } pending)
         {
             // Keep what was typed in the last moments.
             pending.Cancel();
             _ = Graph.SaveMessageAsync(Combine());
+        }
+
+        try
+        {
+            if (_script is not null)
+            {
+                await _script.InvokeVoidAsync("dispose");
+                await _script.DisposeAsync();
+            }
+
+            if (_module is not null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The web view has gone, and the panel with it.
         }
     }
 
@@ -97,7 +151,7 @@
     private List<FileChange> SelectedIn(bool staged) =>
         [.. (staged ? Graph.StagedChanges : Graph.UnstagedChanges).Where(change => _selected.Contains(Key(change, staged)))];
 
-    private RenderFragment FileList(IReadOnlyList<FileChange> files, GitDiffSource source, bool staged) => __builder =>
+    private RenderFragment FileList(IReadOnlyList<FileChange> files, bool staged) => __builder =>
     {
         if (files.Count == 0)
         {
@@ -113,21 +167,20 @@
                 <li class="git-working-file @(_selected.Contains(key) ? "selected" : null)" role="option"
                     aria-selected="@(_selected.Contains(key) ? "true" : "false")" @key="key"
                     title="@(change.OldPath is { } old ? $"{old} → {change.Path}" : change.Path)"
-                    @onclick="e => Toggle(key, e.CtrlKey || e.MetaKey)"
+                    @onclick="e => ToggleAsync(key, e.CtrlKey || e.MetaKey)"
                     @ondblclick="() => MoveAsync(change, staged)">
                     <span class="git-commit-file-kind git-graph-file-@kind.ToString().ToLowerInvariant()"
                           title="@GitGraphText.Label(kind)">@GitGraphText.Letter(kind)</span>
                     <span class="git-commit-file-name">@System.IO.Path.GetFileName(change.Path)</span>
                     <span class="git-commit-file-folder">@CommitFileTree.FolderOf(change.Path)</span>
-                    <button type="button" class="button button-secondary git-working-diff" title="View the diff"
-                            @onclick="() => Graph.OpenDiffAsync(source, change.Path, change.OldPath)" @onclick:stopPropagation="true"
-                            @ondblclick:stopPropagation="true">Diff</button>
                 </li>
             }
         </ul>
     };
 
-    private void Toggle(string key, bool add)
+    // Selecting a file shows its diff straight away, and deselecting it takes the diff away. With several files
+    // selected, the diff is of the one selected last.
+    private Task ToggleAsync(string key, bool add)
     {
         if (!add)
         {
@@ -137,14 +190,40 @@
             {
                 _selected.Add(key);
             }
-
-            return;
         }
-
-        if (!_selected.Remove(key))
+        else if (!_selected.Remove(key))
         {
             _selected.Add(key);
         }
+        else if (_active != key)
+        {
+            return Task.CompletedTask;
+        }
+
+        return ShowDiffForSelectionAsync(_selected.Contains(key) ? key : null);
+    }
+
+    // Shows the diff of a selected file (the given one, or else any other that's selected), or closes the diff if none
+    // is.
+    private Task ShowDiffForSelectionAsync(string? preferred = null)
+    {
+        _active = preferred ?? _selected.LastOrDefault();
+        if (_active is null)
+        {
+            Graph.CloseDiff();
+            return Task.CompletedTask;
+        }
+
+        bool staged = _active.StartsWith('S');
+        FileChange? change = (staged ? Graph.StagedChanges : Graph.UnstagedChanges)
+            .FirstOrDefault(change => Key(change, staged) == _active);
+        if (change is null)
+        {
+            Graph.CloseDiff();
+            return Task.CompletedTask;
+        }
+
+        return Graph.OpenDiffAsync(staged ? GitDiffSource.Staged : GitDiffSource.Unstaged, change.Path, change.OldPath);
     }
 
     private Task MoveAsync(FileChange change, bool staged) => staged ? UnstageAsync([change]) : StageAsync([change]);
@@ -152,12 +231,16 @@
     private async Task StageAsync(IReadOnlyCollection<FileChange> files)
     {
         _selected.Clear();
+        _active = null;
+        Graph.CloseDiff();
         await Graph.StageAsync(files);
     }
 
     private async Task UnstageAsync(IReadOnlyCollection<FileChange> files)
     {
         _selected.Clear();
+        _active = null;
+        Graph.CloseDiff();
         await Graph.UnstageAsync(files);
     }
 

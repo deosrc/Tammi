@@ -40,14 +40,15 @@
         <p class="error git-graph-problem">Couldn't read the git graph. @problem</p>
     }
 
-    @if (Graph.DiffTarget is not null)
-    {
-        <GitFileDiffView Graph="Graph" />
-    }
+    <div class="git-graph-body" @ref="_body">
+        @* A diff takes the place of the list only, so the details stay beside it. The list stays in the page, only
+           hidden, so it keeps its scroll position and selection. *@
+        @if (Graph.DiffTarget is not null)
+        {
+            <GitFileDiffView Graph="Graph" />
+        }
 
-    @* The graph stays in the page while a diff is shown, only hidden, so it keeps its scroll position and selection. *@
-    <div class="git-graph-body" @ref="_body" hidden="@(Graph.DiffTarget is not null)">
-        <div class="git-graph-list" tabindex="0" @ref="_list"
+        <div class="git-graph-list" tabindex="0" @ref="_list" hidden="@(Graph.DiffTarget is not null)"
              style="@ListStyle" @onkeydown="OnKeyDownAsync">
             @* Stays at the top as the list scrolls down, and scrolls sideways with it. Each column but Description,
                which takes the space left, has a handle on the edge towards Description that resizes it. Right-clicking
@@ -90,35 +91,39 @@
                     @MenuCheckbox("Remote branches", Options.ShowRemoteBranches, enabled: true, Options.ToggleRemoteBranches)
                 </ul>
             }
-            @* The changes not yet committed, as a row above the commits, with a dashed line down to HEAD. *@
-            <div class="git-graph-row git-graph-working @(Graph.IsWorkingChangesSelected ? "selected" : null)"
-                 role="option" aria-selected="@(Graph.IsWorkingChangesSelected ? "true" : "false")"
-                 @onclick="Graph.SelectWorkingChangesAsync">
-                @foreach (var column in _visibleColumns)
-                {
-                    @switch (column)
+            @* The changes not yet committed, as a row above the commits, with a dashed line down to HEAD. There
+               is no row while there are none. *@
+            @if (Graph.WorkingChanges is { Count: > 0 })
+            {
+                <div class="git-graph-row git-graph-working @(Graph.IsWorkingChangesSelected ? "selected" : null)"
+                     role="option" aria-selected="@(Graph.IsWorkingChangesSelected ? "true" : "false")"
+                     @onclick="Graph.SelectWorkingChangesAsync">
+                    @foreach (var column in _visibleColumns)
                     {
-                        case GitGraphColumn.Graph:
-                            <span class="git-graph-lane-cell">
-                                <svg class="git-graph-lanes" width="@GraphWidth" height="@GitGraphRowView.RowHeight"
-                                     viewBox="0 0 @GraphWidth @GitGraphRowView.RowHeight" aria-hidden="true" focusable="false">
-                                    <path class="git-graph-working-line" d="@WorkingLinePath" />
-                                    <circle class="git-graph-working-dot" cx="@WorkingX" cy="@(GitGraphRowView.RowHeight / 2.0)" r="4" />
-                                </svg>
-                            </span>
-                            break;
-                        case GitGraphColumn.Description:
-                            <span class="git-graph-summary">
-                                <span class="git-graph-subject git-graph-working-label">Working changes</span>
-                                <span class="git-graph-working-counts">@WorkingCounts</span>
-                            </span>
-                            break;
-                        default:
-                            <span></span>
-                            break;
+                        @switch (column)
+                        {
+                            case GitGraphColumn.Graph:
+                                <span class="git-graph-lane-cell">
+                                    <svg class="git-graph-lanes" width="@GraphWidth" height="@GitGraphRowView.RowHeight"
+                                         viewBox="0 0 @GraphWidth @GitGraphRowView.RowHeight" aria-hidden="true" focusable="false">
+                                        <path class="git-graph-working-line" d="@WorkingLinePath" />
+                                        <circle class="git-graph-working-dot" cx="@WorkingX" cy="@(GitGraphRowView.RowHeight / 2.0)" r="4" />
+                                    </svg>
+                                </span>
+                                break;
+                            case GitGraphColumn.Description:
+                                <span class="git-graph-summary">
+                                    <span class="git-graph-subject git-graph-working-label">Working changes</span>
+                                    <span class="git-graph-working-counts">@WorkingCounts</span>
+                                </span>
+                                break;
+                            default:
+                                <span></span>
+                                break;
+                        }
                     }
-                }
-            </div>
+                </div>
+            }
             <div role="listbox" aria-label="Commits">
                 <Virtualize @ref="_virtualize" TItem="GitGraphRow" ItemsProvider="ProvideRowsAsync"
                             ItemSize="GitGraphRowView.RowHeight" OverscanCount="30">

@@ -123,8 +123,8 @@
                         @foreach (var change in changes)
                         {
                             var folder = CommitFileTree.FolderOf(change.Path);
-                            <li class="git-commit-file git-commit-file-openable" @key="change.Path" title="@FileTitle(change)"
-                                @onclick="() => OpenDiff(change)">
+                            <li class="git-commit-file git-commit-file-openable @(IsShown(change) ? "selected" : null)"
+                                @key="change.Path" title="@FileTitle(change)" @onclick="() => ToggleDiff(change)">
                                 @Kind(change.Kind)
                                 <span class="git-commit-file-name">@CommitFileTree.NameOf(change.Path)</span>
                                 @if (folder.Length > 0)
@@ -277,9 +277,19 @@
         }
     });
 
-    // Shows the file's changes in this commit in place of the graph.
-    private Task OpenDiff(CommitFileChange change) =>
-        Graph.OpenDiffAsync(GitDiffSource.Commit, change.Path, change.OldPath, Graph.Selected?.Commit.Sha);
+    private bool IsShown(CommitFileChange change) => Graph.DiffTarget?.Path == change.Path;
+
+    // Selecting a file shows its changes in this commit, and selecting it again takes them away.
+    private Task ToggleDiff(CommitFileChange change)
+    {
+        if (IsShown(change))
+        {
+            Graph.CloseDiff();
+            return Task.CompletedTask;
+        }
+
+        return Graph.OpenDiffAsync(GitDiffSource.Commit, change.Path, change.OldPath, Graph.Selected?.Commit.Sha);
+    }
 
     private void ToggleFolder(string path)
     {
@@ -385,8 +395,9 @@
             }
             else
             {
-                <li class="git-commit-file git-commit-file-openable" role="treeitem" style="@indent"
-                    title="@FileTitle(node.Change!)" @key="node.Path" @onclick="() => OpenDiff(node.Change!)">
+                <li class="git-commit-file git-commit-file-openable @(IsShown(node.Change!) ? "selected" : null)"
+                    role="treeitem" aria-selected="@(IsShown(node.Change!) ? "true" : "false")" style="@indent"
+                    title="@FileTitle(node.Change!)" @key="node.Path" @onclick="() => ToggleDiff(node.Change!)">
                     @Kind(node.Change!.Kind)
                     <span class="git-commit-file-name">@node.Name</span>
                 </li>

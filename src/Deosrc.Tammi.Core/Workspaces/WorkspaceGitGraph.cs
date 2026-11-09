@@ -262,6 +262,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     /// </summary>
     public Task SelectAsync(string? sha) => RunAsync(() =>
     {
+        ClearDiff();
         IsWorkingChangesSelected = false;
         Select(sha);
     });
@@ -271,6 +272,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     /// </summary>
     public Task SelectWorkingChangesAsync() => RunAsync(() =>
     {
+        ClearDiff();
         Selected = null;
         SelectedChanges = null;
         SelectedChangesProblem = null;
@@ -382,10 +384,15 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     /// </summary>
     public void CloseDiff()
     {
+        ClearDiff();
+        Changed?.Invoke();
+    }
+
+    private void ClearDiff()
+    {
         DiffTarget = null;
         ActiveDiff = null;
         DiffProblem = null;
-        Changed?.Invoke();
     }
 
     /// <summary>
@@ -432,6 +439,13 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
             Deosrc.Tammi.Core.Git.RepositoryStatus status = _reader.ReadStatus(Path);
             WorkingChanges = [.. status.Changes.OrderBy(change => change.Path, StringComparer.Ordinal)];
             HeadSha = status.HeadSha;
+            if (IsWorkingChangesSelected && WorkingChanges.Count == 0)
+            {
+                // The row is gone (e.g. after a commit), so show HEAD's commit instead.
+                IsWorkingChangesSelected = false;
+                Select(HeadSha);
+            }
+
             if (readMessage)
             {
                 Message = _workingTree.ReadMessageAsync(Path).GetAwaiter().GetResult();
