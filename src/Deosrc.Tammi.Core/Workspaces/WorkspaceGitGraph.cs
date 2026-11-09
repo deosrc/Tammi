@@ -448,6 +448,18 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     }
 
     /// <summary>
+    /// Clears <see cref="SyncProblem"/>, once the user has seen it.
+    /// </summary>
+    public void DismissSyncProblem()
+    {
+        if (SyncProblem is not null)
+        {
+            SyncProblem = null;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
     /// Shows the diff of a file in place of the graph.
     /// </summary>
     /// <param name="source">Which two states to compare.</param>

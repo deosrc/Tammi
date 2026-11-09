@@ -2489,6 +2489,29 @@ label.task-choice {
   font-size: var(--font-size-small);
 }
 
+/* Less space above than below, so the message sits close to the toolbar and clear of the graph. */
+.git-graph-sync-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  padding: 0 var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.git-graph-sync-error-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.git-graph-sync-error-body p {
+  margin: 0;
+}
+
+.git-graph-sync-error-close {
+  flex: none;
+}
+
 .git-graph-sync-details {
   margin: var(--space-1) 0 0;
   overflow-x: auto;
