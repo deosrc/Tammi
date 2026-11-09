@@ -17,10 +17,20 @@ public static class MauiProgram
 
     public static MauiApp CreateMauiApp()
     {
-        _instanceLock = SingleInstanceLock.TryAcquire(new WindowsAppPaths().DataDirectory);
+        var dataDirectory = new WindowsAppPaths().DataDirectory;
+        _instanceLock = SingleInstanceLock.TryAcquire(dataDirectory);
         if (_instanceLock is null)
         {
-            NativeMethods.MessageBox(IntPtr.Zero, SingleInstanceLock.AlreadyRunningMessage, Deosrc.Tammi.Core.AppInfo.Name, 0x30);
+            // Ask the running copy to show its window, rather than starting another.
+            if (!SingleInstanceLock.SignalRunningInstance(dataDirectory))
+            {
+                NativeMethods.MessageBox(
+                    IntPtr.Zero,
+                    SingleInstanceLock.AlreadyRunningMessage,
+                    Deosrc.Tammi.Core.AppInfo.Name,
+                    0x30);
+            }
+
             Environment.Exit(0);
         }
 
@@ -34,6 +44,10 @@ public static class MauiProgram
         {
             var services = IPlatformApplication.Current!.Services;
             WindowStatePersistence.Attach(window, services.GetRequiredService<WindowStateStore>());
+
+            // Another copy being started shows this window instead.
+            _instanceLock!.Activated += () => window.DispatcherQueue.TryEnqueue(() => ShowWindow(window));
+            _instanceLock.StartListening();
 
             // Closing the window warns first if any agents are running.
             var agents = services.GetRequiredService<WorkspaceAgents>();
@@ -60,6 +74,16 @@ public static class MauiProgram
         var app = builder.Build();
         app.Services.UseTammiLogging();
         return app;
+    }
+
+    private static void ShowWindow(Microsoft.UI.Xaml.Window window)
+    {
+        if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter { State: Microsoft.UI.Windowing.OverlappedPresenterState.Minimized } presenter)
+        {
+            presenter.Restore();
+        }
+
+        window.Activate();
     }
 
     private static class NativeMethods

@@ -26,4 +26,24 @@ public sealed class SingleInstanceLockTests : IDisposable
         using var second = SingleInstanceLock.TryAcquire(_directory);
         Assert.NotNull(second);
     }
+
+    [Fact]
+    public async Task SignalRunningInstance_RaisesActivatedInTheHolder()
+    {
+        using var holder = SingleInstanceLock.TryAcquire(_directory);
+        Assert.NotNull(holder);
+        var activated = new TaskCompletionSource();
+        holder.Activated += () => activated.TrySetResult();
+        holder.StartListening();
+
+        Assert.True(SingleInstanceLock.SignalRunningInstance(_directory));
+
+        await activated.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public void SignalRunningInstance_WithNothingRunning_ReturnsFalse()
+    {
+        Assert.False(SingleInstanceLock.SignalRunningInstance(_directory));
+    }
 }

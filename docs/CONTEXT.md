@@ -278,7 +278,8 @@ with the new name, without reading the tasks again. A workspace that can't be re
   A workspace that's no longer listed, or can't be read, is skipped. Each workspace's own tabs are restored when its
   tab is first shown (see Workspace View).
 - **One instance:** only one copy of Tammi runs at a time, so the same agents are never started twice. Starting a
-  second copy tells the user Tammi is already running and exits.
+  second copy shows the running copy's window (restoring it if it's minimised) and exits. If the running copy can't be
+  reached, it tells the user Tammi is already running instead.
 - Starts the Create Workspace flow.
 
 ### Workspace View (tab)

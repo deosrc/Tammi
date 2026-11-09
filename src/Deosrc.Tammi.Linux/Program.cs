@@ -27,10 +27,16 @@ internal static class Program
     private static void Main(string[] args)
     {
         // Held until the process ends.
-        using var instanceLock = SingleInstanceLock.TryAcquire(new XdgAppPaths().DataDirectory);
+        var dataDirectory = new XdgAppPaths().DataDirectory;
+        using var instanceLock = SingleInstanceLock.TryAcquire(dataDirectory);
         if (instanceLock is null)
         {
-            Console.Error.WriteLine(SingleInstanceLock.AlreadyRunningMessage);
+            // Ask the running copy to show its window, rather than starting another.
+            if (!SingleInstanceLock.SignalRunningInstance(dataDirectory))
+            {
+                Console.Error.WriteLine(SingleInstanceLock.AlreadyRunningMessage);
+            }
+
             return;
         }
 
@@ -61,6 +67,9 @@ internal static class Program
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             app.MainWindow.ShowMessage("Unhandled error", e.ExceptionObject.ToString());
 
+        instanceLock.Activated += () => app.MainWindow.Invoke(() => ShowWindow(app.MainWindow));
+        instanceLock.StartListening();
+
         app.Run();
 
         // Run returns once the window has closed.
@@ -84,6 +93,17 @@ internal static class Program
                 AppCloseWarning.Message(running),
                 PhotinoDialogButtons.YesNo,
                 PhotinoDialogIcon.Warning) == PhotinoDialogResult.Yes;
+    }
+
+    /// <summary>
+    /// Brings the window to the front, restoring it if it's minimised. Some window managers refuse to let an app
+    /// take focus, and then only mark the window as needing attention.
+    /// </summary>
+    private static void ShowWindow(PhotinoWindow window)
+    {
+        window.SetMinimized(false);
+        window.SetTopMost(true);
+        window.SetTopMost(false);
     }
 
     private static WindowStateTracker TrackWindowState(PhotinoWindow window, WindowState initial)
