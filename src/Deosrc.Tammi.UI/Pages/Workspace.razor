@@ -852,10 +852,11 @@ else
             .Concat(GitGraphs.For(WorkspaceId))
             .OrderBy(tab => tab.StartOrder)];
 
-        // Show the tab the view was showing last time, or the dashboard if it wasn't showing one or it has been
-        // closed.
-        _shown = ViewState.GetShown(WorkspaceId) is { } shown && _tabs.Contains(shown) ? shown : null;
-        SetShownTab(_shown);
+        // Show the tab the view was showing last time (in this run, or before Tammi restarted), or the dashboard if it
+        // wasn't showing one or it has been closed. This only reads: what the view shows is only remembered when the
+        // user changes it, as a tab that hasn't opened yet (while tabs are restored) isn't the dashboard.
+        _shown = (ViewState.GetShown(WorkspaceId) ?? TabRestorer.GetActive(WorkspaceId)) is { } shown
+            && _tabs.Contains(shown) ? shown : null;
     }
 
     // Remembers the tab the view shows, here and for the next time Tammi starts.

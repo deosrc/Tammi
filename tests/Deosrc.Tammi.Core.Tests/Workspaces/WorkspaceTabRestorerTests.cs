@@ -129,6 +129,25 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task ActiveTab_Agent_IsShownAgain()
+    {
+        var firstRun = NewRun();
+        await firstRun.Restorer.RestoreAsync(_workspace);
+        var agent = await firstRun.Agents.StartAsync(_workspace, Resumable);
+        firstRun.Graphs.Open(_workspace, _workspace.Repositories[0]);
+        firstRun.Restorer.SetActive(_workspace.Id, agent);
+        await firstRun.Restorer.WhenSavedAsync();
+        await firstRun.DisposeAsync();
+
+        var secondRun = NewRun();
+        var restoration = await secondRun.Restorer.RestoreAsync(_workspace);
+
+        Assert.Same(Assert.Single(secondRun.Agents.For(_workspace.Id)), restoration.Active);
+        Assert.Same(restoration.Active, secondRun.Restorer.GetActive(_workspace.Id));
+        await secondRun.DisposeAsync();
+    }
+
+    [Fact]
     public async Task ActiveTab_DashboardOrClosedTab_IsntRestored()
     {
         var firstRun = NewRun();
