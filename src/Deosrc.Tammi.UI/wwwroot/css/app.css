@@ -1551,6 +1551,19 @@ label.task-choice {
   --agent-state-tone-text: var(--color-surface);
 }
 
+/* An agent tab's state at its end, in the state's tone: a spinner, an icon or a dot. */
+.agent-tab-state {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--agent-state-tone);
+}
+
+.agent-tab-state .spinner {
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+}
+
 .agent-state-dot {
   flex: none;
   width: 8px;
