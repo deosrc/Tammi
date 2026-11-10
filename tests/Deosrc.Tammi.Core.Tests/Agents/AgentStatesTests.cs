@@ -30,4 +30,27 @@ public class AgentStatesTests
     {
         Assert.Equal(expected, state.IsRunning());
     }
+
+    [Fact]
+    public void Summarise_WithNoAgents_ReturnsNull()
+    {
+        Assert.Null(AgentStates.Summarise([]));
+    }
+
+    [Fact]
+    public void Summarise_WithOnlyExitedAgents_ReturnsNull()
+    {
+        Assert.Null(AgentStates.Summarise([AgentState.Exited, AgentState.Exited]));
+    }
+
+    [Theory]
+    [InlineData(AgentState.Error, AgentState.Error, AgentState.NeedsInput, AgentState.Working, AgentState.Idle)]
+    [InlineData(AgentState.NeedsInput, AgentState.Idle, AgentState.NeedsInput, AgentState.Working, AgentState.Exited)]
+    [InlineData(AgentState.Working, AgentState.Idle, AgentState.Working, AgentState.Running, AgentState.Exited)]
+    [InlineData(AgentState.Idle, AgentState.Exited, AgentState.Idle)]
+    [InlineData(AgentState.Running, AgentState.Exited, AgentState.Running)]
+    public void Summarise_ReturnsMostImportantState(AgentState expected, params AgentState[] states)
+    {
+        Assert.Equal(expected, AgentStates.Summarise(states));
+    }
 }

@@ -287,26 +287,8 @@ else
                                 }
                                 @if (tab is WorkspaceAgent agent)
                                 {
-                                    @* Agents' tabs show their state at the end, next to the close button: a spinner while
-                                       working, an icon when it needs the user, and a dot for any other state. *@
-                                    <span class="agent-tab-state @AgentStateText.ToneClass(agent.State)"
-                                          title="@AgentStateText.Label(agent.State)">
-                                        @if (agent.State == AgentState.Working)
-                                        {
-                                            <span class="spinner" role="progressbar" aria-label="Working"></span>
-                                        }
-                                        else if (agent.State == AgentState.NeedsInput)
-                                        {
-                                            <svg class="icon icon-small" viewBox="0 0 24 24" role="img" aria-label="Needs input">
-                                                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                                                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                                            </svg>
-                                        }
-                                        else
-                                        {
-                                            <span class="agent-state-dot"></span>
-                                        }
-                                    </span>
+                                    @* Agents' tabs show their state at the end, next to the close button. *@
+                                    <AgentStateIndicator State="agent.State" />
                                 }
                             </button>
                             <button type="button" class="tab-close" title="Close @tab.Name"

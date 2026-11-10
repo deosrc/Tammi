@@ -287,7 +287,10 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   why in a few words ("Workspace folder missing" or "Corrupt"), and its Details button opens a tab with the full
   reason and the option to delete the workspace.
 - Opening a workspace shows it in a **tab**. Several workspaces can be open at once. Opening a workspace that's
-  already open shows its tab.
+  already open shows its tab. A workspace's tab ends with the state of its agents, if it has any that are running or
+  have failed: the one that most needs the user, in the order Error, Needs input, Working, then Idle or Running. It's
+  shown like an agent's tab in the Workspace View (a spinner, an icon or a dot), and updates live. Agents that exited
+  normally don't count.
 - **Reopening tabs:** the workspaces open in tabs, their order and the tab that was shown are kept in the app's data
   folder as they change. When the app starts, it opens those tabs again, and shows the one that was shown, if any.
   A workspace that's no longer listed, or can't be read, is skipped. Each workspace's own tabs are restored when its
