@@ -268,6 +268,10 @@ else
                                 {
                                     <AgentIcon Definition="iconAgent.Agent.Definition" />
                                 }
+                                else if (tab is WorkspaceTerminal)
+                                {
+                                    @TerminalIcon
+                                }
                                 else if (tab is WorkspaceGitGraph)
                                 {
                                     <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">

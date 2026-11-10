@@ -437,7 +437,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   it says why instead.
 - **Main area tabs:** the main area has its own row of tabs, below a small divider. The first is always the
   **dashboard** (an icon, no name), which the view shows until the user opens something else. Then come the
-  workspace's terminals, agents and Git Graphs, in the order they started or opened. An agent's tab starts with the agent's icon, and ends (before its close button) with its state: a blue spinner while Working, a coloured bell icon when it Needs input, and otherwise a dot coloured by its state. The
+  workspace's terminals, agents and Git Graphs, in the order they started or opened. A terminal's tab starts with a terminal icon. An agent's tab starts with the agent's icon, and ends (before its close button) with its state: a blue spinner while Working, a coloured bell icon when it Needs input, and otherwise a dot coloured by its state. The
   last is always a **+** tab, which opens a menu of things to start: **Terminal**, **Git** (see Git Graph), then each
   Agent Definition (in the order agents are offered). Terminal and each Agent Definition have a submenu of
   **Workspace** and **Repository: `<name>`** for each repository.
