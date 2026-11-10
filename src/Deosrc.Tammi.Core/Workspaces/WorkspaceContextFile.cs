@@ -4,18 +4,19 @@ using Deosrc.Tammi.Core.Integrations;
 namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
-/// The task context file: a markdown file in the workspace's <c>.tammi/</c> folder with its tasks' details (titles,
-/// statuses, links and descriptions) and its git repositories, for agents to read. The initial prompt tells each agent where it is.
+/// The workspace context file: a markdown file in the workspace's <c>.tammi/</c> folder with its tasks' details (titles,
+/// statuses, links and descriptions) and its git repositories, for agents to read. The initial prompt tells each agent
+/// where it is.
 /// </summary>
 /// <remarks>
 /// <see cref="WorkspaceTaskList"/> writes it each time it has read the tasks, so it follows the tasks as they change.
 /// </remarks>
-public static class TaskContextFile
+public static class WorkspaceContextFile
 {
     /// <summary>
     /// The file's name, in the workspace's <c>.tammi/</c> folder.
     /// </summary>
-    public const string FileName = "tasks.md";
+    public const string FileName = "context.md";
 
     /// <summary>
     /// The file's full path in a workspace.
@@ -39,9 +40,10 @@ public static class TaskContextFile
         ArgumentNullException.ThrowIfNull(tasks);
 
         var text = new StringBuilder();
-        text.Append("# Tasks\n\n");
-        text.Append("The tasks of the Tammi workspace \"").Append(workspace.Name).Append("\". ");
+        text.Append("# Workspace context\n\n");
+        text.Append("The Tammi workspace \"").Append(workspace.Name).Append("\". ");
         text.Append("Tammi rewrites this file when the tasks change, so don't edit it.\n");
+        text.Append("\n## Tasks\n");
         if (tasks.Count == 0)
         {
             text.Append("\nThis workspace has no tasks. It's described by its name alone.\n");
@@ -136,7 +138,7 @@ public static class TaskContextFile
 
     private static void AppendTask(StringBuilder text, WorkspaceTask task)
     {
-        text.Append("## ").Append(task.Key);
+        text.Append("### ").Append(task.Key);
         if (task.Task is not { } info)
         {
             text.Append("\n\n").Append(task.Problem switch
@@ -174,7 +176,7 @@ public static class TaskContextFile
             text.Append("- Repository: ").Append(repository).Append('\n');
         }
 
-        text.Append("\n### Description\n\n");
+        text.Append("\n#### Description\n\n");
         text.Append(string.IsNullOrWhiteSpace(info.Description)
             ? "No description."
             : info.Description.ReplaceLineEndings("\n").Trim('\n'));
