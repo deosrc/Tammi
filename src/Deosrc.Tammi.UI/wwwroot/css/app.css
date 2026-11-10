@@ -1224,19 +1224,38 @@ label.task-choice {
 }
 
 .pull-request-open {
-  --pull-request-tone: var(--color-success);
+  --pull-request-tone: var(--color-focus);
 }
 
 .pull-request-merged {
-  --pull-request-tone: var(--color-merged);
+  --pull-request-tone: var(--color-success);
 }
 
 .pull-request-closed {
   --pull-request-tone: var(--color-error);
 }
 
+/* The checks dot: ringed in the surface colour, so it stands out on the badge's fill. */
 .pull-request-checks {
+  flex: none;
+  width: 8px;
+  height: 8px;
   margin-left: 2px;
+  border-radius: 50%;
+  background: var(--pull-request-checks-tone);
+  box-shadow: 0 0 0 1.5px var(--color-surface);
+}
+
+.pull-request-checks-failed {
+  --pull-request-checks-tone: var(--color-error);
+}
+
+.pull-request-checks-running {
+  --pull-request-checks-tone: var(--color-warning);
+}
+
+.pull-request-checks-passed {
+  --pull-request-checks-tone: var(--color-success);
 }
 
 .pull-request-problem {
@@ -3756,6 +3775,10 @@ label.task-choice {
   --workspace-badge-tone: var(--color-error);
 }
 
-.workspace-badge-merged {
-  --workspace-badge-tone: var(--color-merged);
+.workspace-badges:empty {
+  display: none;
+}
+
+.workspace-card-body .pull-request-badges {
+  margin-top: var(--space-2);
 }

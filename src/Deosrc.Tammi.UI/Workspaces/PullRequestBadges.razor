@@ -1,0 +1,33 @@
+@* A row of Pull Request badges, one for each Pull Request, with a warning when they couldn't all be read. It's on the
+   repository cards in the Workspace View and on the workspace cards on Home. It shows nothing when there are neither. *@
+@using Deosrc.Tammi.Core.Integrations
+
+@if (PullRequests.Count > 0 || Problem is not null)
+{
+    <div class="pull-request-badges">
+        @foreach (var pullRequest in PullRequests)
+        {
+            <PullRequestBadge @key="pullRequest.Url" PullRequest="pullRequest" />
+        }
+        @if (Problem is { } problem)
+        {
+            <span class="pull-request-problem" title="@problem" role="img" aria-label="@problem">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+                    <path d="M12 9v4M12 17h.01" />
+                </svg>
+            </span>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PullRequestInfo> PullRequests { get; set; } = [];
+
+    /// <summary>
+    /// Why the Pull Requests couldn't all be read, or <see langword="null"/> if they could.
+    /// </summary>
+    [Parameter]
+    public string? Problem { get; set; }
+}

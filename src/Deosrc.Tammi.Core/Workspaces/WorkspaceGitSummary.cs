@@ -37,37 +37,25 @@ public sealed record WorkspaceGitSummary(IReadOnlyList<HomeRepositoryStatus> Rep
             .Select(repository => repository.Git.Repository)];
 
     /// <summary>
-    /// Whether the workspace has Pull Requests and every one of them is merged.
+    /// The Pull Requests from the workspace branch of each repository, in the workspace's order.
     /// </summary>
-    public bool AllPullRequestsMerged
+    public IReadOnlyList<PullRequestInfo> PullRequests =>
+        [.. Repositories.SelectMany(repository => repository.PullRequests.PullRequests)];
+
+    /// <summary>
+    /// Why some repositories' Pull Requests couldn't be read, or <see langword="null"/> if they all could.
+    /// </summary>
+    public string? PullRequestProblem
     {
         get
         {
-            var pullRequests = Repositories.SelectMany(repository => repository.PullRequests.PullRequests).ToArray();
-            return pullRequests.Length > 0 && pullRequests.All(pullRequest => pullRequest.State == PullRequestState.Merged);
+            string[] problems =
+            [
+                .. Repositories.Select(repository => repository.PullRequests.Problem).OfType<string>().Distinct(),
+            ];
+            return problems.Length == 0 ? null : string.Join(" ", problems);
         }
     }
-
-    /// <summary>
-    /// The Pull Requests that are still drafts.
-    /// </summary>
-    public IReadOnlyList<PullRequestInfo> Drafts =>
-        [.. Repositories.SelectMany(repository => repository.PullRequests.PullRequests)
-            .Where(pullRequest => pullRequest.State == PullRequestState.Draft)];
-
-    /// <summary>
-    /// The Pull Requests whose checks are still running.
-    /// </summary>
-    public IReadOnlyList<PullRequestInfo> ChecksRunning => PullRequestsWith(PullRequestChecks.InProgress);
-
-    /// <summary>
-    /// The Pull Requests whose checks failed.
-    /// </summary>
-    public IReadOnlyList<PullRequestInfo> ChecksFailed => PullRequestsWith(PullRequestChecks.Failed);
-
-    private IReadOnlyList<PullRequestInfo> PullRequestsWith(PullRequestChecks checks) =>
-        [.. Repositories.SelectMany(repository => repository.PullRequests.PullRequests)
-            .Where(pullRequest => pullRequest.Checks == checks)];
 
     private static bool HasLocalChanges(RepositoryStatus status) =>
         status.HasUncommittedChanges

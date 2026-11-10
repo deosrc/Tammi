@@ -72,35 +72,8 @@
                                         Behind @summary.Behind.Count
                                     </span>
                                 }
-                                @if (summary.Drafts.Count > 0)
-                                {
-                                    <span class="workspace-badge workspace-badge-info"
-                                          title="@BadgeTitle("Draft pull requests:", summary.Drafts)">
-                                        Draft PRs @summary.Drafts.Count
-                                    </span>
-                                }
-                                @if (summary.ChecksRunning.Count > 0)
-                                {
-                                    <span class="workspace-badge workspace-badge-info"
-                                          title="@BadgeTitle("Checks running on", summary.ChecksRunning)">
-                                        Checks running @summary.ChecksRunning.Count
-                                    </span>
-                                }
-                                @if (summary.ChecksFailed.Count > 0)
-                                {
-                                    <span class="workspace-badge workspace-badge-danger"
-                                          title="@BadgeTitle("Checks failed on", summary.ChecksFailed)">
-                                        Checks failed @summary.ChecksFailed.Count
-                                    </span>
-                                }
-                                @if (summary.AllPullRequestsMerged)
-                                {
-                                    <span class="workspace-badge workspace-badge-merged"
-                                          title="Every pull request from the workspace branches is merged">
-                                        All PRs merged
-                                    </span>
-                                }
                             </div>
+                            <PullRequestBadges PullRequests="summary.PullRequests" Problem="@summary.PullRequestProblem" />
                         }
                     </div>
                     <div class="workspace-card-actions">

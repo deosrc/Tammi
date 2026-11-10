@@ -106,37 +106,28 @@ public sealed class HomeGitStatusTests : IDisposable
     }
 
     [Fact]
-    public async Task RefreshAsync_PullRequestChecks_AreListedByState()
+    public async Task RefreshAsync_PullRequests_AreListedForEveryRepository()
     {
-        var workspace = await CreateWorkspaceAsync("api");
+        var workspace = await CreateWorkspaceAsync("api", "web");
         _github.Add("task-1", 1);
-        _github.Add("task-1", 2);
-        _github.Add("task-1", 3);
-        PullRequestChecks[] checks = [PullRequestChecks.InProgress, PullRequestChecks.Failed, PullRequestChecks.Succeeded];
-        _github.PullRequests["task-1"] =
-            [.. _github.PullRequests["task-1"].Select((pullRequest, i) => pullRequest with { Checks = checks[i] })];
+        _github.Add("task-1", 2, PullRequestState.Draft);
 
         await _home.RefreshAsync([workspace], CancellationToken);
 
         var summary = _home.Get(workspace);
-        Assert.Equal([1], summary.ChecksRunning.Select(pullRequest => pullRequest.Number));
-        Assert.Equal([2], summary.ChecksFailed.Select(pullRequest => pullRequest.Number));
+        Assert.Equal([1, 2, 1, 2], summary.PullRequests.Select(pullRequest => pullRequest.Number));
+        Assert.Null(summary.PullRequestProblem);
     }
 
     [Fact]
-    public async Task RefreshAsync_AllPullRequestsMerged_OnlyWhenThereAreSomeAndAllAreMerged()
+    public async Task RefreshAsync_PullRequestsFail_SaysWhy()
     {
         var workspace = await CreateWorkspaceAsync("api");
-        await _home.RefreshAsync([workspace], CancellationToken);
-        Assert.False(_home.Get(workspace).AllPullRequestsMerged);
+        _github.Failure = new IntegrationException("GitHub couldn't be reached.");
 
-        _github.Add("task-1", 1, PullRequestState.Merged);
         await _home.RefreshAsync([workspace], CancellationToken);
-        Assert.True(_home.Get(workspace).AllPullRequestsMerged);
 
-        _github.Add("task-1", 2);
-        await _home.RefreshAsync([workspace], CancellationToken);
-        Assert.False(_home.Get(workspace).AllPullRequestsMerged);
+        Assert.Contains("GitHub couldn't be reached.", _home.Get(workspace).PullRequestProblem);
     }
 
     [Fact]
@@ -158,18 +149,6 @@ public sealed class HomeGitStatusTests : IDisposable
         Assert.Equal("api", Assert.Single(summary.Behind).FolderName);
         Assert.Empty(summary.LocalChanges);
         Assert.Empty(summary.Unpushed);
-    }
-
-    [Fact]
-    public async Task RefreshAsync_DraftPullRequests_AreListed()
-    {
-        var workspace = await CreateWorkspaceAsync("api");
-        _github.Add("task-1", 1, PullRequestState.Draft);
-        _github.Add("task-1", 2);
-
-        await _home.RefreshAsync([workspace], CancellationToken);
-
-        Assert.Equal([1], _home.Get(workspace).Drafts.Select(pullRequest => pullRequest.Number));
     }
 
     [Fact]
