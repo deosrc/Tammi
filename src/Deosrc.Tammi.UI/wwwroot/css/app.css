@@ -3811,6 +3811,14 @@ label.task-choice {
   --workspace-badge-tone: var(--color-error);
 }
 
+/* A workspace's agents on Home: an indicator for each, in the order they started. */
+.workspace-agents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 /* A line between the card's parts. The spacing around it is its own, so nothing else adds margins to the rows. */
 .workspace-card-divider {
   height: 0;

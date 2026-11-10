@@ -282,6 +282,9 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - Workspaces open in a tab watch their worktrees for file changes and update live.
   - Other workspaces refresh when Home is shown, and on a timer (interval in Settings).
   - Agent status is always live, because Tammi runs the agent processes itself.
+  - A workspace's card shows its open agents below the git badges, after a divider: an indicator for each, in the order
+    they started (a spinner while Working, a bell icon when it Needs input, otherwise a dot coloured by its state),
+    with the agent's name and state as its tooltip. Workspaces without open agents show nothing.
 - Workspaces are listed in the order they were first saved or added, each with its name and Workspace Folder.
   A workspace whose folder or metadata is missing, or whose metadata can't be read, can't be opened. Its card says
   why in a few words ("Workspace folder missing" or "Corrupt"), and its Details button opens a tab with the full

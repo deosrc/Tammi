@@ -2,7 +2,7 @@
 
 @* An agent's state as a tab shows it, in the state's tone: a spinner while it works, an icon when it needs the user, and
    a dot for any other state. *@
-<span class="agent-tab-state @AgentStateText.ToneClass(State)" title="@AgentStateText.Label(State)">
+<span class="agent-tab-state @AgentStateText.ToneClass(State)" title="@(Title ?? AgentStateText.Label(State))">
     @if (State == AgentState.Working)
     {
         <span class="spinner" role="progressbar" aria-label="Working"></span>
@@ -26,4 +26,10 @@
     /// </summary>
     [Parameter, EditorRequired]
     public AgentState State { get; set; }
+
+    /// <summary>
+    /// The tooltip, if it should say more than the state's name, e.g. which agent it is.
+    /// </summary>
+    [Parameter]
+    public string? Title { get; set; }
 }
