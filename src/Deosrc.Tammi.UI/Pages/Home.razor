@@ -64,22 +64,19 @@
                                 <div class="workspace-badges">
                                     @if (summary.LocalChanges.Count > 0)
                                     {
-                                        <span class="workspace-badge workspace-badge-warning"
-                                              title="@BadgeTitle("Local changes in", summary.LocalChanges)">
+                                        <span class="workspace-badge workspace-badge-warning">
                                             Local changes
                                         </span>
                                     }
                                     @if (summary.Unpushed.Count > 0)
                                     {
-                                        <span class="workspace-badge workspace-badge-warning"
-                                              title="@BadgeTitle("Unpushed commits in", summary.Unpushed)">
+                                        <span class="workspace-badge workspace-badge-warning">
                                             Unpushed
                                         </span>
                                     }
                                     @if (summary.Behind.Count > 0)
                                     {
-                                        <span class="workspace-badge workspace-badge-info"
-                                              title="@BadgeTitle("Behind the remote in", summary.Behind)">
+                                        <span class="workspace-badge workspace-badge-info">
                                             Behind
                                         </span>
                                     }
@@ -158,12 +155,6 @@
 
     private IEnumerable<Core.Workspaces.Workspace> AvailableWorkspaces() =>
         _workspaces?.Select(listing => listing.Workspace).OfType<Core.Workspaces.Workspace>() ?? [];
-
-    private static string BadgeTitle(string prefix, IEnumerable<WorkspaceRepository> repositories) =>
-        $"{prefix} {string.Join(", ", repositories.Select(repository => repository.FolderName))}";
-
-    private static string BadgeTitle(string prefix, IEnumerable<PullRequestInfo> pullRequests) =>
-        $"{prefix} {string.Join(", ", pullRequests.Select(pullRequest => $"{pullRequest.Repository}#{pullRequest.Number}"))}";
 
     // Follows the workspaces that are live (open in a tab), so their changes show as they happen.
     private void Observe()
