@@ -72,6 +72,13 @@
                                         Behind @summary.Behind.Count
                                     </span>
                                 }
+                                @if (summary.Drafts.Count > 0)
+                                {
+                                    <span class="workspace-badge workspace-badge-info"
+                                          title="@BadgeTitle("Draft pull requests:", summary.Drafts)">
+                                        Draft PRs @summary.Drafts.Count
+                                    </span>
+                                }
                                 @if (summary.ChecksRunning.Count > 0)
                                 {
                                     <span class="workspace-badge workspace-badge-info"

@@ -49,6 +49,13 @@ public sealed record WorkspaceGitSummary(IReadOnlyList<HomeRepositoryStatus> Rep
     }
 
     /// <summary>
+    /// The Pull Requests that are still drafts.
+    /// </summary>
+    public IReadOnlyList<PullRequestInfo> Drafts =>
+        [.. Repositories.SelectMany(repository => repository.PullRequests.PullRequests)
+            .Where(pullRequest => pullRequest.State == PullRequestState.Draft)];
+
+    /// <summary>
     /// The Pull Requests whose checks are still running.
     /// </summary>
     public IReadOnlyList<PullRequestInfo> ChecksRunning => PullRequestsWith(PullRequestChecks.InProgress);

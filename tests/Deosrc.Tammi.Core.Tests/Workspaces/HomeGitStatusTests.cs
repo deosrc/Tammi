@@ -161,6 +161,18 @@ public sealed class HomeGitStatusTests : IDisposable
     }
 
     [Fact]
+    public async Task RefreshAsync_DraftPullRequests_AreListed()
+    {
+        var workspace = await CreateWorkspaceAsync("api");
+        _github.Add("task-1", 1, PullRequestState.Draft);
+        _github.Add("task-1", 2);
+
+        await _home.RefreshAsync([workspace], CancellationToken);
+
+        Assert.Equal([1], _home.Get(workspace).Drafts.Select(pullRequest => pullRequest.Number));
+    }
+
+    [Fact]
     public async Task RefreshAsync_SeesChangesMadeSinceTheLastRead()
     {
         var workspace = await CreateWorkspaceAsync("api");
