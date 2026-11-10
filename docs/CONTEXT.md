@@ -306,17 +306,18 @@ with the new name, without reading the tasks again. A workspace that can't be re
 - **Repositories section:** a card with the git status of each repository, in the workspace's order. Right-clicking a
   card opens a menu with a **Tools** submenu (see [Tools](#tools)). The whole card is coloured by what needs
   attention: danger when the worktree is broken or its status can't be read, warning when it has work that isn't
-  pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its submodules, and
-  success otherwise. Each card has:
-  - a label: Broken, Unreadable, Changed (as on Home), Out of sync (only behind) or Clean
+  pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its submodules. A
+  repository with no issues has no colour and no label, and looks like a card in the Tasks section. Each card has:
+  - a label: Broken, Unreadable, Changed (as on Home) or Out of sync (only behind). A clean repository has none
   - its branch (or the commit, when HEAD is detached), and how far it's ahead of and behind its upstream, when it
     tracks one
   - how many uncommitted changes and unpushed commits it has
   - its submodules, nested under it, each with the same details, or "Not checked out"
   - a broken worktree says what's wrong (e.g. "Local Repository moved or deleted") instead
   - under its name, a badge for each [Pull Request](#github) from its workspace branch, oldest first, coloured by its
-    state (grey for a draft, green for open, purple for merged, red for closed), with an icon for its state, its number
-    and, when it has checks, one icon for the most severe of them (failed, then in progress, then passed). The tooltip
+    state (grey for a draft, blue for open, green for merged, red for closed), with an icon for its state and its number.
+    A draft or open Pull Request with checks ends with a dot for them: red if any failed, amber if any are running,
+    green if all passed. The tooltip
     gives its repository, title and state. Clicking a badge opens the Pull Request in the browser (not the git graph).
     A repository with no Pull Requests shows no badge.
     - Pull Requests are found from the Local Repository's remotes (fetch and push URLs): each remote on a connected

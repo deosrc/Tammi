@@ -1,6 +1,7 @@
 @* One repository's card in the side panel's Repositories section. The card's colour says whether it needs attention:
-   danger when it's broken or can't be read, warning when it has work that isn't pushed or is out of sync with its
-   upstream, and success when it's clean. Clicking the card opens the repository's git graph, or shows it if it's open.
+   danger when it's broken or can't be read and warning when it has work that isn't pushed or is out of sync with its
+   upstream. A clean card has no label and is styled like a task's card. Clicking the card opens the repository's git
+   graph, or shows it if it's open.
    Its name is a button for the keyboard, whose click reaches the card. A checked-out submodule's part of the card
    opens the submodule's graph instead. A badge for each Pull Request from the workspace branch sits under its name,
    and opens the Pull Request in the browser. *@
@@ -69,14 +70,6 @@
     [Parameter]
     public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
 
-    private string? ToneClass => Repository switch
-    {
-        { IsLoaded: false } => null,
-        { IsBroken: true } or { Status: null } => "git-status-card-danger",
-        { Status: { } status } when GitStatusText.NeedsAttention(status) => "git-status-card-warning",
-        _ => "git-status-card-success",
-    };
-
     private string? Label => Repository switch
     {
         { IsLoaded: false } => null,
@@ -84,6 +77,14 @@
         { Status: null } => "Unreadable",
         { Status.IsChanged: true } => "Changed",
         { Status: { } status } when GitStatusText.NeedsAttention(status) => "Out of sync",
-        _ => "Clean",
+        _ => null,
+    };
+
+    private string? ToneClass => Repository switch
+    {
+        { IsLoaded: false } => null,
+        { IsBroken: true } or { Status: null } => "git-status-card-danger",
+        { Status: { } status } when GitStatusText.NeedsAttention(status) => "git-status-card-warning",
+        _ => null,
     };
 }
