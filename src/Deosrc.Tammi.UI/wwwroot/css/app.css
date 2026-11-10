@@ -3749,7 +3749,6 @@ label.task-choice {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  margin-top: var(--space-2);
 }
 
 .workspace-badge {
@@ -3775,10 +3774,10 @@ label.task-choice {
   --workspace-badge-tone: var(--color-error);
 }
 
-.workspace-badges:empty {
-  display: none;
-}
-
-.workspace-card-body .pull-request-badges {
-  margin-top: var(--space-2);
+/* A line between the card's parts. The spacing around it is its own, so nothing else adds margins to the rows. */
+.workspace-card-divider {
+  height: 0;
+  margin: var(--space-2) 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
 }

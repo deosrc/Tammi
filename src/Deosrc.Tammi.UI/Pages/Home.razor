@@ -50,29 +50,45 @@
                         @if (available && workspace.Workspace is { Repositories.Count: > 0 } details
                              && GitStatus.Get(details) is { IsLoaded: true } summary)
                         {
-                            <div class="workspace-badges">
-                                @if (summary.LocalChanges.Count > 0)
-                                {
-                                    <span class="workspace-badge workspace-badge-warning"
-                                          title="@BadgeTitle("Local changes in", summary.LocalChanges)">
-                                        Local changes @summary.LocalChanges.Count
-                                    </span>
-                                }
-                                @if (summary.Unpushed.Count > 0)
-                                {
-                                    <span class="workspace-badge workspace-badge-warning"
-                                          title="@BadgeTitle("Unpushed commits in", summary.Unpushed)">
-                                        Unpushed @summary.Unpushed.Count
-                                    </span>
-                                }
-                                @if (summary.Behind.Count > 0)
-                                {
-                                    <span class="workspace-badge workspace-badge-info"
-                                          title="@BadgeTitle("Behind the remote in", summary.Behind)">
-                                        Behind @summary.Behind.Count
-                                    </span>
-                                }
-                            </div>
+                            var hasGitBadges = summary.LocalChanges.Count > 0 || summary.Unpushed.Count > 0
+                                || summary.Behind.Count > 0;
+                            var hasPullRequests = summary.PullRequests.Count > 0 || summary.PullRequestProblem is not null;
+
+                            @* Dividers only where there's something on both sides: after the text, and between the rows. *@
+                            @if (hasGitBadges || hasPullRequests)
+                            {
+                                <hr class="workspace-card-divider" />
+                            }
+                            @if (hasGitBadges)
+                            {
+                                <div class="workspace-badges">
+                                    @if (summary.LocalChanges.Count > 0)
+                                    {
+                                        <span class="workspace-badge workspace-badge-warning"
+                                              title="@BadgeTitle("Local changes in", summary.LocalChanges)">
+                                            Local changes
+                                        </span>
+                                    }
+                                    @if (summary.Unpushed.Count > 0)
+                                    {
+                                        <span class="workspace-badge workspace-badge-warning"
+                                              title="@BadgeTitle("Unpushed commits in", summary.Unpushed)">
+                                            Unpushed
+                                        </span>
+                                    }
+                                    @if (summary.Behind.Count > 0)
+                                    {
+                                        <span class="workspace-badge workspace-badge-info"
+                                              title="@BadgeTitle("Behind the remote in", summary.Behind)">
+                                            Behind
+                                        </span>
+                                    }
+                                </div>
+                            }
+                            @if (hasGitBadges && hasPullRequests)
+                            {
+                                <hr class="workspace-card-divider" />
+                            }
                             <PullRequestBadges PullRequests="summary.PullRequests" Problem="@summary.PullRequestProblem" />
                         }
                     </div>
