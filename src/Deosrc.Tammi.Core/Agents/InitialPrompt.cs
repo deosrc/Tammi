@@ -1,7 +1,7 @@
 namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
-/// The initial prompt that Tammi sends an agent when it starts, telling it about the workspace's task context file.
+/// The initial prompt that Tammi sends an agent when it starts, telling it about the workspace's workspace context file.
 /// </summary>
 /// <remarks>
 /// The prompt comes from a template, configured in Settings, with a placeholder for the context file's path. Each
@@ -10,16 +10,17 @@ namespace Deosrc.Tammi.Core.Agents;
 public static class InitialPrompt
 {
     /// <summary>
-    /// The placeholder in a template for the task context file's full path.
+    /// The placeholder in a template for the workspace context file's full path.
     /// </summary>
     public const string ContextFilePlaceholder = "{contextFile}";
 
     /// <summary>
-    /// The start of every predefined template: where the task context file is, and how to get the tasks' latest
+    /// The start of every predefined template: where the workspace context file is, and how to get the tasks' latest
     /// details.
     /// </summary>
     private const string ReadContextFile =
-        "The tasks for this workspace are described in " + ContextFilePlaceholder + ". Read that file first. "
+        "The tasks and git repositories for this workspace are described in " + ContextFilePlaceholder
+        + ". Read that file first. "
         + "Tammi rewrites it when the tasks change, so read it again whenever you need their latest details.";
 
     /// <summary>
@@ -59,7 +60,7 @@ public static class InitialPrompt
     /// Fills in a template.
     /// </summary>
     /// <param name="template">The template. Text other than the placeholder is kept as it is.</param>
-    /// <param name="contextFilePath">The task context file's path, put in place of every placeholder.</param>
+    /// <param name="contextFilePath">The workspace context file's path, put in place of every placeholder.</param>
     /// <returns>The prompt.</returns>
     public static string Expand(string template, string contextFilePath)
     {

@@ -21,7 +21,9 @@ stop=false
 dotnet build "$root/Deosrc.Tammi.Linux.slnf" --nologo -v q
 
 # Only one Tammi runs at a time (a second launch just signals the first), so there's at most one to replace.
-running_pid="$(pgrep -x Deosrc.Tammi.Linux | head -n 1 || true)"
+# The kernel truncates process names to 15 characters, so that's what pgrep -x has to match.
+process_name="Deosrc.Tammi.Linux"
+running_pid="$(pgrep -x "${process_name:0:15}" | head -n 1 || true)"
 
 if [[ -n "$running_pid" ]]; then
   echo "Tammi is running (pid $running_pid). The build starts once it exits."

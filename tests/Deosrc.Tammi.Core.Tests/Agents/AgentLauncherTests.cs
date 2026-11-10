@@ -33,7 +33,7 @@ public class AgentLauncherTests
     {
         var pty = new RecordingPtyService();
         var definition = new AgentDefinition("Test", "test-agent", "--flag") { PromptArguments = ["-p", "{prompt}"] };
-        var prompt = InitialPrompt.Expand(InitialPrompt.DefaultTemplate, "/ws/.tammi/tasks.md");
+        var prompt = InitialPrompt.Expand(InitialPrompt.DefaultTemplate, "/ws/.tammi/context.md");
 
         new AgentLauncher(pty).Start(definition, Path.GetTempPath(), PtySize.Default, prompt);
 

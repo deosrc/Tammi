@@ -8,7 +8,7 @@ namespace Deosrc.Tammi.Core.Workspaces;
 /// <remarks>
 /// Each task is read on its own, so a slow or failing source doesn't hold up the others. While tasks are read again,
 /// their previous details are kept until the new ones arrive. Once every task has been read, the workspace's task
-/// context file is written with them (see <see cref="TaskContextFile"/>), so agents see the tasks as they are now.
+/// context file is written with them (see <see cref="WorkspaceContextFile"/>), so agents see the tasks as they are now.
 /// </remarks>
 public sealed class WorkspaceTaskList : IDisposable
 {
@@ -67,13 +67,13 @@ public sealed class WorkspaceTaskList : IDisposable
     }
 
     /// <summary>
-    /// Why the task context file couldn't be written after the tasks were last read, or <see langword="null"/> if it
+    /// Why the workspace context file couldn't be written after the tasks were last read, or <see langword="null"/> if it
     /// was (or they haven't been read yet).
     /// </summary>
     public string? ContextFileProblem => _contextFileProblem;
 
     /// <summary>
-    /// Raised when a task has been read, when reading starts or finishes, and when the task context file couldn't be
+    /// Raised when a task has been read, when reading starts or finishes, and when the workspace context file couldn't be
     /// written or can be again. It's raised on a background thread.
     /// </summary>
     public event Action? Changed;
@@ -87,7 +87,7 @@ public sealed class WorkspaceTaskList : IDisposable
     /// Reads every task again. A read that's under way is cancelled.
     /// </summary>
     /// <returns>
-    /// A task that completes when every task has been read and the task context file written, or when a newer read or
+    /// A task that completes when every task has been read and the workspace context file written, or when a newer read or
     /// disposing cancels it.
     /// </returns>
     public Task RefreshAsync()
@@ -107,11 +107,11 @@ public sealed class WorkspaceTaskList : IDisposable
     }
 
     /// <summary>
-    /// Takes the workspace's new name, after it was renamed, without reading the tasks again. The task context file is
+    /// Takes the workspace's new name, after it was renamed, without reading the tasks again. The workspace context file is
     /// written again with it: straight away if every task has been read, or else when they have.
     /// </summary>
     /// <param name="workspace">The renamed workspace. Its tasks must be the same.</param>
-    /// <returns>A task that completes when the task context file has been written, if it's written straight away.</returns>
+    /// <returns>A task that completes when the workspace context file has been written, if it's written straight away.</returns>
     /// <exception cref="ArgumentException">The workspace is a different one, or its tasks have changed.</exception>
     public Task RenameAsync(Workspace workspace)
     {
@@ -184,7 +184,7 @@ public sealed class WorkspaceTaskList : IDisposable
         string? problem = null;
         try
         {
-            await TaskContextFile.WriteAsync(Workspace, Tasks, token).ConfigureAwait(false);
+            await WorkspaceContextFile.WriteAsync(Workspace, Tasks, token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -192,7 +192,7 @@ public sealed class WorkspaceTaskList : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            problem = $"The task context file for agents couldn't be written. {ex.Message}";
+            problem = $"The workspace context file for agents couldn't be written. {ex.Message}";
         }
 
         if (token.IsCancellationRequested || problem == _contextFileProblem)

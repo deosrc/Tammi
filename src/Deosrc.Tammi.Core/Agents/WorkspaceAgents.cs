@@ -93,7 +93,7 @@ public sealed class WorkspaceAgents(
     /// </summary>
     /// <remarks>
     /// An agent that takes an initial prompt is sent the one from the Settings' template, with the path of the
-    /// workspace's task context file (see <see cref="TaskContextFile"/>). The file is written first if it doesn't exist
+    /// workspace's workspace context file (see <see cref="WorkspaceContextFile"/>). The file is written first if it doesn't exist
     /// yet, listing the tasks by their keys until their details are read.
     /// </remarks>
     /// <param name="workspace">The workspace.</param>
@@ -107,7 +107,7 @@ public sealed class WorkspaceAgents(
     /// </returns>
     /// <exception cref="FileNotFoundException">The agent's command can't be found.</exception>
     /// <exception cref="DirectoryNotFoundException">The folder to start it in doesn't exist.</exception>
-    /// <exception cref="IOException">The task context file couldn't be written.</exception>
+    /// <exception cref="IOException">The workspace context file couldn't be written.</exception>
     /// <exception cref="ArgumentException">The definition has no command, or its initial prompt can't be passed.</exception>
     /// <exception cref="ObjectDisposedException">The app is closing.</exception>
     public async Task<WorkspaceAgent> StartAsync(
@@ -255,11 +255,11 @@ public sealed class WorkspaceAgents(
         string contextFile;
         try
         {
-            contextFile = await TaskContextFile.CreateIfMissingAsync(workspace).ConfigureAwait(false);
+            contextFile = await WorkspaceContextFile.CreateIfMissingAsync(workspace).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            throw new IOException($"The task context file for agents couldn't be written. {ex.Message}", ex);
+            throw new IOException($"The workspace context file for agents couldn't be written. {ex.Message}", ex);
         }
 
         return InitialPrompt.Expand(settingsStore.Current.Agents.InitialPromptTemplate, contextFile);

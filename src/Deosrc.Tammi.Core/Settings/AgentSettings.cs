@@ -16,7 +16,7 @@ public sealed record AgentSettings
 
     /// <summary>
     /// The template for the initial prompt sent to agents when they start, with
-    /// <see cref="InitialPrompt.ContextFilePlaceholder"/> for the task context file's path.
+    /// <see cref="InitialPrompt.ContextFilePlaceholder"/> for the workspace context file's path.
     /// </summary>
     public string InitialPromptTemplate { get; init; } = InitialPrompt.DefaultTemplate;
 

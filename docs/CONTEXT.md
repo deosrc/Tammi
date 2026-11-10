@@ -140,7 +140,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 <clone folder>/<repo>/              Local Repository (shared, outside any workspace)
 <parent folder>/<folder name>/
     .tammi/                         Workspace metadata (tasks, repositories, branches, settings)
-                                    and the task context file for agents
+                                    and the workspace context file for agents
     <repo>/                         Workspace Worktree of <clone folder>/<repo>
     <another repo>/                 Workspace Worktree of another Local Repository
 ```
@@ -220,7 +220,7 @@ own branch. It is created automatically when the workspace is created:
 
 **Renaming a workspace.** The Workspace View's **Manage Workspace** menu offers **Rename…**, which changes the
 workspace's name (as checked when it's created) in its metadata and index entry, and on its tab. The Workspace Folder
-keeps its name, so worktrees and running agents and terminals aren't affected. The task context file is written again
+keeps its name, so worktrees and running agents and terminals aren't affected. The workspace context file is written again
 with the new name, without reading the tasks again. A workspace that can't be read can't be renamed.
 
 **Deleting a workspace.** The Workspace View and the details tab of a workspace that can't be read both offer it.
@@ -516,7 +516,7 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     but shown as an error until it's changed.
   - Agents are offered in that order: the Supported Agents, then the Custom Agents.
   - The initial prompt template. A menu fills it in with one of three predefined prompts, ticking the one in use. Each
-    tells the agent to read the task context file, and to read it again for the tasks' latest details, since Tammi
+    tells the agent to read the workspace context file, and to read it again for the tasks' latest details, since Tammi
     rewrites it when they change. Then it has the agent:
     - **Implement the tasks:** start making the changes.
     - **Plan the change:** plan the changes, and wait for the user to approve the plan before making them.
@@ -667,10 +667,13 @@ are left to other tools for now.
   context file in `.tammi/` and keeps it up to date. When an agent starts, Tammi sends it an
   **initial prompt** telling it about the context file. The initial prompt is configurable, with a
   placeholder for the context file's path. Each Agent Definition says how the prompt is passed to its CLI.
-  - The context file is `.tammi/tasks.md`. It has a section for each task, in the workspace's order: its key and
-    title, a link to its page, its Task Status (with its category), its repository's page if it belongs to one, and
+  - The context file is `.tammi/context.md`. Its **Tasks** section has a subsection for each task, in the workspace's
+    order: its key and title, a link to its page, its Task Status (with its category), its repository's page if it belongs to one, and
     its description as the source gives it (markdown from GitHub, wiki markup from JIRA). A workspace without tasks
     gets a file that says so.
+  - A separate **Repositories** section follows, because the Workspace Folder isn't a git repository itself and an
+    agent started in it can otherwise be confused. It says so, then has a subsection for each Workspace Worktree: its
+    folder, its branch and its base branch. A workspace without repositories gets a line that says so.
   - It's written each time the workspace's tasks have all been read (see [Tasks section](#workspace-view-tab)): when
     the tab opens, on Refresh, when integrations are added or removed, and when the task list changes. It's only
     rewritten when its contents change, and always in full, so an agent never reads half a file. A task that can't be
