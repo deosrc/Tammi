@@ -11,7 +11,7 @@ public class AgentSettingsTests
         var custom = new AgentDefinition("Codex", "codex");
 
         Assert.Equal(
-            [AgentDefinition.ClaudeCode, custom],
+            [AgentDefinition.ClaudeCode, AgentDefinition.OpenCode, custom],
             new AgentSettings { CustomDefinitions = [custom] }.Definitions);
     }
 

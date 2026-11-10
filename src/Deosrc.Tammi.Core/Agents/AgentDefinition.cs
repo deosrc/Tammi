@@ -79,6 +79,20 @@ public sealed record AgentDefinition
     public AgentHooks? Hooks { get; init; }
 
     /// <summary>
+    /// Whether the agent reports its state in its terminal output (see <c>TerminalStateReader</c>), instead of through
+    /// <see cref="Hooks"/>. Only Supported Agents do for now, so it isn't kept in the settings file.
+    /// </summary>
+    [JsonIgnore]
+    public bool ReportsStateInTerminal { get; init; }
+
+    /// <summary>
+    /// What the IDs Tammi makes up for new Agent Sessions start with, for agents that only accept IDs in their own
+    /// format. <c>null</c> for a UUID. See <see cref="NewSessionId"/>.
+    /// </summary>
+    [JsonIgnore]
+    public string? SessionIdPrefix { get; init; }
+
+    /// <summary>
     /// How Tammi sets a new Agent Session's ID: arguments added after <see cref="Arguments"/> when the agent starts,
     /// with <see cref="SessionIdPlaceholder"/> where the ID goes. Tammi makes up the ID, a UUID, so it can resume the
     /// session later. For example, <c>["--session-id", "{sessionId}"]</c>. Empty when the agent's session ID can't be
@@ -122,6 +136,34 @@ public sealed record AgentDefinition
         SessionIdArguments = ["--session-id", SessionIdPlaceholder],
         ResumeArguments = ["--resume", SessionIdPlaceholder],
     };
+
+    /// <summary>
+    /// The definition for opencode, a Supported Agent (see <see cref="SupportedAgent.OpenCode"/>). The initial prompt
+    /// is passed with <c>--prompt</c>, which starts the interactive terminal UI with that prompt. Tammi sets the
+    /// session's ID with <c>--session</c> (opencode creates the session if it doesn't exist, but only accepts IDs
+    /// that start with <c>ses_</c>) and resumes it the same way.
+    /// </summary>
+    /// <remarks>
+    /// Differences from <see cref="ClaudeCode"/>: opencode has no hooks. It reports its state and session in its
+    /// terminal output instead (see <see cref="ReportsStateInTerminal"/>), so its state is only known while its output
+    /// is being read (see <c>WorkspaceAgent</c>).
+    /// </remarks>
+    public static AgentDefinition OpenCode { get; } = new("opencode", "opencode")
+    {
+        PromptArguments = ["--prompt", PromptPlaceholder],
+        ReportsStateInTerminal = true,
+        SessionIdPrefix = AgentSession.OpenCodeIdPrefix,
+        SessionIdArguments = ["--session", SessionIdPlaceholder],
+        ResumeArguments = ["--session", SessionIdPlaceholder],
+    };
+
+    /// <summary>
+    /// Makes up an ID for a new Agent Session, in the format the agent accepts: a UUID, or <see cref="SessionIdPrefix"/>
+    /// and 26 hex digits.
+    /// </summary>
+    public string NewSessionId() => SessionIdPrefix is { } prefix
+        ? prefix + Guid.NewGuid().ToString("N")[..26]
+        : Guid.NewGuid().ToString();
 
     /// <summary>
     /// The arguments to start the agent with.
@@ -192,6 +234,8 @@ public sealed record AgentDefinition
         && Name == other.Name
         && Command == other.Command
         && Equals(Hooks, other.Hooks)
+        && ReportsStateInTerminal == other.ReportsStateInTerminal
+        && SessionIdPrefix == other.SessionIdPrefix
         && SequenceEqual(Arguments, other.Arguments)
         && SequenceEqual(PromptArguments, other.PromptArguments)
         && SequenceEqual(SessionIdArguments, other.SessionIdArguments)

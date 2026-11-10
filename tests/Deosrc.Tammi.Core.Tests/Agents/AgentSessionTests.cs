@@ -6,6 +6,24 @@ public class AgentSessionTests
 {
     private static readonly DateTimeOffset StartedAt = new(2026, 11, 3, 9, 30, 0, TimeSpan.Zero);
 
+    [Theory]
+    [InlineData("ses_e427d777fffe6WDj5dcMZ1iGSn", true)]
+    [InlineData("ses_1", true)]
+    [InlineData("3f2504e0-4f89-11d3-9a0c-0305e82c3301", true)]
+    [InlineData("ses_", false)]
+    [InlineData("ses", false)]
+    [InlineData("ses_abc def", false)]
+    [InlineData("ses_abc;rm", false)]
+    [InlineData("ses_-x", false)]
+    [InlineData("--session", false)]
+    [InlineData("-ses_abc", false)]
+    [InlineData("SES_abc", false)]
+    [InlineData(null, false)]
+    public void IsValidId_AcceptsUuidsAndOpenCodeIds(string? id, bool expected)
+    {
+        Assert.Equal(expected, AgentSession.IsValidId(id));
+    }
+
     [Fact]
     public async Task Of_RecordsAgentsSession()
     {

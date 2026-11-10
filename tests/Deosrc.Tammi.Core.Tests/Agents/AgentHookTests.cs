@@ -36,6 +36,22 @@ public sealed class AgentHookTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task State_Failed_IsReportedWhileRunning_AndDroppedAfterStop()
+    {
+        var session = new FakePtySession();
+        var hooks = _server.Register();
+        var definition = AgentDefinition.ClaudeCode with { Hooks = new FailedHooks() };
+        await using var agent = new Agent(definition, "/work", session, hooks);
+
+        Send(hooks, "failed");
+        Assert.Equal(AgentState.Failed, agent.State);
+
+        await agent.StopAsync();
+        Send(hooks, "failed");
+        Assert.Equal(AgentState.Exited, agent.State);
+    }
+
+    [Fact]
     public void StateChanged_IsRaisedOnlyWhenStateChanges()
     {
         var (agent, hooks) = CreateAgent(new FakePtySession());
@@ -189,6 +205,14 @@ public sealed class AgentHookTests : IAsyncDisposable
     {
         var hooks = _server.Register();
         return (new Agent(AgentDefinition.ClaudeCode, "/work", session, hooks), hooks);
+    }
+
+    private sealed class FailedHooks : AgentHooks
+    {
+        public override IReadOnlyList<string> CreateArguments(AgentHookEndpoint endpoint) => [];
+
+        public override AgentState? StateAfter(JsonElement hookEvent) =>
+            hookEvent.GetProperty("hook_event_name").GetString() == "failed" ? AgentState.Failed : null;
     }
 
     private static void Send(AgentHookRegistration hooks, string eventName, string? sessionId = null)

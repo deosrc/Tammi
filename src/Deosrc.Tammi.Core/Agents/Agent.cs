@@ -17,6 +17,7 @@ public sealed class Agent : IAsyncDisposable
     private readonly TaskCompletionSource<AgentState> _ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Lock _lock = new();
     private readonly AgentHookRegistration? _hooks;
+    private readonly TerminalStateReader? _terminalState;
     private Task? _stopped;
     private bool _stopRequested;
     private AgentState _state = AgentState.Running;
@@ -47,6 +48,7 @@ public sealed class Agent : IAsyncDisposable
         WorkingDirectory = workingDirectory ?? throw new ArgumentNullException(nameof(workingDirectory));
         Session = session ?? throw new ArgumentNullException(nameof(session));
         _sessionId = sessionId;
+        _terminalState = definition.ReportsStateInTerminal ? new TerminalStateReader() : null;
         if (hooks is not null && definition.Hooks is not null)
         {
             _hooks = hooks;
@@ -180,11 +182,56 @@ public sealed class Agent : IAsyncDisposable
         await Task.WhenAny(Ended, Task.Delay(TimeSpan.FromSeconds(1))).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Follows the agent's terminal output, for an agent that reports its state there (see
+    /// <see cref="AgentDefinition.ReportsStateInTerminal"/>). Anything else is ignored. Call it with all of the output,
+    /// in order, from one thread at a time.
+    /// </summary>
+    /// <param name="output">The next output from the agent's pseudoterminal.</param>
+    public void ReadTerminalOutput(ReadOnlySpan<byte> output)
+    {
+        if (_terminalState is null)
+        {
+            return;
+        }
+
+        foreach (var report in _terminalState.Read(output))
+        {
+            if (report.SessionId is { } id)
+            {
+                UpdateSessionId(id);
+            }
+
+            if (StateFrom(report.State) is { } next)
+            {
+                UpdateState(next);
+            }
+        }
+    }
+
+    // opencode: working is busy and blocked is waiting on the user (a permission, question or sign-in). Done, idle and
+    // clear (which it sends when a session's state is withdrawn) all mean it's waiting for the next prompt.
+    private static AgentState? StateFrom(string state) => state switch
+    {
+        "working" => AgentState.Working,
+        "blocked" => AgentState.NeedsInput,
+        "error" => AgentState.Failed,
+        "idle" or "done" or "clear" => AgentState.Idle,
+        _ => null,
+    };
+
     private void UpdateSessionId(JsonElement hookEvent)
     {
+        if (Definition.Hooks?.SessionIdFrom(hookEvent) is { } id)
+        {
+            UpdateSessionId(id);
+        }
+    }
+
+    private void UpdateSessionId(string id)
+    {
         // Only IDs that can be resumed count, so a session that can't be resumed is never recorded.
-        if (!Definition.CanResume || Definition.Hooks?.SessionIdFrom(hookEvent) is not { } id
-            || !AgentSession.IsValidId(id))
+        if (!Definition.CanResume || !AgentSession.IsValidId(id))
         {
             return;
         }
@@ -234,7 +281,15 @@ public sealed class Agent : IAsyncDisposable
     private void OnHookEvent(JsonElement hookEvent)
     {
         UpdateSessionId(hookEvent);
-        if (Definition.Hooks?.StateAfter(hookEvent) is not { } next || !next.IsRunning())
+        if (Definition.Hooks?.StateAfter(hookEvent) is { } next)
+        {
+            UpdateState(next);
+        }
+    }
+
+    private void UpdateState(AgentState next)
+    {
+        if (!next.IsRunning())
         {
             return;
         }

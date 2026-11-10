@@ -2161,7 +2161,7 @@ label.task-choice {
   background: var(--color-surface-hover);
 }
 
-/* An agent's logo, e.g. Claude's on the New menu. It's shown in its brand colour. */
+/* An agent's logo, e.g. Claude's on the New menu. Claude's is shown in its brand colour. */
 .agent-icon {
   flex: none;
   width: 18px;
@@ -2170,6 +2170,11 @@ label.task-choice {
 
 .agent-icon-claude {
   fill: var(--color-claude);
+}
+
+/* opencode's logo is a plain frame, so it takes the text colour and follows the theme. */
+.agent-icon-opencode {
+  fill: currentColor;
 }
 
 /* An icon at the start of a menu item, e.g. what the New menu's items start. It keeps its size beside long names. */

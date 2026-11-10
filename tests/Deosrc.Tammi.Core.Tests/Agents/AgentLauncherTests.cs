@@ -208,6 +208,19 @@ public class AgentLauncherTests
     }
 
     [Fact]
+    public void Start_OpenCode_SetsAnOpenCodeSessionId()
+    {
+        var pty = new RecordingPtyService();
+
+        var agent = new AgentLauncher(pty).Start(AgentDefinition.OpenCode, Path.GetTempPath(), PtySize.Default, "Hello");
+
+        var request = Assert.Single(pty.Requests).Request;
+        Assert.StartsWith("ses_", agent.SessionId);
+        Assert.Equal(["--session", agent.SessionId!, "--prompt", "Hello"], request.Arguments);
+        Assert.Empty(request.Environment);
+    }
+
+    [Fact]
     public async Task Start_WithDisposedHookServer_StartsWithoutHooks()
     {
         var pty = new RecordingPtyService();
