@@ -7,6 +7,7 @@ namespace Deosrc.Tammi.Core.Tests.Agents;
 /// </summary>
 internal sealed class FakePtySession : IPtySession
 {
+    private readonly System.Text.StringBuilder _input = new();
     private readonly TaskCompletionSource<int> _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
@@ -30,9 +31,12 @@ internal sealed class FakePtySession : IPtySession
     public ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
         new(0);
 
-    public void Write(ReadOnlySpan<byte> data)
-    {
-    }
+    /// <summary>
+    /// Everything written to the terminal, as text.
+    /// </summary>
+    public string Input => _input.ToString();
+
+    public void Write(ReadOnlySpan<byte> data) => _input.Append(System.Text.Encoding.UTF8.GetString(data));
 
     public void Resize(PtySize size) => Size = size;
 

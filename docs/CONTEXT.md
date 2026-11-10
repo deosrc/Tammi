@@ -515,6 +515,9 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     case and surrounding spaces, including the Supported Agents' names. A name that's already used is still saved,
     but shown as an error until it's changed.
   - Agents are offered in that order: the Supported Agents, then the Custom Agents.
+  - The initial prompt style: **Prefill** (the default) or **Submit**. Prefill types the prompt into the agent's input
+    about two seconds after it starts, without sending it, so the user can edit it and send it themselves. Submit passes
+    it to the agent with its initial prompt arguments, so the agent acts on it straight away.
   - The initial prompt template. A menu fills it in with one of three predefined prompts, ticking the one in use. Each
     tells the agent to read the workspace context file, and to read it again for the tasks' latest details, since Tammi
     rewrites it when they change. Then it has the agent:
@@ -683,6 +686,10 @@ are left to other tools for now.
     are still being read), listing the tasks by their keys until their details are read. If it can't be written, the
     agent doesn't start, and says why. An agent that doesn't take an initial prompt starts without it.
   - Running agents aren't told when the file changes.
+  - How the prompt is given depends on the **initial prompt style** setting. With **prefill** (the default), the agent
+    starts without it, and Tammi types it into the agent's terminal as a bracketed paste about two seconds later,
+    without pressing Enter. With **submit**, it's passed as the initial prompt arguments say. Either way, only agents
+    with initial prompt arguments are given one.
   - The template's placeholder is `{contextFile}`, replaced with the file's full path. The rest of the template is
     sent as it is. Resumed Agent Sessions aren't sent the prompt again.
   - An Agent Definition has two lists of arguments. Its **arguments** are passed every time it starts. Its
