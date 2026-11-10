@@ -59,7 +59,7 @@ public sealed class WorkspaceTabsKeeperTests : IDisposable
         tabs.Close("b");
 
         OpenWorkspaceTabs saved = OpenWorkspaceTabs.None;
-        for (var i = 0; i < 100 && saved.WorkspaceIds.Count != 1; i++)
+        for (var i = 0; i < 100 && !(saved.WorkspaceIds.Count == 1 && saved.ActiveWorkspaceId == "a"); i++)
         {
             await Task.Delay(20, CancellationToken);
             saved = await store.LoadAsync(CancellationToken);
