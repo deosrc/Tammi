@@ -428,8 +428,9 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     deleting the workspace closes its graphs.
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
 - **Agents section:** a card for each of the workspace's open agents, in the order they started, with its
-  [state](#agents) as a badge and the card's colour. Clicking the card shows its tab, and a running agent has a
-  **Stop** button (which only stops it). An agent that ended with an error shows its exit code. Below the cards,
+  [state](#agents) as a badge (with a spinner while Working) and the card's colour: blue for Working and Running, the warning colour (as a repository with changes) for Needs input, grey for Idle
+  and Exited, red for Error. Needs input and Error also tint the card's background. Clicking the card shows its tab. Cards have no Stop
+  button: closing the agent's tab stops it. An agent that ended with an error shows its exit code. Below the cards,
   **Past sessions** lists the workspace's recorded Agent Sessions that aren't running, most recently started first,
   each with its agent's name, the repository it was started in (if it wasn't the Workspace Folder) and when it was
   last started. Each one can be resumed, which opens it in a new tab, or forgotten. A session whose agent can't resume
@@ -457,8 +458,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     its definition and repository folder when it's in a repository (e.g. "Claude Code (api)"). A name already used by
     one of the workspace's open agents gets the first free number (e.g. "Claude Code 2"). A resumed session is named
     after the folder it was started in.
-  - **Stopping** an agent (from the side panel) ends its process, and keeps its tab, marked as exited, until it's
-    closed. Closing a running agent's tab stops it. Either way, its session can still be resumed.
+  - Closing a running agent's tab stops it (ends its process). Its session can still be resumed.
   - A session that's already running in one of the workspace's agents can't be resumed again.
   - **Copy and paste:** Ctrl+Shift+C and Ctrl+Shift+V on every platform. On Windows, as in Windows Terminal,
     Ctrl+C also copies when text is selected (otherwise it interrupts the process) and Ctrl+V pastes.

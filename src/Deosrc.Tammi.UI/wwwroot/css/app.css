@@ -31,6 +31,8 @@
   --color-focus: #0969da;
   --color-error: #cf222e;
   --color-success: #1a7f37;
+  --color-info: #0969da;
+  --color-info-text: #ffffff;
   --color-success-bg: #dafbe1;
   --color-warning: #9a6700;
   --color-warning-bg: #fff8c5;
@@ -66,6 +68,8 @@
     --color-focus: #4c9aff;
     --color-error: #ff7b72;
     --color-success: #3fb950;
+    --color-info: #4c9aff;
+    --color-info-text: #1f2328;
     --color-success-bg: #12261e;
     --color-warning: #d29922;
     --color-warning-bg: #3b2e0e;
@@ -1005,11 +1009,23 @@ label.task-choice {
   margin-left: auto;
   padding: 0 var(--space-2);
   border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   background: var(--agent-state-tone);
   color: var(--agent-state-tone-text);
   font-size: var(--font-size-small);
   font-weight: 700;
   line-height: 1.6;
+}
+
+/* A Working badge has a spinner before its label, smaller than usual and in the badge's text colour. */
+.agent-state-badge .spinner {
+  width: 10px;
+  height: 10px;
+  border-width: 2px;
+  border-color: color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
 }
 
 .side-panel-section-body .agent-card-detail,
@@ -1496,20 +1512,33 @@ label.task-choice {
 }
 
 /* An agent's state, as a coloured dot on its tab and a badge on its card in the side panel. Each state sets the tone
-   both use. */
+   both use: blue while working, warning (as a repository with changes) when it needs input, grey when idle, red on error. */
 .agent-state-active {
-  --agent-state-tone: var(--color-accent);
-  --agent-state-tone-text: var(--color-accent-text);
+  --agent-state-tone: var(--color-info);
+  --agent-state-tone-text: var(--color-info-text);
 }
 
-.agent-state-success {
-  --agent-state-tone: var(--color-success);
+.agent-state-idle {
+  --agent-state-tone: var(--color-text-muted);
   --agent-state-tone-text: var(--color-surface);
 }
 
 .agent-state-warning {
   --agent-state-tone: var(--color-warning);
   --agent-state-tone-text: var(--color-warning-text);
+}
+
+/* Needs input and Error also tint the card like a repository card with changes or a problem (.git-status-card-warning
+   and -danger): border and background. */
+.agent-card.agent-state-warning {
+  border-color: var(--color-warning-border);
+  border-left-color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+.agent-card.agent-state-danger {
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
 }
 
 .agent-state-danger {

@@ -18,7 +18,7 @@ else
             var state = agent.State;
             var shown = ReferenceEquals(agent, Shown);
             @* Clicking the card shows the agent's tab. Its name is a button for the keyboard, whose click reaches the
-               card. Stop does only that. *@
+               card. *@
             <li class="agent-card card-action @AgentStateText.ToneClass(state) @(shown ? "agent-card-shown" : null)"
                 @key="agent" title="Show @agent.Name" @onclick="() => OnShow.InvokeAsync(agent)">
                 <div class="agent-card-heading">
@@ -26,7 +26,13 @@ else
                             aria-current="@(shown ? "true" : null)">
                         @agent.Name
                     </button>
-                    <span class="agent-state-badge">@AgentStateText.Label(state)</span>
+                    <span class="agent-state-badge">
+                        @if (state == AgentState.Working)
+                        {
+                            <span class="spinner" role="progressbar" aria-label="Working"></span>
+                        }
+                        @AgentStateText.Label(state)
+                    </span>
                 </div>
                 @if (state == AgentState.Error && agent.Agent.ExitCode is { } exitCode)
                 {
@@ -35,16 +41,6 @@ else
                 @if (agent.SessionProblem is { } problem)
                 {
                     <p class="agent-card-detail warning" title="@problem">Its session can't be resumed later.</p>
-                }
-                @if (!agent.HasExited)
-                {
-                    <div class="agent-card-actions">
-                        <button type="button" class="button button-secondary button-small"
-                                disabled="@_stopping.Contains(agent)" @onclick="() => StopAsync(agent)"
-                                @onclick:stopPropagation="true">
-                            Stop
-                        </button>
-                    </div>
                 }
             </li>
         }
@@ -99,7 +95,6 @@ else
 
 @code {
     private readonly CancellationTokenSource _disposed = new();
-    private readonly HashSet<WorkspaceAgent> _stopping = [];
     private IReadOnlyList<AgentSession> _sessions = [];
     private string? _problem;
     private string? _error;
@@ -179,19 +174,6 @@ else
             _sessions = sessions;
             _problem = store.Problem;
             _loadedWorkspaceId = workspace.Id;
-        }
-    }
-
-    private async Task StopAsync(WorkspaceAgent agent)
-    {
-        _stopping.Add(agent);
-        try
-        {
-            await Agents.StopAsync(agent);
-        }
-        finally
-        {
-            _stopping.Remove(agent);
         }
     }
 
