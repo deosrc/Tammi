@@ -40,6 +40,15 @@ public static class AppRoutes
     /// </summary>
     public const string NewWorkspace = "new-workspace";
 
+    private const string EditWorkspacePrefix = "edit-workspace/";
+
+    /// <summary>
+    /// The path of the flow that changes a workspace's tasks and repositories. It isn't under <c>workspaces/</c>, so it
+    /// can't clash with the workspace's tab.
+    /// </summary>
+    public static string EditWorkspace(string workspaceId) =>
+        EditWorkspacePrefix + Uri.EscapeDataString(workspaceId);
+
     private const string WorkspacePrefix = "workspaces/";
 
     /// <summary>

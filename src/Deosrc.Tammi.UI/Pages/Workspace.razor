@@ -220,6 +220,11 @@ else
                         <div class="menu-backdrop" @onclick="() => _manageMenuOpen = false"></div>
                         <ul class="menu menu-up" role="menu" aria-label="Manage Workspace">
                             <li role="none">
+                                <button type="button" class="menu-item" role="menuitem" @onclick="StartEdit">
+                                    Edit tasks and repositories…
+                                </button>
+                            </li>
+                            <li role="none">
                                 <button type="button" class="menu-item" role="menuitem" @onclick="StartRename">
                                     Rename…
                                 </button>
@@ -1153,6 +1158,12 @@ else
     }
 
     private string? RenameProblem => WorkspaceNames.Validate(_newName);
+
+    private void StartEdit()
+    {
+        _manageMenuOpen = false;
+        Navigation.NavigateTo(AppRoutes.EditWorkspace(WorkspaceId));
+    }
 
     private void StartRename()
     {

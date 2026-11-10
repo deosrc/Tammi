@@ -95,7 +95,11 @@
         <h2 id="chosen-tasks-heading">Chosen tasks (@Draft.Tasks.Count)</h2>
         @if (Draft.Tasks.Count == 0)
         {
-            <p class="placeholder">No tasks chosen. A workspace doesn't need tasks: you'll name it in the next step.</p>
+            <p class="placeholder">
+                @(Draft.IsEditing
+                    ? "No tasks chosen. A workspace doesn't need tasks."
+                    : "No tasks chosen. A workspace doesn't need tasks: you'll name it in the next step.")
+            </p>
         }
         else
         {

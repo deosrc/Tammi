@@ -20,6 +20,7 @@ public sealed class WorkspaceCreator(
     ILogger<WorkspaceCreator>? logger = null)
 {
     private readonly ILogger _logger = logger ?? NullLogger<WorkspaceCreator>.Instance;
+    private readonly WorkspaceWorktreeSteps _steps = new(worktrees, logger ?? NullLogger<WorkspaceCreator>.Instance);
 
     /// <summary>
     /// Checks a workspace can be created as requested, without changing anything.
@@ -58,51 +59,9 @@ public sealed class WorkspaceCreator(
             problems.Add($"'{request.BranchName}' isn't a valid branch name.");
         }
 
-        var repositoryPaths = new HashSet<string>(
-            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
-        for (int i = 0; i < request.Repositories.Count; i++)
-        {
-            var repository = request.Repositories[i];
-            var otherNames = request.Repositories.Where((_, other) => other != i).Select(other => other.FolderName);
-            if (WorktreeFolderNames.Validate(repository.FolderName, otherNames) is { } folderProblem)
-            {
-                problems.Add($"{repository.FolderName}: {folderProblem}");
-            }
-
-            string label = repository.FolderName.Trim();
-            if (!Path.IsPathFullyQualified(repository.LocalRepositoryPath) || !Directory.Exists(repository.LocalRepositoryPath))
-            {
-                problems.Add($"{label}: the local repository '{repository.LocalRepositoryPath}' doesn't exist.");
-                continue;
-            }
-
-            if (!repositoryPaths.Add(Path.TrimEndingDirectorySeparator(Path.GetFullPath(repository.LocalRepositoryPath))))
-            {
-                problems.Add($"{label}: the local repository '{repository.LocalRepositoryPath}' is in the workspace twice.");
-                continue;
-            }
-
-            if (branchIsValid)
-            {
-                var branch = await worktrees.GetBranchStateAsync(
-                    repository.LocalRepositoryPath, request.BranchName!, cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
-                if (branch.Exists)
-                {
-                    problems.Add($"{label}: the branch '{request.BranchName}' already exists. Choose another branch name.");
-                }
-            }
-
-            bool baseExists = await worktrees.CommitExistsAsync(
-                repository.LocalRepositoryPath, repository.BaseBranch ?? string.Empty, cancellationToken)
-                .ConfigureAwait(false);
-            if (!baseExists)
-            {
-                problems.Add(string.IsNullOrWhiteSpace(repository.BaseBranch)
-                    ? $"{label}: choose a base branch."
-                    : $"{label}: the base branch '{repository.BaseBranch}' doesn't exist.");
-            }
-        }
+        await _steps.CheckAsync(
+            request.Repositories, [], request.BranchName ?? string.Empty, branchIsValid, problems, null, cancellationToken)
+            .ConfigureAwait(false);
 
         return problems;
     }
@@ -160,54 +119,16 @@ public sealed class WorkspaceCreator(
             var repositories = new List<WorkspaceRepository>();
             foreach (var repository in request.Repositories)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (repository.Remote is { } remote)
-                {
-                    Report($"Fetching {repository.FolderName}…");
-                    try
-                    {
-                        await worktrees.FetchAsync(repository.LocalRepositoryPath, remote, cancellationToken)
-                            .ConfigureAwait(false);
-                    }
-                    catch (GitCommandException ex)
-                    {
-                        _logger.LogWarning(
-                            "Couldn't fetch {Remote} for {Repository}, so its branch starts from the last fetched "
-                            + "{BaseBranch}.",
-                            remote,
-                            repository.LocalRepositoryPath,
-                            repository.BaseBranch);
-                        warnings.Add($"{repository.FolderName}: couldn't fetch '{remote}', so the branch starts from "
-                            + $"the last fetched '{repository.BaseBranch}'. {ex.Message}");
-                    }
-                }
-
-                completedSteps++;
-
-                Report($"Creating the worktree for {repository.FolderName}…");
-                string worktreePath = Path.Combine(request.Folder, repository.FolderName);
-                created.Worktrees.Add((repository.LocalRepositoryPath, worktreePath));
-                await worktrees.CreateWorktreeAsync(
-                    new CreateWorktreeRequest
-                    {
-                        RepositoryPath = repository.LocalRepositoryPath,
-                        WorktreePath = worktreePath,
-                        BranchName = request.BranchName,
-                        BaseBranch = repository.BaseBranch,
-                        Fetch = false,
-                        InitSubmodules = false,
-                    },
-                    cancellationToken).ConfigureAwait(false);
-
-                Report($"Checking out the submodules of {repository.FolderName}…");
-                await worktrees.InitSubmodulesAsync(worktreePath, cancellationToken).ConfigureAwait(false);
-                completedSteps++;
-
-                repositories.Add(new WorkspaceRepository(
-                    repository.FolderName,
-                    repository.LocalRepositoryPath,
+                repositories.Add(await _steps.AddAsync(
+                    request.Folder,
                     request.BranchName,
-                    repository.BaseBranch));
+                    repository,
+                    created.Worktrees,
+                    warnings,
+                    Report,
+                    () => completedSteps++,
+                    () => completedSteps++,
+                    cancellationToken).ConfigureAwait(false));
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -258,37 +179,7 @@ public sealed class WorkspaceCreator(
     /// <returns>What couldn't be removed.</returns>
     private async Task<IReadOnlyList<string>> RollBackAsync(CreatedItems created, string branchName)
     {
-        var problems = new List<string>();
-        for (int i = created.Worktrees.Count - 1; i >= 0; i--)
-        {
-            var (repositoryPath, worktreePath) = created.Worktrees[i];
-            try
-            {
-                // Git may have registered the worktree, or created the branch, before failing. A folder git didn't
-                // make a worktree of is deleted with the Workspace Folder.
-                if (worktrees.CheckWorktree(worktreePath).Health is not (WorktreeHealth.Missing or WorktreeHealth.NotAWorktree))
-                {
-                    await worktrees.RemoveWorktreeAsync(repositoryPath, worktreePath, force: true).ConfigureAwait(false);
-                }
-            }
-            catch (Exception ex) when (ex is GitException or IOException or UnauthorizedAccessException)
-            {
-                problems.Add($"Couldn't remove the worktree '{worktreePath}'. {ex.Message}");
-            }
-
-            try
-            {
-                var branch = await worktrees.GetBranchStateAsync(repositoryPath, branchName).ConfigureAwait(false);
-                if (branch.Exists)
-                {
-                    await worktrees.DeleteBranchAsync(repositoryPath, branchName).ConfigureAwait(false);
-                }
-            }
-            catch (GitException ex)
-            {
-                problems.Add($"Couldn't delete the branch '{branchName}' from '{repositoryPath}'. {ex.Message}");
-            }
-        }
+        var problems = await _steps.RollBackAsync(created.Worktrees, branchName).ConfigureAwait(false);
 
         try
         {
