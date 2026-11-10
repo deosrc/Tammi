@@ -264,11 +264,13 @@ else
                                     aria-selected="@(shown ? "true" : "false")"
                                     title="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })"
                                     @onclick="() => ShowTab(tab)">
-                                @if (tab is WorkspaceAgent agent)
+                                @if (tab is WorkspaceAgent iconAgent)
                                 {
-                                    @* Agents' tabs show their state, so one that needs the user stands out. *@
-                                    <span class="agent-state-dot @AgentStateText.ToneClass(agent.State)"
-                                          title="@AgentStateText.Label(agent.State)"></span>
+                                    <AgentIcon Definition="iconAgent.Agent.Definition" />
+                                }
+                                else if (tab is WorkspaceTerminal)
+                                {
+                                    @TerminalIcon
                                 }
                                 else if (tab is WorkspaceGitGraph)
                                 {
@@ -282,6 +284,11 @@ else
                                     <span class="session-tab-status">
                                         @(tab is WorkspaceAgent { State: AgentState.Error } ? "Error" : "Exited")
                                     </span>
+                                }
+                                @if (tab is WorkspaceAgent agent)
+                                {
+                                    @* Agents' tabs show their state at the end, next to the close button. *@
+                                    <AgentStateIndicator State="agent.State" />
                                 }
                             </button>
                             <button type="button" class="tab-close" title="Close @tab.Name"
@@ -845,10 +852,11 @@ else
             .Concat(GitGraphs.For(WorkspaceId))
             .OrderBy(tab => tab.StartOrder)];
 
-        // Show the tab the view was showing last time, or the dashboard if it wasn't showing one or it has been
-        // closed.
-        _shown = ViewState.GetShown(WorkspaceId) is { } shown && _tabs.Contains(shown) ? shown : null;
-        SetShownTab(_shown);
+        // Show the tab the view was showing last time (in this run, or before Tammi restarted), or the dashboard if it
+        // wasn't showing one or it has been closed. This only reads: what the view shows is only remembered when the
+        // user changes it, as a tab that hasn't opened yet (while tabs are restored) isn't the dashboard.
+        _shown = (ViewState.GetShown(WorkspaceId) ?? TabRestorer.GetActive(WorkspaceId)) is { } shown
+            && _tabs.Contains(shown) ? shown : null;
     }
 
     // Remembers the tab the view shows, here and for the next time Tammi starts.

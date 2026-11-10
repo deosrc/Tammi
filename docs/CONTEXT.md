@@ -282,12 +282,18 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - Workspaces open in a tab watch their worktrees for file changes and update live.
   - Other workspaces refresh when Home is shown, and on a timer (interval in Settings).
   - Agent status is always live, because Tammi runs the agent processes itself.
+  - A workspace's card shows its open agents below the git badges, after a divider: an indicator for each, in the order
+    they started (a spinner while Working, a bell icon when it Needs input, otherwise a dot coloured by its state),
+    with the agent's name and state as its tooltip. Workspaces without open agents show nothing.
 - Workspaces are listed in the order they were first saved or added, each with its name and Workspace Folder.
   A workspace whose folder or metadata is missing, or whose metadata can't be read, can't be opened. Its card says
   why in a few words ("Workspace folder missing" or "Corrupt"), and its Details button opens a tab with the full
   reason and the option to delete the workspace.
 - Opening a workspace shows it in a **tab**. Several workspaces can be open at once. Opening a workspace that's
-  already open shows its tab.
+  already open shows its tab. A workspace's tab ends with the state of its agents, if it has any that are running or
+  have failed: the one that most needs the user, in the order Error, Needs input, Working, then Idle or Running. It's
+  shown like an agent's tab in the Workspace View (a spinner, an icon or a dot), and updates live. Agents that exited
+  normally don't count.
 - **Reopening tabs:** the workspaces open in tabs, their order and the tab that was shown are kept in the app's data
   folder as they change. When the app starts, it opens those tabs again, and shows the one that was shown, if any.
   A workspace that's no longer listed, or can't be read, is skipped. Each workspace's own tabs are restored when its
@@ -427,16 +433,17 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - Like terminals, graph tabs stay when the workspace's tab closes. Closing a graph's tab closes the repository, and
     deleting the workspace closes its graphs.
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
-- **Agents section:** a card for each of the workspace's open agents, in the order they started, with its
-  [state](#agents) as a badge and the card's colour. Clicking the card shows its tab, and a running agent has a
-  **Stop** button (which only stops it). An agent that ended with an error shows its exit code. Below the cards,
+- **Agents section:** a card for each of the workspace's open agents, in the order they started, with its icon, its
+  [state](#agents) as a badge (with a spinner while Working) and the card's colour: blue for Working, the warning colour (as a repository with changes) for Needs input, grey for Idle, Running
+  and Exited, red for Error. Needs input and Error also tint the card's background. Clicking the card shows its tab. Cards have no Stop
+  button: closing the agent's tab stops it. An agent that ended with an error shows its exit code. Below the cards,
   **Past sessions** lists the workspace's recorded Agent Sessions that aren't running, most recently started first,
   each with its agent's name, the repository it was started in (if it wasn't the Workspace Folder) and when it was
   last started. Each one can be resumed, which opens it in a new tab, or forgotten. A session whose agent can't resume
   it says why instead.
 - **Main area tabs:** the main area has its own row of tabs, below a small divider. The first is always the
   **dashboard** (an icon, no name), which the view shows until the user opens something else. Then come the
-  workspace's terminals, agents and Git Graphs, in the order they started or opened. An agent's tab has a dot coloured by its state. The
+  workspace's terminals, agents and Git Graphs, in the order they started or opened. A terminal's tab starts with a terminal icon. An agent's tab starts with the agent's icon, and ends (before its close button) with its state: a blue spinner while Working, a coloured bell icon when it Needs input, and otherwise a dot coloured by its state. The
   last is always a **+** tab, which opens a menu of things to start: **Terminal**, **Git** (see Git Graph), then each
   Agent Definition (in the order agents are offered). Terminal and each Agent Definition have a submenu of
   **Workspace** and **Repository: `<name>`** for each repository.
@@ -457,8 +464,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     its definition and repository folder when it's in a repository (e.g. "Claude Code (api)"). A name already used by
     one of the workspace's open agents gets the first free number (e.g. "Claude Code 2"). A resumed session is named
     after the folder it was started in.
-  - **Stopping** an agent (from the side panel) ends its process, and keeps its tab, marked as exited, until it's
-    closed. Closing a running agent's tab stops it. Either way, its session can still be resumed.
+  - Closing a running agent's tab stops it (ends its process). Its session can still be resumed.
   - A session that's already running in one of the workspace's agents can't be resumed again.
   - **Copy and paste:** Ctrl+Shift+C and Ctrl+Shift+V on every platform. On Windows, as in Windows Terminal,
     Ctrl+C also copies when text is selected (otherwise it interrupts the process) and Ctrl+V pastes.

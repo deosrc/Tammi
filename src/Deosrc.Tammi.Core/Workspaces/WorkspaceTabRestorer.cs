@@ -120,6 +120,19 @@ public sealed class WorkspaceTabRestorer : IDisposable
     }
 
     /// <summary>
+    /// The tab a workspace's view is meant to show: the one the user last showed, or the one that was shown when Tammi
+    /// last closed, once it has been opened again. It can be a tab that has since closed.
+    /// </summary>
+    /// <returns>The tab, or <c>null</c> for the dashboard, or if the workspace isn't tracked yet.</returns>
+    public IMainAreaTab? GetActive(string workspaceId)
+    {
+        lock (_lock)
+        {
+            return _tracked.TryGetValue(workspaceId, out var tracked) ? tracked.Active : null;
+        }
+    }
+
+    /// <summary>
     /// Stops keeping track of a workspace's tabs and leaves what's saved as it is, e.g. as the workspace is deleted.
     /// </summary>
     public void Forget(string workspaceId)

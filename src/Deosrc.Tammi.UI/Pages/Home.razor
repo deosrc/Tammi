@@ -1,4 +1,5 @@
 @page "/"
+@using Deosrc.Tammi.Core.Agents
 @using Deosrc.Tammi.Core.Integrations
 @using Deosrc.Tammi.Core.Settings
 @implements IDisposable
@@ -6,6 +7,7 @@
 @inject WorkspaceTabs WorkspaceTabs
 @inject NavigationManager Navigation
 @inject HomeGitStatus GitStatus
+@inject WorkspaceAgents Agents
 @inject ISettingsStore SettingsStore
 
 <div class="page">
@@ -88,6 +90,18 @@
                             }
                             <PullRequestBadges PullRequests="summary.PullRequests" Problem="@summary.PullRequestProblem" />
                         }
+                        @if (available && Agents.For(workspace.Id) is { Count: > 0 } agents)
+                        {
+                            @* The workspace's agents, one indicator each, in the order they started. *@
+                            <hr class="workspace-card-divider" />
+                            <div class="workspace-agents" aria-label="Agents">
+                                @foreach (var agent in agents)
+                                {
+                                    <AgentStateIndicator State="agent.State"
+                                                         Title="@($"{agent.Name}: {AgentStateText.Label(agent.State)}")" />
+                                }
+                            </div>
+                        }
                     </div>
                     <div class="workspace-card-actions">
                         @* A workspace that can't be read opens a tab with the details of what's wrong instead. *@
@@ -116,6 +130,7 @@
         WorkspaceStore.Changed += OnWorkspacesChanged;
         WorkspaceTabs.Changed += OnTabsChanged;
         GitStatus.Changed += OnGitStatusChanged;
+        Agents.Changed += OnAgentsChanged;
         await LoadAsync();
         Observe();
 
@@ -128,6 +143,7 @@
         WorkspaceStore.Changed -= OnWorkspacesChanged;
         WorkspaceTabs.Changed -= OnTabsChanged;
         GitStatus.Changed -= OnGitStatusChanged;
+        Agents.Changed -= OnAgentsChanged;
         _observing?.Dispose();
         _disposed.Cancel();
         _disposed.Dispose();
@@ -191,6 +207,9 @@
             StateHasChanged();
         }
     });
+
+    // Raised on any thread, for any workspace. Agent states are always live, so there is nothing to read first.
+    private void OnAgentsChanged(string workspaceId) => OnGitStatusChanged();
 
     private void OnTabsChanged() => InvokeAsync(() =>
     {

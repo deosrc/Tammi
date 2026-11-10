@@ -1,5 +1,7 @@
 @implements IDisposable
+@using Deosrc.Tammi.Core.Agents
 @inject WorkspaceTabs WorkspaceTabs
+@inject WorkspaceAgents Agents
 @inject NavigationManager Navigation
 
 <nav class="tab-strip" aria-label="Main">
@@ -17,6 +19,11 @@
         <div class="tab workspace-tab @ActiveClass(route)" @key="tab.WorkspaceId">
             <a class="tab-label" href="@route" title="@tab.Name" aria-current="@AriaCurrent(route)">
                 <span class="tab-label-text">@tab.Name</span>
+                @* The state of the workspace's agents that most needs the user, if it has any. *@
+                @if (AgentStates.Summarise(Agents.For(tab.WorkspaceId).Select(agent => agent.State)) is { } agentState)
+                {
+                    <AgentStateIndicator State="agentState" />
+                }
             </a>
             <button type="button" class="tab-close" title="Close @tab.Name" aria-label="Close @tab.Name"
                     @onclick="() => Close(tab)">
@@ -42,12 +49,14 @@
     {
         _currentPath = CurrentPath();
         WorkspaceTabs.Changed += OnTabsChanged;
+        Agents.Changed += OnAgentsChanged;
         Navigation.LocationChanged += OnLocationChanged;
     }
 
     public void Dispose()
     {
         WorkspaceTabs.Changed -= OnTabsChanged;
+        Agents.Changed -= OnAgentsChanged;
         Navigation.LocationChanged -= OnLocationChanged;
     }
 
@@ -78,6 +87,9 @@
     }
 
     private void OnTabsChanged() => InvokeAsync(StateHasChanged);
+
+    // Raised on any thread, for any workspace.
+    private void OnAgentsChanged(string workspaceId) => InvokeAsync(StateHasChanged);
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {

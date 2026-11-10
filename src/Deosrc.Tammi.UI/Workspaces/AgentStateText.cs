@@ -21,15 +21,15 @@ internal static class AgentStateText
     };
 
     /// <summary>
-    /// The CSS class that colours the state: warning when the agent needs the user, danger when it went wrong, success
-    /// when it's waiting for its next prompt, and the accent while it works.
+    /// The CSS class that colours the state: warning (orange) when the agent needs the user, danger (red) when it went
+    /// wrong, idle (grey) when it's waiting for its next prompt, and active (blue) while it works. Running (no finer detail available) looks like idle.
     /// </summary>
     public static string ToneClass(AgentState state) => state switch
     {
         AgentState.NeedsInput => "agent-state-warning",
         AgentState.Error => "agent-state-danger",
-        AgentState.Idle => "agent-state-success",
-        AgentState.Working or AgentState.Running => "agent-state-active",
+        AgentState.Idle or AgentState.Running => "agent-state-idle",
+        AgentState.Working => "agent-state-active",
         _ => "agent-state-ended",
     };
 }
