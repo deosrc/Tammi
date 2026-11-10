@@ -40,10 +40,35 @@ public static class AppRoutes
     /// </summary>
     public const string NewWorkspace = "new-workspace";
 
+    private const string EditWorkspacePrefix = "edit-workspace/";
+
+    /// <summary>
+    /// The path of the flow that changes a workspace's tasks and repositories. It isn't under <c>workspaces/</c>, so it
+    /// can't clash with the workspace's tab.
+    /// </summary>
+    public static string EditWorkspace(string workspaceId) =>
+        EditWorkspacePrefix + Uri.EscapeDataString(workspaceId);
+
     private const string WorkspacePrefix = "workspaces/";
 
     /// <summary>
     /// The path of a workspace's tab.
     /// </summary>
     public static string Workspace(string workspaceId) => WorkspacePrefix + Uri.EscapeDataString(workspaceId);
+
+    /// <summary>
+    /// Gets the workspace a path is the tab of.
+    /// </summary>
+    /// <param name="path">A path relative to the base URI, without its query or fragment.</param>
+    public static string? WorkspaceIdOf(string path)
+    {
+        var trimmed = path.TrimEnd('/');
+        if (!trimmed.StartsWith(WorkspacePrefix, StringComparison.Ordinal) || trimmed.Length == WorkspacePrefix.Length
+            || trimmed.IndexOf('/', WorkspacePrefix.Length) >= 0)
+        {
+            return null;
+        }
+
+        return Uri.UnescapeDataString(trimmed[WorkspacePrefix.Length..]);
+    }
 }

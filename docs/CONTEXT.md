@@ -140,7 +140,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 <clone folder>/<repo>/              Local Repository (shared, outside any workspace)
 <parent folder>/<folder name>/
     .tammi/                         Workspace metadata (tasks, repositories, branches, settings)
-                                    and the task context file for agents
+                                    and the workspace context file for agents
     <repo>/                         Workspace Worktree of <clone folder>/<repo>
     <another repo>/                 Workspace Worktree of another Local Repository
 ```
@@ -220,8 +220,23 @@ own branch. It is created automatically when the workspace is created:
 
 **Renaming a workspace.** The Workspace View's **Manage Workspace** menu offers **Rename…**, which changes the
 workspace's name (as checked when it's created) in its metadata and index entry, and on its tab. The Workspace Folder
-keeps its name, so worktrees and running agents and terminals aren't affected. The task context file is written again
+keeps its name, so worktrees and running agents and terminals aren't affected. The workspace context file is written again
 with the new name, without reading the tasks again. A workspace that can't be read can't be renamed.
+
+**Editing tasks and repositories.** The Workspace View's **Manage Workspace** menu offers **Edit tasks and
+repositories…**, a flow of two steps that reuse the Create Workspace steps for choosing tasks and repositories.
+1. **Tasks.** The workspace's tasks are chosen already. The user adds or removes tasks as when creating a workspace.
+   Tasks the workspace has don't choose repositories again; tasks added now do, as in the repository step.
+2. **Repositories.** The workspace's repositories are listed as already in it: they can't be removed or chosen again,
+   and their folder names are taken. The user chooses more Local Repositories, each with a folder name and base branch.
+   They get the workspace's own branch, which can't be changed once the workspace has repositories. A workspace with
+   none chooses the branch as when it's created.
+- Tammi checks everything first, as when creating a workspace (plus that each new worktree's folder doesn't exist in
+  the Workspace Folder, and that the branch doesn't exist in the added repositories), then fetches each added
+  repository and creates its worktree and submodules. The metadata (tasks and repositories) is written last. If a step
+  fails or the user cancels, the added worktrees and their new branches are removed, and the metadata stays as it was.
+- The workspace's name and Workspace Folder don't change. The workspace context file is written again with the new tasks
+  and repositories. Removing a repository from a workspace isn't part of editing: delete the workspace instead.
 
 **Deleting a workspace.** The Workspace View and the details tab of a workspace that can't be read both offer it.
 1. Tammi checks what would be lost and always asks the user to confirm. It lists the worktrees with uncommitted changes
@@ -273,6 +288,13 @@ with the new name, without reading the tasks again. A workspace that can't be re
   reason and the option to delete the workspace.
 - Opening a workspace shows it in a **tab**. Several workspaces can be open at once. Opening a workspace that's
   already open shows its tab.
+- **Reopening tabs:** the workspaces open in tabs, their order and the tab that was shown are kept in the app's data
+  folder as they change. When the app starts, it opens those tabs again, and shows the one that was shown, if any.
+  A workspace that's no longer listed, or can't be read, is skipped. Each workspace's own tabs are restored when its
+  tab is first shown (see Workspace View).
+- **One instance:** only one copy of Tammi runs at a time, so the same agents are never started twice. Starting a
+  second copy shows the running copy's window (restoring it if it's minimised) and exits. If the running copy can't be
+  reached, it tells the user Tammi is already running instead.
 - Starts the Create Workspace flow.
 
 ### Workspace View (tab)
@@ -299,17 +321,18 @@ with the new name, without reading the tasks again. A workspace that can't be re
 - **Repositories section:** a card with the git status of each repository, in the workspace's order. Right-clicking a
   card opens a menu with a **Tools** submenu (see [Tools](#tools)). The whole card is coloured by what needs
   attention: danger when the worktree is broken or its status can't be read, warning when it has work that isn't
-  pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its submodules, and
-  success otherwise. Each card has:
-  - a label: Broken, Unreadable, Changed (as on Home), Out of sync (only behind) or Clean
+  pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its submodules. A
+  repository with no issues has no colour and no label, and looks like a card in the Tasks section. Each card has:
+  - a label: Broken, Unreadable, Changed (as on Home) or Out of sync (only behind). A clean repository has none
   - its branch (or the commit, when HEAD is detached), and how far it's ahead of and behind its upstream, when it
     tracks one
   - how many uncommitted changes and unpushed commits it has
   - its submodules, nested under it, each with the same details, or "Not checked out"
   - a broken worktree says what's wrong (e.g. "Local Repository moved or deleted") instead
   - under its name, a badge for each [Pull Request](#github) from its workspace branch, oldest first, coloured by its
-    state (grey for a draft, green for open, purple for merged, red for closed), with an icon for its state, its number
-    and, when it has checks, one icon for the most severe of them (failed, then in progress, then passed). The tooltip
+    state (grey for a draft, blue for open, green for merged, red for closed), with an icon for its state and its number.
+    A draft or open Pull Request with checks ends with a dot for them: red if any failed, amber if any are running,
+    green if all passed. The tooltip
     gives its repository, title and state. Clicking a badge opens the Pull Request in the browser (not the git graph).
     A repository with no Pull Requests shows no badge.
     - Pull Requests are found from the Local Repository's remotes (fetch and push URLs): each remote on a connected
@@ -369,7 +392,31 @@ with the new name, without reading the tasks again. A workspace that can't be re
       its A, M, D or R.
     - Every graph shows files the same way, and the list or tree choice is kept in the settings, so it's the same
       after a restart. Like the columns, whether Authors is collapsed is shared by every graph until the app closes.
-      Diffs are a separate Git operation.
+    - Selecting a changed file shows its diff (see below), and selecting it again takes the diff away.
+  - **Working changes:** the top row of the graph is the changes not yet committed, joined to HEAD by a dashed line,
+    with how many files are unstaged and staged. It is only shown while there are changes, and after the last one is
+    committed the selection moves to HEAD's commit. Selecting it turns the details into the commit panel: the files with
+    unstaged changes, the staged files below them (a toggle in the panel's heading shows both as a list or as a tree of
+    folders, which start open and show how many of their files were modified, added, deleted and renamed, as in a
+    commit's tree, and have a Stage or Unstage button, shown on hover, that moves all their files; the same list or tree
+    choice, kept in the settings, as the changed files of a commit; select files, with Ctrl-click to add to the selection; the last one selected has its diff shown, which goes when it's
+    deselected; the
+    Stage, Stage all, Unstage and Unstage all buttons move them between the two, as does double-clicking a file), the
+    commit message's subject and body (a bar above them resizes the body, down to one row: drag it, or focus it and
+    use Up and Down, and double-click resets it, and the height is kept like the details' width; the unstaged and staged files share the rest of the height evenly),
+    and the Commit button, which needs a staged file and a subject. A counter at the end of the subject counts down the
+    characters left of a soft limit, 72 unless the Git settings say otherwise: it's green until 10 are left, orange from
+    there to the limit, and red once the subject is over it, which can still be committed. The message is
+    kept in git's own `COMMIT_EDITMSG` file in the repository's git directory (a submodule's own, for a submodule) as
+    it's typed, and read from there when the panel opens; a commit clears it. Staging, unstaging and committing use the
+    git CLI, so hooks run, and a failure is shown under the message. A submodule whose checked-out commit differs from
+    the one the repository records is listed like a file, marked S, and staging it records the commit it has checked out;
+    its diff shows the old and new commit. The submodule's own uncommitted files aren't part of it: commit them from the
+    submodule's own graph tab first.
+  - **Diffs:** a file's diff (a commit's changes to it, or a working change's unstaged or staged changes) is shown in
+    place of the list of commits (the details stay beside it) as unified hunks with old and new line numbers. Deselecting the file, or the close button in its top right, goes back to
+    the list, which keeps its scroll position and selection. Binary files say so instead, and very large diffs are cut
+    short.
   - The split between the list and the details is resizable: drag it, or focus it and use Left and Right. Double-click
     resets it. The details' width is kept as a fixed width in pixels (see [Layout state](#technical-constraints)), so
     every graph opens with it, even after a restart. Each side keeps a minimum width: when the window is too narrow
@@ -459,6 +506,15 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
       or unknown when the token can't list keys), with an Add button. Tammi adds it through GitHub's API, titled with
       the computer's and key's names. If the token isn't allowed to, Tammi copies the public key and opens GitHub's
       page for adding a key, and says why. JIRA has no SSH keys.
+    - **Not loaded by SSH:** SSH only tries a key on its own when it has a default file name (`id_ed25519`, `id_rsa`,
+      …). A key with any other name that no `IdentityFile` in `~/.ssh/config` names would never be offered to the
+      remote (git fails with `Permission denied (publickey)`), so the key shows a warning, including keys that were
+      renamed or already there. The default fix is a **Host entry** (`Host <host>`, `IdentityFile`,
+      `IdentitiesOnly yes`) for each configured integration's SSH host (GitHub Enterprise Server hosts too), shown as
+      ticked hosts the user can untick before confirming. Hosts the key isn't added to start unticked, and hosts
+      with an entry naming the key are left out. The entries go before the first `Host *` entry, because SSH uses the
+      first value it finds for each option. The config is created if missing and its other content is kept. The Generate
+      form's file name field warns about a non-default name too, and points to this Host entry option.
   - What a [Git Graph](#workspace-view-tab) shows when it opens: the workspace branch (the default) or everything
 - **Repositories**
   - Monitored Folder(s), each with how many repositories were found in it
@@ -475,8 +531,11 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     case and surrounding spaces, including the Supported Agents' names. A name that's already used is still saved,
     but shown as an error until it's changed.
   - Agents are offered in that order: the Supported Agents, then the Custom Agents.
+  - The initial prompt style: **Prefill** (the default) or **Submit**. Prefill types the prompt into the agent's input
+    about two seconds after it starts, without sending it, so the user can edit it and send it themselves. Submit passes
+    it to the agent with its initial prompt arguments, so the agent acts on it straight away.
   - The initial prompt template. A menu fills it in with one of three predefined prompts, ticking the one in use. Each
-    tells the agent to read the task context file, and to read it again for the tasks' latest details, since Tammi
+    tells the agent to read the workspace context file, and to read it again for the tasks' latest details, since Tammi
     rewrites it when they change. Then it has the agent:
     - **Implement the tasks:** start making the changes.
     - **Plan the change:** plan the changes, and wait for the user to approve the plan before making them.
@@ -518,6 +577,21 @@ Operations available in the Workspace View:
 - Fetch, pull and push
 - Stage, unstage and commit
 - View diffs
+
+**Fetch, pull and push** are buttons in each git graph tab, so they apply to the repository or submodule the tab is
+for. They run the `git` CLI, so the user's git config and credential helpers apply, and Tammi never prompts for
+credentials (a git that would need a terminal prompt fails instead).
+- **Fetch** gets every remote, pruning deleted branches, and also fetches the repository's checked-out submodules.
+- **Pull** brings the checked-out branch up to date with its upstream. It follows the user's `pull.rebase` and
+  `pull.ff` config, and merges when neither is set. A conflicted pull is left in the working directory, where the
+  conflicts show in the working changes to resolve.
+- **Push** pushes the checked-out branch. A branch with no upstream is pushed to `origin` (or the only remote) and
+  starts tracking it.
+- Pull and push need a branch, so they fail with a clear message on a detached HEAD (as submodules usually are).
+- While one runs, git's progress is shown under the toolbar and the buttons are disabled. A failure is shown there
+  too, worded for what went wrong (authentication, unreachable remote, conflicts, uncommitted changes that would be
+  overwritten, a rejected push, no remote or upstream), with git's own output under it.
+- When it finishes the graph is read again, and the side panel's status follows from the repository's watched files.
 
 **Submodules are supported** by all of these. Submodules appear in status, and the operations can be
 applied inside them. Creating and switching branches, stashing, merging, rebasing and history rewrites
@@ -612,10 +686,13 @@ are left to other tools for now.
   context file in `.tammi/` and keeps it up to date. When an agent starts, Tammi sends it an
   **initial prompt** telling it about the context file. The initial prompt is configurable, with a
   placeholder for the context file's path. Each Agent Definition says how the prompt is passed to its CLI.
-  - The context file is `.tammi/tasks.md`. It has a section for each task, in the workspace's order: its key and
-    title, a link to its page, its Task Status (with its category), its repository's page if it belongs to one, and
+  - The context file is `.tammi/context.md`. Its **Tasks** section has a subsection for each task, in the workspace's
+    order: its key and title, a link to its page, its Task Status (with its category), its repository's page if it belongs to one, and
     its description as the source gives it (markdown from GitHub, wiki markup from JIRA). A workspace without tasks
     gets a file that says so.
+  - A separate **Repositories** section follows, because the Workspace Folder isn't a git repository itself and an
+    agent started in it can otherwise be confused. It says so, then has a subsection for each Workspace Worktree: its
+    folder, its branch and its base branch. A workspace without repositories gets a line that says so.
   - It's written each time the workspace's tasks have all been read (see [Tasks section](#workspace-view-tab)): when
     the tab opens, on Refresh, when integrations are added or removed, and when the task list changes. It's only
     rewritten when its contents change, and always in full, so an agent never reads half a file. A task that can't be
@@ -625,6 +702,10 @@ are left to other tools for now.
     are still being read), listing the tasks by their keys until their details are read. If it can't be written, the
     agent doesn't start, and says why. An agent that doesn't take an initial prompt starts without it.
   - Running agents aren't told when the file changes.
+  - How the prompt is given depends on the **initial prompt style** setting. With **prefill** (the default), the agent
+    starts without it, and Tammi types it into the agent's terminal as a bracketed paste about two seconds later,
+    without pressing Enter. With **submit**, it's passed as the initial prompt arguments say. Either way, only agents
+    with initial prompt arguments are given one.
   - The template's placeholder is `{contextFile}`, replaced with the file's full path. The rest of the template is
     sent as it is. Resumed Agent Sessions aren't sent the prompt again.
   - An Agent Definition has two lists of arguments. Its **arguments** are passed every time it starts. Its
@@ -842,6 +923,8 @@ are left to other tools for now.
   - **Linux:** a `/dev/ptmx` pseudoterminal. The process is started with `posix_spawn` rather than `forkpty`,
     because a .NET process can't safely run code in a forked child before `exec`. `posix_spawn` starts the new
     session and opens the terminal without any code in the child. This needs glibc 2.29 or later.
+  - Links in the terminal's output (plain `http(s)` URLs, and OSC 8 hyperlinks) open in the user's browser when clicked.
+    Other schemes are ignored, as the output comes from a process and a link could otherwise start a program.
   - xterm.js is vendored in the UI library (`wwwroot/lib/xterm`), so the app needs no network access or npm build.
 
 ## Open Questions

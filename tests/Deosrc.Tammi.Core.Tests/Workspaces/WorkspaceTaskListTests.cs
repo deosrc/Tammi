@@ -169,7 +169,7 @@ public sealed class WorkspaceTaskListTests : IDisposable
     }
 
     [Fact]
-    public async Task RefreshAsync_WritesTheTaskContextFile()
+    public async Task RefreshAsync_WritesTheWorkspaceContextFile()
     {
         var task = _github.Add(1, "Fix the bug") with { Description = "It breaks." };
         _github.Tasks[0] = task;
@@ -178,15 +178,15 @@ public sealed class WorkspaceTaskListTests : IDisposable
 
         await list.RefreshAsync();
 
-        var contents = await File.ReadAllTextAsync(TaskContextFile.PathOf(workspace), CancellationToken);
-        Assert.Equal(TaskContextFile.Render(workspace, list.Tasks), contents);
-        Assert.Contains("## GH-1: Fix the bug", contents, StringComparison.Ordinal);
-        Assert.Contains("## X-1", contents, StringComparison.Ordinal);
+        var contents = await File.ReadAllTextAsync(WorkspaceContextFile.PathOf(workspace), CancellationToken);
+        Assert.Equal(WorkspaceContextFile.Render(workspace, list.Tasks), contents);
+        Assert.Contains("### GH-1: Fix the bug", contents, StringComparison.Ordinal);
+        Assert.Contains("### X-1", contents, StringComparison.Ordinal);
         Assert.Null(list.ContextFileProblem);
     }
 
     [Fact]
-    public async Task RefreshAsync_Again_RewritesTheTaskContextFile()
+    public async Task RefreshAsync_Again_RewritesTheWorkspaceContextFile()
     {
         var task = _github.Add(1, "Before");
         var workspace = CreateWorkspace(task.Reference);
@@ -196,13 +196,13 @@ public sealed class WorkspaceTaskListTests : IDisposable
 
         await list.RefreshAsync();
 
-        var contents = await File.ReadAllTextAsync(TaskContextFile.PathOf(workspace), CancellationToken);
-        Assert.Contains("## GH-1: After", contents, StringComparison.Ordinal);
+        var contents = await File.ReadAllTextAsync(WorkspaceContextFile.PathOf(workspace), CancellationToken);
+        Assert.Contains("### GH-1: After", contents, StringComparison.Ordinal);
         Assert.DoesNotContain("Before", contents, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task RenameAsync_AfterTheTasksWereRead_RewritesTheTaskContextFile_WithoutReadingThemAgain()
+    public async Task RenameAsync_AfterTheTasksWereRead_RewritesTheWorkspaceContextFile_WithoutReadingThemAgain()
     {
         var task = _github.Add(1, "Fix the bug");
         var workspace = CreateWorkspace(task.Reference);
@@ -212,7 +212,7 @@ public sealed class WorkspaceTaskListTests : IDisposable
 
         await list.RenameAsync(workspace with { Name = "Renamed" });
 
-        var contents = await File.ReadAllTextAsync(TaskContextFile.PathOf(workspace), CancellationToken);
+        var contents = await File.ReadAllTextAsync(WorkspaceContextFile.PathOf(workspace), CancellationToken);
         Assert.Contains("\"Renamed\"", contents, StringComparison.Ordinal);
         Assert.Contains("Fix the bug", contents, StringComparison.Ordinal);
         Assert.Equal("Renamed", list.Workspace.Name);
@@ -229,7 +229,7 @@ public sealed class WorkspaceTaskListTests : IDisposable
     }
 
     [Fact]
-    public async Task RefreshAsync_NoTasks_WritesTheTaskContextFile()
+    public async Task RefreshAsync_NoTasks_WritesTheWorkspaceContextFile()
     {
         var workspace = CreateWorkspace();
         using var list = new WorkspaceTaskList(workspace, _registry);
@@ -238,12 +238,12 @@ public sealed class WorkspaceTaskListTests : IDisposable
 
         Assert.Contains(
             "no tasks",
-            await File.ReadAllTextAsync(TaskContextFile.PathOf(workspace), CancellationToken),
+            await File.ReadAllTextAsync(WorkspaceContextFile.PathOf(workspace), CancellationToken),
             StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task RefreshAsync_TaskContextFileCantBeWritten_SaysWhy_AndRaisesChanged()
+    public async Task RefreshAsync_WorkspaceContextFileCantBeWritten_SaysWhy_AndRaisesChanged()
     {
         var task = _github.Add(1, "Task");
         var workspace = NewWorkspace(task.Reference);
@@ -259,7 +259,7 @@ public sealed class WorkspaceTaskListTests : IDisposable
     }
 
     [Fact]
-    public async Task RefreshAsync_TaskContextFileCanBeWrittenAgain_ClearsTheProblem()
+    public async Task RefreshAsync_WorkspaceContextFileCanBeWrittenAgain_ClearsTheProblem()
     {
         var workspace = NewWorkspace(_github.Add(1, "Task").Reference) with
         {
@@ -273,11 +273,11 @@ public sealed class WorkspaceTaskListTests : IDisposable
         await list.RefreshAsync();
 
         Assert.Null(list.ContextFileProblem);
-        Assert.True(File.Exists(TaskContextFile.PathOf(workspace)));
+        Assert.True(File.Exists(WorkspaceContextFile.PathOf(workspace)));
     }
 
     /// <summary>
-    /// A workspace with its folder and <c>.tammi/</c> folder on disk, so its task context file can be written.
+    /// A workspace with its folder and <c>.tammi/</c> folder on disk, so its workspace context file can be written.
     /// </summary>
     private Workspace CreateWorkspace(params TaskReference[] tasks)
     {
@@ -287,7 +287,7 @@ public sealed class WorkspaceTaskListTests : IDisposable
     }
 
     /// <summary>
-    /// A workspace whose folder doesn't exist, so its task context file can't be written.
+    /// A workspace whose folder doesn't exist, so its workspace context file can't be written.
     /// </summary>
     internal static Workspace NewWorkspace(params TaskReference[] tasks) => new()
     {

@@ -24,8 +24,18 @@ internal sealed class FakeFileSystemWatchService : IFileSystemWatchService
         }
     }
 
+    /// <summary>
+    /// Whether new watches fail, as when the system's limit of watches is reached.
+    /// </summary>
+    public volatile bool FailWatches;
+
     public IDisposable Watch(string directory, Action<FileSystemChanges> onChanged, FileSystemWatchOptions? options = null)
     {
+        if (FailWatches)
+        {
+            throw new IOException("The limit of watches was reached.");
+        }
+
         if (!System.IO.Directory.Exists(directory))
         {
             throw new DirectoryNotFoundException($"Couldn't find the folder '{directory}'.");

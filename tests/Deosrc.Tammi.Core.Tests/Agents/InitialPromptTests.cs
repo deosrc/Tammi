@@ -8,8 +8,8 @@ public class InitialPromptTests
     public void Expand_ReplacesPlaceholderWithPath()
     {
         Assert.Equal(
-            "Read /work/ws/.tammi/tasks.md now.",
-            InitialPrompt.Expand("Read {contextFile} now.", "/work/ws/.tammi/tasks.md"));
+            "Read /work/ws/.tammi/context.md now.",
+            InitialPrompt.Expand("Read {contextFile} now.", "/work/ws/.tammi/context.md"));
     }
 
     [Fact]
@@ -31,9 +31,9 @@ public class InitialPromptTests
     }
 
     [Theory]
-    [InlineData(@"C:\Users\Jo Smith\Workspaces\100% done & dusted\.tammi\tasks.md")]
-    [InlineData("/home/jo/it's \"quoted\" $HOME `cmd`/.tammi/tasks.md")]
-    [InlineData("/home/jo/{contextFile}/.tammi/tasks.md")]
+    [InlineData(@"C:\Users\Jo Smith\Workspaces\100% done & dusted\.tammi\context.md")]
+    [InlineData("/home/jo/it's \"quoted\" $HOME `cmd`/.tammi/context.md")]
+    [InlineData("/home/jo/{contextFile}/.tammi/context.md")]
     public void Expand_InsertsPathWithSpecialCharactersAsItIs(string path)
     {
         Assert.Equal($"Read {path}.", InitialPrompt.Expand("Read {contextFile}.", path));

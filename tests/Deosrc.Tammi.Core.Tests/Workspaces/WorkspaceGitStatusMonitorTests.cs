@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Time.Testing;
 using Deosrc.Tammi.Core.Git;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Tests.Catalogue;
@@ -127,6 +128,38 @@ public sealed class WorkspaceGitStatusMonitorTests : IDisposable
 
         Assert.Equal(watchCount, _watchService.WatchedFolders.Count);
         Assert.Contains(api, _watchService.WatchedFolders);
+    }
+
+    [Fact]
+    public async Task WatchesThatFail_ScanPeriodicallyAndWatchAgain()
+    {
+        var workspace = await CreateWorkspaceAsync("api");
+        var time = new FakeTimeProvider();
+        _watchService.FailWatches = true;
+        var monitor = new WorkspaceGitStatusMonitor(workspace, _reader, _worktrees, _watchService, time);
+        _disposables.Add(monitor);
+        await monitor.RefreshAsync(CancellationToken);
+        Assert.Empty(_watchService.WatchedFolders);
+        string api = Path.Combine(WorkspaceFolder, "api");
+
+        // Without watches, a change is found by the next scan, which also watches the folders again.
+        _watchService.FailWatches = false;
+        await WaitForAsync(
+            monitor,
+            () => monitor.Repositories[0].Status?.IsChanged == true,
+            () =>
+            {
+                TempRepositories.WriteFile(api, "new.txt", "new");
+                time.Advance(WorkspaceGitStatusMonitor.FallbackScanInterval);
+            });
+        Assert.Contains(api, _watchService.WatchedFolders);
+
+        // Once everything is watched, nothing is scanned.
+        var scanned = false;
+        monitor.Changed += () => scanned = true;
+        time.Advance(WorkspaceGitStatusMonitor.FallbackScanInterval * 3);
+        await Task.Delay(200, CancellationToken);
+        Assert.False(scanned);
     }
 
     [Fact]

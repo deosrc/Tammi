@@ -495,6 +495,9 @@ public sealed class GitHubIntegration
     /// </summary>
     public Uri NewSshKeyUrl => new($"https://{_webHost}/settings/ssh/new");
 
+    /// <inheritdoc />
+    public string SshHost => _webHost;
+
     /// <summary>
     /// The message for a token that can't add SSH keys, naming the permission it needs.
     /// </summary>

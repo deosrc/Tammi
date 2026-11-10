@@ -78,10 +78,10 @@ public class WindowsCommandLineTests
     public void BuildForBatchFile_EscapesDefaultPromptAndPath()
     {
         var prompt = Deosrc.Tammi.Core.Agents.InitialPrompt.Expand(
-            "Read `{contextFile}` & go!", @"C:\Users\Jo\100% done\.tammi\tasks.md");
+            "Read `{contextFile}` & go!", @"C:\Users\Jo\100% done\.tammi\context.md");
 
         Assert.Equal(
-            BatchPrefix + @" ""Read `C:\Users\Jo\100%%cd:~,% done\.tammi\tasks.md` & go!""""",
+            BatchPrefix + @" ""Read `C:\Users\Jo\100%%cd:~,% done\.tammi\context.md` & go!""""",
             WindowsCommandLine.BuildForBatchFile(Batch, [prompt]));
     }
 

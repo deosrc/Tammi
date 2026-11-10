@@ -156,6 +156,87 @@ public sealed class SshKeyStore(
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
+    public string ConfigPath => Path.Combine(KeyDirectory, "config");
+
+    /// <inheritdoc />
+    public async Task<bool> IsLoadedBySshAsync(SshKey key, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        if (key.HasDefaultName && IsInKeyDirectory(key))
+        {
+            return true;
+        }
+
+        return (await ReadConfigAsync(cancellationToken).ConfigureAwait(false)).NamesKey(key.PrivateKeyPath);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> GetHostsWithoutEntryAsync(
+        SshKey key, IEnumerable<string> hosts, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        var config = await ReadConfigAsync(cancellationToken).ConfigureAwait(false);
+        return Missing(config, key, hosts);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> AddHostEntriesAsync(
+        SshKey key, IEnumerable<string> hosts, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        var config = await ReadConfigAsync(cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<string> missing = Missing(config, key, hosts);
+        if (missing.Count == 0)
+        {
+            return missing;
+        }
+
+        string identityFile = IdentityFileFor(key);
+        string text = config.AddHostEntries(missing, identityFile);
+
+        CreateKeyDirectory();
+        await File.WriteAllTextAsync(ConfigPath, text, cancellationToken).ConfigureAwait(false);
+        if (!OperatingSystem.IsWindows())
+        {
+            // OpenSSH refuses a config others can write to.
+            File.SetUnixFileMode(ConfigPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        }
+
+        _logger.LogInformation("Added SSH config entries for {Hosts} using the key {Path}.", string.Join(", ", missing), key.PrivateKeyPath);
+        return missing;
+    }
+
+    private static List<string> Missing(SshConfig config, SshKey key, IEnumerable<string> hosts) =>
+        [.. hosts.Distinct(StringComparer.OrdinalIgnoreCase).Where(host => !config.NamesKeyForHost(key.PrivateKeyPath, host))];
+
+    private bool IsInKeyDirectory(SshKey key) =>
+        string.Equals(
+            Path.GetDirectoryName(Path.GetFullPath(key.PrivateKeyPath)),
+            Path.GetFullPath(KeyDirectory).TrimEnd(Path.DirectorySeparatorChar),
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    private string HomeDirectory => Path.GetDirectoryName(Path.GetFullPath(KeyDirectory).TrimEnd(Path.DirectorySeparatorChar))
+        ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+    /// <summary>
+    /// How the config names the key: with <c>~</c> when it's in the user's SSH folder, so the config still works
+    /// if the home folder moves.
+    /// </summary>
+    private string IdentityFileFor(SshKey key) =>
+        IsInKeyDirectory(key) && string.Equals(KeyDirectory, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh"),
+            StringComparison.Ordinal)
+            ? "~/.ssh/" + key.Name
+            : key.PrivateKeyPath.Replace('\\', '/');
+
+    private async Task<SshConfig> ReadConfigAsync(CancellationToken cancellationToken)
+    {
+        string? text = File.Exists(ConfigPath)
+            ? await File.ReadAllTextAsync(ConfigPath, cancellationToken).ConfigureAwait(false)
+            : null;
+        return SshConfig.Parse(text, HomeDirectory);
+    }
+
     private bool IsTaken(string name)
     {
         string path = Path.Combine(KeyDirectory, name);

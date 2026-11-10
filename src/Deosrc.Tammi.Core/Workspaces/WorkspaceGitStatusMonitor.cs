@@ -19,12 +19,18 @@ namespace Deosrc.Tammi.Core.Workspaces;
 /// Each repository is read on its own, when something in it changes. Changes that arrive while it's being read are
 /// collected into one more read.
 /// </para>
+/// <para>
+/// The number of folder watches a user can have is limited (e.g. by inotify on Linux), and a watch can fail or stop.
+/// While any folder of a repository isn't watched, that repository is read again every
+/// <see cref="FallbackScanInterval"/>, which also tries to watch the folder again.
+/// </para>
 /// </remarks>
 public sealed class WorkspaceGitStatusMonitor : IDisposable
 {
     private readonly IGitRepositoryReader _reader;
     private readonly IGitWorktreeService _worktrees;
     private readonly IFileSystemWatchService _watchService;
+    private readonly TimeProvider _timeProvider;
     private readonly RepositorySlot[] _slots;
     private volatile bool _started;
     private volatile bool _disposed;
@@ -36,10 +42,12 @@ public sealed class WorkspaceGitStatusMonitor : IDisposable
         Workspace workspace,
         IGitRepositoryReader reader,
         IGitWorktreeService worktrees,
-        IFileSystemWatchService watchService)
+        IFileSystemWatchService watchService,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(workspace);
         Workspace = workspace;
+        _timeProvider = timeProvider ?? TimeProvider.System;
         _reader = reader;
         _worktrees = worktrees;
         _watchService = watchService;
@@ -48,6 +56,11 @@ public sealed class WorkspaceGitStatusMonitor : IDisposable
                 new WorkspaceRepositoryStatus(repository, workspace.GetWorktreePath(repository))))
             .ToArray();
     }
+
+    /// <summary>
+    /// How often a repository is read again while some of its folders can't be watched.
+    /// </summary>
+    public static TimeSpan FallbackScanInterval { get; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
     /// The workspace being monitored.
@@ -210,6 +223,7 @@ public sealed class WorkspaceGitStatusMonitor : IDisposable
                 return;
             }
 
+            bool allWatched = true;
             var wantedFolders = wanted.Select(folder => folder.Folder).ToHashSet(FileSystemPaths.Comparer);
             foreach (string folder in slot.Watches.Keys.Where(folder => !wantedFolders.Contains(folder)).ToArray())
             {
@@ -233,9 +247,28 @@ public sealed class WorkspaceGitStatusMonitor : IDisposable
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
                 {
-                    // The folder went away, or can't be watched. The next read tries again.
+                    // The folder went away, or can't be watched (e.g. the watch limit is reached). The periodic scan
+                    // reads the repository and tries again.
+                    allWatched = false;
                 }
             }
+
+            SetFallbackScan(slot, !allWatched);
+        }
+    }
+
+    // Call with the slot's watch lock held.
+    private void SetFallbackScan(RepositorySlot slot, bool enabled)
+    {
+        if (enabled && slot.FallbackTimer is null && !_disposed)
+        {
+            slot.FallbackTimer = _timeProvider.CreateTimer(
+                _ => QueueRead(slot), null, FallbackScanInterval, FallbackScanInterval);
+        }
+        else if (!enabled && slot.FallbackTimer is not null)
+        {
+            slot.FallbackTimer.Dispose();
+            slot.FallbackTimer = null;
         }
     }
 
@@ -243,13 +276,15 @@ public sealed class WorkspaceGitStatusMonitor : IDisposable
     {
         if (changes.Error is not null)
         {
-            // Watching may have stopped. The read watches the folder again.
+            // Watching may have stopped. The read watches the folder again, and until then it's scanned.
             lock (slot.WatchLock)
             {
                 if (slot.Watches.Remove(folder, out var watch))
                 {
                     watch.Dispose();
                 }
+
+                SetFallbackScan(slot, true);
             }
         }
 
@@ -261,6 +296,7 @@ public sealed class WorkspaceGitStatusMonitor : IDisposable
         public readonly SemaphoreSlim ReadLock = new(1, 1);
         public readonly Lock WatchLock = new();
         public readonly Dictionary<string, IDisposable> Watches = new(FileSystemPaths.Comparer);
+        public ITimer? FallbackTimer;
         public int ReadQueued;
         private volatile WorkspaceRepositoryStatus _current = initial;
 
@@ -280,6 +316,8 @@ public sealed class WorkspaceGitStatusMonitor : IDisposable
                 }
 
                 Watches.Clear();
+                FallbackTimer?.Dispose();
+                FallbackTimer = null;
             }
         }
     }

@@ -1,4 +1,7 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@inject WorkspaceTabsKeeper TabsKeeper
+@inject NavigationManager Navigation
 
 <div class="app">
     <header class="app-bar">
@@ -9,3 +12,31 @@
         @Body
     </main>
 </div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        TabsKeeper.SetActive(ActiveWorkspaceId());
+
+        // Opens the tabs from last time, once per app run. The app starts on Home, so the tab that was shown
+        // is shown again, unless the app was started on another page.
+        var shown = await TabsKeeper.RestoreAsync();
+        if (shown is not null && Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/') == AppRoutes.Home)
+        {
+            Navigation.NavigateTo(AppRoutes.Workspace(shown));
+        }
+    }
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) =>
+        TabsKeeper.SetActive(ActiveWorkspaceId());
+
+    private string? ActiveWorkspaceId()
+    {
+        var path = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var end = path.IndexOfAny(['?', '#']);
+        return AppRoutes.WorkspaceIdOf(end < 0 ? path : path[..end]);
+    }
+}

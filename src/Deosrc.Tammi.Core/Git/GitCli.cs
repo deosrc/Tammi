@@ -108,7 +108,7 @@ public sealed partial class GitCli(GitCliOptions? options = null, ILogger<GitCli
         }
 
         Task<string> stdout = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
-        Task<string> stderr = process.StandardError.ReadToEndAsync(CancellationToken.None);
+        Task<string> stderr = ReadErrorAsync(process.StandardError, options.OnErrorLine);
 
         try
         {
@@ -156,6 +156,57 @@ public sealed partial class GitCli(GitCliOptions? options = null, ILogger<GitCli
         }
 
         return result;
+    }
+
+    // Reads standard error to the end, reporting each line (a progress line ends with a carriage return) as it arrives.
+    private static async Task<string> ReadErrorAsync(StreamReader reader, Action<string>? onLine)
+    {
+        if (onLine is null)
+        {
+            return await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+
+        var all = new StringBuilder();
+        var line = new StringBuilder();
+        var buffer = new char[1024];
+        int read;
+        while ((read = await reader.ReadAsync(buffer.AsMemory(), CancellationToken.None).ConfigureAwait(false)) > 0)
+        {
+            all.Append(buffer, 0, read);
+            foreach (char c in buffer.AsSpan(0, read))
+            {
+                if (c is '\r' or '\n')
+                {
+                    Report(line, onLine);
+                }
+                else
+                {
+                    line.Append(c);
+                }
+            }
+        }
+
+        Report(line, onLine);
+        return all.ToString();
+    }
+
+    private static void Report(StringBuilder line, Action<string> onLine)
+    {
+        if (line.Length == 0)
+        {
+            return;
+        }
+
+        string text = line.ToString();
+        line.Clear();
+        try
+        {
+            onLine(text);
+        }
+        catch (Exception)
+        {
+            // A failing listener mustn't stop git's output being read.
+        }
     }
 
     private static void Kill(Process process)

@@ -34,6 +34,8 @@ public static class ServiceCollectionExtensions
 
         // One window per app, so the open tabs are shared app-wide.
         services.AddSingleton<WorkspaceTabs>();
+        services.AddSingleton<OpenWorkspaceTabsStore>();
+        services.AddSingleton<WorkspaceTabsKeeper>();
         services.AddSingleton<IGitCli>(services => new GitCli(logger: services.GetRequiredService<ILogger<GitCli>>()));
         services.AddSingleton<IGitUserConfig>(services => new GitUserConfig(services.GetRequiredService<IGitCli>()));
         services.AddSingleton<ISshKeyStore>(services => new SshKeyStore(
@@ -41,6 +43,8 @@ public static class ServiceCollectionExtensions
             logger: services.GetRequiredService<ILogger<SshKeyStore>>()));
         services.AddScoped<Clipboard>();
         services.AddSingleton<IGitRepositoryReader, GitRepositoryReader>();
+        services.AddSingleton<IGitSync>(services => new GitSync(services.GetRequiredService<IGitCli>()));
+        services.AddSingleton<IGitWorkingTree>(services => new GitWorkingTree(services.GetRequiredService<IGitCli>()));
         services.AddSingleton<IGitWorktreeService, GitWorktreeService>();
         services.AddSingleton(services => new IntegrationManager(
             services.GetRequiredService<ISettingsStore>(),
@@ -75,8 +79,10 @@ public static class ServiceCollectionExtensions
             services.GetRequiredService<IntegrationRegistry>(),
             services.GetRequiredService<IGitRepositoryReader>(),
             services.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<HomeGitStatus>();
         services.AddSingleton<WorkspaceDeleter>();
         services.AddSingleton<WorkspaceCreator>();
+        services.AddSingleton<WorkspaceEditor>();
         services.AddSingleton<IRepositoryCatalogue, RepositoryCatalogue>();
         return services;
     }

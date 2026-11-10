@@ -43,6 +43,7 @@ public sealed class WorkspaceDraft
     private string _name = string.Empty;
     private string _folderName = string.Empty;
     private string _branchName = string.Empty;
+    private IReadOnlyList<WorkspaceRepository> _existingRepositories = [];
 
     /// <param name="parentFolder">
     /// The parent folder to start with, usually the Default Workspace Parent Folder setting.
@@ -64,6 +65,79 @@ public sealed class WorkspaceDraft
         _folderNameFormat = folderNameFormat ?? new WorkspaceFolderNameFormat();
         _nameTemplate = nameTemplate ?? GeneralSettings.DefaultWorkspaceNameTemplate;
     }
+
+    /// <summary>
+    /// Starts a draft from an existing workspace, to change its tasks and add repositories (see
+    /// <see cref="WorkspaceEditor"/>).
+    /// </summary>
+    /// <remarks>
+    /// The workspace's own repositories are kept in <see cref="ExistingRepositories"/>: they count as chosen, so they
+    /// can't be added again and their folder names are taken. Its tasks don't choose repositories again, so only tasks
+    /// added since do. Once the workspace has repositories, the branch is theirs and can't be changed.
+    /// </remarks>
+    /// <param name="workspace">The workspace to edit.</param>
+    /// <param name="tasks">
+    /// The workspace's tasks as read from their sources, in the order the workspace lists them. A task that couldn't be
+    /// read can be given with only its key as its title.
+    /// </param>
+    public static WorkspaceDraft ForEditing(
+        Workspace workspace,
+        IReadOnlyList<TaskInfo> tasks,
+        WorkspaceFolderNameFormat? folderNameFormat = null,
+        string? nameTemplate = null)
+    {
+        ArgumentNullException.ThrowIfNull(workspace);
+        ArgumentNullException.ThrowIfNull(tasks);
+        var draft = new WorkspaceDraft(
+            Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(workspace.Folder)) ?? workspace.Folder,
+            folderNameFormat,
+            nameTemplate)
+        {
+            IsEditing = true,
+        };
+        draft.Name = workspace.Name;
+        draft.FolderName = Path.GetFileName(Path.TrimEndingDirectorySeparator(workspace.Folder));
+        foreach (var task in tasks)
+        {
+            draft._tasks.Add(task);
+            draft._tasksWithRepositoriesChosen.Add(task.Reference);
+        }
+
+        draft._existingRepositories = workspace.Repositories;
+        draft.BranchName = workspace.Repositories.Select(repository => repository.Branch).FirstOrDefault()
+            ?? draft.SuggestedBranchName
+            ?? string.Empty;
+        draft.IsBranchNameEdited = workspace.Repositories.Count > 0;
+        return draft;
+    }
+
+    /// <summary>
+    /// Whether the draft changes an existing workspace (see <see cref="ForEditing"/>).
+    /// </summary>
+    public bool IsEditing { get; private init; }
+
+    /// <summary>
+    /// The repositories the workspace being edited already has. They can't be removed or added again.
+    /// </summary>
+    public IReadOnlyList<WorkspaceRepository> ExistingRepositories => _existingRepositories;
+
+    /// <summary>
+    /// Whether the <see cref="BranchName"/> is the workspace's own and can't be changed, because the workspace being
+    /// edited already has repositories on it.
+    /// </summary>
+    public bool IsBranchFixed => _existingRepositories.Count > 0;
+
+    /// <summary>
+    /// Whether the repository is one of the <see cref="ExistingRepositories"/>.
+    /// </summary>
+    public bool IsExistingRepository(CatalogueRepository repository)
+    {
+        ArgumentNullException.ThrowIfNull(repository);
+        return _existingRepositories.Any(existing => IsSamePath(existing.LocalRepositoryPath, repository.Path));
+    }
+
+    private static bool IsSamePath(string a, string b) => PathComparer.Equals(
+        Path.TrimEndingDirectorySeparator(a), Path.TrimEndingDirectorySeparator(b));
 
     /// <summary>
     /// The chosen tasks, in the order they were chosen. A workspace can have none, and can mix tasks from any sources.
@@ -202,7 +276,8 @@ public sealed class WorkspaceDraft
     /// <summary>
     /// Whether the repository is chosen.
     /// </summary>
-    public bool ContainsRepository(CatalogueRepository repository) => FindRepository(repository) is not null;
+    public bool ContainsRepository(CatalogueRepository repository) =>
+        FindRepository(repository) is not null || IsExistingRepository(repository);
 
     /// <summary>
     /// Returns the chosen repository for a catalogue entry, or <see langword="null"/> if it isn't chosen.
@@ -267,6 +342,11 @@ public sealed class WorkspaceDraft
             var matches = catalogue
                 .Where(repository => repository.Remotes.Any(remote => GitRemoteUrls.IsSameRepository(remote.Url, url.ToString())))
                 .ToList();
+            if (matches.Exists(IsExistingRepository))
+            {
+                continue;
+            }
+
             if (_repositories.Find(chosen => matches.Exists(match => PathComparer.Equals(match.Path, chosen.Repository.Path)))
                 is { } alreadyChosen)
             {
@@ -328,7 +408,7 @@ public sealed class WorkspaceDraft
     /// <see cref="WorkspaceCreator.CheckAsync"/> checks the rest, such as whether the branch exists.
     /// </summary>
     public bool IsRepositoriesValid =>
-        BranchNameProblem is null
+        (BranchNameProblem is null || (IsEditing && _repositories.Count == 0))
         && _repositories.TrueForAll(repository =>
             repository.FolderNameProblem is null && !repository.IsLoading && repository.BaseBranch.Trim().Length > 0);
 
@@ -344,6 +424,25 @@ public sealed class WorkspaceDraft
         BranchName = _branchName.Trim(),
         Repositories = [.. _repositories.Select(repository => repository.ToCreationRepository())],
     };
+
+    /// <summary>
+    /// The request to edit the workspace as drafted.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The draft isn't of an existing workspace.</exception>
+    public WorkspaceEditRequest ToEditRequest()
+    {
+        if (!IsEditing)
+        {
+            throw new InvalidOperationException("The draft isn't of an existing workspace.");
+        }
+
+        return new WorkspaceEditRequest
+        {
+            Tasks = [.. _tasks.Select(task => task.Reference)],
+            BranchName = _branchName.Trim(),
+            AddedRepositories = [.. _repositories.Select(repository => repository.ToCreationRepository())],
+        };
+    }
 
     /// <summary>
     /// Whether the task is chosen.
@@ -420,8 +519,11 @@ public sealed class WorkspaceDraft
     /// <param name="except">A repository whose folder name the user just cleared, so it isn't filled in again yet.</param>
     internal void FollowFolderNameSuggestions(WorkspaceDraftRepository? except = null)
     {
+        // The workspace's own repositories come first, with the names they have, so the new ones don't clash.
         var suggestions = WorktreeFolderNames.Suggest(
         [
+            .. _existingRepositories.Select(repository => (
+                repository.FolderName, (string?)null, (string?)repository.FolderName)),
             .. _repositories.Select(repository => (
                 repository.Repository.Name,
                 repository.Owner,
@@ -431,7 +533,7 @@ public sealed class WorkspaceDraft
         {
             if (_repositories[i] != except)
             {
-                _repositories[i].FollowSuggestion(suggestions[i]);
+                _repositories[i].FollowSuggestion(suggestions[_existingRepositories.Count + i]);
             }
         }
     }

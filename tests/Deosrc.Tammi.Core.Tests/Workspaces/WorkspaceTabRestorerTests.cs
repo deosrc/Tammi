@@ -50,7 +50,7 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
         Assert.Empty((await firstRun.Restorer.RestoreAsync(_workspace)).Problems);
         await firstRun.Agents.StartAsync(_workspace, Resumable);
         firstRun.Graphs.Open(_workspace, _workspace.Repositories[0]);
-        await WaitForSavedTabsAsync(2);
+        await firstRun.Restorer.WhenSavedAsync();
         await firstRun.DisposeAsync();
 
         var secondRun = NewRun();
@@ -67,7 +67,7 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
         var run = NewRun();
         await run.Restorer.RestoreAsync(_workspace);
         await run.Agents.StartAsync(_workspace, Resumable);
-        await WaitForSavedTabsAsync(1);
+        await run.Restorer.WhenSavedAsync();
 
         await run.Restorer.RestoreAsync(_workspace);
 
@@ -82,10 +82,10 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
         await firstRun.Restorer.RestoreAsync(_workspace);
         var agent = await firstRun.Agents.StartAsync(_workspace, Resumable);
         var graph = firstRun.Graphs.Open(_workspace, _workspace.Repositories[0]);
-        await WaitForSavedTabsAsync(2);
+        await firstRun.Restorer.WhenSavedAsync();
         await firstRun.Agents.CloseAsync(agent);
         firstRun.Graphs.Close(graph);
-        await WaitForSavedTabsAsync(0);
+        await firstRun.Restorer.WhenSavedAsync();
         await firstRun.DisposeAsync();
 
         var secondRun = NewRun();
@@ -118,7 +118,7 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
         await firstRun.Agents.StartAsync(_workspace, Resumable);
         var graph = firstRun.Graphs.Open(_workspace, _workspace.Repositories[0]);
         firstRun.Restorer.SetActive(_workspace.Id, graph);
-        await WaitForSavedTabsAsync(2);
+        await firstRun.Restorer.WhenSavedAsync();
         await firstRun.DisposeAsync();
 
         var secondRun = NewRun();
@@ -135,9 +135,9 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
         await firstRun.Restorer.RestoreAsync(_workspace);
         var graph = firstRun.Graphs.Open(_workspace, _workspace.Repositories[0]);
         firstRun.Restorer.SetActive(_workspace.Id, graph);
-        await WaitForSavedTabsAsync(1);
+        await firstRun.Restorer.WhenSavedAsync();
         firstRun.Restorer.SetActive(_workspace.Id, null);
-        await Task.Delay(100, TestContext.Current.CancellationToken);
+        await firstRun.Restorer.WhenSavedAsync();
         await firstRun.DisposeAsync();
 
         var secondRun = NewRun();
@@ -148,24 +148,13 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
         await secondRun.DisposeAsync();
     }
 
-    private async Task WaitForSavedTabsAsync(int count)
-    {
-        var store = new SavedTabsFileStore(Path.Combine(_workspace.MetadataFolder, SavedTabsFileStore.DefaultFileName));
-        var deadline = DateTime.UtcNow.AddSeconds(5);
-        while ((await store.ListAsync(TestContext.Current.CancellationToken)).Count != count)
-        {
-            Assert.True(DateTime.UtcNow < deadline, $"Expected {count} saved tabs.");
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
-    }
-
     private Run NewRun()
     {
         var agents = new WorkspaceAgents(
             new AgentLauncher(_pty),
             _settings,
             new FakeTimeProvider(new DateTimeOffset(2026, 11, 4, 12, 0, 0, TimeSpan.Zero)));
-        var graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), _settings);
+        var graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new GitWorkingTree(new GitCli()), new GitSync(new GitCli()), _settings);
         return new Run(agents, graphs, new WorkspaceTabRestorer(agents, graphs));
     }
 

@@ -37,6 +37,7 @@ public sealed class WorkspaceAgentsTests : IAsyncDisposable
         {
             CustomDefinitions = [Resumable, Plain, Prompted],
             InitialPromptTemplate = "Read {contextFile} first.",
+            InitialPromptStyle = InitialPromptStyle.Submit,
         },
     });
 
@@ -188,13 +189,13 @@ public sealed class WorkspaceAgentsTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task StartAsync_AgentTakesAPrompt_SendsTheInitialPrompt_WithTheTaskContextFile()
+    public async Task StartAsync_AgentTakesAPrompt_SendsTheInitialPrompt_WithTheWorkspaceContextFile()
     {
         var workspace = _workspace with { Tasks = [new TaskReference("github", "acme/api#42")] };
 
         var agent = await _agents.StartAsync(workspace, Prompted);
 
-        var contextFile = TaskContextFile.PathOf(workspace);
+        var contextFile = WorkspaceContextFile.PathOf(workspace);
         Assert.Equal(
             ["-a", "--id", agent.Agent.SessionId!, "--prompt", $"Read {contextFile} first."],
             Assert.Single(_pty.Requests).Request.Arguments);
@@ -205,9 +206,50 @@ public sealed class WorkspaceAgentsTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task StartAsync_TaskContextFileExists_KeepsIt()
+    public async Task StartAsync_Prefill_StartsWithoutThePrompt_ThenTypesItWithoutSendingIt()
     {
-        var contextFile = TaskContextFile.PathOf(_workspace);
+        await _settings.UpdateAsync(
+            settings => settings with { Agents = settings.Agents with { InitialPromptStyle = InitialPromptStyle.Prefill } },
+            TestContext.Current.CancellationToken);
+
+        var agent = await _agents.StartAsync(_workspace, Prompted);
+
+        Assert.Equal(["-a", "--id", agent.Agent.SessionId!], Assert.Single(_pty.Requests).Request.Arguments);
+        Assert.Equal("", _pty.Sessions[0].Input);
+        _time.Advance(WorkspaceAgents.PrefillDelay);
+        var contextFile = WorkspaceContextFile.PathOf(_workspace);
+        await WaitForAsync(() => _pty.Sessions[0].Input.Length > 0);
+        Assert.Equal($"\u001b[200~Read {contextFile} first.\u001b[201~", _pty.Sessions[0].Input);
+    }
+
+    [Fact]
+    public async Task StartAsync_PrefillAndAgentEndsFirst_TypesNothing()
+    {
+        await _settings.UpdateAsync(
+            settings => settings with { Agents = settings.Agents with { InitialPromptStyle = InitialPromptStyle.Prefill } },
+            TestContext.Current.CancellationToken);
+
+        await _agents.StartAsync(_workspace, Prompted);
+        _pty.Sessions[0].Exit(0);
+        await _agents.For(_workspace.Id)[0].Agent.Ended;
+        _time.Advance(WorkspaceAgents.PrefillDelay);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+
+        Assert.Equal("", _pty.Sessions[0].Input);
+    }
+
+    private static async Task WaitForAsync(Func<bool> condition)
+    {
+        for (var i = 0; i < 100 && !condition(); i++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task StartAsync_WorkspaceContextFileExists_KeepsIt()
+    {
+        var contextFile = WorkspaceContextFile.PathOf(_workspace);
         await File.WriteAllTextAsync(contextFile, "Details", TestContext.Current.CancellationToken);
 
         await _agents.StartAsync(_workspace, Prompted);
@@ -222,17 +264,17 @@ public sealed class WorkspaceAgentsTests : IAsyncDisposable
 
         var arguments = Assert.Single(_pty.Requests).Request.Arguments;
         Assert.DoesNotContain(arguments, argument => argument.Contains("Read ", StringComparison.Ordinal));
-        Assert.False(File.Exists(TaskContextFile.PathOf(_workspace)));
+        Assert.False(File.Exists(WorkspaceContextFile.PathOf(_workspace)));
     }
 
     [Fact]
-    public async Task StartAsync_TaskContextFileCantBeWritten_Throws_AndAddsNothing()
+    public async Task StartAsync_WorkspaceContextFileCantBeWritten_Throws_AndAddsNothing()
     {
         var workspace = CreateWorkspace("broken", createMetadataFolder: false);
 
         var ex = await Assert.ThrowsAsync<IOException>(() => _agents.StartAsync(workspace, Prompted));
 
-        Assert.Contains("task context file", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("workspace context file", ex.Message, StringComparison.Ordinal);
         Assert.Empty(_pty.Requests);
         Assert.Empty(_agents.For(workspace.Id));
     }

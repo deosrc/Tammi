@@ -10,10 +10,15 @@
     <div class="settings-field">
         <label for="workspace-branch">Branch</label>
         <input id="workspace-branch" class="settings-text @(BranchProblem is null ? null : "invalid")"
-               autocomplete="off" spellcheck="false" value="@Draft.BranchName" @oninput="OnBranchInput" />
+               autocomplete="off" spellcheck="false" value="@Draft.BranchName" disabled="@Draft.IsBranchFixed"
+               @oninput="OnBranchInput" />
         @if (BranchProblem is { } branchProblem)
         {
             <p class="error">@branchProblem</p>
+        }
+        else if (Draft.IsBranchFixed)
+        {
+            <p class="settings-help">The workspace's branch. Added repositories get it too.</p>
         }
         else
         {
@@ -55,9 +60,14 @@
                     var chosen = Draft.ContainsRepository(repository);
                     <li class="task-item @(chosen ? "task-item-chosen" : null)" @key="repository.Path">
                         <label class="task-choice" title="@repository.Path">
-                            <input type="checkbox" checked="@chosen" @onchange="() => Toggle(repository)" />
+                            <input type="checkbox" checked="@chosen" disabled="@Draft.IsExistingRepository(repository)"
+                                   @onchange="() => Toggle(repository)" />
                             <span class="repository-name">@repository.Name</span>
                             <span class="task-title repository-path">@DisplayPath(repository)</span>
+                            @if (Draft.IsExistingRepository(repository))
+                            {
+                                <span class="badge">In the workspace</span>
+                            }
                         </label>
                     </li>
                 }
@@ -70,10 +80,22 @@
     </section>
 
     <section class="repository-picker-chosen" aria-labelledby="chosen-repositories-heading">
-        <h3 id="chosen-repositories-heading">Chosen repositories (@Draft.Repositories.Count)</h3>
+        <h3 id="chosen-repositories-heading">
+            @(Draft.IsEditing ? "Repositories to add" : "Chosen repositories") (@Draft.Repositories.Count)
+        </h3>
+        @if (Draft.ExistingRepositories.Count > 0)
+        {
+            <p class="settings-help">
+                Already in the workspace: @string.Join(", ", Draft.ExistingRepositories.Select(existing => existing.FolderName))
+            </p>
+        }
         @if (Draft.Repositories.Count == 0)
         {
-            <p class="placeholder">No repositories chosen. Each one you choose gets a worktree in the Workspace Folder.</p>
+            <p class="placeholder">
+                @(Draft.IsEditing
+                    ? "No repositories to add. Each one you choose gets a worktree in the Workspace Folder."
+                    : "No repositories chosen. Each one you choose gets a worktree in the Workspace Folder.")
+            </p>
         }
         else
         {

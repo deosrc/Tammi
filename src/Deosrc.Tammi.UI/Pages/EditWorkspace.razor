@@ -1,0 +1,321 @@
+@page "/edit-workspace/{WorkspaceId}"
+@using Deosrc.Tammi.Core.Integrations
+@using Deosrc.Tammi.Core.Settings
+@inject IWorkspaceStore WorkspaceStore
+@inject IntegrationRegistry Registry
+@inject ISettingsStore SettingsStore
+@inject WorkspaceEditor Editor
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="page wizard">
+    @if (_loadProblem is not null)
+    {
+        <h1>Edit workspace</h1>
+        <p class="error" role="alert">@_loadProblem</p>
+        <div class="wizard-actions">
+            <a class="button button-secondary" href="@AppRoutes.Home">Home</a>
+        </div>
+    }
+    else if (_draft is null || _workspace is null)
+    {
+        <h1>Edit workspace</h1>
+        <p class="placeholder">Reading the workspace…</p>
+    }
+    else
+    {
+        <h1>Edit @_workspace.Name</h1>
+
+        <ol class="wizard-steps" aria-label="Steps">
+            @foreach (var (step, title) in Steps)
+            {
+                <li class="wizard-step @(step == _step ? "active" : null) @(step < _step ? "done" : null)"
+                    aria-current="@(step == _step ? "step" : null)">
+                    <span class="wizard-step-number">@((int)step + 1)</span>
+                    @title
+                </li>
+            }
+        </ol>
+
+        @switch (_step)
+        {
+            case EditStep.Tasks:
+                <section class="wizard-body">
+                    <h2>Change tasks</h2>
+                    <p class="settings-help settings-intro">
+                        Add tasks to the workspace, or remove the ones it no longer needs.
+                    </p>
+                    <TaskPicker Draft="_draft" />
+                </section>
+                break;
+
+            case EditStep.Repositories:
+                <section class="wizard-body">
+                    <h2>Add repositories</h2>
+                    @if (_saving)
+                    {
+                        <div class="workspace-creation" aria-live="polite">
+                            <progress max="@(_progress?.TotalSteps ?? 1)" value="@(_progress?.CompletedSteps ?? 0)"></progress>
+                            <p>@(_progress?.Message ?? "Checking…")</p>
+                        </div>
+                    }
+                    else if (_saved is not null)
+                    {
+                        <p>The workspace <strong>@_saved.Workspace.Name</strong> was changed.</p>
+                        @foreach (var warning in _saved.Warnings)
+                        {
+                            <p class="warning">@warning</p>
+                        }
+                    }
+                    else
+                    {
+                        <RepositoryPicker Draft="_draft" Changed="StateHasChanged" />
+                    }
+
+                    @if (_failure is not null)
+                    {
+                        <div class="workspace-creation-failure" role="alert">
+                            @if (_failure.Problems.Count > 0)
+                            {
+                                <p class="error">The workspace can't be changed:</p>
+                                <ul>
+                                    @foreach (var problem in _failure.Problems)
+                                    {
+                                        <li class="error">@problem</li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p class="error">@_failure.Message</p>
+                            }
+                            @if (_failure.CleanupProblems.Count == 0)
+                            {
+                                @if (_failure.InnerException is not null)
+                                {
+                                    <p class="settings-help">Everything added for it has been removed again.</p>
+                                }
+                            }
+                            else
+                            {
+                                <p class="error">Some of what was added couldn't be removed again:</p>
+                                <ul>
+                                    @foreach (var problem in _failure.CleanupProblems)
+                                    {
+                                        <li class="error">@problem</li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    }
+                </section>
+                break;
+        }
+
+        <div class="wizard-actions">
+            @if (_saved is not null)
+            {
+                <div class="wizard-actions-end">
+                    <button type="button" class="button" @onclick="Finish">Back to workspace</button>
+                </div>
+            }
+            else if (_saving)
+            {
+                <button type="button" class="button button-secondary" disabled="@_cancelling" @onclick="CancelSaving">
+                    @(_cancelling ? "Cancelling…" : "Cancel")
+                </button>
+            }
+            else
+            {
+                <a class="button button-secondary" href="@AppRoutes.Workspace(_workspace.Id)">Cancel</a>
+                <div class="wizard-actions-end">
+                    @if (_step > EditStep.Tasks)
+                    {
+                        <button type="button" class="button button-secondary" @onclick="Back">Back</button>
+                    }
+                    @if (_step < EditStep.Repositories)
+                    {
+                        <button type="button" class="button" @onclick="Next">Next</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="button" disabled="@(!_draft.IsRepositoriesValid)"
+                                @onclick="SaveAsync">Save changes</button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private enum EditStep
+    {
+        Tasks,
+        Repositories,
+    }
+
+    private static readonly IReadOnlyList<(EditStep Step, string Title)> Steps =
+    [
+        (EditStep.Tasks, "Tasks"),
+        (EditStep.Repositories, "Repositories"),
+    ];
+
+    [Parameter]
+    public string WorkspaceId { get; set; } = "";
+
+    private readonly CancellationTokenSource _disposed = new();
+    private Deosrc.Tammi.Core.Workspaces.Workspace? _workspace;
+    private WorkspaceDraft? _draft;
+    private string? _loadProblem;
+    private string? _loadedId;
+    private EditStep _step = EditStep.Tasks;
+    private bool _saving;
+    private bool _cancelling;
+    private CancellationTokenSource? _saveToken;
+    private WorkspaceCreationProgress? _progress;
+    private WorkspaceEditException? _failure;
+    private WorkspaceCreationResult? _saved;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedId == WorkspaceId)
+        {
+            return;
+        }
+
+        _loadedId = WorkspaceId;
+        _workspace = null;
+        _draft = null;
+        _loadProblem = null;
+        WorkspaceListing? listing;
+        try
+        {
+            listing = await WorkspaceStore.FindAsync(WorkspaceId, _disposed.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (listing?.Workspace is not { } workspace)
+        {
+            _loadProblem = listing is null
+                ? "This workspace isn't in the list of workspaces."
+                : $"The workspace '{listing.Name}' can't be edited. {listing.Problem}";
+            return;
+        }
+
+        IReadOnlyList<TaskInfo> tasks;
+        try
+        {
+            tasks = await ReadTasksAsync(workspace.Tasks);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        var general = SettingsStore.Current.General;
+        _draft = WorkspaceDraft.ForEditing(
+            workspace, tasks, general.WorkspaceFolderNameFormat, general.WorkspaceNameTemplate);
+        _workspace = workspace;
+    }
+
+    /// <summary>
+    /// Reads each of the workspace's tasks from its source. One that can't be read stays, shown by its key, so it isn't
+    /// dropped from the workspace by accident.
+    /// </summary>
+    private async Task<IReadOnlyList<TaskInfo>> ReadTasksAsync(IReadOnlyList<TaskReference> references)
+    {
+        var tasks = await Task.WhenAll(references.Select(async reference =>
+        {
+            if (Registry.Find(reference.Source) is ITaskIntegration source)
+            {
+                try
+                {
+                    if (await source.GetTaskAsync(reference.Key, _disposed.Token) is { } task)
+                    {
+                        // The workspace's metadata decides the key, so the task is still found by it.
+                        return task with { Source = reference.Source, Key = reference.Key };
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // Shown by its key below.
+                }
+            }
+
+            return new TaskInfo(reference.Source, reference.Key, reference.Key, new Uri("about:blank"));
+        }));
+        return tasks;
+    }
+
+    private void Next() => _step++;
+
+    private void Back()
+    {
+        _failure = null;
+        _step--;
+    }
+
+    public void Dispose()
+    {
+        // Leaving the page while saving stops it, and removes what was added.
+        _saveToken?.Cancel();
+        _disposed.Cancel();
+        _disposed.Dispose();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_draft is null || _workspace is null)
+        {
+            return;
+        }
+
+        _failure = null;
+        _progress = null;
+        _saving = true;
+        _cancelling = false;
+        using var save = _saveToken = new CancellationTokenSource();
+        var progress = new Progress<WorkspaceCreationProgress>(update =>
+        {
+            _progress = update;
+            StateHasChanged();
+        });
+        try
+        {
+            _saved = await Editor.EditAsync(_workspace.Id, _draft.ToEditRequest(), progress, save.Token);
+            if (_saved.Warnings.Count == 0)
+            {
+                Finish();
+            }
+        }
+        catch (WorkspaceEditException ex)
+        {
+            _failure = ex;
+        }
+        catch (WorkspaceException ex)
+        {
+            _failure = new WorkspaceEditException(ex.Message, ex.Folder, innerException: ex);
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled by the user, or by leaving the page. Whatever was added has been removed.
+        }
+        finally
+        {
+            _saveToken = null;
+            _saving = false;
+        }
+    }
+
+    private void CancelSaving()
+    {
+        _cancelling = true;
+        _saveToken?.Cancel();
+    }
+
+    private void Finish() => Navigation.NavigateTo(AppRoutes.Workspace(WorkspaceId));
+}

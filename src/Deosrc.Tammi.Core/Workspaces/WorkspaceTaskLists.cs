@@ -36,7 +36,8 @@ public sealed class WorkspaceTaskLists : IDisposable
 
     /// <summary>
     /// Starts reading the tasks of a workspace that's open in a tab. If they're already read, returns its list (taking
-    /// the workspace's new name, if it was renamed), unless its tasks have changed: then its list is replaced.
+    /// the workspace's new name, if it was renamed), unless its tasks or repositories have changed: then its list is
+    /// replaced, so the workspace context file is written again.
     /// </summary>
     /// <exception cref="InvalidOperationException">The workspace isn't open in a tab.</exception>
     public WorkspaceTaskList Start(Workspace workspace)
@@ -54,7 +55,8 @@ public sealed class WorkspaceTaskLists : IDisposable
 
             if (_lists.TryGetValue(workspace.Id, out var existing))
             {
-                if (existing.Workspace.Tasks.SequenceEqual(workspace.Tasks))
+                if (existing.Workspace.Tasks.SequenceEqual(workspace.Tasks)
+                    && existing.Workspace.Repositories.SequenceEqual(workspace.Repositories))
                 {
                     _ = existing.RenameAsync(workspace);
                     return existing;

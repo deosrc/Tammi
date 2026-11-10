@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Terminals;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.UI;
@@ -11,8 +12,28 @@ namespace Deosrc.Tammi.Windows;
 
 public static class MauiProgram
 {
+    // Held until the process ends.
+    private static SingleInstanceLock? _instanceLock;
+
     public static MauiApp CreateMauiApp()
     {
+        var dataDirectory = new WindowsAppPaths().DataDirectory;
+        _instanceLock = SingleInstanceLock.TryAcquire(dataDirectory);
+        if (_instanceLock is null)
+        {
+            // Ask the running copy to show its window, rather than starting another.
+            if (!SingleInstanceLock.SignalRunningInstance(dataDirectory))
+            {
+                NativeMethods.MessageBox(
+                    IntPtr.Zero,
+                    SingleInstanceLock.AlreadyRunningMessage,
+                    Deosrc.Tammi.Core.AppInfo.Name,
+                    0x30);
+            }
+
+            Environment.Exit(0);
+        }
+
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>();
 
@@ -23,6 +44,10 @@ public static class MauiProgram
         {
             var services = IPlatformApplication.Current!.Services;
             WindowStatePersistence.Attach(window, services.GetRequiredService<WindowStateStore>());
+
+            // Another copy being started shows this window instead.
+            _instanceLock!.Activated += () => window.DispatcherQueue.TryEnqueue(() => ShowWindow(window));
+            _instanceLock.StartListening();
 
             // Closing the window warns first if any agents are running.
             var agents = services.GetRequiredService<WorkspaceAgents>();
@@ -49,5 +74,21 @@ public static class MauiProgram
         var app = builder.Build();
         app.Services.UseTammiLogging();
         return app;
+    }
+
+    private static void ShowWindow(Microsoft.UI.Xaml.Window window)
+    {
+        if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter { State: Microsoft.UI.Windowing.OverlappedPresenterState.Minimized } presenter)
+        {
+            presenter.Restore();
+        }
+
+        window.Activate();
+    }
+
+    private static class NativeMethods
+    {
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        public static extern int MessageBox(IntPtr window, string text, string caption, uint type);
     }
 }

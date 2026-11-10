@@ -3,12 +3,12 @@ using Deosrc.Tammi.Core.Workspaces;
 
 namespace Deosrc.Tammi.Core.Tests.Workspaces;
 
-public sealed class TaskContextFileTests : IDisposable
+public sealed class WorkspaceContextFileTests : IDisposable
 {
     private readonly DirectoryInfo _root = Directory.CreateTempSubdirectory("tammi-tests-");
     private readonly Workspace _workspace;
 
-    public TaskContextFileTests()
+    public WorkspaceContextFileTests()
     {
         _workspace = new Workspace
         {
@@ -27,7 +27,7 @@ public sealed class TaskContextFileTests : IDisposable
     [Fact]
     public void PathOf_IsInTheMetadataFolder()
     {
-        Assert.Equal(Path.Combine(_workspace.MetadataFolder, "tasks.md"), TaskContextFile.PathOf(_workspace));
+        Assert.Equal(Path.Combine(_workspace.MetadataFolder, "context.md"), WorkspaceContextFile.PathOf(_workspace));
     }
 
     [Fact]
@@ -42,18 +42,20 @@ public sealed class TaskContextFileTests : IDisposable
         };
         var task = new WorkspaceTask(info.Reference) { IsLoaded = true, Task = info };
 
-        var contents = TaskContextFile.Render(_workspace, [task]);
+        var contents = WorkspaceContextFile.Render(_workspace, [task]);
 
         Assert.Equal(
-            "# Tasks\n\n"
-            + "The tasks of the Tammi workspace \"api-42-fix-login\". "
+            "# Workspace context\n\n"
+            + "The Tammi workspace \"api-42-fix-login\". "
             + "Tammi rewrites this file when the tasks change, so don't edit it.\n\n"
-            + "## acme/api#42: Fix login\n\n"
+            + "## Tasks\n\n"
+            + "### acme/api#42: Fix login\n\n"
             + "- Link: https://github.com/acme/api/issues/42\n"
             + "- Status: Open (to do)\n"
             + "- Repository: https://github.com/acme/api\n\n"
-            + "### Description\n\n"
-            + "Login fails.\n\nSteps:\n1. Log in\n",
+            + "#### Description\n\n"
+            + "Login fails.\n\nSteps:\n1. Log in\n\n"
+            + "## Repositories\n\nThis workspace has no repositories.\n",
             contents);
     }
 
@@ -66,11 +68,11 @@ public sealed class TaskContextFileTests : IDisposable
         };
         var task = new WorkspaceTask(info.Reference) { IsLoaded = true, Task = info };
 
-        var contents = TaskContextFile.Render(_workspace, [task]);
+        var contents = WorkspaceContextFile.Render(_workspace, [task]);
 
         Assert.Contains("- Status: In Review\n", contents, StringComparison.Ordinal);
         Assert.DoesNotContain("Repository", contents, StringComparison.Ordinal);
-        Assert.EndsWith("### Description\n\nNo description.\n", contents, StringComparison.Ordinal);
+        Assert.Contains("#### Description\n\nNo description.\n", contents, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -87,10 +89,46 @@ public sealed class TaskContextFileTests : IDisposable
             ProblemDetail = problem == WorkspaceTaskProblem.ReadFailed ? "GitHub is down." : null,
         };
 
-        var contents = TaskContextFile.Render(_workspace, [task]);
+        var contents = WorkspaceContextFile.Render(_workspace, [task]);
 
-        Assert.Contains("\n## acme/api#42\n\n", contents, StringComparison.Ordinal);
+        Assert.Contains("\n### acme/api#42\n\n", contents, StringComparison.Ordinal);
         Assert.Contains(expected, contents, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_Repositories_ListsEachWorktree()
+    {
+        var workspace = _workspace with
+        {
+            Repositories =
+            [
+                new WorkspaceRepository("api", "/clones/api", "api-42-fix-login", "origin/main"),
+                new WorkspaceRepository("web", "/clones/web", "api-42-fix-login", "origin/develop"),
+            ],
+        };
+
+        var contents = WorkspaceContextFile.Render(workspace, []);
+
+        Assert.Contains("\n## Repositories\n\n", contents, StringComparison.Ordinal);
+        Assert.Contains("is not a git repository itself", contents, StringComparison.Ordinal);
+        Assert.Contains(
+            "\n### api\n\n"
+            + $"- Folder: {Path.Combine(workspace.Folder, "api")}\n"
+            + "- Branch: api-42-fix-login\n"
+            + "- Base branch: origin/main\n",
+            contents,
+            StringComparison.Ordinal);
+        Assert.Contains("\n### web\n", contents, StringComparison.Ordinal);
+        Assert.Contains("- Base branch: origin/develop\n", contents, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_NoRepositories_SaysSo()
+    {
+        Assert.EndsWith(
+            "## Repositories\n\nThis workspace has no repositories.\n",
+            WorkspaceContextFile.Render(_workspace, []),
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -98,7 +136,7 @@ public sealed class TaskContextFileTests : IDisposable
     {
         Assert.Contains(
             "This workspace has no tasks.",
-            TaskContextFile.Render(_workspace with { Tasks = [] }, []),
+            WorkspaceContextFile.Render(_workspace with { Tasks = [] }, []),
             StringComparison.Ordinal);
     }
 
@@ -107,24 +145,24 @@ public sealed class TaskContextFileTests : IDisposable
     {
         WorkspaceTask[] tasks = [new(new TaskReference("github", "acme/api#42"))];
 
-        await TaskContextFile.WriteAsync(_workspace, tasks, CancellationToken);
+        await WorkspaceContextFile.WriteAsync(_workspace, tasks, CancellationToken);
 
         Assert.Equal(
-            TaskContextFile.Render(_workspace, tasks),
-            await File.ReadAllTextAsync(TaskContextFile.PathOf(_workspace), CancellationToken));
-        Assert.Equal(["tasks.md"], Directory.GetFiles(_workspace.MetadataFolder).Select(Path.GetFileName));
+            WorkspaceContextFile.Render(_workspace, tasks),
+            await File.ReadAllTextAsync(WorkspaceContextFile.PathOf(_workspace), CancellationToken));
+        Assert.Equal(["context.md"], Directory.GetFiles(_workspace.MetadataFolder).Select(Path.GetFileName));
     }
 
     [Fact]
     public async Task WriteAsync_SameContents_DoesntRewriteTheFile()
     {
         WorkspaceTask[] tasks = [new(new TaskReference("github", "acme/api#42"))];
-        await TaskContextFile.WriteAsync(_workspace, tasks, CancellationToken);
-        var path = TaskContextFile.PathOf(_workspace);
+        await WorkspaceContextFile.WriteAsync(_workspace, tasks, CancellationToken);
+        var path = WorkspaceContextFile.PathOf(_workspace);
         var written = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         File.SetLastWriteTimeUtc(path, written);
 
-        await TaskContextFile.WriteAsync(_workspace, tasks, CancellationToken);
+        await WorkspaceContextFile.WriteAsync(_workspace, tasks, CancellationToken);
 
         Assert.Equal(written, File.GetLastWriteTimeUtc(path));
     }
@@ -134,27 +172,27 @@ public sealed class TaskContextFileTests : IDisposable
     {
         var missing = _workspace with { Folder = Path.Combine(_root.FullName, "missing") };
 
-        await Assert.ThrowsAnyAsync<IOException>(() => TaskContextFile.WriteAsync(missing, [], CancellationToken));
+        await Assert.ThrowsAnyAsync<IOException>(() => WorkspaceContextFile.WriteAsync(missing, [], CancellationToken));
     }
 
     [Fact]
     public async Task CreateIfMissingAsync_NoFile_ListsTheTasksByKey()
     {
-        var path = await TaskContextFile.CreateIfMissingAsync(_workspace, CancellationToken);
+        var path = await WorkspaceContextFile.CreateIfMissingAsync(_workspace, CancellationToken);
 
-        Assert.Equal(TaskContextFile.PathOf(_workspace), path);
+        Assert.Equal(WorkspaceContextFile.PathOf(_workspace), path);
         var contents = await File.ReadAllTextAsync(path, CancellationToken);
-        Assert.Contains("## acme/api#42\n", contents, StringComparison.Ordinal);
-        Assert.Contains("## ABC-1\n", contents, StringComparison.Ordinal);
+        Assert.Contains("### acme/api#42\n", contents, StringComparison.Ordinal);
+        Assert.Contains("### ABC-1\n", contents, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task CreateIfMissingAsync_FileExists_KeepsIt()
     {
-        var path = TaskContextFile.PathOf(_workspace);
+        var path = WorkspaceContextFile.PathOf(_workspace);
         await File.WriteAllTextAsync(path, "The tasks' details", CancellationToken);
 
-        await TaskContextFile.CreateIfMissingAsync(_workspace, CancellationToken);
+        await WorkspaceContextFile.CreateIfMissingAsync(_workspace, CancellationToken);
 
         Assert.Equal("The tasks' details", await File.ReadAllTextAsync(path, CancellationToken));
     }

@@ -197,6 +197,21 @@
 
 <div class="settings-form">
     <div class="settings-field">
+        <label for="initial-prompt-style">Style</label>
+        <div class="settings-field-row">
+            <select id="initial-prompt-style" value="@agents.InitialPromptStyle" @onchange="OnStyleChanged">
+                <option value="@InitialPromptStyle.Prefill">Prefill</option>
+                <option value="@InitialPromptStyle.Submit">Submit</option>
+            </select>
+        </div>
+        <p class="settings-help">
+            <strong>Prefill</strong> types the prompt into the agent's input a moment after it starts, so you can change
+            it and send it yourself. <strong>Submit</strong> passes it to the agent as its initial prompt arguments say,
+            and the agent acts on it straight away.
+        </p>
+    </div>
+
+    <div class="settings-field">
         <label for="initial-prompt-template">Template</label>
         @* Recreated after each change, so it shows the saved value even when that's unchanged, e.g. when a cleared
            template goes back to the default. *@
@@ -207,7 +222,7 @@
                   value="@agents.InitialPromptTemplate"
                   @onchange="OnTemplateChanged"></textarea>
         <p class="settings-help">
-            Sent to an agent when it starts, to tell it about the workspace's task context file.
+            Sent to an agent when it starts, to tell it about the workspace's workspace context file.
             <code>@InitialPrompt.ContextFilePlaceholder</code> is replaced with the file's full path, and the rest is sent
             as it is. Start from a predefined prompt to choose what the agent does after reading the tasks. Leave it
             empty to use the default, which reads the tasks and then waits for instructions.
@@ -330,6 +345,11 @@
         _templateRevision++;
         return UpdateAgentsAsync(agents => agents with { InitialPromptTemplate = Text(e) });
     }
+
+    private Task OnStyleChanged(ChangeEventArgs e) =>
+        Enum.TryParse(e.Value?.ToString(), out InitialPromptStyle style)
+            ? UpdateAgentsAsync(agents => agents with { InitialPromptStyle = style })
+            : Task.CompletedTask;
 
     private Task UsePredefinedPromptAsync(PredefinedPrompt prompt)
     {

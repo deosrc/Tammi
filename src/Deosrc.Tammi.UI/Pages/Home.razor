@@ -1,8 +1,12 @@
 @page "/"
+@using Deosrc.Tammi.Core.Integrations
+@using Deosrc.Tammi.Core.Settings
 @implements IDisposable
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceTabs WorkspaceTabs
 @inject NavigationManager Navigation
+@inject HomeGitStatus GitStatus
+@inject ISettingsStore SettingsStore
 
 <div class="page">
     <div class="page-header">
@@ -43,6 +47,47 @@
                                 <span>@WorkspaceAvailabilityText.Summary(workspace.Availability)</span>
                             </div>
                         }
+                        @if (available && workspace.Workspace is { Repositories.Count: > 0 } details
+                             && GitStatus.Get(details) is { IsLoaded: true } summary)
+                        {
+                            var hasGitBadges = summary.LocalChanges.Count > 0 || summary.Unpushed.Count > 0
+                                || summary.Behind.Count > 0;
+                            var hasPullRequests = summary.PullRequests.Count > 0 || summary.PullRequestProblem is not null;
+
+                            @* Dividers only where there's something on both sides: after the text, and between the rows. *@
+                            @if (hasGitBadges || hasPullRequests)
+                            {
+                                <hr class="workspace-card-divider" />
+                            }
+                            @if (hasGitBadges)
+                            {
+                                <div class="workspace-badges">
+                                    @if (summary.LocalChanges.Count > 0)
+                                    {
+                                        <span class="workspace-badge workspace-badge-warning">
+                                            Local changes
+                                        </span>
+                                    }
+                                    @if (summary.Unpushed.Count > 0)
+                                    {
+                                        <span class="workspace-badge workspace-badge-warning">
+                                            Unpushed
+                                        </span>
+                                    }
+                                    @if (summary.Behind.Count > 0)
+                                    {
+                                        <span class="workspace-badge workspace-badge-info">
+                                            Behind
+                                        </span>
+                                    }
+                                </div>
+                            }
+                            @if (hasGitBadges && hasPullRequests)
+                            {
+                                <hr class="workspace-card-divider" />
+                            }
+                            <PullRequestBadges PullRequests="summary.PullRequests" Problem="@summary.PullRequestProblem" />
+                        }
                     </div>
                     <div class="workspace-card-actions">
                         @* A workspace that can't be read opens a tab with the details of what's wrong instead. *@
@@ -59,6 +104,7 @@
 
 @code {
     private IReadOnlyList<WorkspaceListing>? _workspaces;
+    private IDisposable? _observing;
     private string? _indexProblem;
     private readonly CancellationTokenSource _disposed = new();
 
@@ -68,12 +114,21 @@
     protected override async Task OnInitializedAsync()
     {
         WorkspaceStore.Changed += OnWorkspacesChanged;
+        WorkspaceTabs.Changed += OnTabsChanged;
+        GitStatus.Changed += OnGitStatusChanged;
         await LoadAsync();
+        Observe();
+
+        // Refresh when Home is shown, and then on the configured interval, in the background.
+        _ = RefreshLoopAsync(_disposed.Token);
     }
 
     public void Dispose()
     {
         WorkspaceStore.Changed -= OnWorkspacesChanged;
+        WorkspaceTabs.Changed -= OnTabsChanged;
+        GitStatus.Changed -= OnGitStatusChanged;
+        _observing?.Dispose();
         _disposed.Cancel();
         _disposed.Dispose();
     }
@@ -98,6 +153,54 @@
         }
     }
 
+    private IEnumerable<Core.Workspaces.Workspace> AvailableWorkspaces() =>
+        _workspaces?.Select(listing => listing.Workspace).OfType<Core.Workspaces.Workspace>() ?? [];
+
+    // Follows the workspaces that are live (open in a tab), so their changes show as they happen.
+    private void Observe()
+    {
+        _observing?.Dispose();
+        _observing = GitStatus.Observe(AvailableWorkspaces(), OnGitStatusChanged);
+    }
+
+    private async Task RefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var workspaces = AvailableWorkspaces().ToArray();
+                if (workspaces.Length > 0)
+                {
+                    await GitStatus.RefreshAsync(workspaces, cancellationToken);
+                }
+
+                await Task.Delay(SettingsStore.Current.Git.StatusRefreshInterval, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Home was left.
+        }
+    }
+
+    private void OnGitStatusChanged() => InvokeAsync(() =>
+    {
+        if (!_disposed.IsCancellationRequested)
+        {
+            StateHasChanged();
+        }
+    });
+
+    private void OnTabsChanged() => InvokeAsync(() =>
+    {
+        if (!_disposed.IsCancellationRequested)
+        {
+            Observe();
+            StateHasChanged();
+        }
+    });
+
     private void Open(WorkspaceListing workspace)
     {
         // Opening a workspace that's already open keeps its tab, so this just shows it.
@@ -113,6 +216,7 @@
         }
 
         await LoadAsync();
+        Observe();
         StateHasChanged();
     });
 }

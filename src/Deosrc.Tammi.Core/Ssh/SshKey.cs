@@ -19,6 +19,24 @@ public sealed record SshKey(string Name, string PrivateKeyPath, string Algorithm
     public string PublicKeyPath => PrivateKeyPath + ".pub";
 
     /// <summary>
+    /// The file names SSH tries on its own, in the SSH folder, without being told to in the SSH config.
+    /// </summary>
+    private static readonly string[] DefaultNames =
+        ["id_rsa", "id_ecdsa", "id_ecdsa_sk", "id_ed25519", "id_ed25519_sk", "id_dsa"];
+
+    /// <summary>
+    /// Whether the file name is one SSH tries on its own (e.g. <c>id_ed25519</c>), rather than only when the SSH
+    /// config names the file.
+    /// </summary>
+    public bool HasDefaultName => IsDefaultName(Name);
+
+    /// <summary>
+    /// Whether a key file name is one SSH tries on its own (see <see cref="HasDefaultName"/>).
+    /// </summary>
+    public static bool IsDefaultName(string? name) =>
+        DefaultNames.Contains(name?.Trim(), OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+    /// <summary>
     /// The public key as one line, in the form services such as GitHub accept: algorithm, data and comment.
     /// </summary>
     public string PublicKey => Comment is null ? $"{Algorithm} {Data}" : $"{Algorithm} {Data} {Comment}";

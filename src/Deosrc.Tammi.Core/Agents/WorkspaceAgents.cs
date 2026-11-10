@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Workspaces;
@@ -92,8 +93,10 @@ public sealed class WorkspaceAgents(
     /// Starts an agent in a workspace, in a new Agent Session, and records the session if it can be resumed.
     /// </summary>
     /// <remarks>
-    /// An agent that takes an initial prompt is sent the one from the Settings' template, with the path of the
-    /// workspace's task context file (see <see cref="TaskContextFile"/>). The file is written first if it doesn't exist
+    /// An agent that takes an initial prompt is given the one from the Settings' template, with the path of the
+    /// workspace's workspace context file (see <see cref="WorkspaceContextFile"/>). By default it's typed into the
+    /// agent's input a moment after it starts, for the user to send (see <see cref="InitialPromptStyle.Prefill"/>);
+    /// otherwise it's passed as the definition says, and the agent acts on it at once. The file is written first if it doesn't exist
     /// yet, listing the tasks by their keys until their details are read.
     /// </remarks>
     /// <param name="workspace">The workspace.</param>
@@ -107,7 +110,7 @@ public sealed class WorkspaceAgents(
     /// </returns>
     /// <exception cref="FileNotFoundException">The agent's command can't be found.</exception>
     /// <exception cref="DirectoryNotFoundException">The folder to start it in doesn't exist.</exception>
-    /// <exception cref="IOException">The task context file couldn't be written.</exception>
+    /// <exception cref="IOException">The workspace context file couldn't be written.</exception>
     /// <exception cref="ArgumentException">The definition has no command, or its initial prompt can't be passed.</exception>
     /// <exception cref="ObjectDisposedException">The app is closing.</exception>
     public async Task<WorkspaceAgent> StartAsync(
@@ -123,12 +126,44 @@ public sealed class WorkspaceAgents(
             ? await CreateInitialPromptAsync(workspace).ConfigureAwait(false)
             : null;
 
+        var prefill = initialPrompt is not null && settingsStore.Current.Agents.InitialPromptStyle == InitialPromptStyle.Prefill;
+
         // The terminal resizes the session to fit as soon as it's shown.
-        return await AddAsync(
+        var workspaceAgent = await AddAsync(
             workspace,
             definition,
             repository?.FolderName,
-            () => launcher.Start(definition, folder, PtySize.Default, initialPrompt)).ConfigureAwait(false);
+            () => launcher.Start(definition, folder, PtySize.Default, prefill ? null : initialPrompt)).ConfigureAwait(false);
+        if (prefill)
+        {
+            _ = PrefillAsync(workspaceAgent.Agent, initialPrompt!);
+        }
+
+        return workspaceAgent;
+    }
+
+    /// <summary>
+    /// How long a prefilled initial prompt waits after the agent starts, so the agent is ready for input.
+    /// </summary>
+    public static readonly TimeSpan PrefillDelay = TimeSpan.FromSeconds(2);
+
+    private async Task PrefillAsync(Agent agent, string prompt)
+    {
+        try
+        {
+            await Task.Delay(PrefillDelay, timeProvider).ConfigureAwait(false);
+            if (agent.Ended.IsCompleted || IsDisposed)
+            {
+                return;
+            }
+
+            // A bracketed paste, so line breaks in the prompt stay in the input instead of sending it.
+            agent.Session.Write(Encoding.UTF8.GetBytes($"\u001b[200~{prompt}\u001b[201~"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Couldn't prefill the initial prompt of {Definition}.", agent.Definition.Name);
+        }
     }
 
     /// <summary>
@@ -255,11 +290,11 @@ public sealed class WorkspaceAgents(
         string contextFile;
         try
         {
-            contextFile = await TaskContextFile.CreateIfMissingAsync(workspace).ConfigureAwait(false);
+            contextFile = await WorkspaceContextFile.CreateIfMissingAsync(workspace).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            throw new IOException($"The task context file for agents couldn't be written. {ex.Message}", ex);
+            throw new IOException($"The workspace context file for agents couldn't be written. {ex.Message}", ex);
         }
 
         return InitialPrompt.Expand(settingsStore.Current.Agents.InitialPromptTemplate, contextFile);

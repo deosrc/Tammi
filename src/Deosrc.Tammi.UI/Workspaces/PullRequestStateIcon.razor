@@ -1,0 +1,36 @@
+@* The icon for a Pull Request's state, as on its badge: a branch icon that is open, a draft, merged or closed. *@
+@using Deosrc.Tammi.Core.Integrations
+
+<svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    @switch (State)
+    {
+        case PullRequestState.Draft:
+            <circle cx="6" cy="6" r="2.5" />
+            <circle cx="6" cy="18" r="2.5" />
+            <circle cx="18" cy="18" r="2.5" />
+            <path d="M6 8.5v7M18 6v.01M18 11v.01" />
+            break;
+        case PullRequestState.Merged:
+            <circle cx="6" cy="6" r="2.5" />
+            <circle cx="18" cy="18" r="2.5" />
+            <path d="M6 8.5V21M6 9a9 9 0 0 0 9.5 9" />
+            break;
+        case PullRequestState.Closed:
+            <circle cx="6" cy="6" r="2.5" />
+            <circle cx="6" cy="18" r="2.5" />
+            <circle cx="18" cy="18" r="2.5" />
+            <path d="M6 8.5v7M18 11v4.5M15 3l6 6M21 3l-6 6" />
+            break;
+        default:
+            <circle cx="6" cy="6" r="2.5" />
+            <circle cx="6" cy="18" r="2.5" />
+            <circle cx="18" cy="18" r="2.5" />
+            <path d="M6 8.5v7M18 15.5V9a3 3 0 0 0-3-3h-4M13 3l-3 3 3 3" />
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired]
+    public PullRequestState State { get; set; }
+}
