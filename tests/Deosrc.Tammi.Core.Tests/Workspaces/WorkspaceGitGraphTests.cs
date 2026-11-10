@@ -268,6 +268,23 @@ public sealed class WorkspaceGitGraphTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadAsync_AlreadyLoaded_ReadsFilesChangedWhileTheTabWasHiddenAgain()
+    {
+        string remote = await _repos.CreateRemoteWithSubmoduleAsync();
+        string app = await _repos.CloneAsync(remote, "app", "--recurse-submodules");
+        var repository = new WorkspaceRepository("app", remote, "main", "origin/main");
+        WorkspaceGitGraph graph = _graphs.Open(WorkspaceAt(repository), repository);
+        await graph.LoadAsync();
+        await graph.SelectWorkingChangesAsync();
+        Assert.Empty(graph.WorkingChanges!);
+
+        TempRepositories.WriteFile(app, "new.txt", "new");
+        await graph.LoadAsync();
+
+        Assert.Equal("new.txt", Assert.Single(graph.WorkingChanges!).Path);
+    }
+
+    [Fact]
     public async Task SubmoduleWithOnlyUncommittedFiles_HasNothingToStage()
     {
         string remote = await _repos.CreateRemoteWithSubmoduleAsync();

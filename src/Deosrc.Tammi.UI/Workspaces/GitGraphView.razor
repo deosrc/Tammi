@@ -70,13 +70,12 @@
             </button>
         </div>
         <button type="button" class="button button-secondary button-icon git-graph-refresh" title="Read the graph again"
-                disabled="@Graph.IsLoading" @onclick="Graph.RefreshAsync">
+                aria-label="Refresh" disabled="@Graph.IsLoading" @onclick="Graph.RefreshAsync">
             <svg class="icon icon-small @(Graph.IsLoading ? "icon-spin" : null)" viewBox="0 0 24 24" aria-hidden="true"
                  focusable="false">
                 <path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" />
                 <path d="M21 3v5h-5" />
             </svg>
-            Refresh
         </button>
     </div>
 
