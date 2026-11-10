@@ -220,9 +220,21 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public IReadOnlyList<GitReference> LabelsFor(string sha) => _labels.GetValueOrDefault(sha) ?? [];
 
     /// <summary>
-    /// Reads the first page, if the graph hasn't been read yet. Otherwise reads it again if its refs have changed.
+    /// Reads the first page, if the graph hasn't been read yet. Otherwise, as when its tab is shown again, reads it
+    /// again if its refs have changed, and reads the working changes again, since files may have changed while the
+    /// tab was hidden.
     /// </summary>
-    public Task LoadAsync() => _loaded ? RefreshIfChangedAsync() : RunAsync(() => Reload(0));
+    public async Task LoadAsync()
+    {
+        if (!_loaded)
+        {
+            await RunAsync(() => Reload(0)).ConfigureAwait(false);
+            return;
+        }
+
+        await RefreshIfChangedAsync().ConfigureAwait(false);
+        await RefreshWorkingChangesAsync().ConfigureAwait(false);
+    }
 
     /// <summary>
     /// Reads the next page, unless every commit has been read.
