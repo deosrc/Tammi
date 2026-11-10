@@ -48,5 +48,13 @@ dotnet test --project tests/Deosrc.Tammi.Core.Tests
 dotnet run --project src/Deosrc.Tammi.Linux
 ```
 
+#### Trying a branch in the running app
+
+`scripts/switch-linux-instance.sh` builds this checkout and replaces the running Tammi with it, which suits trying a
+change (or an agent's branch) in the real app. It starts a detached launcher that waits for the running Tammi to exit,
+so close Tammi when you're ready: that ends all its agents, including one that ran the script. Pass `--stop` to have
+the script ask the running Tammi to exit instead, which skips its close warning. The new instance's output goes to
+`tammi-switch.log` in the temp directory.
+
 `dotnet test` runs on Microsoft.Testing.Platform (set in `global.json`). It evaluates every project in a solution or
 solution filter, including the Windows host, so on Linux run it against the test project instead.
