@@ -427,7 +427,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - Like terminals, graph tabs stay when the workspace's tab closes. Closing a graph's tab closes the repository, and
     deleting the workspace closes its graphs.
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
-- **Agents section:** a card for each of the workspace's open agents, in the order they started, with its
+- **Agents section:** a card for each of the workspace's open agents, in the order they started, with its icon, its
   [state](#agents) as a badge (with a spinner while Working) and the card's colour: blue for Working, the warning colour (as a repository with changes) for Needs input, grey for Idle, Running
   and Exited, red for Error. Needs input and Error also tint the card's background. Clicking the card shows its tab. Cards have no Stop
   button: closing the agent's tab stops it. An agent that ended with an error shows its exit code. Below the cards,

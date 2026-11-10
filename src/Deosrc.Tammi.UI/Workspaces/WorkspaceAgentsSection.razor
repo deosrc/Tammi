@@ -22,6 +22,7 @@ else
             <li class="agent-card card-action @AgentStateText.ToneClass(state) @(shown ? "agent-card-shown" : null)"
                 @key="agent" title="Show @agent.Name" @onclick="() => OnShow.InvokeAsync(agent)">
                 <div class="agent-card-heading">
+                    <AgentIcon Definition="agent.Agent.Definition" />
                     <button type="button" class="agent-card-name card-action-name" title="@agent.WorkingDirectory"
                             aria-current="@(shown ? "true" : null)">
                         @agent.Name
