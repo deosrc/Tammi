@@ -5,7 +5,7 @@ namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// The task context file: a markdown file in the workspace's <c>.tammi/</c> folder with its tasks' details (titles,
-/// statuses, links and descriptions), for agents to read. The initial prompt tells each agent where it is.
+/// statuses, links and descriptions) and its git repositories, for agents to read. The initial prompt tells each agent where it is.
 /// </summary>
 /// <remarks>
 /// <see cref="WorkspaceTaskList"/> writes it each time it has read the tasks, so it follows the tasks as they change.
@@ -53,6 +53,7 @@ public static class TaskContextFile
             AppendTask(text, task);
         }
 
+        AppendRepositories(text, workspace);
         return text.ToString();
     }
 
@@ -110,6 +111,27 @@ public static class TaskContextFile
         }
 
         return path;
+    }
+
+    private static void AppendRepositories(StringBuilder text, Workspace workspace)
+    {
+        text.Append("\n## Repositories\n\n");
+        if (workspace.Repositories.Count == 0)
+        {
+            text.Append("This workspace has no repositories.\n");
+            return;
+        }
+
+        text.Append("The workspace folder, ").Append(workspace.Folder).Append(", is not a git repository itself. ");
+        text.Append("It holds these git worktrees, each in its own folder and on its own branch. ");
+        text.Append("Run git commands inside the repository's folder.\n");
+        foreach (var repository in workspace.Repositories)
+        {
+            text.Append("\n### ").Append(repository.FolderName).Append("\n\n");
+            text.Append("- Folder: ").Append(workspace.GetWorktreePath(repository)).Append('\n');
+            text.Append("- Branch: ").Append(repository.Branch).Append('\n');
+            text.Append("- Base branch: ").Append(repository.BaseBranch).Append('\n');
+        }
     }
 
     private static void AppendTask(StringBuilder text, WorkspaceTask task)

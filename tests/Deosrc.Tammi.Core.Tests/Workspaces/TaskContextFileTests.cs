@@ -53,7 +53,8 @@ public sealed class TaskContextFileTests : IDisposable
             + "- Status: Open (to do)\n"
             + "- Repository: https://github.com/acme/api\n\n"
             + "### Description\n\n"
-            + "Login fails.\n\nSteps:\n1. Log in\n",
+            + "Login fails.\n\nSteps:\n1. Log in\n\n"
+            + "## Repositories\n\nThis workspace has no repositories.\n",
             contents);
     }
 
@@ -70,7 +71,7 @@ public sealed class TaskContextFileTests : IDisposable
 
         Assert.Contains("- Status: In Review\n", contents, StringComparison.Ordinal);
         Assert.DoesNotContain("Repository", contents, StringComparison.Ordinal);
-        Assert.EndsWith("### Description\n\nNo description.\n", contents, StringComparison.Ordinal);
+        Assert.Contains("### Description\n\nNo description.\n", contents, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -91,6 +92,42 @@ public sealed class TaskContextFileTests : IDisposable
 
         Assert.Contains("\n## acme/api#42\n\n", contents, StringComparison.Ordinal);
         Assert.Contains(expected, contents, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_Repositories_ListsEachWorktree()
+    {
+        var workspace = _workspace with
+        {
+            Repositories =
+            [
+                new WorkspaceRepository("api", "/clones/api", "api-42-fix-login", "origin/main"),
+                new WorkspaceRepository("web", "/clones/web", "api-42-fix-login", "origin/develop"),
+            ],
+        };
+
+        var contents = TaskContextFile.Render(workspace, []);
+
+        Assert.Contains("\n## Repositories\n\n", contents, StringComparison.Ordinal);
+        Assert.Contains("is not a git repository itself", contents, StringComparison.Ordinal);
+        Assert.Contains(
+            "\n### api\n\n"
+            + $"- Folder: {Path.Combine(workspace.Folder, "api")}\n"
+            + "- Branch: api-42-fix-login\n"
+            + "- Base branch: origin/main\n",
+            contents,
+            StringComparison.Ordinal);
+        Assert.Contains("\n### web\n", contents, StringComparison.Ordinal);
+        Assert.Contains("- Base branch: origin/develop\n", contents, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_NoRepositories_SaysSo()
+    {
+        Assert.EndsWith(
+            "## Repositories\n\nThis workspace has no repositories.\n",
+            TaskContextFile.Render(_workspace, []),
+            StringComparison.Ordinal);
     }
 
     [Fact]

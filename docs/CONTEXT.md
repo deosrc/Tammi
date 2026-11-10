@@ -671,6 +671,9 @@ are left to other tools for now.
     title, a link to its page, its Task Status (with its category), its repository's page if it belongs to one, and
     its description as the source gives it (markdown from GitHub, wiki markup from JIRA). A workspace without tasks
     gets a file that says so.
+  - After the tasks, it has a **Repositories** section, because the Workspace Folder isn't a git repository itself and
+    an agent started in it can otherwise be confused. It says so, then lists each Workspace Worktree: its folder, its
+    branch and its base branch. A workspace without repositories gets a line that says so.
   - It's written each time the workspace's tasks have all been read (see [Tasks section](#workspace-view-tab)): when
     the tab opens, on Refresh, when integrations are added or removed, and when the task list changes. It's only
     rewritten when its contents change, and always in full, so an agent never reads half a file. A task that can't be
