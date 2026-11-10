@@ -2,6 +2,7 @@
 import { Terminal } from '../lib/xterm/xterm.mjs';
 import { FitAddon } from '../lib/xterm/addon-fit.mjs';
 import { Unicode11Addon } from '../lib/xterm/addon-unicode11.mjs';
+import { WebLinksAddon } from '../lib/xterm/addon-web-links.mjs';
 
 const isWindows = navigator.userAgent.includes('Windows');
 
@@ -31,16 +32,24 @@ const theme = {
 /**
  * Creates a terminal in an element, sized to fill it.
  * @param {HTMLElement} element The element to show the terminal in.
- * @param {DotNet.DotNetObject} dotNet The component, which receives OnInput, OnBinaryInput and OnResize.
+ * @param {DotNet.DotNetObject} dotNet The component, which receives OnInput, OnBinaryInput, OnResize and OpenLink.
  * @param {{ windowsBuildNumber?: number }} options Set windowsBuildNumber when the process runs in ConPTY.
  */
 export function create(element, dotNet, options) {
+  // Links must open in the user's browser, not in this web view, which would navigate away from Tammi.
+  const openLink = (event, uri) => {
+    event.preventDefault();
+    dotNet.invokeMethodAsync('OpenLink', uri);
+  };
+
   const terminal = new Terminal({
     // The Unicode 11 addon uses a proposed API.
     allowProposedApi: true,
     cursorBlink: true,
     fontFamily: '"Cascadia Mono", Consolas, "DejaVu Sans Mono", "Liberation Mono", "Ubuntu Mono", monospace',
     fontSize: 14,
+    // Links that programs write as OSC 8 hyperlinks.
+    linkHandler: { activate: openLink, allowNonHttpProtocols: false },
     scrollback: 10000,
     theme,
     windowsPty: options.windowsBuildNumber
@@ -54,6 +63,9 @@ export function create(element, dotNet, options) {
   // Unicode 11 widths, so emoji and other wide characters take the two cells that programs expect.
   terminal.loadAddon(new Unicode11Addon());
   terminal.unicode.activeVersion = '11';
+
+  // Plain URLs in the output.
+  terminal.loadAddon(new WebLinksAddon(openLink));
 
   terminal.attachCustomKeyEventHandler(event => handleClipboardKeys(terminal, event));
   const subscriptions = [

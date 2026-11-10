@@ -41,7 +41,7 @@ public static class ThirdPartySoftware
             LicenseUrl: "http://www.microsoft.com/web/webpi/eula/eula_win2d_10012014.htm"),
         new("Windows App SDK", "Used by .NET MAUI", ThirdPartyPlatforms.Windows, "Microsoft Software License Terms",
             "https://github.com/microsoft/windowsappsdk", LicenseFile: "windows-app-sdk.txt"),
-        new("xterm.js", "@xterm/xterm, @xterm/addon-fit and @xterm/addon-unicode11: the embedded terminal",
+        new("xterm.js", "@xterm/xterm, @xterm/addon-fit, @xterm/addon-unicode11 and @xterm/addon-web-links: the embedded terminal",
             ThirdPartyPlatforms.All, "MIT", "https://github.com/xtermjs/xterm.js", LicenseFile: "xterm.txt"),
     ];
 

@@ -1,8 +1,11 @@
 @using System.Text
+@using Microsoft.Extensions.Logging
 @using Deosrc.Tammi.Core.Platform
 @using Deosrc.Tammi.Core.Terminals
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject IProcessLauncher ProcessLauncher
+@inject ILogger<Terminal> Logger
 
 @*
     An embedded terminal: shows a pseudoterminal session with xterm.js and sends it the user's input. The terminal
@@ -93,6 +96,30 @@
     /// </summary>
     [JSInvokable]
     public void OnBinaryInput(string data) => Session.Pty.Write(Encoding.Latin1.GetBytes(data));
+
+    /// <summary>
+    /// Opens a link that the user clicked in the output, in their browser. Only web links are opened, because the
+    /// output is from a process and a link could otherwise start any program or open any file.
+    /// </summary>
+    [JSInvokable]
+    public void OpenLink(string uri)
+    {
+        if (!Uri.TryCreate(uri, UriKind.Absolute, out var link)
+            || (link.Scheme != Uri.UriSchemeHttp && link.Scheme != Uri.UriSchemeHttps))
+        {
+            Logger.LogWarning("Not opening a terminal link that isn't a web link: {Uri}", uri);
+            return;
+        }
+
+        try
+        {
+            ProcessLauncher.Open(link.AbsoluteUri);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Couldn't open the terminal link {Uri}", uri);
+        }
+    }
 
     [JSInvokable]
     public void OnResize(int columns, int rows) => Session.Pty.Resize(new PtySize(columns, rows));
