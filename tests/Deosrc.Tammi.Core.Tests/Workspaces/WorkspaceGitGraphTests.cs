@@ -12,7 +12,7 @@ public sealed class WorkspaceGitGraphTests : IDisposable
     private readonly WorkspaceGitGraphs _graphs;
 
     public WorkspaceGitGraphTests() =>
-        _graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new GitWorkingTree(_repos.Git), new InMemorySettingsStore());
+        _graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new GitWorkingTree(_repos.Git), new GitSync(_repos.Git), new InMemorySettingsStore());
 
     public void Dispose()
     {
@@ -58,6 +58,38 @@ public sealed class WorkspaceGitGraphTests : IDisposable
             ["main", "origin/main", "v1"],
             graph.LabelsFor(graph.Rows[0].Commit.Sha).Select(reference => reference.Name));
         Assert.Equal("main", graph.Refs.HeadBranch);
+    }
+
+    [Fact]
+    public async Task SyncAsync_Push_UpdatesTheGraphAndLeavesNoProblem()
+    {
+        (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();
+        string clone = workspace.GetWorktreePath(repository);
+        await _repos.CommitFileAsync(clone, "a.txt", "a", "Add a");
+        WorkspaceGitGraph graph = _graphs.Open(workspace, repository);
+        await graph.LoadAsync();
+
+        bool worked = await graph.SyncAsync(GitSyncOperation.Push);
+
+        Assert.True(worked);
+        Assert.Null(graph.SyncProblem);
+        Assert.Null(graph.Syncing);
+        Assert.Equal(graph.Rows[0].Commit.Sha, graph.Refs.References.Single(r => r.Name == "origin/main").TargetSha);
+    }
+
+    [Fact]
+    public async Task SyncAsync_Failure_KeepsTheProblemForTheView()
+    {
+        (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();
+        string clone = workspace.GetWorktreePath(repository);
+        await _repos.RunAsync(clone, "remote", "set-url", "origin", _repos.PathTo("missing.git"));
+        WorkspaceGitGraph graph = _graphs.Open(workspace, repository);
+        await graph.LoadAsync();
+
+        bool worked = await graph.SyncAsync(GitSyncOperation.Fetch);
+
+        Assert.False(worked);
+        Assert.Equal(GitSyncFailure.Network, graph.SyncProblem?.Failure);
     }
 
     [Fact]

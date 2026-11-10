@@ -932,6 +932,25 @@ label.task-choice {
   }
 }
 
+/* A ring with one coloured arc, turning. Sized like .icon-small (14px) so it can stand in for an icon. */
+.spinner {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+  animation: icon-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 3s;
+  }
+}
+
 .side-panel-section-body {
   padding: 0 var(--space-4) var(--space-4);
 }
@@ -2457,6 +2476,41 @@ label.task-choice {
 
 .git-graph-refresh {
   margin-left: auto;
+}
+
+.git-graph-sync {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+/* Less space above than below, so the message sits close to the toolbar and clear of the graph. */
+.git-graph-sync-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  padding: 0 var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.git-graph-sync-error-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.git-graph-sync-error-body p {
+  margin: 0;
+}
+
+.git-graph-sync-error-close {
+  flex: none;
+}
+
+.git-graph-sync-details {
+  margin: var(--space-1) 0 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  font-size: var(--font-size-small);
 }
 
 .git-graph-problem {

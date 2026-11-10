@@ -26,6 +26,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
 
     private readonly IGitRepositoryReader _reader;
     private readonly IGitWorkingTree _workingTree;
+    private readonly IGitSync _sync;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<GitGraphRow> _rows = [];
     private IReadOnlyDictionary<string, IReadOnlyList<GitReference>> _labels =
@@ -34,6 +35,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     private GitGraphLayout _layout = new();
     private bool _loaded;
     private volatile bool _disposed;
+    private int _syncing;
 
     internal WorkspaceGitGraph(
         Workspace workspace,
@@ -41,7 +43,8 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         string? submodulePath,
         GitGraphScope scope,
         IGitRepositoryReader reader,
-        IGitWorkingTree workingTree)
+        IGitWorkingTree workingTree,
+        IGitSync sync)
     {
         WorkspaceId = workspace.Id;
         Repository = repository;
@@ -49,6 +52,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         Scope = scope;
         _reader = reader;
         _workingTree = workingTree;
+        _sync = sync;
         string worktree = workspace.GetWorktreePath(repository);
         Path = submodulePath is null
             ? worktree
@@ -185,6 +189,16 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     /// The file path and source of the diff shown, or <see langword="null"/> if the graph is shown.
     /// </summary>
     public (string Path, GitDiffSource Source)? DiffTarget { get; private set; }
+
+    /// <summary>
+    /// The fetch, pull or push that's running, or <see langword="null"/> when none is.
+    /// </summary>
+    public GitSyncOperation? Syncing { get; private set; }
+
+    /// <summary>
+    /// The last fetch, pull or push that failed, or <see langword="null"/> if the last one worked (or none has run).
+    /// </summary>
+    public GitSyncException? SyncProblem { get; private set; }
 
     /// <summary>
     /// Raised when the graph has been read, or the selection has changed. It can be raised on a background thread.
@@ -354,6 +368,66 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         }
 
         return committed;
+    }
+
+    /// <summary>
+    /// Fetches, pulls or pushes, then reads the graph again so the new commits and branches show. Does nothing while
+    /// another of them is running. <see cref="Syncing"/> follows it, and a failure is
+    /// left in <see cref="SyncProblem"/>.
+    /// </summary>
+    /// <returns>Whether it worked.</returns>
+    public async Task<bool> SyncAsync(GitSyncOperation operation)
+    {
+        if (_disposed || Interlocked.CompareExchange(ref _syncing, 1, 0) == 1)
+        {
+            return false;
+        }
+
+        Syncing = operation;
+        SyncProblem = null;
+        Changed?.Invoke();
+
+        bool worked = false;
+        try
+        {
+            Task task = operation switch
+            {
+                GitSyncOperation.Fetch => _sync.FetchAsync(Path),
+                GitSyncOperation.Pull => _sync.PullAsync(Path),
+                _ => _sync.PushAsync(Path),
+            };
+            await task.ConfigureAwait(false);
+            worked = true;
+        }
+        catch (GitSyncException ex)
+        {
+            SyncProblem = ex;
+        }
+        catch (GitException ex)
+        {
+            SyncProblem = new GitSyncException(operation, GitSyncFailure.Other, ex.Message, "", ex);
+        }
+        finally
+        {
+            Syncing = null;
+            Volatile.Write(ref _syncing, 0);
+        }
+
+        // The refs, and after a pull or a conflicted one the working changes, have changed even when it failed.
+        await RunAsync(() => Reload(Rows.Count)).ConfigureAwait(false);
+        return worked;
+    }
+
+    /// <summary>
+    /// Clears <see cref="SyncProblem"/>, once the user has seen it.
+    /// </summary>
+    public void DismissSyncProblem()
+    {
+        if (SyncProblem is not null)
+        {
+            SyncProblem = null;
+            Changed?.Invoke();
+        }
     }
 
     /// <summary>

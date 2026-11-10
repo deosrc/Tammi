@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
             logger: services.GetRequiredService<ILogger<SshKeyStore>>()));
         services.AddScoped<Clipboard>();
         services.AddSingleton<IGitRepositoryReader, GitRepositoryReader>();
+        services.AddSingleton<IGitSync>(services => new GitSync(services.GetRequiredService<IGitCli>()));
         services.AddSingleton<IGitWorkingTree>(services => new GitWorkingTree(services.GetRequiredService<IGitCli>()));
         services.AddSingleton<IGitWorktreeService, GitWorktreeService>();
         services.AddSingleton(services => new IntegrationManager(

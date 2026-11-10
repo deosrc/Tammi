@@ -24,6 +24,51 @@
             </button>
         </div>
         <span class="git-graph-count">@CountText</span>
+        <div class="git-graph-sync" role="group" aria-label="Sync with the remote">
+            <button type="button" class="button button-secondary button-icon" title="Download new commits from the remotes"
+                    disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Fetch)">
+                @if (Graph.Syncing == GitSyncOperation.Fetch)
+                {
+                    <span class="spinner" role="progressbar" aria-label="Fetching"></span>
+                }
+                else
+                {
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+                    </svg>
+                }
+                Fetch
+            </button>
+            <button type="button" class="button button-secondary button-icon"
+                    title="Fetch the upstream branch and bring this branch up to date with it"
+                    disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Pull)">
+                @if (Graph.Syncing == GitSyncOperation.Pull)
+                {
+                    <span class="spinner" role="progressbar" aria-label="Pulling"></span>
+                }
+                else
+                {
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14M19 12l-7 7-7-7" />
+                    </svg>
+                }
+                Pull
+            </button>
+            <button type="button" class="button button-secondary button-icon" title="Upload this branch's commits to the remote"
+                    disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Push)">
+                @if (Graph.Syncing == GitSyncOperation.Push)
+                {
+                    <span class="spinner" role="progressbar" aria-label="Pushing"></span>
+                }
+                else
+                {
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 19V5M5 12l7-7 7 7" />
+                    </svg>
+                }
+                Push
+            </button>
+        </div>
         <button type="button" class="button button-secondary button-icon git-graph-refresh" title="Read the graph again"
                 disabled="@Graph.IsLoading" @onclick="Graph.RefreshAsync">
             <svg class="icon icon-small @(Graph.IsLoading ? "icon-spin" : null)" viewBox="0 0 24 24" aria-hidden="true"
@@ -34,6 +79,29 @@
             Refresh
         </button>
     </div>
+
+    @* Only a failed fetch, pull or push is shown: the buttons' spinner says one is running. *@
+    @if (Graph.Syncing is null && Graph.SyncProblem is { } syncProblem)
+    {
+        <div class="error git-graph-sync-error" role="alert">
+            <div class="git-graph-sync-error-body">
+                <p>@syncProblem.Message</p>
+                @if (syncProblem.Details.Length > 0)
+                {
+                    <details>
+                        <summary>Git's output</summary>
+                        <pre class="git-graph-sync-details">@syncProblem.Details</pre>
+                    </details>
+                }
+            </div>
+            <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
+                    title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissSyncProblem">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+            </button>
+        </div>
+    }
 
     @if (Graph.Problem is { } problem)
     {
