@@ -75,7 +75,8 @@ public sealed class WorkspaceDraftRepository
     /// </summary>
     public string? FolderNameProblem => WorktreeFolderNames.Validate(
         _folderName,
-        _draft.Repositories.Where(other => other != this).Select(other => other.FolderName));
+        _draft.Repositories.Where(other => other != this).Select(other => other.FolderName)
+            .Concat(_draft.ExistingRepositories.Select(existing => existing.FolderName)));
 
     /// <summary>
     /// What the workspace's branch starts from, e.g. <c>origin/main</c>. Empty until <see cref="LoadAsync"/> finds the

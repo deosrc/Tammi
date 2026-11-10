@@ -223,6 +223,21 @@ workspace's name (as checked when it's created) in its metadata and index entry,
 keeps its name, so worktrees and running agents and terminals aren't affected. The workspace context file is written again
 with the new name, without reading the tasks again. A workspace that can't be read can't be renamed.
 
+**Editing tasks and repositories.** The Workspace View's **Manage Workspace** menu offers **Edit tasks and
+repositories…**, a flow of two steps that reuse the Create Workspace steps for choosing tasks and repositories.
+1. **Tasks.** The workspace's tasks are chosen already. The user adds or removes tasks as when creating a workspace.
+   Tasks the workspace has don't choose repositories again; tasks added now do, as in the repository step.
+2. **Repositories.** The workspace's repositories are listed as already in it: they can't be removed or chosen again,
+   and their folder names are taken. The user chooses more Local Repositories, each with a folder name and base branch.
+   They get the workspace's own branch, which can't be changed once the workspace has repositories. A workspace with
+   none chooses the branch as when it's created.
+- Tammi checks everything first, as when creating a workspace (plus that each new worktree's folder doesn't exist in
+  the Workspace Folder, and that the branch doesn't exist in the added repositories), then fetches each added
+  repository and creates its worktree and submodules. The metadata (tasks and repositories) is written last. If a step
+  fails or the user cancels, the added worktrees and their new branches are removed, and the metadata stays as it was.
+- The workspace's name and Workspace Folder don't change. The workspace context file is written again with the new tasks
+  and repositories. Removing a repository from a workspace isn't part of editing: delete the workspace instead.
+
 **Deleting a workspace.** The Workspace View and the details tab of a workspace that can't be read both offer it.
 1. Tammi checks what would be lost and always asks the user to confirm. It lists the worktrees with uncommitted changes
    or unpushed commits (including inside their submodules), and anything else in the Workspace Folder that isn't a

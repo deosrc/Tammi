@@ -82,6 +82,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<HomeGitStatus>();
         services.AddSingleton<WorkspaceDeleter>();
         services.AddSingleton<WorkspaceCreator>();
+        services.AddSingleton<WorkspaceEditor>();
         services.AddSingleton<IRepositoryCatalogue, RepositoryCatalogue>();
         return services;
     }
