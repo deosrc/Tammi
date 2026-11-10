@@ -885,6 +885,8 @@ are left to other tools for now.
   - **Linux:** a `/dev/ptmx` pseudoterminal. The process is started with `posix_spawn` rather than `forkpty`,
     because a .NET process can't safely run code in a forked child before `exec`. `posix_spawn` starts the new
     session and opens the terminal without any code in the child. This needs glibc 2.29 or later.
+  - Links in the terminal's output (plain `http(s)` URLs, and OSC 8 hyperlinks) open in the user's browser when clicked.
+    Other schemes are ignored, as the output comes from a process and a link could otherwise start a program.
   - xterm.js is vendored in the UI library (`wwwroot/lib/xterm`), so the app needs no network access or npm build.
 
 ## Open Questions
