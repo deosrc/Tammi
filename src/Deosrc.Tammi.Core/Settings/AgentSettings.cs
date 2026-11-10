@@ -21,6 +21,13 @@ public sealed record AgentSettings
     public string InitialPromptTemplate { get; init; } = InitialPrompt.DefaultTemplate;
 
     /// <summary>
+    /// How the initial prompt is given to an agent: typed into its input for the user to send
+    /// (<see cref="InitialPromptStyle.Prefill"/>), or sent straight away (<see cref="InitialPromptStyle.Submit"/>).
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<InitialPromptStyle>))]
+    public InitialPromptStyle InitialPromptStyle { get; init; } = InitialPromptStyle.Prefill;
+
+    /// <summary>
     /// Every Agent Definition that can be started, in the order they're offered: the Supported Agents (see
     /// <see cref="SupportedAgent.All"/>), then the Custom Agents.
     /// </summary>
@@ -39,6 +46,7 @@ public sealed record AgentSettings
         InitialPromptTemplate = string.IsNullOrWhiteSpace(InitialPromptTemplate)
             ? InitialPrompt.DefaultTemplate
             : InitialPromptTemplate,
+        InitialPromptStyle = Enum.IsDefined(InitialPromptStyle) ? InitialPromptStyle : InitialPromptStyle.Prefill,
     };
 
     /// <summary>
@@ -66,10 +74,11 @@ public sealed record AgentSettings
     public bool Equals(AgentSettings? other) =>
         other is not null
         && InitialPromptTemplate == other.InitialPromptTemplate
+        && InitialPromptStyle == other.InitialPromptStyle
         && (CustomDefinitions is null || other.CustomDefinitions is null
             ? CustomDefinitions == other.CustomDefinitions
             : CustomDefinitions.SequenceEqual(other.CustomDefinitions));
 
     /// <inheritdoc />
-    public override int GetHashCode() => HashCode.Combine(InitialPromptTemplate, CustomDefinitions?.Count);
+    public override int GetHashCode() => HashCode.Combine(InitialPromptTemplate, InitialPromptStyle, CustomDefinitions?.Count);
 }
