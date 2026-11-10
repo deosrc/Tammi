@@ -1090,15 +1090,9 @@ label.task-choice {
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
-  border-left: 4px solid var(--color-border);
+  border-left: 4px solid var(--git-status-tone);
   border-radius: var(--radius);
   background: var(--color-surface);
-}
-
-.git-status-card-success {
-  --git-status-tone: var(--color-success);
-  border-color: var(--color-success);
-  background: var(--color-success-bg);
 }
 
 .git-status-card-warning {
@@ -1224,19 +1218,38 @@ label.task-choice {
 }
 
 .pull-request-open {
-  --pull-request-tone: var(--color-success);
+  --pull-request-tone: var(--color-focus);
 }
 
 .pull-request-merged {
-  --pull-request-tone: var(--color-merged);
+  --pull-request-tone: var(--color-success);
 }
 
 .pull-request-closed {
   --pull-request-tone: var(--color-error);
 }
 
+/* The checks dot: ringed in the surface colour, so it stands out on the badge's fill. */
 .pull-request-checks {
+  flex: none;
+  width: 8px;
+  height: 8px;
   margin-left: 2px;
+  border-radius: 50%;
+  background: var(--pull-request-checks-tone);
+  box-shadow: 0 0 0 1.5px var(--color-surface);
+}
+
+.pull-request-checks-failed {
+  --pull-request-checks-tone: var(--color-error);
+}
+
+.pull-request-checks-running {
+  --pull-request-checks-tone: var(--color-warning);
+}
+
+.pull-request-checks-passed {
+  --pull-request-checks-tone: var(--color-success);
 }
 
 .pull-request-problem {
@@ -3723,4 +3736,42 @@ label.task-choice {
 .git-working-folder:hover .git-working-folder-action,
 .git-working-folder:focus-within .git-working-folder-action {
   visibility: visible;
+}
+
+/* A workspace's status on Home: a badge for each kind of thing that needs attention, shown only when there is some. */
+.workspace-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.workspace-badge {
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--workspace-badge-tone);
+  color: var(--workspace-badge-text, var(--color-surface));
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.workspace-badge-warning {
+  --workspace-badge-tone: var(--color-warning);
+  --workspace-badge-text: var(--color-warning-text);
+}
+
+.workspace-badge-info {
+  --workspace-badge-tone: var(--color-text-muted);
+}
+
+.workspace-badge-danger {
+  --workspace-badge-tone: var(--color-error);
+}
+
+/* A line between the card's parts. The spacing around it is its own, so nothing else adds margins to the rows. */
+.workspace-card-divider {
+  height: 0;
+  margin: var(--space-2) 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
 }
