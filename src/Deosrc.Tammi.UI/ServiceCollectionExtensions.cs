@@ -79,6 +79,7 @@ public static class ServiceCollectionExtensions
             services.GetRequiredService<IntegrationRegistry>(),
             services.GetRequiredService<IGitRepositoryReader>(),
             services.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<HomeGitStatus>();
         services.AddSingleton<WorkspaceDeleter>();
         services.AddSingleton<WorkspaceCreator>();
         services.AddSingleton<IRepositoryCatalogue, RepositoryCatalogue>();

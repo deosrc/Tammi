@@ -3724,3 +3724,38 @@ label.task-choice {
 .git-working-folder:focus-within .git-working-folder-action {
   visibility: visible;
 }
+
+/* A workspace's status on Home: a badge for each kind of thing that needs attention, shown only when there is some. */
+.workspace-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.workspace-badge {
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--workspace-badge-tone);
+  color: var(--workspace-badge-text, var(--color-surface));
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.workspace-badge-warning {
+  --workspace-badge-tone: var(--color-warning);
+  --workspace-badge-text: var(--color-warning-text);
+}
+
+.workspace-badge-info {
+  --workspace-badge-tone: var(--color-text-muted);
+}
+
+.workspace-badge-danger {
+  --workspace-badge-tone: var(--color-error);
+}
+
+.workspace-badge-merged {
+  --workspace-badge-tone: var(--color-merged);
+}
