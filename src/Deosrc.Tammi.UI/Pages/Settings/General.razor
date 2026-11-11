@@ -4,6 +4,7 @@
 @using Deosrc.Tammi.Core.Integrations
 @using Deosrc.Tammi.Core.Platform
 @using Deosrc.Tammi.Core.Settings
+@using Deosrc.Tammi.Core.Workspaces
 @using Microsoft.Extensions.Logging
 @inject IFolderPicker FolderPicker
 @inject IAppPaths AppPaths
@@ -118,6 +119,36 @@
     </div>
 
     <div class="settings-field">
+        <h2 class="settings-field-title">Home</h2>
+        <p class="settings-help settings-field-intro">
+            How Home arranges workspaces. A workspace's status comes from its work: Done (all Pull Requests merged),
+            In Review, Requires Attention (failed checks, or an agent waiting or failed), In Development or Planning.
+            Its source is where its task comes from.
+        </p>
+        <label for="home-layout">Layout</label>
+        <select id="home-layout" value="@Current.HomeLayout"
+                @onchange="e => UpdateGeneralAsync(g => g with { HomeLayout = Parse(e, g.HomeLayout) })">
+            <option value="@HomeLayout.TabBySourceGroupByStatus">Tab by source, group by status</option>
+            <option value="@HomeLayout.TabByStatusGroupBySource">Tab by status, group by source</option>
+        </select>
+        <h3 class="settings-field-title">Status order</h3>
+        <ol class="settings-list">
+            @for (var i = 0; i < Current.HomeStatusOrder.Count; i++)
+            {
+                var index = i;
+                <li>
+                    @WorkspaceStatuses.Label(Current.HomeStatusOrder[index])
+                    <button type="button" class="button button-secondary" disabled="@(index == 0)"
+                            aria-label="Move up" @onclick="() => MoveStatusAsync(index, -1)">↑</button>
+                    <button type="button" class="button button-secondary"
+                            disabled="@(index == Current.HomeStatusOrder.Count - 1)"
+                            aria-label="Move down" @onclick="() => MoveStatusAsync(index, 1)">↓</button>
+                </li>
+            }
+        </ol>
+    </div>
+
+    <div class="settings-field">
         <label for="log-level">Log level</label>
         <select id="log-level" value="@Current.LogLevel"
                 @onchange="e => UpdateGeneralAsync(g => g with { LogLevel = Parse(e, g.LogLevel) })">
@@ -194,6 +225,20 @@
             RepositoryUrl = new Uri("https://github.com/acme/api"),
         },
     ];
+
+    private Task MoveStatusAsync(int index, int offset) =>
+        UpdateGeneralAsync(general =>
+        {
+            List<WorkspaceStatus> order = [.. general.HomeStatusOrder];
+            var target = index + offset;
+            if (index < 0 || index >= order.Count || target < 0 || target >= order.Count)
+            {
+                return general;
+            }
+
+            (order[index], order[target]) = (order[target], order[index]);
+            return general with { HomeStatusOrder = order };
+        });
 
     private int _nameTemplateRevision;
 

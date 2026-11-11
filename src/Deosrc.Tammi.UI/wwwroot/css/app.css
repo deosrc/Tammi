@@ -3826,3 +3826,49 @@ label.task-choice {
   border: none;
   border-top: 1px solid var(--color-border);
 }
+
+/* Home's tabs (by source or status), and the groups in a tab. */
+.home-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.home-tab-button {
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.home-tab-button:hover {
+  color: var(--color-text);
+}
+
+.home-tab-button.active {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.home-tab-count {
+  margin-left: var(--space-1);
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.home-group {
+  margin-bottom: var(--space-4);
+}
+
+.home-group-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-base, 1rem);
+}
+
+.workspace-card[role="button"] {
+  cursor: pointer;
+}

@@ -433,6 +433,12 @@ else
     [Parameter]
     public string WorkspaceId { get; set; } = "";
 
+    /// <summary>
+    /// Starts the Delete Workspace flow when the tab is shown, e.g. from the button on Home's Done workspaces.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "delete")]
+    public bool Delete { get; set; }
+
     protected override void OnInitialized()
     {
         WorkspaceTabs.Changed += OnTabsChanged;
@@ -462,6 +468,13 @@ else
         _tab = WorkspaceTabs.Find(WorkspaceId);
         UpdateTabs();
         await LoadAsync();
+
+        if (Delete && IsLoaded && _listing is not null && !_deleting)
+        {
+            StartDelete(_listing.Name);
+            // Drops the query, so the flow isn't started again.
+            Navigation.NavigateTo(AppRoutes.Workspace(WorkspaceId), replace: true);
+        }
     }
 
     public void Dispose()

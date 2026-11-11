@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Deosrc.Tammi.Core.Logging;
+using Deosrc.Tammi.Core.Workspaces;
 
 namespace Deosrc.Tammi.Core.Settings;
 
@@ -47,10 +48,23 @@ public sealed record GeneralSettings
     public LogLevel LogLevel { get; init; } = LogLevelSwitch.DefaultLevel;
 
     /// <summary>
+    /// How Home groups workspaces.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<HomeLayout>))]
+    public HomeLayout HomeLayout { get; init; } = HomeLayout.TabBySourceGroupByStatus;
+
+    /// <summary>
+    /// The order Home lists workspace statuses in.
+    /// </summary>
+    public IReadOnlyList<WorkspaceStatus> HomeStatusOrder { get; init; } = WorkspaceStatuses.DefaultOrder;
+
+    /// <summary>
     /// Replaces a missing folder, folder name format or name template, or an unknown log level, with the default.
     /// </summary>
     public GeneralSettings Normalize() => this with
     {
+        HomeLayout = Enum.IsDefined(HomeLayout) ? HomeLayout : HomeLayout.TabBySourceGroupByStatus,
+        HomeStatusOrder = WorkspaceStatuses.NormalizeOrder(HomeStatusOrder),
         LogLevel = Enum.IsDefined(LogLevel) && LogLevel != LogLevel.None ? LogLevel : LogLevelSwitch.DefaultLevel,
         WorkspaceFolderNameFormat = (WorkspaceFolderNameFormat ?? new WorkspaceFolderNameFormat()).Normalize(),
         WorkspaceNameTemplate = WorkspaceNameTemplate ?? DefaultWorkspaceNameTemplate,
@@ -58,4 +72,22 @@ public sealed record GeneralSettings
             ? DefaultDefaultWorkspaceParentFolder
             : DefaultWorkspaceParentFolder.Trim(),
     };
+
+    /// <summary>
+    /// Whether <paramref name="other"/> holds the same settings, comparing the status order item by item.
+    /// </summary>
+    public bool Equals(GeneralSettings? other) =>
+        other is not null
+        && DefaultWorkspaceParentFolder == other.DefaultWorkspaceParentFolder
+        && WorkspaceFolderNameFormat == other.WorkspaceFolderNameFormat
+        && WorkspaceNameTemplate == other.WorkspaceNameTemplate
+        && LogLevel == other.LogLevel
+        && HomeLayout == other.HomeLayout
+        && HomeStatusOrder.SequenceEqual(other.HomeStatusOrder);
+
+    /// <inheritdoc />
+    public override int GetHashCode() =>
+        HashCode.Combine(
+            DefaultWorkspaceParentFolder, WorkspaceFolderNameFormat, WorkspaceNameTemplate, LogLevel, HomeLayout,
+            HomeStatusOrder.Count);
 }

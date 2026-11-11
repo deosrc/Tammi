@@ -2,6 +2,7 @@
 @using Deosrc.Tammi.Core.Agents
 @using Deosrc.Tammi.Core.Integrations
 @using Deosrc.Tammi.Core.Settings
+@using Deosrc.Tammi.Core.Workspaces
 @implements IDisposable
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceTabs WorkspaceTabs
@@ -9,6 +10,7 @@
 @inject HomeGitStatus GitStatus
 @inject WorkspaceAgents Agents
 @inject ISettingsStore SettingsStore
+@inject IntegrationRegistry Registry
 
 <div class="page">
     <div class="page-header">
@@ -31,93 +33,124 @@
     }
     else
     {
-        <ul class="workspace-list">
-            @foreach (var workspace in _workspaces)
+        var layout = SettingsStore.Current.General.HomeLayout;
+        var tabs = Tabs(layout);
+        var current = tabs.FirstOrDefault(tab => tab.Key == _selectedTab) ?? tabs[0];
+        <div class="home-tabs" role="tablist" aria-label="@(layout == HomeLayout.TabBySourceGroupByStatus ? "Sources" : "Statuses")">
+            @foreach (var tab in tabs)
             {
-                var available = workspace.Availability == WorkspaceAvailability.Available;
-                <li class="workspace-card @(available ? null : "workspace-card-unavailable")" @key="workspace.Id">
-                    <div class="workspace-card-body">
-                        <div class="workspace-name" title="@workspace.Name">@workspace.Name</div>
-                        <div class="workspace-folder" title="@workspace.Folder">@workspace.Folder</div>
-                        @if (!available)
-                        {
-                            <div class="workspace-problem warning">
-                                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-                                    <path d="M12 9v4M12 17h.01" />
-                                </svg>
-                                <span>@WorkspaceAvailabilityText.Summary(workspace.Availability)</span>
-                            </div>
-                        }
-                        @if (available && workspace.Workspace is { Repositories.Count: > 0 } details
-                             && GitStatus.Get(details) is { IsLoaded: true } summary)
-                        {
-                            var hasGitBadges = summary.LocalChanges.Count > 0 || summary.Unpushed.Count > 0
-                                || summary.Behind.Count > 0;
-                            var hasPullRequests = summary.PullRequests.Count > 0 || summary.PullRequestProblem is not null;
-
-                            @* Dividers only where there's something on both sides: after the text, and between the rows. *@
-                            @if (hasGitBadges || hasPullRequests)
-                            {
-                                <hr class="workspace-card-divider" />
-                            }
-                            @if (hasGitBadges)
-                            {
-                                <div class="workspace-badges">
-                                    @if (summary.LocalChanges.Count > 0)
-                                    {
-                                        <span class="workspace-badge workspace-badge-warning">
-                                            Local changes
-                                        </span>
-                                    }
-                                    @if (summary.Unpushed.Count > 0)
-                                    {
-                                        <span class="workspace-badge workspace-badge-warning">
-                                            Unpushed
-                                        </span>
-                                    }
-                                    @if (summary.Behind.Count > 0)
-                                    {
-                                        <span class="workspace-badge workspace-badge-info">
-                                            Behind
-                                        </span>
-                                    }
-                                </div>
-                            }
-                            @if (hasGitBadges && hasPullRequests)
-                            {
-                                <hr class="workspace-card-divider" />
-                            }
-                            <PullRequestBadges PullRequests="summary.PullRequests" Problem="@summary.PullRequestProblem" />
-                        }
-                        @if (available && Agents.For(workspace.Id) is { Count: > 0 } agents)
-                        {
-                            @* The workspace's agents, one indicator each, in the order they started. *@
-                            <hr class="workspace-card-divider" />
-                            <div class="workspace-agents" aria-label="Agents">
-                                @foreach (var agent in agents)
-                                {
-                                    <AgentStateIndicator State="agent.State"
-                                                         Title="@($"{agent.Name}: {AgentStateText.Label(agent.State)}")" />
-                                }
-                            </div>
-                        }
-                    </div>
-                    <div class="workspace-card-actions">
-                        @* A workspace that can't be read opens a tab with the details of what's wrong instead. *@
-                        <button type="button" class="@(available ? "button" : "button button-secondary")"
-                                @onclick="() => Open(workspace)">
-                            @(available ? "Open" : "Details")
-                        </button>
-                    </div>
-                </li>
+                <button type="button" role="tab" class="home-tab-button @(tab == current ? "active" : null)"
+                        aria-selected="@(tab == current ? "true" : "false")" @key="tab.Key"
+                        @onclick="() => _selectedTab = tab.Key">
+                    @tab.Key <span class="home-tab-count">@tab.Entries.Count</span>
+                </button>
             }
-        </ul>
+        </div>
+        @foreach (var group in Groups(current, layout))
+        {
+            <section class="home-group" @key="group.Key">
+                <h2 class="home-group-title">@group.Key <span class="home-tab-count">@group.Entries.Count</span></h2>
+                <ul class="workspace-list">
+                    @foreach (var entry in group.Entries)
+                    {
+                        @Card(entry)
+                    }
+                </ul>
+            </section>
+        }
     }
 </div>
 
 @code {
+    private RenderFragment Card(Entry entry) => @<text>
+        @{
+            var workspace = entry.Listing;
+            var available = workspace.Availability == WorkspaceAvailability.Available;
+        }
+        <li class="workspace-card @(available ? null : "workspace-card-unavailable")" @key="workspace.Id"
+        role="button" tabindex="0" title="@(available ? "Open" : "Details")"
+        @onclick="() => Open(workspace)" @onkeydown="e => OnCardKeyDown(e, workspace)">
+            <div class="workspace-card-body">
+                <div class="workspace-name" title="@workspace.Name">@workspace.Name</div>
+                <div class="workspace-folder" title="@workspace.Folder">@workspace.Folder</div>
+                @if (!available)
+                {
+                    <div class="workspace-problem warning">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+                            <path d="M12 9v4M12 17h.01" />
+                        </svg>
+                        <span>@WorkspaceAvailabilityText.Summary(workspace.Availability)</span>
+                    </div>
+                }
+                @if (available && workspace.Workspace is { Repositories.Count: > 0 } details
+                     && GitStatus.Get(details) is { IsLoaded: true } summary)
+                {
+                    var hasGitBadges = summary.LocalChanges.Count > 0 || summary.Unpushed.Count > 0
+                        || summary.Behind.Count > 0;
+                    var hasPullRequests = summary.PullRequests.Count > 0 || summary.PullRequestProblem is not null;
+
+                    @* Dividers only where there's something on both sides: after the text, and between the rows. *@
+                    @if (hasGitBadges || hasPullRequests)
+                    {
+                        <hr class="workspace-card-divider" />
+                    }
+                    @if (hasGitBadges)
+                    {
+                        <div class="workspace-badges">
+                            @if (summary.LocalChanges.Count > 0)
+                            {
+                                <span class="workspace-badge workspace-badge-warning">
+                                    Local changes
+                                </span>
+                            }
+                            @if (summary.Unpushed.Count > 0)
+                            {
+                                <span class="workspace-badge workspace-badge-warning">
+                                    Unpushed
+                                </span>
+                            }
+                            @if (summary.Behind.Count > 0)
+                            {
+                                <span class="workspace-badge workspace-badge-info">
+                                    Behind
+                                </span>
+                            }
+                        </div>
+                    }
+                    @if (hasGitBadges && hasPullRequests)
+                    {
+                        <hr class="workspace-card-divider" />
+                    }
+                    <PullRequestBadges PullRequests="summary.PullRequests" Problem="@summary.PullRequestProblem" />
+                }
+                @if (available && Agents.For(workspace.Id) is { Count: > 0 } agents)
+                {
+                    @* The workspace's agents, one indicator each, in the order they started. *@
+                    <hr class="workspace-card-divider" />
+                    <div class="workspace-agents" aria-label="Agents">
+                        @foreach (var agent in agents)
+                        {
+                            <AgentStateIndicator State="agent.State"
+                                                 Title="@($"{agent.Name}: {AgentStateText.Label(agent.State)}")" />
+                        }
+                    </div>
+                }
+            </div>
+            @if (entry.Status == WorkspaceStatus.Done && available)
+            {
+                <div class="workspace-card-actions">
+                    <button type="button" class="button button-danger"
+                            @onclick="() => Delete(workspace)" @onclick:stopPropagation="true">
+                        Delete workspace…
+                    </button>
+                </div>
+            }
+        </li>
+    </text>;
+
     private IReadOnlyList<WorkspaceListing>? _workspaces;
+    private string? _selectedTab;
     private IDisposable? _observing;
     private string? _indexProblem;
     private readonly CancellationTokenSource _disposed = new();
@@ -219,6 +252,71 @@
             StateHasChanged();
         }
     });
+
+    private sealed record Entry(WorkspaceListing Listing, string Source, WorkspaceStatus Status);
+
+    private sealed record Bucket(string Key, IReadOnlyList<Entry> Entries);
+
+    private IReadOnlyList<Entry> Entries() =>
+    [
+        .. _workspaces!.Select(listing =>
+        {
+            var details = listing.Workspace;
+            var source = details is null
+                ? WorkspaceSources.NoTasks
+                : WorkspaceSources.Of(details.Tasks, id => Registry.All.FirstOrDefault(i => i.Id == id)?.Name);
+            var status = details is null || listing.Availability != WorkspaceAvailability.Available
+                ? WorkspaceStatus.RequiresAttention
+                : WorkspaceStatuses.Of(
+                    GitStatus.Get(details) is { IsLoaded: true } summary ? summary : EmptySummary(details),
+                    Agents.For(listing.Id).Select(agent => agent.State));
+            return new Entry(listing, source, status);
+        }),
+    ];
+
+    // Until its git status is read, a workspace is shown as it would be with no changes.
+    private static WorkspaceGitSummary EmptySummary(Core.Workspaces.Workspace workspace) => new([]);
+
+    private static IReadOnlyList<Bucket> BySource(IEnumerable<Entry> entries) =>
+    [
+        .. entries.GroupBy(entry => entry.Source)
+            .OrderBy(group => group.Key == WorkspaceSources.NoTasks)
+            .ThenBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase)
+            .Select(group => new Bucket(group.Key, [.. group])),
+    ];
+
+    private static IReadOnlyList<Bucket> ByStatus(IEnumerable<Entry> entries, IReadOnlyList<WorkspaceStatus> order) =>
+    [
+        .. order.Select(status => new Bucket(WorkspaceStatuses.Label(status), [.. entries.Where(e => e.Status == status)]))
+            .Where(bucket => bucket.Entries.Count > 0),
+    ];
+
+    private IReadOnlyList<Bucket> Tabs(HomeLayout layout)
+    {
+        var entries = Entries();
+        return layout == HomeLayout.TabBySourceGroupByStatus
+            ? BySource(entries)
+            : ByStatus(entries, SettingsStore.Current.General.HomeStatusOrder);
+    }
+
+    private IReadOnlyList<Bucket> Groups(Bucket tab, HomeLayout layout) =>
+        layout == HomeLayout.TabBySourceGroupByStatus
+            ? ByStatus(tab.Entries, SettingsStore.Current.General.HomeStatusOrder)
+            : BySource(tab.Entries);
+
+    private void OnCardKeyDown(KeyboardEventArgs e, WorkspaceListing workspace)
+    {
+        if (e.Key is "Enter" or " ")
+        {
+            Open(workspace);
+        }
+    }
+
+    private void Delete(WorkspaceListing workspace)
+    {
+        WorkspaceTabs.Open(workspace.Id, workspace.Name);
+        Navigation.NavigateTo(AppRoutes.DeleteWorkspace(workspace.Id));
+    }
 
     private void Open(WorkspaceListing workspace)
     {
