@@ -13,11 +13,11 @@ public static class WorkspaceStatuses
     /// </summary>
     public static IReadOnlyList<WorkspaceStatus> DefaultOrder { get; } =
     [
+        WorkspaceStatus.Done,
         WorkspaceStatus.RequiresAttention,
         WorkspaceStatus.InReview,
         WorkspaceStatus.InDevelopment,
         WorkspaceStatus.Planning,
-        WorkspaceStatus.Done,
     ];
 
     /// <summary>
