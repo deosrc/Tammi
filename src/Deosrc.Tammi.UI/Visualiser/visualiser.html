@@ -6,10 +6,23 @@
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0b0d; }
   canvas { display: block; width: 100%; height: 100%; }
+  /* Tooltips are dark glass: the page shows through them, and the hovered thing's colour glows at the edge. */
+  #tip {
+    position: fixed; left: 0; top: 0; z-index: 1; max-width: 260px; padding: 7px 10px;
+    border: 1px solid color-mix(in srgb, var(--c, #8a6cf0) 55%, transparent); border-radius: 8px;
+    background: rgba(11, 11, 13, 0.62); backdrop-filter: blur(6px);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--c, #8a6cf0) 35%, transparent);
+    color: #cfd2d6; font: 12px/1.4 system-ui, sans-serif; pointer-events: none;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  #tip.shown { opacity: 1; }
+  #tip b { display: block; color: #fff; font-weight: 600; }
+  #tip span { color: #8b9097; }
 </style>
 </head>
 <body>
 <canvas id="canvas"></canvas>
+<div id="tip"></div>
 <script>
 // A proof-of-concept visualiser. Workspaces are glowing nodes, grouped around their task source. Each agent orbits its
 // workspace and throws off particles: lots when it's working, a slow pulse when it needs the user, a few when idle.
@@ -41,6 +54,12 @@ function create(canvas) {
   let frame = 0;
   let time = 0;
   let last = performance.now();
+  let pointer = null;
+  let hoverKey = null;
+
+  const tip = document.getElementById("tip");
+  canvas.addEventListener("pointermove", (e) => (pointer = { x: e.clientX, y: e.clientY }));
+  canvas.addEventListener("pointerleave", () => (pointer = null));
 
   const resize = () => {
     const ratio = window.devicePixelRatio || 1;
@@ -89,6 +108,73 @@ function create(canvas) {
     layout();
   };
 
+  const stateText = (state) => (state === "NeedsInput" ? "needs input" : state.toLowerCase());
+
+  // The agent under the pointer, else the workspace: what it is, in text, and the colour it glows.
+  const findHover = () => {
+    if (!pointer) return null;
+    const near = (x, y, r) => Math.hypot(pointer.x - x, pointer.y - y) <= r;
+    for (const w of workspaces) {
+      for (const agent of w.agents) {
+        if (agent.ex !== undefined && near(agent.ex, agent.ey, 10)) {
+          return {
+            key: `${w.id}/${agent.id}`, x: agent.ex, y: agent.ey, r: 9, colour: agentColour(agent.state),
+            title: agent.id, lines: [`Agent, ${stateText(agent.state)}`, `in ${w.name}`],
+          };
+        }
+      }
+    }
+    for (const w of workspaces) {
+      if (near(w.x, w.y, 40)) {
+        const working = w.agents.filter((a) => a.state === "Working").length;
+        const count = `${w.agents.length} agent${w.agents.length === 1 ? "" : "s"}`;
+        return {
+          key: w.id, x: w.x, y: w.y, r: 40, colour: sourceColour(w.source), title: w.name,
+          lines: [
+            w.source === "local" ? "No task source" : `Source: ${w.source}`,
+            w.agents.length ? `${count}${working ? `, ${working} working` : ""}` : "No agents",
+          ],
+        };
+      }
+    }
+    return null;
+  };
+
+  const showHover = (hover) => {
+    if (!hover) {
+      hoverKey = null;
+      tip.classList.remove("shown");
+      return;
+    }
+    if (hover.key !== hoverKey) {
+      hoverKey = hover.key;
+      tip.replaceChildren();
+      const title = document.createElement("b");
+      title.textContent = hover.title;
+      tip.append(title);
+      for (const line of hover.lines) {
+        const row = document.createElement("span");
+        row.textContent = line;
+        tip.append(row, document.createElement("br"));
+      }
+      tip.lastChild.remove();
+      tip.style.setProperty("--c", hover.colour);
+      tip.classList.add("shown");
+    }
+
+    // Beside the pointer, kept inside the window.
+    const x = Math.min(pointer.x + 16, width - tip.offsetWidth - 8);
+    const y = Math.min(pointer.y + 16, height - tip.offsetHeight - 8);
+    tip.style.transform = `translate(${Math.max(x, 8)}px, ${Math.max(y, 8)}px)`;
+
+    // A soft ring round what's hovered.
+    context.strokeStyle = hover.colour + "aa";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.arc(hover.x, hover.y, hover.r, 0, Math.PI * 2);
+    context.stroke();
+  };
+
   const step = (now) => {
     frame = requestAnimationFrame(step);
     const dt = Math.min((now - last) / 1000, 0.05);
@@ -118,6 +204,8 @@ function create(canvas) {
         const angle = time * 0.6 * (config.speed + 0.3) + w.phase + (i / w.agents.length) * Math.PI * 2;
         const ex = w.x + Math.cos(angle) * 34;
         const ey = w.y + Math.sin(angle) * 34;
+        agent.ex = ex;
+        agent.ey = ey;
         const colour = agentColour(agent.state);
         const rate = config.pulse ? config.rate + 6 * Math.max(0, Math.sin(time * 3)) ** 4 : config.rate;
         for (let n = rate * dt * 60 * 0.5 + Math.random(); n >= 1; n--) {
@@ -142,6 +230,7 @@ function create(canvas) {
       context.fillRect(p.x, p.y, 2, 2);
     }
     context.globalAlpha = 1;
+    showHover(findHover());
   };
   frame = requestAnimationFrame(step);
 
