@@ -3854,10 +3854,44 @@ label.task-choice {
   color: var(--color-text);
 }
 
-.home-tab-count {
+/* A count in a chip. In a tab, a status gives it (and the active tab's underline) the status's colour. */
+.home-count {
+  display: inline-block;
+  min-width: 1.5em;
   margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--home-status-tone, var(--color-text-muted));
+  color: var(--home-status-text, var(--color-surface));
   font-size: var(--font-size-small);
-  color: var(--color-text-muted);
+  font-weight: 700;
+  text-align: center;
+}
+
+.home-tab-button[data-status="RequiresAttention"] {
+  --home-status-tone: var(--color-error);
+}
+
+.home-tab-button[data-status="InReview"] {
+  --home-status-tone: var(--color-warning);
+  --home-status-text: var(--color-warning-text);
+}
+
+.home-tab-button[data-status="InDevelopment"] {
+  --home-status-tone: var(--color-info);
+  --home-status-text: var(--color-info-text);
+}
+
+.home-tab-button[data-status="Planning"] {
+  --home-status-tone: var(--color-text-muted);
+}
+
+.home-tab-button[data-status="Done"] {
+  --home-status-tone: var(--color-success);
+}
+
+.home-tab-button.active[data-status] {
+  border-bottom-color: var(--home-status-tone);
 }
 
 .home-group {

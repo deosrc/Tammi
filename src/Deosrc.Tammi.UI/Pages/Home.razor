@@ -97,9 +97,10 @@
                 @foreach (var tab in tabs)
                 {
                     <button type="button" role="tab" class="home-tab-button @(tab == current ? "active" : null)"
+                            data-status="@tab.Status"
                             aria-selected="@(tab == current ? "true" : "false")" @key="tab.Key"
                             @onclick="() => _selectedTab = tab.Key">
-                        @tab.Key <span class="home-tab-count">@tab.Entries.Count</span>
+                        @tab.Key <span class="home-count">@tab.Entries.Count</span>
                     </button>
                 }
             </div>
@@ -109,7 +110,7 @@
             <section class="home-group" @key="group.Key">
                 @if (general.HomeGroupBy != HomeGrouping.None)
                 {
-                    <h2 class="home-group-title">@group.Key <span class="home-tab-count">@group.Entries.Count</span></h2>
+                    <h2 class="home-group-title">@group.Key <span class="home-count">@group.Entries.Count</span></h2>
                 }
                 <ul class="workspace-list">
                     @foreach (var entry in group.Entries)
@@ -318,7 +319,11 @@
 
     private sealed record Entry(WorkspaceListing Listing, string Source, WorkspaceStatus Status);
 
-    private sealed record Bucket(string Key, IReadOnlyList<Entry> Entries);
+    // Status is set when the bucket is a workspace status, so it can be coloured.
+    private sealed record Bucket(string Key, IReadOnlyList<Entry> Entries)
+    {
+        public WorkspaceStatus? Status { get; init; }
+    }
 
     private IReadOnlyList<Entry> Entries() =>
     [
@@ -350,7 +355,7 @@
 
     private static IReadOnlyList<Bucket> ByStatus(IEnumerable<Entry> entries, IReadOnlyList<WorkspaceStatus> order) =>
     [
-        .. order.Select(status => new Bucket(WorkspaceStatuses.Label(status), [.. entries.Where(e => e.Status == status)]))
+        .. order.Select(status => new Bucket(WorkspaceStatuses.Label(status), [.. entries.Where(e => e.Status == status)]) { Status = status })
             .Where(bucket => bucket.Entries.Count > 0),
     ];
 
