@@ -6,7 +6,7 @@
 @inject NavigationManager Navigation
 
 @* The chosen agent's limits as small progress bars, shown throughout the app. Clicking opens the usage tab. *@
-<footer class="app-footer">
+<footer class="app-footer @(VisualiserOpen ? "theme-dark" : "")">
     <button type="button" class="usage-footer" title="@Title" aria-label="@Title" @onclick="OpenUsage">
         <span class="usage-footer-title">USAGE</span>
         @if (Limits.Count == 0)
@@ -28,9 +28,22 @@
             </span>
         }
     </button>
+    <button type="button" class="visualiser-toggle" title="@VisualiserTitle" aria-label="@VisualiserTitle"
+            aria-pressed="@VisualiserOpen" @onclick="OnToggleVisualiser">
+        VISUALISER
+    </button>
 </footer>
 
 @code {
+    /// <summary>Whether the visualiser is open over the page. The footer then uses the dark theme.</summary>
+    [Parameter]
+    public bool VisualiserOpen { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleVisualiser { get; set; }
+
+    private string VisualiserTitle => VisualiserOpen ? "Close the visualiser" : "Open the visualiser";
+
     // The footer redraws every minute so the time until reset counts down. Usage is read every third tick.
     private static readonly TimeSpan TickInterval = TimeSpan.FromMinutes(1);
     private const int TicksPerRefresh = 3;
