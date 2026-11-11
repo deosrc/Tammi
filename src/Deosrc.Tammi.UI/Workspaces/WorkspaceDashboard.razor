@@ -1,0 +1,225 @@
+@* The Workspace View's dashboard: the workspace's tasks and their status, its open Pull Requests with their checks and
+   reviews, its running agents and the state of its repositories, side by side. It shows what the side panel does, and
+   reuses its cards, so each one is clicked the same way. *@
+@implements IDisposable
+@using Deosrc.Tammi.Core.Agents
+@using Deosrc.Tammi.Core.Integrations
+@using Deosrc.Tammi.Core.Platform
+@inject WorkspaceAgents Agents
+@inject IProcessLauncher ProcessLauncher
+
+<div class="dashboard">
+    <h1 class="dashboard-title">@Workspace.Name</h1>
+    <div class="dashboard-grid">
+        <section class="dashboard-section" aria-labelledby="dashboard-tasks">
+            <h2 id="dashboard-tasks">Tasks</h2>
+            @if (Tasks is null || Tasks.Tasks.Count == 0)
+            {
+                <p class="placeholder">No tasks in this workspace.</p>
+            }
+            else
+            {
+                <p class="dashboard-summary">@TaskSummary</p>
+                <ul class="workspace-task-list">
+                    @foreach (var task in Tasks.Tasks)
+                    {
+                        <WorkspaceTaskCard @key="task.Reference" WorkspaceTask="task" />
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="dashboard-section" aria-labelledby="dashboard-pull-requests">
+            <h2 id="dashboard-pull-requests">Pull Requests</h2>
+            @if (PullRequests is null || !PullRequests.Repositories.Any(repository => repository.IsLoaded))
+            {
+                <p class="placeholder">@(Workspace.Repositories.Count == 0 ? "No repositories in this workspace." : "Reading pull requests…")</p>
+            }
+            else
+            {
+                @if (PullRequests.Repositories.Any(repository => repository.Problem is not null))
+                {
+                    <p class="warning" title="@string.Join(Environment.NewLine, PullRequests.Repositories.Select(repository => repository.Problem).OfType<string>())">
+                        Some pull requests couldn't be read.
+                    </p>
+                }
+                @if (AllPullRequests.Count == 0)
+                {
+                    <p class="placeholder">No pull requests from the workspace branches.</p>
+                }
+                else
+                {
+                    <ul class="dashboard-list">
+                        @foreach (var pullRequest in AllPullRequests)
+                        {
+                            <li class="dashboard-pull-request card-action" @key="pullRequest.Url"
+                                title="Open #@pullRequest.Number in the browser"
+                                @onclick="() => ProcessLauncher.Open(pullRequest.Url.AbsoluteUri)">
+                                <div class="dashboard-pull-request-heading">
+                                    <PullRequestBadge PullRequest="pullRequest" />
+                                    <button type="button" class="card-action-name dashboard-pull-request-title">@pullRequest.Title</button>
+                                </div>
+                                <div class="dashboard-pull-request-status">
+                                    <span>@pullRequest.Repository</span>
+                                    <span>@PullRequestText.State(pullRequest.State)</span>
+                                    @if (pullRequest.State is PullRequestState.Draft or PullRequestState.Open)
+                                    {
+                                        @if (pullRequest.Checks is { } checks)
+                                        {
+                                            <span>@PullRequestText.Checks(checks)</span>
+                                        }
+                                        @if (pullRequest.Review is { } review)
+                                        {
+                                            <span class="dashboard-review @ReviewClass(review)">@PullRequestText.Review(review)</span>
+                                        }
+                                    }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+        </section>
+
+        <section class="dashboard-section" aria-labelledby="dashboard-agents">
+            <h2 id="dashboard-agents">Agents</h2>
+            @if (OpenAgents.Count == 0)
+            {
+                <p class="placeholder">No agents running. Start one from the + tab.</p>
+            }
+            else
+            {
+                <ul class="agent-list">
+                    @foreach (var agent in OpenAgents)
+                    {
+                        var state = agent.State;
+                        <li class="agent-card card-action @AgentStateText.ToneClass(state)" @key="agent"
+                            title="Show @agent.Name" @onclick="() => OnShowAgent.InvokeAsync(agent)">
+                            <div class="agent-card-heading">
+                                <AgentIcon Definition="agent.Agent.Definition" />
+                                <button type="button" class="agent-card-name card-action-name" title="@agent.WorkingDirectory">
+                                    @agent.Name
+                                </button>
+                                <span class="agent-state-badge">
+                                    @if (state == AgentState.Working)
+                                    {
+                                        <span class="spinner" role="progressbar" aria-label="Working"></span>
+                                    }
+                                    @AgentStateText.Label(state)
+                                </span>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="dashboard-section" aria-labelledby="dashboard-repositories">
+            <h2 id="dashboard-repositories">Repositories</h2>
+            @if (GitStatus is null || GitStatus.Repositories.Count == 0)
+            {
+                <p class="placeholder">No repositories in this workspace.</p>
+            }
+            else
+            {
+                <ul class="git-status-list">
+                    @foreach (var repository in GitStatus.Repositories)
+                    {
+                        <WorkspaceRepositoryGitStatus @key="repository.Repository.FolderName"
+                                                      Repository="repository"
+                                                      PullRequests="PullRequests?.Find(repository.Repository.FolderName)"
+                                                      OnOpenGraph="path => OnOpenGraph.InvokeAsync((repository.Repository, path))" />
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// The workspace.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public Workspace Workspace { get; set; } = null!;
+
+    [Parameter]
+    public WorkspaceTaskList? Tasks { get; set; }
+
+    [Parameter]
+    public WorkspacePullRequestList? PullRequests { get; set; }
+
+    [Parameter]
+    public WorkspaceGitStatusMonitor? GitStatus { get; set; }
+
+    /// <summary>
+    /// Called with an agent to show its tab.
+    /// </summary>
+    [Parameter]
+    public EventCallback<WorkspaceAgent> OnShowAgent { get; set; }
+
+    /// <summary>
+    /// Called to open a git graph: of a repository, or of one of its submodules (by its path in the repository).
+    /// </summary>
+    [Parameter]
+    public EventCallback<(WorkspaceRepository Repository, string? Path)> OnOpenGraph { get; set; }
+
+    private IReadOnlyList<WorkspaceAgent> OpenAgents => Agents.For(Workspace.Id);
+
+    // Open Pull Requests first (drafts after them), then the ones that are over.
+    private IReadOnlyList<PullRequestInfo> AllPullRequests =>
+        PullRequests is null
+            ? []
+            : [.. PullRequests.Repositories
+                .SelectMany(repository => repository.PullRequests)
+                .OrderBy(pullRequest => pullRequest.State switch
+                {
+                    PullRequestState.Open => 0,
+                    PullRequestState.Draft => 1,
+                    _ => 2,
+                })];
+
+    private string TaskSummary
+    {
+        get
+        {
+            var loaded = Tasks!.Tasks.Select(task => task.Task).OfType<TaskInfo>().ToList();
+            var parts = new List<string>();
+            foreach ((TaskStatusCategory category, string label) in new[]
+            {
+                (TaskStatusCategory.ToDo, "to do"),
+                (TaskStatusCategory.InProgress, "in progress"),
+                (TaskStatusCategory.Done, "done"),
+            })
+            {
+                int count = loaded.Count(task => task.StatusCategory == category);
+                if (count > 0)
+                {
+                    parts.Add($"{count} {label}");
+                }
+            }
+
+            return parts.Count == 0 ? "" : string.Join(" · ", parts);
+        }
+    }
+
+    private static string ReviewClass(PullRequestReview review) => review switch
+    {
+        PullRequestReview.Approved => "dashboard-review-approved",
+        PullRequestReview.ChangesRequested => "dashboard-review-changes",
+        _ => "dashboard-review-required",
+    };
+
+    protected override void OnInitialized() => Agents.Changed += OnAgentsChanged;
+
+    public void Dispose() => Agents.Changed -= OnAgentsChanged;
+
+    // Raised on a background thread, e.g. when an agent's state changes.
+    private void OnAgentsChanged(string workspaceId)
+    {
+        if (workspaceId == Workspace.Id)
+        {
+            InvokeAsync(StateHasChanged);
+        }
+    }
+}

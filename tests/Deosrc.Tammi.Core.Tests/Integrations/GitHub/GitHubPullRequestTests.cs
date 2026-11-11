@@ -78,6 +78,23 @@ public sealed class GitHubPullRequestTests : IDisposable
         Assert.Equal(checks, pullRequest.Checks);
     }
 
+    [Theory]
+    [InlineData("APPROVED", PullRequestReview.Approved)]
+    [InlineData("CHANGES_REQUESTED", PullRequestReview.ChangesRequested)]
+    [InlineData("REVIEW_REQUIRED", PullRequestReview.ReviewRequired)]
+    [InlineData(null, null)]
+    public async Task GetPullRequestsAsync_ReadsTheReviewDecision(string? decision, PullRequestReview? review)
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        _api.Respond(GraphQlPath, Response("acme/api",
+            PullRequest(1, "OPEN", head: "https://github.com/acme/api", reviewDecision: decision)));
+
+        PullRequestInfo pullRequest = Assert.Single(await github.GetPullRequestsAsync(
+            ["https://github.com/acme/api.git"], Branch, CancellationToken));
+
+        Assert.Equal(review, pullRequest.Review);
+    }
+
     [Fact]
     public async Task GetPullRequestsAsync_LeavesOutPullRequestsFromBranchesInOtherRepositories()
     {
@@ -276,13 +293,15 @@ public sealed class GitHubPullRequestTests : IDisposable
         string state,
         string? head,
         bool isDraft = false,
-        string? checks = null) => new()
+        string? checks = null,
+        string? reviewDecision = null) => new()
     {
         ["number"] = number,
         ["title"] = $"PR {number}",
         ["url"] = $"https://github.com/acme/api/pull/{number}",
         ["state"] = state,
         ["isDraft"] = isDraft,
+        ["reviewDecision"] = reviewDecision,
         ["headRepository"] = head is null ? null : new JsonObject { ["url"] = head },
         ["commits"] = new JsonObject
         {

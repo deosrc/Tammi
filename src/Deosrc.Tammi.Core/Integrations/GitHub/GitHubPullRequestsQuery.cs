@@ -23,6 +23,7 @@ internal static class GitHubPullRequestsQuery
                 url
                 state
                 isDraft
+                reviewDecision
                 headRepository { url }
                 commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
               }
@@ -48,6 +49,10 @@ internal static class GitHubPullRequestsQuery
     public sealed record Connection<TNode>(IReadOnlyList<TNode?>? Nodes);
 
     /// <param name="State"><c>OPEN</c>, <c>CLOSED</c> or <c>MERGED</c>.</param>
+    /// <param name="ReviewDecision">
+    /// <c>APPROVED</c>, <c>CHANGES_REQUESTED</c> or <c>REVIEW_REQUIRED</c>, or <see langword="null"/> when no review is
+    /// required.
+    /// </param>
     /// <param name="HeadRepository">
     /// The repository the branch is in, or <see langword="null"/> if it was deleted.
     /// </param>
@@ -58,6 +63,7 @@ internal static class GitHubPullRequestsQuery
         string Url,
         string State,
         bool IsDraft,
+        string? ReviewDecision,
         HeadRepository? HeadRepository,
         Connection<CommitNode>? Commits);
 

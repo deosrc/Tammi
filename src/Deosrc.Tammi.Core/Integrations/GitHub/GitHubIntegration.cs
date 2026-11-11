@@ -480,6 +480,13 @@ public sealed class GitHubIntegration
 
         return new PullRequestInfo(Id, repository, pullRequest.Number, pullRequest.Title, url, state.Value)
         {
+            Review = pullRequest.ReviewDecision switch
+            {
+                "APPROVED" => PullRequestReview.Approved,
+                "CHANGES_REQUESTED" => PullRequestReview.ChangesRequested,
+                "REVIEW_REQUIRED" => PullRequestReview.ReviewRequired,
+                _ => null,
+            },
             Checks = pullRequest.Commits?.Nodes?.FirstOrDefault()?.Commit?.StatusCheckRollup?.State switch
             {
                 "SUCCESS" => PullRequestChecks.Succeeded,

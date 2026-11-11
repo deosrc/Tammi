@@ -22,14 +22,30 @@ internal static class PullRequestText
         _ => "Checks failed",
     };
 
+    public static string Review(PullRequestReview review) => review switch
+    {
+        PullRequestReview.Approved => "Approved",
+        PullRequestReview.ChangesRequested => "Changes requested",
+        _ => "Review required",
+    };
+
     /// <summary>
     /// The badge's tooltip, e.g. "acme/api#12: Fix login (Open · Checks failed). Open it in the browser".
     /// </summary>
     public static string Title(PullRequestInfo pullRequest)
     {
-        string status = pullRequest.Checks is { } checks
-            ? $"{State(pullRequest.State)} · {Checks(checks)}"
-            : State(pullRequest.State);
+        var parts = new List<string> { State(pullRequest.State) };
+        if (pullRequest.Checks is { } checks)
+        {
+            parts.Add(Checks(checks));
+        }
+
+        if (pullRequest.Review is { } review)
+        {
+            parts.Add(Review(review));
+        }
+
+        string status = string.Join(" · ", parts);
         return $"{pullRequest.Repository}#{pullRequest.Number}: {pullRequest.Title} ({status}). Open it in the browser";
     }
 }

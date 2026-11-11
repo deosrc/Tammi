@@ -352,8 +352,12 @@ else
             else
             {
                 <div class="workspace-main-empty">
-                    <h1>@_tab.Name</h1>
-                    <p class="placeholder">Git operations, agents and terminals will appear here.</p>
+                    @if (_listing?.Workspace is { } dashboardWorkspace)
+                    {
+                        <WorkspaceDashboard Workspace="dashboardWorkspace" Tasks="_tasks" PullRequests="_pullRequests"
+                                            GitStatus="_gitStatus" OnShowAgent="ShowTab"
+                                            OnOpenGraph="graph => OpenGraph(graph.Repository, graph.Path)" />
+                    }
                 </div>
             }
         </div>
