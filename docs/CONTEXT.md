@@ -458,7 +458,10 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   last started. Each one can be resumed, which opens it in a new tab, or forgotten. A session whose agent can't resume
   it says why instead.
 - **Main area tabs:** the main area has its own row of tabs, below a small divider. The first is always the
-  **dashboard** (an icon, no name), which the view shows until the user opens something else. Then come the
+  **dashboard** (an icon, no name), which the view shows until the user opens something else. The dashboard shows the
+  workspace's tasks with a count by status category, its Pull Requests (open ones first) with their state, checks and
+  review decision (approved, changes requested or review required; GitHub has no separate "rejected"), its agents with
+  their states, and its repositories' git status. It uses the side panel's cards, so each is clicked the same way. Then come the
   workspace's terminals, agents and Git Graphs, in the order they started or opened. A terminal's tab starts with a terminal icon. An agent's tab starts with the agent's icon, and ends (before its close button) with its state: a blue spinner while Working, a coloured bell icon when it Needs input, and otherwise a dot coloured by its state. The
   last is always a **+** tab, which opens a menu of things to start: **Terminal**, **Git** (see Git Graph), then each
   Agent Definition (in the order agents are offered). Terminal and each Agent Definition have a submenu of

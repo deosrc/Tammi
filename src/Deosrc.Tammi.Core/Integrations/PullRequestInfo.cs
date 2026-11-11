@@ -21,4 +21,9 @@ public sealed record PullRequestInfo(
     /// The combined result of its checks, or <see langword="null"/> when it has none or they can't be read.
     /// </summary>
     public PullRequestChecks? Checks { get; init; }
+
+    /// <summary>
+    /// What its reviewers decided, or <see langword="null"/> when it needs no review or the service doesn't say.
+    /// </summary>
+    public PullRequestReview? Review { get; init; }
 }
