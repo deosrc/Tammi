@@ -269,8 +269,8 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - **Agent status** for the workspace's AI agents (see [agent states](#agents))
   - **Pull Requests** from each repository's workspace branch, as the same badges as the Workspace View's
     [Repositories section](#workspace-view-tab)
-- **Layout:** Home groups workspaces by **source** and **status**, in one of two styles chosen in the General
-  settings: tabs by source with groups by status, or tabs by status with groups by source. Empty tabs and groups aren't
+- **Layout:** Home groups workspaces by **source** and **status**, in one of two styles chosen with the View Options button
+  on Home: tabs by source with groups by status, or tabs by status with groups by source. Empty tabs and groups aren't
   shown.
   - A workspace's **status** is its overall state, not a Task Status: **Requires Attention** (a Pull Request has failed
     checks, an agent needs input or failed, or the workspace can't be read), **Done** (every Pull Request is merged, so
@@ -279,7 +279,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     Pull Requests that were closed) and **Planning** (no changes). The first that applies is used, in that order.
   - A workspace's **source** is where its first task comes from: a GitHub issue's repository, or a JIRA issue's project
     (with its integration). A workspace with no tasks is under "No task".
-  - The order of statuses is configurable in the General settings.
+  - The order of statuses is configurable with the View Options button.
   - Clicking a workspace's card opens it. There is no Open button.
 - Each workspace shows a compact summary line (e.g. "2/3 repos changed · 1 agent needs input"). It can
   be expanded to show a breakdown for each repository and agent.

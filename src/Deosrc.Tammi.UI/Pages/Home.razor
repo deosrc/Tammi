@@ -15,8 +15,46 @@
 <div class="page">
     <div class="page-header">
         <h1>Workspaces</h1>
-        <a class="button" href="@AppRoutes.NewWorkspace">New workspace</a>
+        <div class="page-header-actions">
+            <button type="button" class="button button-secondary" aria-expanded="@(_layoutOpen ? "true" : "false")"
+                    aria-controls="home-layout-panel" @onclick="() => _layoutOpen = !_layoutOpen">
+                View Options
+            </button>
+            <a class="button" href="@AppRoutes.NewWorkspace">New workspace</a>
+        </div>
     </div>
+
+    @if (_layoutOpen)
+    {
+        var general = SettingsStore.Current.General;
+        <div id="home-layout-panel" class="home-layout-panel">
+            <label for="home-layout">Layout</label>
+            <select id="home-layout" value="@general.HomeLayout"
+                    @onchange="e => UpdateGeneralAsync(g => g with { HomeLayout = Enum.TryParse(e.Value?.ToString(), out HomeLayout layout) ? layout : g.HomeLayout })">
+                <option value="@HomeLayout.TabBySourceGroupByStatus">Tab by source, group by status</option>
+                <option value="@HomeLayout.TabByStatusGroupBySource">Tab by status, group by source</option>
+            </select>
+            <h2 class="settings-field-title">Status order</h2>
+            <ol class="settings-list">
+                @for (var i = 0; i < general.HomeStatusOrder.Count; i++)
+                {
+                    var index = i;
+                    <li>
+                        @WorkspaceStatuses.Label(general.HomeStatusOrder[index])
+                        <button type="button" class="button button-secondary" disabled="@(index == 0)"
+                                aria-label="Move up" @onclick="() => MoveStatusAsync(index, -1)">↑</button>
+                        <button type="button" class="button button-secondary"
+                                disabled="@(index == general.HomeStatusOrder.Count - 1)"
+                                aria-label="Move down" @onclick="() => MoveStatusAsync(index, 1)">↓</button>
+                    </li>
+                }
+            </ol>
+            @if (_settingsError is not null)
+            {
+                <p class="error">@_settingsError</p>
+            }
+        </div>
+    }
 
     @if (_indexProblem is not null)
     {
@@ -151,6 +189,8 @@
 
     private IReadOnlyList<WorkspaceListing>? _workspaces;
     private string? _selectedTab;
+    private bool _layoutOpen;
+    private string? _settingsError;
     private IDisposable? _observing;
     private string? _indexProblem;
     private readonly CancellationTokenSource _disposed = new();
@@ -303,6 +343,33 @@
         layout == HomeLayout.TabBySourceGroupByStatus
             ? ByStatus(tab.Entries, SettingsStore.Current.General.HomeStatusOrder)
             : BySource(tab.Entries);
+
+    private async Task UpdateGeneralAsync(Func<GeneralSettings, GeneralSettings> update)
+    {
+        try
+        {
+            await SettingsStore.UpdateAsync(settings => settings with { General = update(settings.General) });
+            _settingsError = null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _settingsError = $"Couldn't save the settings. {ex.Message}";
+        }
+    }
+
+    private Task MoveStatusAsync(int index, int offset) =>
+        UpdateGeneralAsync(general =>
+        {
+            List<WorkspaceStatus> order = [.. general.HomeStatusOrder];
+            var target = index + offset;
+            if (index < 0 || index >= order.Count || target < 0 || target >= order.Count)
+            {
+                return general;
+            }
+
+            (order[index], order[target]) = (order[target], order[index]);
+            return general with { HomeStatusOrder = order };
+        });
 
     private void OnCardKeyDown(KeyboardEventArgs e, WorkspaceListing workspace)
     {
