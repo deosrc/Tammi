@@ -62,6 +62,11 @@ public static class AppRoutes
     public static string Workspace(string workspaceId) => WorkspacePrefix + Uri.EscapeDataString(workspaceId);
 
     /// <summary>
+    /// The path of a workspace's tab, starting the Delete Workspace flow in it.
+    /// </summary>
+    public static string DeleteWorkspace(string workspaceId) => Workspace(workspaceId) + "?delete=true";
+
+    /// <summary>
     /// Gets the workspace a path is the tab of.
     /// </summary>
     /// <param name="path">A path relative to the base URI, without its query or fragment.</param>

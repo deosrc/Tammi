@@ -269,6 +269,22 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - **Agent status** for the workspace's AI agents (see [agent states](#agents))
   - **Pull Requests** from each repository's workspace branch, as the same badges as the Workspace View's
     [Repositories section](#workspace-view-tab)
+- **Layout:** Home can split workspaces into tabs and into groups within a tab, each by **source** or **status**, or not
+  at all (None). They are chosen with the View Options button on Home, and can't both use the same split (unless both are
+  None). The default is tabs by status, groups by source. Empty tabs and groups aren't shown. With no tabs, or no
+  groups, their controls and headings are left out.
+  - A workspace's **status** is its overall state, not a Task Status: **Requires Attention** (a Pull Request has failed
+    checks, an agent needs input or failed, or the workspace can't be read), **Done** (every Pull Request is merged, so
+    the workspace just needs deleting; its card offers a button for that), **In Review** (Pull Requests are open and
+    their checks passed or there are none), **In Development** (uncommitted or unpushed changes, an agent at work, or
+    Pull Requests that were closed) and **Planning** (no changes). The first that applies is used, in that order.
+  - A workspace's **source** is where its first task comes from: a GitHub issue's repository, or a JIRA issue's project
+    (with its integration). A workspace with no tasks is under "No task".
+  - The order of statuses is configurable with the View Options button, by dragging them or with buttons.
+  - Sources are ordered alphabetically (workspaces with no task last) unless the user chooses a **custom** order in View
+    Options, which they set the same way. Sources they haven't placed follow the others, alphabetically.
+  - View Options shows the status order beside the other options when the window is wide enough.
+  - Clicking a workspace's card opens it. There is no Open button.
 - Each workspace shows a compact summary line (e.g. "2/3 repos changed · 1 agent needs input"). It can
   be expanded to show a breakdown for each repository and agent.
 - A repository counts as **changed** when it has uncommitted changes (staged, unstaged or untracked)

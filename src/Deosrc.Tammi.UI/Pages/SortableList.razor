@@ -1,0 +1,92 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* A list of items in order. An item is moved by dragging it from anywhere but its buttons, or with the buttons
+   at its end. Dragging is handled in script, so the list isn't re-rendered while a drag is in progress. *@
+<ol class="sortable-list" aria-label="@Label" @ref="_list">
+    @for (var i = 0; i < Items.Count; i++)
+    {
+        var index = i;
+        <li class="sortable-item" draggable="true" @key="Items[index]">
+            <span class="sortable-handle" aria-hidden="true">⋮⋮</span>
+            <span class="sortable-label">@Items[index]</span>
+            <button type="button" class="button button-secondary" disabled="@(index == 0)"
+                    aria-label="Move up" @onclick="() => OnMove.InvokeAsync((index, index - 1))">↑</button>
+            <button type="button" class="button button-secondary" disabled="@(index == Items.Count - 1)"
+                    aria-label="Move down" @onclick="() => OnMove.InvokeAsync((index, index + 1))">↓</button>
+        </li>
+    }
+</ol>
+
+@code {
+    private ElementReference _list;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _script;
+    private DotNetObjectReference<SortableList>? _self;
+
+    /// <summary>
+    /// The items' text, in order. Each is different.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<string> Items { get; set; } = [];
+
+    /// <summary>
+    /// What the list is, for screen readers.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    /// <summary>
+    /// Called with the index of an item and the index it is to move to.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public EventCallback<(int From, int To)> OnMove { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Deosrc.Tammi.UI/Pages/SortableList.razor.js");
+            _script = await _module.InvokeAsync<IJSObjectReference>(
+                "attach", _list, _self ??= DotNetObjectReference.Create(this));
+        }
+        catch (JSDisconnectedException)
+        {
+            // The web view has gone.
+        }
+    }
+
+    // Called by the script when an item is dropped on another.
+    [JSInvokable]
+    public Task OnDropped(int from, int to) => OnMove.InvokeAsync((from, to));
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_script is not null)
+            {
+                await _script.InvokeVoidAsync("dispose");
+                await _script.DisposeAsync();
+            }
+
+            if (_module is not null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The web view has gone, and the list with it.
+        }
+
+        _self?.Dispose();
+    }
+}

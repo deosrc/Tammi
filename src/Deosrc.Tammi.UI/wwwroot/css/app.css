@@ -3949,3 +3949,192 @@ label.task-choice {
   gap: var(--space-4);
   margin-bottom: var(--space-4);
 }
+
+
+/* Home's tabs (by source or status), and the groups in a tab. */
+.home-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.home-tab-button {
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.home-tab-button:hover {
+  color: var(--color-text);
+}
+
+.home-tab-button.active {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+/* A count in a chip. In a tab, a status gives it (and the active tab's underline) the status's colour. */
+.home-count {
+  display: inline-block;
+  min-width: 1.5em;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--home-status-tone, var(--color-text-muted));
+  color: var(--home-status-text, var(--color-surface));
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  text-align: center;
+}
+
+.home-tab-button[data-status="RequiresAttention"] {
+  --home-status-tone: var(--color-error);
+}
+
+.home-tab-button[data-status="InReview"] {
+  --home-status-tone: var(--color-warning);
+  --home-status-text: var(--color-warning-text);
+}
+
+.home-tab-button[data-status="InDevelopment"] {
+  --home-status-tone: var(--color-info);
+  --home-status-text: var(--color-info-text);
+}
+
+.home-tab-button[data-status="Planning"] {
+  --home-status-tone: var(--color-text-muted);
+}
+
+.home-tab-button[data-status="Done"] {
+  --home-status-tone: var(--color-success);
+}
+
+.home-tab-button.active[data-status] {
+  border-bottom-color: var(--home-status-tone);
+}
+
+.home-group {
+  margin-bottom: var(--space-4);
+}
+
+.home-group-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-base, 1rem);
+}
+
+.workspace-card[role="button"] {
+  cursor: pointer;
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.home-layout-panel {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+/* A list whose items are reordered by dragging their handle, or with buttons at their end. */
+.sortable-list {
+  display: flex;
+  max-width: 20rem;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.sortable-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  cursor: grab;
+  user-select: none;
+}
+
+.sortable-item.dragging {
+  opacity: 0.5;
+}
+
+.sortable-item.drag-over {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.sortable-handle {
+  color: var(--color-text-muted);
+  letter-spacing: -2px;
+  user-select: none;
+}
+
+.sortable-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.sortable-item button {
+  cursor: pointer;
+}
+
+.home-layout-panel {
+  position: relative;
+}
+
+/* The status order is beside the other options when there's room, and below them when there isn't. */
+.home-layout-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+@media (min-width: 48rem) {
+  .home-layout-body {
+    flex-direction: row;
+    gap: var(--space-6, 2rem);
+  }
+
+  /* Only as wide as its content, so the status order sits right beside it. */
+  .home-layout-main {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  /* The source and status orders are columns with a divider before each, only when they're side by side. */
+  .home-layout-side {
+    flex: none;
+    max-width: 50%;
+    padding-left: var(--space-6, 2rem);
+    border-left: 1px solid var(--color-border);
+  }
+
+  .home-layout-status {
+    width: 20rem;
+  }
+}
+
+.home-layout-close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+/* A little room between the source order's select and its list. */
+.home-layout-sources select {
+  margin-bottom: var(--space-2);
+}
