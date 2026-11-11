@@ -52,7 +52,11 @@ function create(canvas) {
     context.fillStyle = "#0b0b0d";
     context.fillRect(0, 0, width, height);
   };
-  const observer = new ResizeObserver(resize);
+  // On a resize the canvas is redrawn at its new size and the nodes move to their places in it.
+  const observer = new ResizeObserver(() => {
+    resize();
+    layout();
+  });
   observer.observe(canvas);
   resize();
 

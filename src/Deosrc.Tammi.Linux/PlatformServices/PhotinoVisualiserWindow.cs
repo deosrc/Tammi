@@ -28,7 +28,7 @@ internal sealed class PhotinoVisualiserWindow(PhotinoBlazorApp app, VisualiserFe
             .SetTitle("Visualiser")
             .SetMinSize(400, 300)
             .SetMaxSize(100_000, 100_000)
-            .SetSize(900, 700)
+            .SetSize(1800, 1400)
             .Center()
             .LoadRawString(VisualiserPage.Html);
         _window = window;

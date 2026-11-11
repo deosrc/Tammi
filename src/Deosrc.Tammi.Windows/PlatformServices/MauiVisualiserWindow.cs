@@ -24,8 +24,8 @@ internal sealed class MauiVisualiserWindow(VisualiserFeed feed) : IVisualiserWin
         var window = new Window(new ContentPage { Content = webView, Padding = 0 })
         {
             Title = "Visualiser",
-            Width = 900,
-            Height = 700,
+            Width = 1800,
+            Height = 1400,
         };
         _window = window;
 
