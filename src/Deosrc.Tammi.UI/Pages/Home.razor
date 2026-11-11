@@ -52,20 +52,7 @@
                 </select>
             </div>
             <h2 class="settings-field-title">Status order</h2>
-            <ol class="settings-list">
-                @for (var i = 0; i < general.HomeStatusOrder.Count; i++)
-                {
-                    var index = i;
-                    <li>
-                        @WorkspaceStatuses.Label(general.HomeStatusOrder[index])
-                        <button type="button" class="button button-secondary" disabled="@(index == 0)"
-                                aria-label="Move up" @onclick="() => MoveStatusAsync(index, -1)">↑</button>
-                        <button type="button" class="button button-secondary"
-                                disabled="@(index == general.HomeStatusOrder.Count - 1)"
-                                aria-label="Move down" @onclick="() => MoveStatusAsync(index, 1)">↓</button>
-                    </li>
-                }
-            </ol>
+            <SortableStatusList Order="general.HomeStatusOrder" OnMove="move => MoveStatusToAsync(move.From, move.To)" />
             @if (_settingsError is not null)
             {
                 <p class="error">@_settingsError</p>
@@ -392,17 +379,19 @@
         }
     }
 
-    private Task MoveStatusAsync(int index, int offset) =>
+    // Moves the status at `index` to `target`, shifting the ones between.
+    private Task MoveStatusToAsync(int index, int target) =>
         UpdateGeneralAsync(general =>
         {
             List<WorkspaceStatus> order = [.. general.HomeStatusOrder];
-            var target = index + offset;
-            if (index < 0 || index >= order.Count || target < 0 || target >= order.Count)
+            if (index < 0 || index >= order.Count || target < 0 || target >= order.Count || index == target)
             {
                 return general;
             }
 
-            (order[index], order[target]) = (order[target], order[index]);
+            var status = order[index];
+            order.RemoveAt(index);
+            order.Insert(target, status);
             return general with { HomeStatusOrder = order };
         });
 
