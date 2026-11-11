@@ -23,7 +23,13 @@
     {
         var state = Monitor.Get(name);
         <section class="usage-agent" aria-labelledby="usage-heading-@name.Replace(' ', '-')">
-            <h2 id="usage-heading-@name.Replace(' ', '-')">@name</h2>
+            <div class="usage-agent-header">
+                <h2 id="usage-heading-@name.Replace(' ', '-')">@name</h2>
+                @if (state.Usage is { } updated)
+                {
+                    <span class="usage-limit-reset">Updated @updated.FetchedAt.ToLocalTime().ToString("t")</span>
+                }
+            </div>
             @if (state.Error is not null)
             {
                 <p class="warning" role="alert">@state.Error</p>
@@ -50,7 +56,6 @@
                         </li>
                     }
                 </ul>
-                <p class="settings-help">Updated @usage.FetchedAt.ToLocalTime().ToString("t").</p>
             }
             else if (state.Error is null)
             {
