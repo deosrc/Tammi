@@ -4,27 +4,17 @@
 @inject NavigationManager Navigation
 
 <div class="app">
-    <div class="app-upper">
-        <header class="app-bar">
-            <span class="app-name">@AppInfo.Name</span>
-            <TabStrip />
-        </header>
-        <main class="app-content">
-            @Body
-        </main>
-        @if (_visualiserOpen)
-        {
-            <Visualiser />
-        }
-    </div>
-    <UsageFooter VisualiserOpen="_visualiserOpen" OnToggleVisualiser="ToggleVisualiser" />
+    <header class="app-bar">
+        <span class="app-name">@AppInfo.Name</span>
+        <TabStrip />
+    </header>
+    <main class="app-content">
+        @Body
+    </main>
+    <UsageFooter />
 </div>
 
 @code {
-    private bool _visualiserOpen;
-
-    private void ToggleVisualiser() => _visualiserOpen = !_visualiserOpen;
-
     protected override async Task OnInitializedAsync()
     {
         Navigation.LocationChanged += OnLocationChanged;

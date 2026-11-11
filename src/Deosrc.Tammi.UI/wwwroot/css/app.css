@@ -90,34 +90,6 @@
   }
 }
 
-/* The dark colours again, for a part of the app that is dark whatever the system theme (e.g. the footer while the
-   visualiser is open). Keep in step with the dark block above. */
-.theme-dark {
-  --color-bg: #1e1f22;
-  --color-surface: #2b2d31;
-  --color-surface-hover: #35373c;
-  --color-chrome: #17181a;
-  --color-border: #3f4147;
-  --color-text: #e6e7e9;
-  --color-text-muted: #9ba1a8;
-  --color-accent: #8a6cf0;
-  --color-accent-text: #ffffff;
-  --color-focus: #4c9aff;
-  --color-error: #ff7b72;
-  --color-success: #3fb950;
-  --color-info: #4c9aff;
-  --color-info-text: #1f2328;
-  --color-success-bg: #12261e;
-  --color-warning: #d29922;
-  --color-warning-bg: #3b2e0e;
-  --color-warning-border: #9e6a03;
-  --color-warning-text: #1f2328;
-  --color-error-bg: #2d1416;
-  --color-merged: #a371f7;
-  --color-jira: #4c9aff;
-  color: var(--color-text);
-}
-
 /* ---------------------------------------------------------------------------------------------------------------
    Base
    --------------------------------------------------------------------------------------------------------------- */
@@ -312,28 +284,6 @@ a {
   color: var(--color-accent);
 }
 
-/* The app bar and the page. The visualiser covers all of it, but not the footer. */
-.app-upper {
-  position: relative;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.visualiser {
-  position: absolute;
-  inset: 0;
-  z-index: 50;
-  background: #0b0b0d;
-}
-
-.visualiser-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
 .app-content {
   flex: 1;
   min-height: 0;
@@ -481,8 +431,7 @@ a {
   cursor: pointer;
 }
 
-.visualiser-toggle:hover,
-.visualiser-toggle[aria-pressed="true"] {
+.visualiser-toggle:hover {
   background: var(--color-surface-hover);
   color: var(--color-text);
 }

@@ -21,6 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The visualiser's page, shown in its own window by each host. -->
+    <EmbeddedResource Include="Visualiser\visualiser.html" LogicalName="Deosrc.Tammi.UI.Visualiser.visualiser.html" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Deosrc.Tammi.Core\Deosrc.Tammi.Core.csproj" />
   </ItemGroup>
 

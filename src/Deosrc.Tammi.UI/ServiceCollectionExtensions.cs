@@ -15,6 +15,7 @@ using Deosrc.Tammi.Core.Workspaces;
 using Deosrc.Tammi.UI.Components;
 using Deosrc.Tammi.UI.Layout;
 using Deosrc.Tammi.UI.Logging;
+using Deosrc.Tammi.UI.Visualiser;
 using Deosrc.Tammi.UI.Workspaces;
 using Microsoft.Extensions.Logging;
 
@@ -66,6 +67,7 @@ public static class ServiceCollectionExtensions
             time: services.GetRequiredService<TimeProvider>()));
         services.AddSingleton<AgentUsageMonitor>();
         services.AddSingleton<UsageTabState>();
+        services.AddSingleton<VisualiserFeed>();
         services.AddSingleton<ToolImages>();
         services.AddSingleton<WorkspaceTools>();
         services.AddSingleton<TerminalLauncher>();
