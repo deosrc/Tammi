@@ -9,9 +9,11 @@ using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Ssh;
 using Deosrc.Tammi.Core.Terminals;
 using Deosrc.Tammi.Core.Tools;
+using Deosrc.Tammi.Core.Usage;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.Core.Workspaces;
 using Deosrc.Tammi.UI.Components;
+using Deosrc.Tammi.UI.Layout;
 using Deosrc.Tammi.UI.Logging;
 using Deosrc.Tammi.UI.Workspaces;
 using Microsoft.Extensions.Logging;
@@ -59,6 +61,11 @@ public static class ServiceCollectionExtensions
             services.GetRequiredService<IPtyService>(),
             services.GetRequiredService<AgentHookServer>()));
         services.AddSingleton<SupportedAgentChecker>();
+        services.AddSingleton<IAgentUsageProvider>(services => new ClaudeUsageProvider(
+            new HttpClient { Timeout = IntegrationRequestTimeout },
+            time: services.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<AgentUsageMonitor>();
+        services.AddSingleton<UsageTabState>();
         services.AddSingleton<ToolImages>();
         services.AddSingleton<WorkspaceTools>();
         services.AddSingleton<TerminalLauncher>();

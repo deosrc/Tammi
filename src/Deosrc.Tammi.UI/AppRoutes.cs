@@ -10,6 +10,11 @@ public static class AppRoutes
     public const string Settings = "settings";
 
     /// <summary>
+    /// The AI usage page.
+    /// </summary>
+    public const string Usage = "usage";
+
+    /// <summary>
     /// The settings sections, in the order they're listed. <see cref="Settings"/> shows the first one.
     /// </summary>
     public static IReadOnlyList<SettingsSection> SettingsSections { get; } =

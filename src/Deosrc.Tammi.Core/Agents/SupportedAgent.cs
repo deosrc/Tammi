@@ -12,6 +12,11 @@ namespace Deosrc.Tammi.Core.Agents;
 public sealed record SupportedAgent(AgentDefinition Definition, IReadOnlyList<string> VersionArguments, string InstallUrl)
 {
     /// <summary>
+    /// The name of <see cref="ClaudeCode"/>.
+    /// </summary>
+    public const string ClaudeCodeName = "Claude Code";
+
+    /// <summary>
     /// Claude Code.
     /// </summary>
     public static SupportedAgent ClaudeCode { get; } =
