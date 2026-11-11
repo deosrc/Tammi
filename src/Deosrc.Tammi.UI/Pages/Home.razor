@@ -28,6 +28,10 @@
     {
         var general = SettingsStore.Current.General;
         <div id="home-layout-panel" class="home-layout-panel">
+            <button type="button" class="tab-close home-layout-close" title="Close View Options"
+                    aria-label="Close View Options" @onclick="() => _layoutOpen = false">
+                &times;
+            </button>
             <div class="settings-options">
                 <label for="home-tab-by">Tab by</label>
                 <select id="home-tab-by" value="@general.HomeTabBy"

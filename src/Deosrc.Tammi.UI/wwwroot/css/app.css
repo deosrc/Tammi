@@ -3967,3 +3967,13 @@ label.task-choice {
 .sortable-item button {
   cursor: pointer;
 }
+
+.home-layout-panel {
+  position: relative;
+}
+
+.home-layout-close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+}
