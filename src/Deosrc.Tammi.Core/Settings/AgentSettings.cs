@@ -28,6 +28,11 @@ public sealed record AgentSettings
     public InitialPromptStyle InitialPromptStyle { get; init; } = InitialPromptStyle.Prefill;
 
     /// <summary>
+    /// The name of the agent whose usage the Usage tab shows, or <c>null</c> to use the first one that can be read.
+    /// </summary>
+    public string? UsageAgentName { get; init; }
+
+    /// <summary>
     /// Every Agent Definition that can be started, in the order they're offered: the Supported Agents (see
     /// <see cref="SupportedAgent.All"/>), then the Custom Agents.
     /// </summary>
@@ -75,10 +80,11 @@ public sealed record AgentSettings
         other is not null
         && InitialPromptTemplate == other.InitialPromptTemplate
         && InitialPromptStyle == other.InitialPromptStyle
+        && UsageAgentName == other.UsageAgentName
         && (CustomDefinitions is null || other.CustomDefinitions is null
             ? CustomDefinitions == other.CustomDefinitions
             : CustomDefinitions.SequenceEqual(other.CustomDefinitions));
 
     /// <inheritdoc />
-    public override int GetHashCode() => HashCode.Combine(InitialPromptTemplate, InitialPromptStyle, CustomDefinitions?.Count);
+    public override int GetHashCode() => HashCode.Combine(InitialPromptTemplate, InitialPromptStyle, CustomDefinitions?.Count, UsageAgentName);
 }

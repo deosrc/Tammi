@@ -1,0 +1,106 @@
+@page "/usage"
+@implements IDisposable
+@using Deosrc.Tammi.Core.Usage
+@using Deosrc.Tammi.UI.Components
+@inject AgentUsageMonitor Monitor
+@inject Deosrc.Tammi.UI.Layout.UsageTabState TabState
+
+<div class="page">
+    <h1>AI usage</h1>
+
+    <div class="usage-toolbar">
+        <label for="usage-agent">Show in the footer</label>
+        <select id="usage-agent" value="@Monitor.TabAgentName" @onchange="OnTabAgentChanged">
+            @foreach (var name in Monitor.AgentNames)
+            {
+                <option value="@name">@name</option>
+            }
+        </select>
+        <button type="button" class="button" @onclick="RefreshAllAsync" disabled="@_refreshing">Refresh</button>
+    </div>
+
+    @foreach (var name in Monitor.AgentNames)
+    {
+        var state = Monitor.Get(name);
+        <section class="usage-agent" aria-labelledby="usage-heading-@name.Replace(' ', '-')">
+            <div class="usage-agent-header">
+                <h2 id="usage-heading-@name.Replace(' ', '-')">@name</h2>
+                @if (state.Usage is { } updated)
+                {
+                    <span class="usage-limit-reset">Updated @updated.FetchedAt.ToLocalTime().ToString("t")</span>
+                }
+            </div>
+            @if (state.Error is not null)
+            {
+                <p class="warning" role="alert">@state.Error</p>
+            }
+            @if (state.Usage is { } usage)
+            {
+                @if (usage.Limits.Count == 0)
+                {
+                    <p>No usage limits were reported.</p>
+                }
+                <ul class="usage-limits">
+                    @foreach (var limit in usage.Limits)
+                    {
+                        <li>
+                            <div class="usage-limit-header">
+                                <span>@limit.Description</span>
+                                <span>@limit.PercentUsed.ToString("0")% used</span>
+                            </div>
+                            <UsageBar Limit="limit" Class="usage-bar-large" />
+                            @if (limit.ResetsAt is { } resetsAt)
+                            {
+                                <div class="usage-limit-reset">Resets @ResetText(resetsAt)</div>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+            else if (state.Error is null)
+            {
+                <p>Reading usage…</p>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private bool _refreshing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Also covers arriving here by address rather than from the footer.
+        TabState.Open();
+        Monitor.Changed += OnChanged;
+        await RefreshAllAsync(force: false);
+    }
+
+    public void Dispose() => Monitor.Changed -= OnChanged;
+
+    private Task RefreshAllAsync() => RefreshAllAsync(force: true);
+
+    private async Task RefreshAllAsync(bool force)
+    {
+        _refreshing = true;
+        try
+        {
+            await Task.WhenAll(Monitor.AgentNames.Select(name => Monitor.RefreshAsync(name, force)));
+        }
+        finally
+        {
+            _refreshing = false;
+        }
+    }
+
+    private Task OnTabAgentChanged(ChangeEventArgs e) =>
+        e.Value is string name ? Monitor.SetTabAgentAsync(name) : Task.CompletedTask;
+
+    private static string ResetText(DateTimeOffset resetsAt)
+    {
+        var relative = UsageText.TimeUntil(resetsAt, DateTimeOffset.UtcNow);
+        return (relative == "now" ? relative : "in " + relative) + $" ({resetsAt.ToLocalTime():ddd HH:mm})";
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+}
