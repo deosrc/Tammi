@@ -48,10 +48,17 @@ public sealed record GeneralSettings
     public LogLevel LogLevel { get; init; } = LogLevelSwitch.DefaultLevel;
 
     /// <summary>
-    /// How Home groups workspaces.
+    /// What Home has a tab for each of.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter<HomeLayout>))]
-    public HomeLayout HomeLayout { get; init; } = HomeLayout.TabBySourceGroupByStatus;
+    [JsonConverter(typeof(JsonStringEnumConverter<HomeGrouping>))]
+    public HomeGrouping HomeTabBy { get; init; } = HomeGrouping.Status;
+
+    /// <summary>
+    /// What Home has a group for each of, in a tab. It can't be the same as <see cref="HomeTabBy"/>, unless neither
+    /// splits workspaces.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<HomeGrouping>))]
+    public HomeGrouping HomeGroupBy { get; init; } = HomeGrouping.Source;
 
     /// <summary>
     /// The order Home lists workspace statuses in.
@@ -63,7 +70,10 @@ public sealed record GeneralSettings
     /// </summary>
     public GeneralSettings Normalize() => this with
     {
-        HomeLayout = Enum.IsDefined(HomeLayout) ? HomeLayout : HomeLayout.TabBySourceGroupByStatus,
+        HomeTabBy = Enum.IsDefined(HomeTabBy) ? HomeTabBy : HomeGrouping.Status,
+        HomeGroupBy = !Enum.IsDefined(HomeGroupBy) ? HomeGrouping.Source
+            : HomeGroupBy == HomeTabBy && HomeGroupBy != HomeGrouping.None ? HomeGrouping.None
+            : HomeGroupBy,
         HomeStatusOrder = WorkspaceStatuses.NormalizeOrder(HomeStatusOrder),
         LogLevel = Enum.IsDefined(LogLevel) && LogLevel != LogLevel.None ? LogLevel : LogLevelSwitch.DefaultLevel,
         WorkspaceFolderNameFormat = (WorkspaceFolderNameFormat ?? new WorkspaceFolderNameFormat()).Normalize(),
@@ -82,12 +92,13 @@ public sealed record GeneralSettings
         && WorkspaceFolderNameFormat == other.WorkspaceFolderNameFormat
         && WorkspaceNameTemplate == other.WorkspaceNameTemplate
         && LogLevel == other.LogLevel
-        && HomeLayout == other.HomeLayout
+        && HomeTabBy == other.HomeTabBy
+        && HomeGroupBy == other.HomeGroupBy
         && HomeStatusOrder.SequenceEqual(other.HomeStatusOrder);
 
     /// <inheritdoc />
     public override int GetHashCode() =>
         HashCode.Combine(
-            DefaultWorkspaceParentFolder, WorkspaceFolderNameFormat, WorkspaceNameTemplate, LogLevel, HomeLayout,
+            DefaultWorkspaceParentFolder, WorkspaceFolderNameFormat, WorkspaceNameTemplate, LogLevel, HomeTabBy, HomeGroupBy,
             HomeStatusOrder.Count);
 }

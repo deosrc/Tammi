@@ -269,9 +269,10 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - **Agent status** for the workspace's AI agents (see [agent states](#agents))
   - **Pull Requests** from each repository's workspace branch, as the same badges as the Workspace View's
     [Repositories section](#workspace-view-tab)
-- **Layout:** Home groups workspaces by **source** and **status**, in one of two styles chosen with the View Options button
-  on Home: tabs by source with groups by status, or tabs by status with groups by source. Empty tabs and groups aren't
-  shown.
+- **Layout:** Home can split workspaces into tabs and into groups within a tab, each by **source** or **status**, or not
+  at all (None). They are chosen with the View Options button on Home, and can't both use the same split (unless both are
+  None). The default is tabs by status, groups by source. Empty tabs and groups aren't shown. With no tabs, or no
+  groups, their controls and headings are left out.
   - A workspace's **status** is its overall state, not a Task Status: **Requires Attention** (a Pull Request has failed
     checks, an agent needs input or failed, or the workspace can't be read), **Done** (every Pull Request is merged, so
     the workspace just needs deleting; its card offers a button for that), **In Review** (Pull Requests are open and

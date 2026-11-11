@@ -28,12 +28,29 @@
     {
         var general = SettingsStore.Current.General;
         <div id="home-layout-panel" class="home-layout-panel">
-            <label for="home-layout">Layout</label>
-            <select id="home-layout" value="@general.HomeLayout"
-                    @onchange="e => UpdateGeneralAsync(g => g with { HomeLayout = Enum.TryParse(e.Value?.ToString(), out HomeLayout layout) ? layout : g.HomeLayout })">
-                <option value="@HomeLayout.TabBySourceGroupByStatus">Tab by source, group by status</option>
-                <option value="@HomeLayout.TabByStatusGroupBySource">Tab by status, group by source</option>
-            </select>
+            <div class="settings-options">
+                <label for="home-tab-by">Tab by</label>
+                <select id="home-tab-by" value="@general.HomeTabBy"
+                        @onchange="e => UpdateGeneralAsync(g => g with { HomeTabBy = ParseGrouping(e, g.HomeTabBy) })">
+                    @foreach (var option in Groupings)
+                    {
+                        <option value="@option" disabled="@(option != HomeGrouping.None && option == general.HomeGroupBy)">
+                            @GroupingLabel(option)
+                        </option>
+                    }
+                </select>
+
+                <label for="home-group-by">Group by</label>
+                <select id="home-group-by" value="@general.HomeGroupBy"
+                        @onchange="e => UpdateGeneralAsync(g => g with { HomeGroupBy = ParseGrouping(e, g.HomeGroupBy) })">
+                    @foreach (var option in Groupings)
+                    {
+                        <option value="@option" disabled="@(option != HomeGrouping.None && option == general.HomeTabBy)">
+                            @GroupingLabel(option)
+                        </option>
+                    }
+                </select>
+            </div>
             <h2 class="settings-field-title">Status order</h2>
             <ol class="settings-list">
                 @for (var i = 0; i < general.HomeStatusOrder.Count; i++)
@@ -71,23 +88,29 @@
     }
     else
     {
-        var layout = SettingsStore.Current.General.HomeLayout;
-        var tabs = Tabs(layout);
+        var general = SettingsStore.Current.General;
+        var tabs = Split(Entries(), general.HomeTabBy);
         var current = tabs.FirstOrDefault(tab => tab.Key == _selectedTab) ?? tabs[0];
-        <div class="home-tabs" role="tablist" aria-label="@(layout == HomeLayout.TabBySourceGroupByStatus ? "Sources" : "Statuses")">
-            @foreach (var tab in tabs)
-            {
-                <button type="button" role="tab" class="home-tab-button @(tab == current ? "active" : null)"
-                        aria-selected="@(tab == current ? "true" : "false")" @key="tab.Key"
-                        @onclick="() => _selectedTab = tab.Key">
-                    @tab.Key <span class="home-tab-count">@tab.Entries.Count</span>
-                </button>
-            }
-        </div>
-        @foreach (var group in Groups(current, layout))
+        @if (general.HomeTabBy != HomeGrouping.None)
+        {
+            <div class="home-tabs" role="tablist" aria-label="@GroupingLabel(general.HomeTabBy)">
+                @foreach (var tab in tabs)
+                {
+                    <button type="button" role="tab" class="home-tab-button @(tab == current ? "active" : null)"
+                            aria-selected="@(tab == current ? "true" : "false")" @key="tab.Key"
+                            @onclick="() => _selectedTab = tab.Key">
+                        @tab.Key <span class="home-tab-count">@tab.Entries.Count</span>
+                    </button>
+                }
+            </div>
+        }
+        @foreach (var group in Split(current.Entries, general.HomeGroupBy))
         {
             <section class="home-group" @key="group.Key">
-                <h2 class="home-group-title">@group.Key <span class="home-tab-count">@group.Entries.Count</span></h2>
+                @if (general.HomeGroupBy != HomeGrouping.None)
+                {
+                    <h2 class="home-group-title">@group.Key <span class="home-tab-count">@group.Entries.Count</span></h2>
+                }
                 <ul class="workspace-list">
                     @foreach (var entry in group.Entries)
                     {
@@ -331,18 +354,25 @@
             .Where(bucket => bucket.Entries.Count > 0),
     ];
 
-    private IReadOnlyList<Bucket> Tabs(HomeLayout layout)
-    {
-        var entries = Entries();
-        return layout == HomeLayout.TabBySourceGroupByStatus
-            ? BySource(entries)
-            : ByStatus(entries, SettingsStore.Current.General.HomeStatusOrder);
-    }
+    private static readonly HomeGrouping[] Groupings = [HomeGrouping.None, HomeGrouping.Source, HomeGrouping.Status];
 
-    private IReadOnlyList<Bucket> Groups(Bucket tab, HomeLayout layout) =>
-        layout == HomeLayout.TabBySourceGroupByStatus
-            ? ByStatus(tab.Entries, SettingsStore.Current.General.HomeStatusOrder)
-            : BySource(tab.Entries);
+    private static string GroupingLabel(HomeGrouping grouping) => grouping switch
+    {
+        HomeGrouping.Source => "Source",
+        HomeGrouping.Status => "Status",
+        _ => "None",
+    };
+
+    private static HomeGrouping ParseGrouping(ChangeEventArgs e, HomeGrouping current) =>
+        Enum.TryParse(e.Value?.ToString(), out HomeGrouping value) ? value : current;
+
+    // Splits entries into tabs or groups. With None, they are all in one bucket, which isn't shown.
+    private IReadOnlyList<Bucket> Split(IReadOnlyList<Entry> entries, HomeGrouping grouping) => grouping switch
+    {
+        HomeGrouping.Source => BySource(entries),
+        HomeGrouping.Status => ByStatus(entries, SettingsStore.Current.General.HomeStatusOrder),
+        _ => [new Bucket("", entries)],
+    };
 
     private async Task UpdateGeneralAsync(Func<GeneralSettings, GeneralSettings> update)
     {
