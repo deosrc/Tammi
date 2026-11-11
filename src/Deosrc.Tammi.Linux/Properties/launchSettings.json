@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Linux": {
+      "commandName": "Project",
+      "hotReloadEnabled": true
+    }
+  }
+}
