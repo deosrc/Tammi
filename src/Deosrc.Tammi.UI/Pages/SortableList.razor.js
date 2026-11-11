@@ -1,4 +1,4 @@
-// Drag and drop for the status order on Home. Items (`li`) are dragged from anywhere but their buttons. Only classes are
+// Drag and drop for the lists on Home. Items (`li`) are dragged from anywhere but their buttons. Only classes are
 // changed here, so Blazor doesn't need to render while the drag is in progress. When an item is dropped,
 // `dotNet.OnDropped(from, to)` is told the indexes.
 export function attach(list, dotNet) {

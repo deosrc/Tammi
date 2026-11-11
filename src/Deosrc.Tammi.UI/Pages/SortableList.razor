@@ -1,19 +1,18 @@
 @implements IAsyncDisposable
-@using Deosrc.Tammi.Core.Workspaces
 @inject IJSRuntime JS
 
-@* The workspace statuses in order. An item is moved by dragging it from anywhere but its buttons, or with the buttons
+@* A list of items in order. An item is moved by dragging it from anywhere but its buttons, or with the buttons
    at its end. Dragging is handled in script, so the list isn't re-rendered while a drag is in progress. *@
-<ol class="sortable-list" aria-label="Status order" @ref="_list">
-    @for (var i = 0; i < Order.Count; i++)
+<ol class="sortable-list" aria-label="@Label" @ref="_list">
+    @for (var i = 0; i < Items.Count; i++)
     {
         var index = i;
-        <li class="sortable-item" draggable="true" @key="Order[index]">
+        <li class="sortable-item" draggable="true" @key="Items[index]">
             <span class="sortable-handle" aria-hidden="true">⋮⋮</span>
-            <span class="sortable-label">@WorkspaceStatuses.Label(Order[index])</span>
+            <span class="sortable-label">@Items[index]</span>
             <button type="button" class="button button-secondary" disabled="@(index == 0)"
                     aria-label="Move up" @onclick="() => OnMove.InvokeAsync((index, index - 1))">↑</button>
-            <button type="button" class="button button-secondary" disabled="@(index == Order.Count - 1)"
+            <button type="button" class="button button-secondary" disabled="@(index == Items.Count - 1)"
                     aria-label="Move down" @onclick="() => OnMove.InvokeAsync((index, index + 1))">↓</button>
         </li>
     }
@@ -23,16 +22,22 @@
     private ElementReference _list;
     private IJSObjectReference? _module;
     private IJSObjectReference? _script;
-    private DotNetObjectReference<SortableStatusList>? _self;
+    private DotNetObjectReference<SortableList>? _self;
 
     /// <summary>
-    /// The statuses, in order.
+    /// The items' text, in order. Each is different.
     /// </summary>
     [Parameter, EditorRequired]
-    public IReadOnlyList<WorkspaceStatus> Order { get; set; } = [];
+    public IReadOnlyList<string> Items { get; set; } = [];
 
     /// <summary>
-    /// Called with the index of a status and the index it is to move to.
+    /// What the list is, for screen readers.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    /// <summary>
+    /// Called with the index of an item and the index it is to move to.
     /// </summary>
     [Parameter, EditorRequired]
     public EventCallback<(int From, int To)> OnMove { get; set; }
@@ -48,7 +53,7 @@
         {
             _module = await JS.InvokeAsync<IJSObjectReference>(
                 "import",
-                "./_content/Deosrc.Tammi.UI/Pages/SortableStatusList.razor.js");
+                "./_content/Deosrc.Tammi.UI/Pages/SortableList.razor.js");
             _script = await _module.InvokeAsync<IJSObjectReference>(
                 "attach", _list, _self ??= DotNetObjectReference.Create(this));
         }

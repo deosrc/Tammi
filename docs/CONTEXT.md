@@ -280,7 +280,10 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     Pull Requests that were closed) and **Planning** (no changes). The first that applies is used, in that order.
   - A workspace's **source** is where its first task comes from: a GitHub issue's repository, or a JIRA issue's project
     (with its integration). A workspace with no tasks is under "No task".
-  - The order of statuses is configurable with the View Options button.
+  - The order of statuses is configurable with the View Options button, by dragging them or with buttons.
+  - Sources are ordered alphabetically (workspaces with no task last) unless the user chooses a **custom** order in View
+    Options, which they set the same way. Sources they haven't placed follow the others, alphabetically.
+  - View Options shows the status order beside the other options when the window is wide enough.
   - Clicking a workspace's card opens it. There is no Open button.
 - Each workspace shows a compact summary line (e.g. "2/3 repos changed · 1 agent needs input"). It can
   be expanded to show a breakdown for each repository and agent.

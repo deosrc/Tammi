@@ -61,6 +61,17 @@ public sealed record GeneralSettings
     public HomeGrouping HomeGroupBy { get; init; } = HomeGrouping.Source;
 
     /// <summary>
+    /// How Home orders sources.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<HomeSourceOrder>))]
+    public HomeSourceOrder HomeSourceOrder { get; init; } = HomeSourceOrder.Alphabetical;
+
+    /// <summary>
+    /// The order of sources when <see cref="HomeSourceOrder"/> is <see cref="HomeSourceOrder.Custom"/>.
+    /// </summary>
+    public IReadOnlyList<string> HomeCustomSourceOrder { get; init; } = [];
+
+    /// <summary>
     /// The order Home lists workspace statuses in.
     /// </summary>
     public IReadOnlyList<WorkspaceStatus> HomeStatusOrder { get; init; } = WorkspaceStatuses.DefaultOrder;
@@ -74,6 +85,8 @@ public sealed record GeneralSettings
         HomeGroupBy = !Enum.IsDefined(HomeGroupBy) ? HomeGrouping.Source
             : HomeGroupBy == HomeTabBy && HomeGroupBy != HomeGrouping.None ? HomeGrouping.None
             : HomeGroupBy,
+        HomeSourceOrder = Enum.IsDefined(HomeSourceOrder) ? HomeSourceOrder : HomeSourceOrder.Alphabetical,
+        HomeCustomSourceOrder = [.. (HomeCustomSourceOrder ?? []).Where(source => !string.IsNullOrWhiteSpace(source)).Distinct()],
         HomeStatusOrder = WorkspaceStatuses.NormalizeOrder(HomeStatusOrder),
         LogLevel = Enum.IsDefined(LogLevel) && LogLevel != LogLevel.None ? LogLevel : LogLevelSwitch.DefaultLevel,
         WorkspaceFolderNameFormat = (WorkspaceFolderNameFormat ?? new WorkspaceFolderNameFormat()).Normalize(),
@@ -94,11 +107,13 @@ public sealed record GeneralSettings
         && LogLevel == other.LogLevel
         && HomeTabBy == other.HomeTabBy
         && HomeGroupBy == other.HomeGroupBy
+        && HomeSourceOrder == other.HomeSourceOrder
+        && HomeCustomSourceOrder.SequenceEqual(other.HomeCustomSourceOrder)
         && HomeStatusOrder.SequenceEqual(other.HomeStatusOrder);
 
     /// <inheritdoc />
     public override int GetHashCode() =>
         HashCode.Combine(
-            DefaultWorkspaceParentFolder, WorkspaceFolderNameFormat, WorkspaceNameTemplate, LogLevel, HomeTabBy, HomeGroupBy,
-            HomeStatusOrder.Count);
+            HashCode.Combine(DefaultWorkspaceParentFolder, WorkspaceFolderNameFormat, WorkspaceNameTemplate, LogLevel),
+            HomeTabBy, HomeGroupBy, HomeSourceOrder, HomeCustomSourceOrder.Count, HomeStatusOrder.Count);
 }

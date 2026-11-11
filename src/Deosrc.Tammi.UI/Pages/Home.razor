@@ -32,31 +32,57 @@
                     aria-label="Close View Options" @onclick="() => _layoutOpen = false">
                 &times;
             </button>
-            <div class="settings-options">
-                <label for="home-tab-by">Tab by</label>
-                <select id="home-tab-by" value="@general.HomeTabBy"
-                        @onchange="e => UpdateGeneralAsync(g => g with { HomeTabBy = ParseGrouping(e, g.HomeTabBy) })">
-                    @foreach (var option in Groupings)
+            <div class="home-layout-body">
+                <div class="home-layout-main">
+                    <div class="settings-options">
+                        <label for="home-tab-by">Tab by</label>
+                        <select id="home-tab-by" value="@general.HomeTabBy"
+                                @onchange="e => UpdateGeneralAsync(g => g with { HomeTabBy = ParseGrouping(e, g.HomeTabBy) })">
+                            @foreach (var option in Groupings)
+                            {
+                                <option value="@option" disabled="@(option != HomeGrouping.None && option == general.HomeGroupBy)">
+                                    @GroupingLabel(option)
+                                </option>
+                            }
+                        </select>
+                        <label for="home-group-by">Group by</label>
+                        <select id="home-group-by" value="@general.HomeGroupBy"
+                                @onchange="e => UpdateGeneralAsync(g => g with { HomeGroupBy = ParseGrouping(e, g.HomeGroupBy) })">
+                            @foreach (var option in Groupings)
+                            {
+                                <option value="@option" disabled="@(option != HomeGrouping.None && option == general.HomeTabBy)">
+                                    @GroupingLabel(option)
+                                </option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="home-layout-side home-layout-status">
+                    <h2 class="settings-field-title">Status order</h2>
+                    <SortableList Items="StatusLabels(general.HomeStatusOrder)" Label="Status order"
+                                  OnMove="move => MoveStatusToAsync(move.From, move.To)" />
+                </div>
+                <div class="home-layout-side home-layout-sources">
+                    <h2 class="settings-field-title">Source order</h2>
+                    <select id="home-source-order" aria-label="Source order" value="@general.HomeSourceOrder"
+                            @onchange="e => UpdateGeneralAsync(g => g with { HomeSourceOrder = Enum.TryParse(e.Value?.ToString(), out HomeSourceOrder order) ? order : g.HomeSourceOrder })">
+                        <option value="@HomeSourceOrder.Alphabetical">Alphabetical</option>
+                        <option value="@HomeSourceOrder.Custom">Custom</option>
+                    </select>
+                    @if (general.HomeSourceOrder == HomeSourceOrder.Custom)
                     {
-                        <option value="@option" disabled="@(option != HomeGrouping.None && option == general.HomeGroupBy)">
-                            @GroupingLabel(option)
-                        </option>
+                        @if (CustomSources().Count == 0)
+                        {
+                            <p class="placeholder">No sources yet.</p>
+                        }
+                        else
+                        {
+                            <SortableList Items="CustomSources()" Label="Source order"
+                                          OnMove="move => MoveSourceAsync(move.From, move.To)" />
+                        }
                     }
-                </select>
-
-                <label for="home-group-by">Group by</label>
-                <select id="home-group-by" value="@general.HomeGroupBy"
-                        @onchange="e => UpdateGeneralAsync(g => g with { HomeGroupBy = ParseGrouping(e, g.HomeGroupBy) })">
-                    @foreach (var option in Groupings)
-                    {
-                        <option value="@option" disabled="@(option != HomeGrouping.None && option == general.HomeTabBy)">
-                            @GroupingLabel(option)
-                        </option>
-                    }
-                </select>
+                </div>
             </div>
-            <h2 class="settings-field-title">Status order</h2>
-            <SortableStatusList Order="general.HomeStatusOrder" OnMove="move => MoveStatusToAsync(move.From, move.To)" />
             @if (_settingsError is not null)
             {
                 <p class="error">@_settingsError</p>
@@ -336,13 +362,63 @@
     // Until its git status is read, a workspace is shown as it would be with no changes.
     private static WorkspaceGitSummary EmptySummary(Core.Workspaces.Workspace workspace) => new([]);
 
-    private static IReadOnlyList<Bucket> BySource(IEnumerable<Entry> entries) =>
-    [
-        .. entries.GroupBy(entry => entry.Source)
-            .OrderBy(group => group.Key == WorkspaceSources.NoTasks)
-            .ThenBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase)
-            .Select(group => new Bucket(group.Key, [.. group])),
-    ];
+    // Sources in the custom order come first, in it. The others, or all of them when it isn't custom, are
+    // alphabetical, with workspaces that have no task last.
+    private IReadOnlyList<Bucket> BySource(IEnumerable<Entry> entries)
+    {
+        var general = SettingsStore.Current.General;
+        IReadOnlyList<string> custom = general.HomeSourceOrder == HomeSourceOrder.Custom
+            ? general.HomeCustomSourceOrder
+            : [];
+        int Position(string source)
+        {
+            var index = IndexOf(custom, source);
+            return index < 0 ? int.MaxValue : index;
+        }
+
+        return
+        [
+            .. entries.GroupBy(entry => entry.Source)
+                .OrderBy(group => Position(group.Key))
+                .ThenBy(group => group.Key == WorkspaceSources.NoTasks)
+                .ThenBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase)
+                .Select(group => new Bucket(group.Key, [.. group])),
+        ];
+    }
+
+    private static int IndexOf(IReadOnlyList<string> list, string value)
+    {
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (list[i] == value)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    // The sources the custom order is shown and changed with: every source there is, in the order they'd be listed.
+    private IReadOnlyList<string> CustomSources() =>
+        _workspaces is null ? [] : [.. BySource(Entries()).Select(bucket => bucket.Key)];
+
+    private Task MoveSourceAsync(int from, int to)
+    {
+        List<string> order = [.. CustomSources()];
+        if (from < 0 || from >= order.Count || to < 0 || to >= order.Count || from == to)
+        {
+            return Task.CompletedTask;
+        }
+
+        var source = order[from];
+        order.RemoveAt(from);
+        order.Insert(to, source);
+        return UpdateGeneralAsync(general => general with { HomeCustomSourceOrder = order });
+    }
+
+    private static IReadOnlyList<string> StatusLabels(IReadOnlyList<WorkspaceStatus> order) =>
+        [.. order.Select(WorkspaceStatuses.Label)];
 
     private static IReadOnlyList<Bucket> ByStatus(IEnumerable<Entry> entries, IReadOnlyList<WorkspaceStatus> order) =>
     [
