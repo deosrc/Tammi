@@ -1,0 +1,140 @@
+// A proof-of-concept visualiser. Workspaces are glowing nodes, grouped around their task source. Each agent orbits its
+// workspace and throws off particles: lots when it's working, a slow pulse when it needs the user, a few when idle.
+// Each frame fades the last one instead of clearing it, which leaves the trails.
+
+const states = {
+  Working: { rate: 6, speed: 1.6, pulse: false },
+  NeedsInput: { rate: 0.5, speed: 0.4, pulse: true },
+  Error: { rate: 2, speed: 2.2, pulse: false },
+  Running: { rate: 0.3, speed: 0.3, pulse: false },
+  Idle: { rate: 0.2, speed: 0.25, pulse: false },
+  Exited: { rate: 0.05, speed: 0.15, pulse: false },
+};
+
+export function create(canvas) {
+  const context = canvas.getContext("2d");
+  const style = getComputedStyle(document.documentElement);
+  const css = (name, fallback) => style.getPropertyValue(name).trim() || fallback;
+  const colours = {
+    agent: css("--color-claude", "#d97757"),
+    jira: css("--color-jira", "#4c9aff"),
+    other: css("--color-accent", "#8a6cf0"),
+    NeedsInput: css("--color-warning", "#d29922"),
+    Error: css("--color-error", "#ff7b72"),
+  };
+
+  let workspaces = [];
+  let particles = [];
+  let width = 0;
+  let height = 0;
+  let frame = 0;
+  let time = 0;
+  let last = performance.now();
+
+  const resize = () => {
+    const ratio = window.devicePixelRatio || 1;
+    width = canvas.clientWidth;
+    height = canvas.clientHeight;
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.fillStyle = "#0b0b0d";
+    context.fillRect(0, 0, width, height);
+  };
+  const observer = new ResizeObserver(resize);
+  observer.observe(canvas);
+  resize();
+
+  const sourceColour = (source) => (source === "jira" ? colours.jira : colours.other);
+  const agentColour = (state) => colours[state] ?? colours.agent;
+
+  // Sources sit on a ring, and a source's workspaces on a smaller ring around it, so spacing follows the grouping.
+  const layout = () => {
+    const sources = [...new Set(workspaces.map((w) => w.source))];
+    const radius = Math.min(width, height) * (sources.length > 1 ? 0.28 : 0);
+    sources.forEach((source, s) => {
+      const angle = (s / sources.length) * Math.PI * 2;
+      const cx = width / 2 + Math.cos(angle) * radius;
+      const cy = height / 2 + Math.sin(angle) * radius;
+      const group = workspaces.filter((w) => w.source === source);
+      const inner = group.length > 1 ? Math.min(width, height) * 0.12 : 0;
+      group.forEach((w, i) => {
+        const a = (i / group.length) * Math.PI * 2 + angle;
+        w.tx = cx + Math.cos(a) * inner;
+        w.ty = cy + Math.sin(a) * inner;
+      });
+    });
+  };
+
+  const update = (nodes) => {
+    workspaces = nodes.map((node) => {
+      const old = workspaces.find((w) => w.id === node.id);
+      return { ...node, x: old?.x ?? width / 2, y: old?.y ?? height / 2, tx: 0, ty: 0, phase: old?.phase ?? Math.random() * 6 };
+    });
+    layout();
+  };
+
+  const step = (now) => {
+    frame = requestAnimationFrame(step);
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    time += dt;
+
+    // Fade the last frame rather than clearing it.
+    context.globalCompositeOperation = "source-over";
+    context.fillStyle = "rgba(11, 11, 13, 0.14)";
+    context.fillRect(0, 0, width, height);
+    context.globalCompositeOperation = "lighter";
+
+    for (const w of workspaces) {
+      w.x += (w.tx - w.x) * Math.min(dt * 2, 1);
+      w.y += (w.ty - w.y) * Math.min(dt * 2, 1);
+
+      const glow = context.createRadialGradient(w.x, w.y, 0, w.x, w.y, 40);
+      glow.addColorStop(0, sourceColour(w.source) + "55");
+      glow.addColorStop(1, "transparent");
+      context.fillStyle = glow;
+      context.beginPath();
+      context.arc(w.x, w.y, 40, 0, Math.PI * 2);
+      context.fill();
+
+      w.agents.forEach((agent, i) => {
+        const config = states[agent.state] ?? states.Running;
+        const angle = time * 0.6 * (config.speed + 0.3) + w.phase + (i / w.agents.length) * Math.PI * 2;
+        const ex = w.x + Math.cos(angle) * 34;
+        const ey = w.y + Math.sin(angle) * 34;
+        const colour = agentColour(agent.state);
+        const rate = config.pulse ? config.rate + 6 * Math.max(0, Math.sin(time * 3)) ** 4 : config.rate;
+        for (let n = rate * dt * 60 * 0.5 + Math.random(); n >= 1; n--) {
+          const direction = Math.random() * Math.PI * 2;
+          const speed = (0.3 + Math.random()) * config.speed * 60;
+          particles.push({ x: ex, y: ey, vx: Math.cos(direction) * speed, vy: Math.sin(direction) * speed, life: 1, colour });
+        }
+        context.fillStyle = colour;
+        context.beginPath();
+        context.arc(ex, ey, 2.5, 0, Math.PI * 2);
+        context.fill();
+      });
+    }
+
+    particles = particles.filter((p) => p.life > 0).slice(-4000);
+    for (const p of particles) {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt * 0.7;
+      context.globalAlpha = Math.max(p.life, 0);
+      context.fillStyle = p.colour;
+      context.fillRect(p.x, p.y, 2, 2);
+    }
+    context.globalAlpha = 1;
+  };
+  frame = requestAnimationFrame(step);
+
+  return {
+    update,
+    dispose() {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    },
+  };
+}
