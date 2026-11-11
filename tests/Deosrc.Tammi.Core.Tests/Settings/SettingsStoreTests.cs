@@ -379,7 +379,7 @@ public sealed class SettingsStoreTests : IDisposable
         }, TestContext.Current.CancellationToken);
 
         var agents = JsonNode.Parse(File.ReadAllText(SettingsPath))!["agents"]!.AsObject();
-        Assert.Equal(["customDefinitions", "initialPromptTemplate", "initialPromptStyle"], agents.Select(p => p.Key));
+        Assert.Equal(["customDefinitions", "initialPromptTemplate", "initialPromptStyle", "usageAgentName"], agents.Select(p => p.Key));
         var definition = Assert.Single(agents["customDefinitions"]!.AsArray())!.AsObject();
         Assert.Equal(
             ["name", "command", "arguments", "promptArguments", "sessionIdArguments", "resumeArguments"],

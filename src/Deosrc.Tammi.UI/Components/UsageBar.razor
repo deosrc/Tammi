@@ -1,0 +1,18 @@
+@using Deosrc.Tammi.Core.Usage
+
+<span class="usage-bar @Class" role="progressbar" aria-label="@Limit.Description" aria-valuemin="0" aria-valuemax="100"
+      aria-valuenow="@Math.Round(Limit.PercentUsed)">
+    <span class="usage-bar-fill @(Limit.PercentUsed >= 90 ? "full" : Limit.PercentUsed >= 75 ? "high" : null)"
+          style="width: @(Limit.PercentUsed.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></span>
+</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public AgentUsageLimit Limit { get; set; } = null!;
+
+    /// <summary>
+    /// Extra CSS classes, e.g. <c>usage-bar-large</c>.
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+}

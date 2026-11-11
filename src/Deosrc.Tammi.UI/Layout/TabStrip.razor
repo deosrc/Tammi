@@ -2,6 +2,7 @@
 @using Deosrc.Tammi.Core.Agents
 @inject WorkspaceTabs WorkspaceTabs
 @inject WorkspaceAgents Agents
+@inject UsageTabState UsageTabState
 @inject NavigationManager Navigation
 
 <nav class="tab-strip" aria-label="Main">
@@ -31,6 +32,19 @@
             </button>
         </div>
     }
+
+    @if (UsageTabState.IsOpen)
+    {
+        <div class="tab workspace-tab @ActiveClass(AppRoutes.Usage)">
+            <a class="tab-label" href="@AppRoutes.Usage" title="AI usage" aria-current="@AriaCurrent(AppRoutes.Usage)">
+                <span class="tab-label-text">AI usage</span>
+            </a>
+            <button type="button" class="tab-close" title="Close AI usage" aria-label="Close AI usage"
+                    @onclick="CloseUsage">
+                &times;
+            </button>
+        </div>
+    }
 </nav>
 
 <a class="tab settings-tab @(IsInSettings ? "active" : null)" href="@AppRoutes.Settings" title="Settings"
@@ -50,6 +64,7 @@
         _currentPath = CurrentPath();
         WorkspaceTabs.Changed += OnTabsChanged;
         Agents.Changed += OnAgentsChanged;
+        UsageTabState.Changed += OnTabsChanged;
         Navigation.LocationChanged += OnLocationChanged;
     }
 
@@ -57,6 +72,7 @@
     {
         WorkspaceTabs.Changed -= OnTabsChanged;
         Agents.Changed -= OnAgentsChanged;
+        UsageTabState.Changed -= OnTabsChanged;
         Navigation.LocationChanged -= OnLocationChanged;
     }
 
@@ -67,6 +83,16 @@
         if (wasShown)
         {
             Navigation.NavigateTo(next is null ? AppRoutes.Home : AppRoutes.Workspace(next.WorkspaceId));
+        }
+    }
+
+    private void CloseUsage()
+    {
+        var wasShown = IsCurrent(AppRoutes.Usage);
+        UsageTabState.Close();
+        if (wasShown)
+        {
+            Navigation.NavigateTo(AppRoutes.Home);
         }
     }
 

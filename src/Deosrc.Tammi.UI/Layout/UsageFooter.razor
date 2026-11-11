@@ -1,0 +1,97 @@
+@implements IDisposable
+@using Deosrc.Tammi.Core.Usage
+@using Deosrc.Tammi.UI.Components
+@inject AgentUsageMonitor Monitor
+@inject UsageTabState TabState
+@inject NavigationManager Navigation
+
+@* The chosen agent's limits as small progress bars, shown throughout the app. Clicking opens the usage tab. *@
+<footer class="app-footer">
+    <button type="button" class="usage-footer" title="@Title" aria-label="@Title" @onclick="OpenUsage">
+        <span class="usage-footer-title">USAGE</span>
+        @if (Limits.Count == 0)
+        {
+            <span class="usage-footer-item">
+                <span class="usage-footer-label">@(Error ? "unavailable" : "…")</span>
+            </span>
+        }
+        @foreach (var limit in Limits)
+        {
+            <span class="usage-footer-item">
+                <span class="usage-footer-label">@limit.Name</span>
+                <UsageBar Limit="limit" />
+                <span class="usage-footer-percent">@limit.PercentUsed.ToString("0")%</span>
+                @if (limit.ResetsAt is { } resetsAt)
+                {
+                    <span class="usage-footer-reset">@UsageText.TimeUntil(resetsAt, DateTimeOffset.UtcNow)</span>
+                }
+            </span>
+        }
+    </button>
+</footer>
+
+@code {
+    // The footer redraws every minute so the time until reset counts down. Usage is read every third tick.
+    private static readonly TimeSpan TickInterval = TimeSpan.FromMinutes(1);
+    private const int TicksPerRefresh = 3;
+
+    private CancellationTokenSource? _cts = new();
+
+    private IReadOnlyList<AgentUsageLimit> Limits =>
+        Monitor.TabAgentName is { } name && Monitor.Get(name).Usage is { } usage ? usage.Limits.Take(2).ToList() : [];
+
+    private bool Error => Monitor.TabAgentName is { } name && Monitor.Get(name).Error is not null;
+
+    private string Title => Monitor.TabAgentName is { } name
+        ? $"{name} usage: " + (Limits.Count == 0 ? "unknown" : string.Join(", ", Limits.Select(l => $"{l.Name} {l.PercentUsed:0}%" + (l.ResetsAt is { } r ? $", resets in {UsageText.TimeUntil(r, DateTimeOffset.UtcNow)}" : ""))))
+        : "AI usage";
+
+    protected override void OnInitialized()
+    {
+        Monitor.Changed += OnChanged;
+        _ = PollAsync(_cts!.Token);
+    }
+
+    public void Dispose()
+    {
+        Monitor.Changed -= OnChanged;
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+    }
+
+    private void OpenUsage()
+    {
+        TabState.Open();
+        Navigation.NavigateTo(AppRoutes.Usage);
+    }
+
+    private async Task PollAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TickInterval);
+            for (var tick = 0; ; tick++)
+            {
+                if (tick % TicksPerRefresh == 0 && Monitor.TabAgentName is { } name)
+                {
+                    await Monitor.RefreshAsync(name, cancellationToken: cancellationToken);
+                }
+                else
+                {
+                    await InvokeAsync(StateHasChanged);
+                }
+
+                if (!await timer.WaitForNextTickAsync(cancellationToken))
+                {
+                    break;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+}
