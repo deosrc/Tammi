@@ -2,8 +2,6 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches: [main]
 
 permissions:
   contents: read
@@ -21,6 +19,9 @@ env:
 jobs:
   windows:
     name: Windows
+    # Disabled because it's slow and uses a lot of GitHub Actions minutes. Re-enable it once the build time is down (see
+    # the ticket about the Windows build's slowness).
+    if: false
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
