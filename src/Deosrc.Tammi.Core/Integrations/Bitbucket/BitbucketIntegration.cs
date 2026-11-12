@@ -414,10 +414,11 @@ public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestI
     /// </remarks>
     public async Task<IReadOnlyList<string>?> GetSshKeysAsync(CancellationToken cancellationToken = default)
     {
-        string path = $"user/ssh-keys?pagelen={_options.PageSize.ToString(CultureInfo.InvariantCulture)}";
         var keys = new List<string>();
         try
         {
+            string path = $"{await SshKeysPathAsync(cancellationToken).ConfigureAwait(false)}"
+                + $"?pagelen={_options.PageSize.ToString(CultureInfo.InvariantCulture)}";
             await foreach (BitbucketModels.SshKey key in _api
                 .GetPagesAsync<BitbucketModels.SshKey>(path, allowNotFound: false, cancellationToken)
                 .ConfigureAwait(false))
@@ -447,14 +448,8 @@ public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestI
 
         try
         {
-            BitbucketModels.User user = await GetUserAsync(cancellationToken).ConfigureAwait(false);
-            if (string.IsNullOrEmpty(user.Uuid))
-            {
-                throw new IntegrationException("Bitbucket didn't say which account the token belongs to.");
-            }
-
             await _api.PostAsync(
-                $"users/{Uri.EscapeDataString(user.Uuid)}/ssh-keys",
+                await SshKeysPathAsync(cancellationToken).ConfigureAwait(false),
                 new BitbucketModels.NewSshKey(publicKey.Trim(), title.Trim()),
                 cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Added an SSH key to {Integration}.", Id);
@@ -474,6 +469,17 @@ public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestI
 
             _logger.LogDebug(exception, "The SSH key was already on {Integration}.", Id);
         }
+    }
+
+    /// <summary>
+    /// The path of the user's SSH keys. Bitbucket has no path for the current user's, so it names them by UUID.
+    /// </summary>
+    private async Task<string> SshKeysPathAsync(CancellationToken cancellationToken)
+    {
+        BitbucketModels.User user = await GetUserAsync(cancellationToken).ConfigureAwait(false);
+        return string.IsNullOrEmpty(user.Uuid)
+            ? throw new IntegrationException("Bitbucket didn't say which account the token belongs to.")
+            : $"users/{Uri.EscapeDataString(user.Uuid)}/ssh-keys";
     }
 
     private async Task<bool> HasSshKeyAsync(string publicKey, CancellationToken cancellationToken)

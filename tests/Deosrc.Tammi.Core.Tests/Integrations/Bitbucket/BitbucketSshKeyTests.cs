@@ -11,8 +11,8 @@ namespace Deosrc.Tammi.Core.Tests.Integrations.Bitbucket;
 public sealed class BitbucketSshKeyTests : IDisposable
 {
     private const string Key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC/6GX6scN2SURHcbmVqb+8JHF2L4wHY7OOkS1KoNAYz";
-    private const string KeysPath = "user/ssh-keys?pagelen=100";
     private const string AddPath = "users/%7Bc5a0a8a2-0000-4000-8000-000000000001%7D/ssh-keys";
+    private const string KeysPath = AddPath + "?pagelen=100";
 
     private readonly InMemoryCredentialStore _store = new();
     private readonly FakeBitbucketApi _api = new();
@@ -40,11 +40,12 @@ public sealed class BitbucketSshKeyTests : IDisposable
     public async Task GetSshKeysAsync_ReturnsTheKeys_FromEveryPage()
     {
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-        _api.Respond(KeysPath, $$"""
+        _api.Respond("user", FakeBitbucketApi.Response("user.json"))
+            .Respond(KeysPath, $$"""
             {"values":[{"key":"{{Key}}","label":"laptop"}],
-             "next":"https://api.bitbucket.org/2.0/user/ssh-keys?pagelen=100&page=2"}
+             "next":"https://api.bitbucket.org/2.0/{{AddPath}}?pagelen=100&page=2"}
             """)
-            .Respond("user/ssh-keys?pagelen=100&page=2", """{"values":[{"key":"ssh-rsa AAAAB3NzaC1yc2E="}]}""");
+            .Respond(AddPath + "?pagelen=100&page=2", """{"values":[{"key":"ssh-rsa AAAAB3NzaC1yc2E="}]}""");
 
         IReadOnlyList<string>? keys = await bitbucket.GetSshKeysAsync(CancellationToken);
 
@@ -55,7 +56,8 @@ public sealed class BitbucketSshKeyTests : IDisposable
     public async Task GetSshKeysAsync_TokenLacksTheScope_ReturnsNull()
     {
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-        _api.Respond(KeysPath, FakeBitbucketApi.Response("forbidden.json"), HttpStatusCode.Forbidden);
+        _api.Respond("user", FakeBitbucketApi.Response("user.json"))
+            .Respond(KeysPath, FakeBitbucketApi.Response("forbidden.json"), HttpStatusCode.Forbidden);
 
         Assert.Null(await bitbucket.GetSshKeysAsync(CancellationToken));
     }
@@ -64,7 +66,8 @@ public sealed class BitbucketSshKeyTests : IDisposable
     public async Task GetSshKeysAsync_TokenRejected_ThrowsAuthenticationException()
     {
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-        _api.Respond(KeysPath, "{}", HttpStatusCode.Unauthorized);
+        _api.Respond("user", FakeBitbucketApi.Response("user.json"))
+            .Respond(KeysPath, "{}", HttpStatusCode.Unauthorized);
 
         await Assert.ThrowsAsync<IntegrationAuthenticationException>(() => bitbucket.GetSshKeysAsync(CancellationToken));
     }

@@ -833,7 +833,7 @@ are left to other tools for now.
   passwords aren't supported, because Atlassian is retiring them. When Bitbucket says a scope is missing, Tammi says which scopes it needs.
 - **SSH keys:** to add SSH keys from Settings → Git, the token also needs the scopes `read:ssh-key:bitbucket` and
   `write:ssh-key:bitbucket`, which are optional so existing tokens keep working. Tammi lists the account's keys
-  (`user/ssh-keys`) and adds one (`users/{uuid}/ssh-keys`, the UUID from `user`), labelled with the computer's and key's
+  and adds one at `users/{uuid}/ssh-keys` (Bitbucket has no path for the current user; the UUID comes from `user`), labelled with the computer's and key's
   names. Without the scopes, the key's status is unknown, and adding it opens Bitbucket's SSH keys settings page with
   the public key on the clipboard. A key Bitbucket refuses is counted as added if it's already on the user's account.
   SSH host: `bitbucket.org`.
