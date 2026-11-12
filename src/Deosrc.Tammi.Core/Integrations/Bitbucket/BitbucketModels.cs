@@ -22,7 +22,17 @@ internal static class BitbucketModels
     /// <summary>
     /// The user a token belongs to.
     /// </summary>
-    public sealed record User(string? DisplayName, string? Nickname);
+    public sealed record User(string? DisplayName, string? Nickname, string? Uuid);
+
+    /// <summary>
+    /// An SSH key on the user's account. <paramref name="Key"/> is the public key line, which may end in a comment.
+    /// </summary>
+    public sealed record SshKey(string? Key);
+
+    /// <summary>
+    /// A key to add. <paramref name="Label"/> is the name Bitbucket shows for it.
+    /// </summary>
+    public sealed record NewSshKey(string Key, string Label);
 
     /// <param name="FullName">The workspace and repository slugs, e.g. <c>acme/api</c>.</param>
     public sealed record Repository(string? FullName, string? Name, Links? Links);

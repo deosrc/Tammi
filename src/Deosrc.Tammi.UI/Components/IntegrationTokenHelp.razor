@@ -14,6 +14,11 @@
             <li><code>read:workspace:bitbucket</code></li>
         </ul>
         <p>They let @AppInfo.Name list your repositories, and show pull requests and their builds.</p>
+        <p>To add SSH keys from Settings → Git, also give it these scopes:</p>
+        <ul class="token-scopes">
+            <li><code>read:ssh-key:bitbucket</code></li>
+            <li><code>write:ssh-key:bitbucket</code></li>
+        </ul>
         <p><a href="@BitbucketTokenUrl" @onclick="() => Open.InvokeAsync(BitbucketTokenUrl)"
            @onclick:preventDefault>Create a token</a></p>
     }
