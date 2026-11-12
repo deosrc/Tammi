@@ -32,6 +32,22 @@ public interface ITaskIntegration : IIntegration
     Task<IReadOnlyList<TaskInfo>> SearchTasksAsync(string text, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds tasks that a shorthand refers to, which <see cref="TryParseTaskReference"/> doesn't read because it takes
+    /// the user's own repositories, projects or similar to complete it (e.g. <c>repo#42</c> without the owner,
+    /// <c>repo some words</c>, or <c>42</c> without the project key). Tasks that match the text in other ways are
+    /// still found by <see cref="SearchTasksAsync"/>, so this only adds to those.
+    /// </summary>
+    /// <param name="text">What the user entered.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The tasks the shorthand could mean, or none if <paramref name="text"/> isn't one of its shorthands.</returns>
+    /// <exception cref="IntegrationAuthenticationException">The credentials are missing or were rejected.</exception>
+    /// <exception cref="IntegrationException">The service couldn't be reached or returned an error.</exception>
+    Task<IReadOnlyList<TaskInfo>> FindByShorthandAsync(
+        string text,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<TaskInfo>>([]);
+
+    /// <summary>
     /// Reads a task's link (its web page on this integration's service) or reference in the service's own form
     /// (e.g. <c>owner/repo#42</c> or <c>ABC-123</c>). It doesn't contact the service.
     /// </summary>

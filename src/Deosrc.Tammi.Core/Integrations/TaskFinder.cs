@@ -89,11 +89,27 @@ public sealed class TaskFinder
             return new TaskSearchResults(TaskSearchKind.Reference, [], []) { IsUnrecognisedLink = true };
         }
 
-        return await SearchAllAsync(
+        // Shorthands (e.g. `repo#6`, `repo some words`, `1234`) are found as well as, and listed before, whatever the
+        // text matches: a number or a repository's name can also appear in the titles of other tasks.
+        Task<TaskSearchResults> shorthandSearch = SearchAllAsync(
+            TaskSearchKind.Text,
+            sources.Select(source => (source, (Func<Task<IReadOnlyList<TaskInfo>>>)(
+                () => source.FindByShorthandAsync(text, cancellationToken)))),
+            cancellationToken);
+        Task<TaskSearchResults> textSearch = SearchAllAsync(
             TaskSearchKind.Text,
             sources.Select(source => (source, (Func<Task<IReadOnlyList<TaskInfo>>>)(
                 () => source.SearchTasksAsync(text, cancellationToken)))),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
+        TaskSearchResults shorthand = await shorthandSearch.ConfigureAwait(false);
+        TaskSearchResults search = await textSearch.ConfigureAwait(false);
+
+        var seen = new HashSet<TaskReference>(shorthand.Tasks.Select(task => task.Reference));
+        return search with
+        {
+            Tasks = [.. shorthand.Tasks, .. search.Tasks.Where(task => !seen.Contains(task.Reference))],
+            Errors = [.. search.Errors.UnionBy(shorthand.Errors, error => error.Source)],
+        };
     }
 
     private static bool IsLink(string text) =>

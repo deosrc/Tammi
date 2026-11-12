@@ -37,6 +37,21 @@ public sealed class TaskFinderTests
     }
 
     [Fact]
+    public async Task FindAsync_WithShorthand_ListsItsTasksBeforeTheTextMatches_WithoutRepeatingThem()
+    {
+        TaskInfo shorthand = _github.Add(6, "Shorthand match", Now.AddDays(-5));
+        _github.Shorthands["6"] = [shorthand];
+        _github.Tasks.Clear();
+        _jira.Add(1, "Mentions 6 in the title", Now);
+        _jira.Tasks.Add(shorthand);
+
+        TaskSearchResults results = await _finder.FindAsync("6", new HashSet<TaskReference>(), CancellationToken);
+
+        Assert.Equal(TaskSearchKind.Text, results.Kind);
+        Assert.Equal(["Shorthand match", "Mentions 6 in the title"], results.Tasks.Select(task => task.Title));
+    }
+
+    [Fact]
     public async Task FindAsync_WithNothingEntered_LeavesOutTasksInWorkspaces()
     {
         TaskInfo inWorkspace = _github.Add(1, "In a workspace");

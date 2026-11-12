@@ -42,6 +42,11 @@ internal sealed class FakeTaskSource(string id, string keyPrefix) : ITaskIntegra
     /// </summary>
     public TaskCompletionSource? Gate { get; set; }
 
+    /// <summary>
+    /// The tasks each shorthand the source reads finds. Anything else finds nothing.
+    /// </summary>
+    public Dictionary<string, List<TaskInfo>> Shorthands { get; } = [];
+
     private readonly List<string> _calls = [];
 
     public TaskInfo Add(int number, string title, DateTimeOffset? updated = null)
@@ -57,6 +62,13 @@ internal sealed class FakeTaskSource(string id, string keyPrefix) : ITaskIntegra
 
     public Task<IReadOnlyList<TaskInfo>> SearchTasksAsync(string text, CancellationToken cancellationToken = default) =>
         Answer($"search:{text}", () => [.. Tasks.Where(task => task.Title.Contains(text, StringComparison.Ordinal))]);
+
+    public Task<IReadOnlyList<TaskInfo>> FindByShorthandAsync(
+        string text,
+        CancellationToken cancellationToken = default) =>
+        Shorthands.TryGetValue(text, out List<TaskInfo>? found)
+            ? Answer($"shorthand:{text}", () => [.. found], cancellationToken)
+            : Task.FromResult<IReadOnlyList<TaskInfo>>([]);
 
     public bool TryParseTaskReference(string? text, [NotNullWhen(true)] out string? key)
     {
