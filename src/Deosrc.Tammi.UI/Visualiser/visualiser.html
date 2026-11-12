@@ -116,7 +116,10 @@ function create(canvas) {
   };
 
   const arrange = (size) => {
-    const sources = [...new Set(workspaces.map((w) => w.source))];
+    // In the order Home lists them: alphabetical, with workspaces that have no task last.
+    const noTask = "No task";
+    const sources = [...new Set(workspaces.map((w) => w.source))].sort(
+      (a, b) => (a === noTask) - (b === noTask) || a.localeCompare(b, undefined, { sensitivity: "base" }));
     const groups = sources.map((source) => workspaces.filter((w) => w.source === source));
     const radius = 40 * size;
     // Neighbours are a workspace-width apart, centre to centre.
@@ -189,7 +192,7 @@ function create(canvas) {
           key: w.id, workspaceId: w.id, x: w.x, y: w.y, r: nodeRadius(), colour: statusColour(w.status), title: w.name,
           lines: [
             w.statusLabel,
-            w.source === "local" ? "No task source" : `Source: ${w.source}`,
+            w.source === "No task" ? "No task source" : `Source: ${w.source}`,
             w.agents.length ? `${count}${working ? `, ${working} working` : ""}` : "No agents",
           ],
         };

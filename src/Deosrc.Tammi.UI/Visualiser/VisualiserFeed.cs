@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Integrations;
 using Deosrc.Tammi.Core.Workspaces;
 
 namespace Deosrc.Tammi.UI.Visualiser;
@@ -24,6 +25,7 @@ public sealed class VisualiserFeed
     private readonly WorkspaceAgents _agents;
     private readonly HomeGitStatus _gitStatus;
     private readonly WorkspaceTabs _tabs;
+    private readonly IntegrationRegistry _registry;
     private readonly ConcurrentDictionary<string, WorkspaceStatus> _statuses = new(StringComparer.Ordinal);
     private int _scheduled;
     private string? _last;
@@ -33,12 +35,14 @@ public sealed class VisualiserFeed
         IWorkspaceStore workspaceStore,
         WorkspaceAgents agents,
         HomeGitStatus gitStatus,
-        WorkspaceTabs tabs)
+        WorkspaceTabs tabs,
+        IntegrationRegistry registry)
     {
         _workspaceStore = workspaceStore;
         _agents = agents;
         _gitStatus = gitStatus;
         _tabs = tabs;
+        _registry = registry;
         _workspaceStore.Changed += OnWorkspacesChanged;
         _tabs.Changed += OnWorkspacesChanged;
         _agents.Changed += _ => OnSourceChanged();
@@ -121,7 +125,10 @@ public sealed class VisualiserFeed
                 name = listing.Name,
                 status = status.ToString(),
                 statusLabel = WorkspaceStatuses.Label(status),
-                source = listing.Workspace?.Tasks.FirstOrDefault()?.Source ?? "local",
+                // Grouped as Home groups its workspaces: by repository, JIRA project, or "No task".
+                source = listing.Workspace is { } details
+                    ? WorkspaceSources.Of(details.Tasks, id => _registry.All.FirstOrDefault(i => i.Id == id)?.Name)
+                    : WorkspaceSources.NoTasks,
                 agents = agents
                     .Select(agent => new { id = agent.Name, state = agent.State.ToString() })
                     .ToArray(),
