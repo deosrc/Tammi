@@ -15,7 +15,7 @@
     <Copyright>Copyright © Deosrc</Copyright>
     <RepositoryUrl>https://github.com/deosrc/Tammi</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <Version>0.1.0</Version>
+    <Version>0.0.0-dev</Version>
   </PropertyGroup>
 
 </Project>
