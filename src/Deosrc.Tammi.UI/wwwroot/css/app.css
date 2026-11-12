@@ -1158,8 +1158,42 @@ label.task-choice {
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
-  border: 1px dashed var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+/* The agent's name at the left and when the session was last started at the right. */
+.agent-session-heading,
+.agent-session-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.agent-session-heading {
+  justify-content: space-between;
+}
+
+.agent-session-time {
+  flex: none;
+}
+
+/* The repository the session was started in, at the left, and the buttons at the right. */
+.agent-session-footer {
+  justify-content: space-between;
+}
+
+.agent-session-location {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-session-footer .agent-card-actions {
+  flex: none;
+  margin-left: auto;
 }
 
 .agent-session-name {
@@ -1167,11 +1201,6 @@ label.task-choice {
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.agent-session-folder {
-  color: var(--color-text-muted);
-  font-weight: normal;
 }
 
 /* The side panel's git status section: a card for each repository, with its submodules nested inside it. The card's

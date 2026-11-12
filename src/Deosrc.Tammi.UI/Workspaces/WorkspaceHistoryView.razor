@@ -4,7 +4,8 @@
 @inject WorkspaceAgents Agents
 @inject ISettingsStore SettingsStore
 
-@* The History tab's content: the workspace's past Agent Sessions, newest first, which can be resumed or forgotten. *@
+@* The History tab's content: a card for each of the workspace's past Agent Sessions, newest first, which can be resumed or
+   forgotten. *@
 <div class="workspace-history">
     <h2>History</h2>
     @if (_error is not null)
@@ -30,27 +31,30 @@
             {
                 var cantResume = CantResumeReason(session);
                 <li class="agent-session" @key="session.Id">
-                    <div class="agent-session-name" title="@session.WorkingDirectory">
-                        @session.AgentName
-                        @if (WorkspaceAgents.RepositoryFolderOf(Workspace, session.WorkingDirectory) is { } folder)
-                        {
-                            <span class="agent-session-folder">(@folder)</span>
-                        }
+                    <div class="agent-session-heading">
+                        <div class="agent-session-name" title="@session.WorkingDirectory">@session.AgentName</div>
+                        <div class="agent-session-time">@session.LastStartedAt.ToLocalTime().ToString("g")</div>
                     </div>
-                    <div class="agent-session-time">@session.LastStartedAt.ToLocalTime().ToString("g")</div>
                     @if (cantResume is not null)
                     {
                         <p class="agent-card-detail warning">@cantResume</p>
                     }
-                    <div class="agent-card-actions">
-                        <button type="button" class="button button-small" disabled="@(cantResume is not null || _busy)"
-                                @onclick="() => ResumeAsync(session)">
-                            Resume
-                        </button>
-                        <button type="button" class="button button-secondary button-small" disabled="@_busy"
-                                @onclick="() => ForgetAsync(session)">
-                            Forget
-                        </button>
+                    <div class="agent-session-footer">
+                        @if (WorkspaceAgents.RepositoryFolderOf(Workspace, session.WorkingDirectory) is { } folder)
+                        {
+                            <span class="badge agent-session-location" title="@session.WorkingDirectory">@folder</span>
+                        }
+                        <div class="agent-card-actions">
+                            <button type="button" class="button button-small"
+                                    disabled="@(cantResume is not null || _busy)"
+                                    @onclick="() => ResumeAsync(session)">
+                                Resume
+                            </button>
+                            <button type="button" class="button button-secondary button-small" disabled="@_busy"
+                                    @onclick="() => ForgetAsync(session)">
+                                Forget
+                            </button>
+                        </div>
                     </div>
                 </li>
             }
