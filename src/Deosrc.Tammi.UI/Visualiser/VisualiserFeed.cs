@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Deosrc.Tammi.Core.Agents;
 using Deosrc.Tammi.Core.Workspaces;
@@ -10,7 +11,8 @@ namespace Deosrc.Tammi.UI.Visualiser;
 /// <remarks>
 /// A workspace's status is worked out as Home does, from the git status that's been read so far. This doesn't read any
 /// itself, so a workspace shows as it would with no changes until Home or a tab has read its status. It follows
-/// Home's reads as they happen.
+/// reads as they happen, including those of workspaces that are open in a tab. While a workspace's status is being
+/// read again, e.g. just after its tab opens, it keeps the status it last had.
 /// </remarks>
 public sealed class VisualiserFeed
 {
@@ -21,17 +23,27 @@ public sealed class VisualiserFeed
     private readonly IWorkspaceStore _workspaceStore;
     private readonly WorkspaceAgents _agents;
     private readonly HomeGitStatus _gitStatus;
+    private readonly WorkspaceTabs _tabs;
+    private readonly ConcurrentDictionary<string, WorkspaceStatus> _statuses = new(StringComparer.Ordinal);
     private int _scheduled;
     private string? _last;
+    private IDisposable? _observing;
 
-    public VisualiserFeed(IWorkspaceStore workspaceStore, WorkspaceAgents agents, HomeGitStatus gitStatus)
+    public VisualiserFeed(
+        IWorkspaceStore workspaceStore,
+        WorkspaceAgents agents,
+        HomeGitStatus gitStatus,
+        WorkspaceTabs tabs)
     {
         _workspaceStore = workspaceStore;
         _agents = agents;
         _gitStatus = gitStatus;
-        _workspaceStore.Changed += OnSourceChanged;
+        _tabs = tabs;
+        _workspaceStore.Changed += OnWorkspacesChanged;
+        _tabs.Changed += OnWorkspacesChanged;
         _agents.Changed += _ => OnSourceChanged();
         _gitStatus.Changed += OnSourceChanged;
+        _gitStatus.LiveStarted += OnWorkspacesChanged;
     }
 
     /// <summary>
@@ -49,8 +61,7 @@ public sealed class VisualiserFeed
     {
         try
         {
-            var listings = await _workspaceStore.ListAsync(cancellationToken);
-            Workspace[] workspaces = [.. listings.Select(listing => listing.Workspace).OfType<Workspace>()];
+            var workspaces = await ObserveAsync(cancellationToken);
             if (workspaces.Length > 0)
             {
                 await _gitStatus.RefreshAsync(workspaces, cancellationToken);
@@ -59,6 +70,39 @@ public sealed class VisualiserFeed
         catch (Exception ex) when (ex is OperationCanceledException or IOException)
         {
         }
+    }
+
+    // Workspaces that are open in a tab are live, and their changes only reach HomeGitStatus's Changed event for
+    // workspaces that are observed. Which are live changes as tabs open and close, so who's observed is redone then.
+    private async Task<Workspace[]> ObserveAsync(CancellationToken cancellationToken = default)
+    {
+        var listings = await _workspaceStore.ListAsync(cancellationToken);
+        Workspace[] workspaces = [.. listings.Select(listing => listing.Workspace).OfType<Workspace>()];
+        Interlocked.Exchange(ref _observing, _gitStatus.Observe(workspaces, OnSourceChanged))?.Dispose();
+        return workspaces;
+    }
+
+    // The workspaces' monitors start after their tabs open, so this is also called as they do. It's followed before
+    // the snapshot is looked at again, so a read that finishes in between isn't missed.
+    private void OnWorkspacesChanged()
+    {
+        if (Changed is null)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await ObserveAsync().ConfigureAwait(false);
+            }
+            catch (IOException)
+            {
+            }
+
+            OnSourceChanged();
+        });
     }
 
     /// <summary>
@@ -70,11 +114,7 @@ public sealed class VisualiserFeed
         var nodes = listings.Select(listing =>
         {
             var agents = _agents.For(listing.Id);
-            var status = listing.Workspace is { } workspace && listing.Availability == WorkspaceAvailability.Available
-                ? WorkspaceStatuses.Of(
-                    _gitStatus.Get(workspace) is { IsLoaded: true } summary ? summary : new WorkspaceGitSummary([]),
-                    agents.Select(agent => agent.State))
-                : WorkspaceStatus.RequiresAttention;
+            var status = StatusOf(listing, agents);
             return new
             {
                 id = listing.Id,
@@ -92,9 +132,31 @@ public sealed class VisualiserFeed
 
     // Git status can change many times in a moment, so changes that come close together are looked at once, and
     // Changed is raised only if what the page would draw is different.
+    private WorkspaceStatus StatusOf(WorkspaceListing listing, IReadOnlyList<WorkspaceAgent> agents)
+    {
+        if (listing.Workspace is not { } workspace || listing.Availability != WorkspaceAvailability.Available)
+        {
+            return WorkspaceStatus.RequiresAttention;
+        }
+
+        // Git status and Pull Requests are read separately, so a workspace that has just become live has one before
+        // the other. Until both are, its status would be wrong, so it keeps the one it last had.
+        var summary = _gitStatus.Get(workspace);
+        if (summary.IsLoaded && summary.Repositories.All(repository => repository.PullRequests.IsLoaded))
+        {
+            return _statuses[listing.Id] = WorkspaceStatuses.Of(summary, agents.Select(agent => agent.State));
+        }
+
+        return _statuses.TryGetValue(listing.Id, out var last)
+            ? last
+            : WorkspaceStatuses.Of(
+                summary.IsLoaded ? summary : new WorkspaceGitSummary([]),
+                agents.Select(agent => agent.State));
+    }
+
     private void OnSourceChanged()
     {
-        if (Interlocked.Exchange(ref _scheduled, 1) == 0)
+        if (Changed is not null && Interlocked.Exchange(ref _scheduled, 1) == 0)
         {
             _ = Task.Run(async () =>
             {

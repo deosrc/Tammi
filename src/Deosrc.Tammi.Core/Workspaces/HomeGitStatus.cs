@@ -36,7 +36,18 @@ public sealed class HomeGitStatus
         _worktrees = worktrees;
         _registry = registry;
         _timeProvider = timeProvider;
+        _monitors.Started += OnLiveStarted;
+        _pullRequestLists.Started += OnLiveStarted;
     }
+
+    /// <summary>
+    /// Raised when a workspace becomes live, because its monitor or Pull Request list has started, e.g. as its tab is
+    /// shown. Its changes only reach <see cref="Observe"/> for workspaces that were live when it was called, so call it
+    /// again then. It can be raised on any thread.
+    /// </summary>
+    public event Action? LiveStarted;
+
+    private void OnLiveStarted() => LiveStarted?.Invoke();
 
     /// <summary>
     /// Raised when a workspace's summary may have changed. It can be raised on any thread.
