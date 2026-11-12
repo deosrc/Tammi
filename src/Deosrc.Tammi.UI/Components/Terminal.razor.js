@@ -151,8 +151,7 @@ function handleClipboardKeys(terminal, event) {
   }
 
   // Ctrl+Delete deletes the next word. Shells don't bind xterm.js's sequence for it, but all bind Alt+D (ESC d).
-  // Windows' ConPTY understands the usual sequence, so it's left alone there.
-  if (event.key === 'Delete' && !event.shiftKey && !isWindows) {
+  if (event.key === 'Delete' && !event.shiftKey) {
     event.preventDefault();
     terminal.input('\x1bd');
     return false;
@@ -160,7 +159,7 @@ function handleClipboardKeys(terminal, event) {
 
   // Ctrl+Backspace deletes the previous word. xterm.js sends ^H, which shells treat as a plain Backspace. Alt+Backspace
   // (ESC DEL) is the word deletion that shells bind.
-  if (event.key === 'Backspace' && !event.shiftKey && !isWindows) {
+  if (event.key === 'Backspace' && !event.shiftKey) {
     event.preventDefault();
     terminal.input('\x1b\x7f');
     return false;
