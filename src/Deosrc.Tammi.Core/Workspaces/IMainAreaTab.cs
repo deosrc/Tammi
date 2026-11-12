@@ -2,7 +2,7 @@ namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// Something shown as a tab in the main area of a workspace's Workspace View, after the dashboard: a terminal, an
-/// agent or a git graph.
+/// agent, a git graph or the History tab.
 /// </summary>
 public interface IMainAreaTab
 {

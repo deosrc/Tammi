@@ -66,12 +66,15 @@ public static class ServiceCollectionExtensions
             time: services.GetRequiredService<TimeProvider>()));
         services.AddSingleton<AgentUsageMonitor>();
         services.AddSingleton<UsageTabState>();
+        services.AddSingleton<NewWorkspaceTabState>();
+        services.AddSingleton<EditWorkspaceSessions>();
         services.AddSingleton<ToolImages>();
         services.AddSingleton<WorkspaceTools>();
         services.AddSingleton<TerminalLauncher>();
         services.AddSingleton<WorkspaceTerminals>();
         services.AddSingleton<WorkspaceAgents>();
         services.AddSingleton<WorkspaceGitGraphs>();
+        services.AddSingleton<WorkspaceHistoryTabs>();
         services.AddSingleton<WorkspaceTabRestorer>();
         services.AddSingleton<WorkspaceViewState>();
         services.AddSingleton<GitGraphViewOptions>();
