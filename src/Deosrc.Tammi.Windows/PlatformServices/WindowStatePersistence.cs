@@ -55,7 +55,7 @@ internal static class WindowStatePersistence
         }
     }
 
-    private static WindowMode GetMode(AppWindow appWindow) =>
+    internal static WindowMode GetMode(AppWindow appWindow) =>
         (appWindow.Presenter as OverlappedPresenter)?.State switch
         {
             OverlappedPresenterState.Maximized => WindowMode.Maximized,

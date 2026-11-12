@@ -1,4 +1,5 @@
 using Deosrc.Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.UI.Visualiser;
 
 namespace Deosrc.Tammi.Windows.PlatformServices;
@@ -10,7 +11,8 @@ namespace Deosrc.Tammi.Windows.PlatformServices;
 internal sealed class MauiVisualiserWindow(
     VisualiserFeed feed,
     WorkspaceOpenRequests openRequests,
-    ISettingsStore settings) : IVisualiserWindow
+    ISettingsStore settings,
+    VisualiserWindowStateStore stateStore) : IVisualiserWindow
 {
     private Window? _window;
 
@@ -62,7 +64,20 @@ internal sealed class MauiVisualiserWindow(
             }
         });
         settings.Changed += ApplyAlwaysOnTop;
-        window.HandlerChanged += (_, _) => ApplyAlwaysOnTop();
+
+        // Once its native window exists, and before it's shown, it's put where it was left, unless that's no longer on a
+        // screen or fits on it. The main window is the first one.
+        var stateAttached = false;
+        window.HandlerChanged += (_, _) =>
+        {
+            ApplyAlwaysOnTop();
+            if (!stateAttached && window.Handler?.PlatformView is Microsoft.UI.Xaml.Window native)
+            {
+                stateAttached = true;
+                var main = application.Windows.FirstOrDefault()?.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
+                VisualiserWindowStatePersistence.Attach(native, main, stateStore);
+            }
+        };
 
         // A click on a workspace goes to an address the page can't load: it opens the workspace instead.
         webView.Navigating += (_, e) =>
