@@ -1,8 +1,8 @@
 // The browser side of the Terminal component: an xterm.js terminal that sends input and size changes to .NET.
-import { Terminal } from '../lib/xterm/xterm.mjs';
-import { FitAddon } from '../lib/xterm/addon-fit.mjs';
-import { Unicode11Addon } from '../lib/xterm/addon-unicode11.mjs';
-import { WebLinksAddon } from '../lib/xterm/addon-web-links.mjs';
+import { Terminal } from '../lib/xterm/xterm.js';
+import { FitAddon } from '../lib/xterm/addon-fit.js';
+import { Unicode11Addon } from '../lib/xterm/addon-unicode11.js';
+import { WebLinksAddon } from '../lib/xterm/addon-web-links.js';
 
 const isWindows = navigator.userAgent.includes('Windows');
 
