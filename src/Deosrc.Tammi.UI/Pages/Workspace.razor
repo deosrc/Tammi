@@ -9,6 +9,7 @@
 @inject WorkspaceTerminals Terminals
 @inject WorkspaceAgents Agents
 @inject WorkspaceGitGraphs GitGraphs
+@inject WorkspaceHistoryTabs HistoryTabs
 @inject WorkspaceTabRestorer TabRestorer
 @inject ISettingsStore SettingsStore
 @inject WorkspaceViewState ViewState
@@ -143,6 +144,10 @@ else
                             <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <path d="M12 5v14M5 12h14" />
                             </svg>
+                        </button>
+                        <button type="button" class="side-panel-section-action" title="Past sessions" aria-label="History"
+                                @onclick="OpenHistory">
+                            @HistoryIcon
                         </button>
                     </Actions>
                     <ChildContent>
@@ -286,6 +291,10 @@ else
                                 {
                                     @TerminalIcon
                                 }
+                                else if (tab is WorkspaceHistoryTab)
+                                {
+                                    @HistoryIcon
+                                }
                                 else if (tab is WorkspaceGitGraph)
                                 {
                                     <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -358,6 +367,10 @@ else
             @if (_shown is IWorkspaceProcess shownProcess)
             {
                 <Terminal @key="shownProcess" Session="shownProcess.Session" Class="workspace-terminal" />
+            }
+            else if (_shown is WorkspaceHistoryTab && _listing?.Workspace is { } historyWorkspace)
+            {
+                <WorkspaceHistoryView Workspace="historyWorkspace" OnShow="ShowTab" />
             }
             else if (_shown is WorkspaceGitGraph shownGraph)
             {
@@ -464,6 +477,7 @@ else
         Terminals.Changed += OnMainAreaTabsChanged;
         Agents.Changed += OnMainAreaTabsChanged;
         GitGraphs.Changed += OnMainAreaTabsChanged;
+        HistoryTabs.Changed += OnMainAreaTabsChanged;
         SettingsStore.Changed += OnToolsChanged;
     }
 
@@ -502,6 +516,7 @@ else
         Terminals.Changed -= OnMainAreaTabsChanged;
         Agents.Changed -= OnMainAreaTabsChanged;
         GitGraphs.Changed -= OnMainAreaTabsChanged;
+        HistoryTabs.Changed -= OnMainAreaTabsChanged;
         SettingsStore.Changed -= OnToolsChanged;
         SetGitStatus(null);
         SetTasks(null);
@@ -900,6 +915,7 @@ else
     {
         _tabs = [.. Terminals.For(WorkspaceId).Concat<IMainAreaTab>(Agents.For(WorkspaceId))
             .Concat(GitGraphs.For(WorkspaceId))
+            .Concat(HistoryTabs.For(WorkspaceId))
             .OrderBy(tab => tab.StartOrder)];
 
         // Show the tab the view was showing last time (in this run, or before Tammi restarted), or the dashboard if it
@@ -989,10 +1005,26 @@ else
             WorkspaceAgent agent => Agents.CloseAsync(agent),
             WorkspaceTerminal terminal => Terminals.CloseAsync(terminal),
             WorkspaceGitGraph graph => CloseGraph(graph),
+            WorkspaceHistoryTab history => CloseHistory(history),
             _ => Task.CompletedTask,
         };
         UpdateTabs();
         await closing;
+    }
+
+    private Task CloseHistory(WorkspaceHistoryTab history)
+    {
+        HistoryTabs.Close(history);
+        return Task.CompletedTask;
+    }
+
+    // Opens the History tab, or shows it if it's already open.
+    private void OpenHistory()
+    {
+        if (_listing?.Workspace is { } workspace)
+        {
+            ShowTab(HistoryTabs.Open(workspace.Id));
+        }
     }
 
     private Task CloseGraph(WorkspaceGitGraph graph)
@@ -1094,6 +1126,14 @@ else
             <rect x="3" y="4" width="18" height="16" rx="2" />
             <polyline points="7 9 10 12 7 15" />
             <path d="M12 15h5" />
+        </svg>;
+
+    // A clock with its hands turned back: past sessions.
+    private static readonly RenderFragment HistoryIcon =
+        @<svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M12 7v5l3 2" />
         </svg>;
 
     private static readonly RenderFragment WorkspaceFolderIcon =

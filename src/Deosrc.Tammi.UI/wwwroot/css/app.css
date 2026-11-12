@@ -1137,6 +1137,22 @@ label.task-choice {
   font-size: var(--font-size-small);
 }
 
+/* The History tab: the workspace's past Agent Sessions, in the main area. */
+.workspace-history {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+
+.workspace-history h2 {
+  margin-top: 0;
+}
+
+.workspace-history .agent-session-list {
+  max-width: 600px;
+}
+
 .agent-sessions {
   margin-top: var(--space-3);
 }
