@@ -1,7 +1,12 @@
 @inherits LayoutComponentBase
+@using Deosrc.Tammi.Core.Workspaces
+@using Deosrc.Tammi.UI.Visualiser
 @implements IDisposable
 @inject WorkspaceTabsKeeper TabsKeeper
 @inject NavigationManager Navigation
+@inject IWorkspaceStore WorkspaceStore
+@inject WorkspaceTabs WorkspaceTabs
+@inject WorkspaceOpenRequests OpenRequests
 
 <div class="app">
     <header class="app-bar">
@@ -18,6 +23,7 @@
     protected override async Task OnInitializedAsync()
     {
         Navigation.LocationChanged += OnLocationChanged;
+        OpenRequests.Requested += OnOpenRequested;
         TabsKeeper.SetActive(ActiveWorkspaceId());
 
         // Opens the tabs from last time, once per app run. The app starts on Home, so the tab that was shown
@@ -29,7 +35,21 @@
         }
     }
 
-    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+        OpenRequests.Requested -= OnOpenRequested;
+    }
+
+    // Opens the workspace in a tab, or shows its tab if it's already open, as Home does.
+    private void OnOpenRequested(string workspaceId) => _ = InvokeAsync(async () =>
+    {
+        if (await WorkspaceStore.FindAsync(workspaceId) is { } listing)
+        {
+            WorkspaceTabs.Open(listing.Id, listing.Name);
+            Navigation.NavigateTo(AppRoutes.Workspace(listing.Id));
+        }
+    });
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) =>
         TabsKeeper.SetActive(ActiveWorkspaceId());

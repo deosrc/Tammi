@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Photino.Blazor;
 using Photino.NET;
 using Deosrc.Tammi.UI.Visualiser;
@@ -8,9 +9,32 @@ namespace Deosrc.Tammi.Linux.PlatformServices;
 /// Shows the visualiser in a second Photino window, a child of the main window. The page has no Blazor in it: it's
 /// shown from a string, and sent each snapshot as a web message.
 /// </summary>
-internal sealed class PhotinoVisualiserWindow(PhotinoBlazorApp app, VisualiserFeed feed) : IVisualiserWindow
+internal sealed class PhotinoVisualiserWindow(
+    PhotinoBlazorApp app,
+    VisualiserFeed feed,
+    WorkspaceOpenRequests openRequests) : IVisualiserWindow
 {
     private PhotinoWindow? _window;
+
+    private static string? TryGetWorkspaceToOpen(string message)
+    {
+        try
+        {
+            using var json = JsonDocument.Parse(message);
+            return json.RootElement.TryGetProperty("open", out var id) ? id.GetString() : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private void ShowMainWindow() => app.MainWindow.Invoke(() =>
+    {
+        app.MainWindow.SetMinimized(false);
+        app.MainWindow.SetTopMost(true);
+        app.MainWindow.SetTopMost(false);
+    });
 
     /// <inheritdoc />
     public void OpenOrFocus() => app.MainWindow.Invoke(() =>
@@ -42,8 +66,20 @@ internal sealed class PhotinoVisualiserWindow(PhotinoBlazorApp app, VisualiserFe
             return false;
         });
 
-        // The page's only message says it has loaded, so the first snapshot goes then.
-        window.RegisterWebMessageReceivedHandler((_, _) => Push());
+        // The page says when it has loaded, so the first snapshot goes then, and which workspace to open when one is
+        // clicked.
+        window.RegisterWebMessageReceivedHandler((_, message) =>
+        {
+            if (message == "ready")
+            {
+                Push();
+            }
+            else if (TryGetWorkspaceToOpen(message) is { } workspaceId)
+            {
+                openRequests.Request(workspaceId);
+                ShowMainWindow();
+            }
+        });
         window.WaitForClose();
     });
 }

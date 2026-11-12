@@ -27,7 +27,8 @@ internal static class PlatformServiceCollectionExtensions
             new PhotinoFilePicker(provider.GetRequiredService<PhotinoBlazorApp>().MainWindow));
         services.AddSingleton<IVisualiserWindow>(provider => new PhotinoVisualiserWindow(
             provider.GetRequiredService<PhotinoBlazorApp>(),
-            provider.GetRequiredService<VisualiserFeed>()));
+            provider.GetRequiredService<VisualiserFeed>(),
+            provider.GetRequiredService<WorkspaceOpenRequests>()));
         return services;
     }
 }

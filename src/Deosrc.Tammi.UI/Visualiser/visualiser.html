@@ -15,6 +15,7 @@
     color: #cfd2d6; font: 12px/1.4 system-ui, sans-serif; pointer-events: none;
     opacity: 0; transition: opacity 0.15s;
   }
+  canvas.clickable { cursor: pointer; }
   #tip.shown { opacity: 1; }
   #tip b { display: block; color: #fff; font-weight: 600; }
   #tip span { color: #8b9097; }
@@ -126,7 +127,7 @@ function create(canvas) {
       for (const agent of w.agents) {
         if (agent.ex !== undefined && near(agent.ex, agent.ey, 10)) {
           return {
-            key: `${w.id}/${agent.id}`, x: agent.ex, y: agent.ey, r: 9, colour: agentColour(agent.state),
+            key: `${w.id}/${agent.id}`, workspaceId: w.id, x: agent.ex, y: agent.ey, r: 9, colour: agentColour(agent.state),
             title: agent.id, lines: [`Agent, ${stateText(agent.state)}`, `in ${w.name}`],
           };
         }
@@ -137,7 +138,7 @@ function create(canvas) {
         const working = w.agents.filter((a) => a.state === "Working").length;
         const count = `${w.agents.length} agent${w.agents.length === 1 ? "" : "s"}`;
         return {
-          key: w.id, x: w.x, y: w.y, r: 40, colour: statusColour(w.status), title: w.name,
+          key: w.id, workspaceId: w.id, x: w.x, y: w.y, r: 40, colour: statusColour(w.status), title: w.name,
           lines: [
             w.statusLabel,
             w.source === "local" ? "No task source" : `Source: ${w.source}`,
@@ -149,7 +150,22 @@ function create(canvas) {
     return null;
   };
 
+  let hovered = null;
+
+  // Clicking a workspace, or one of its agents, asks the host to open the workspace.
+  canvas.addEventListener("click", () => {
+    if (!hovered) return;
+    if (window.external && window.external.sendMessage) {
+      window.external.sendMessage(JSON.stringify({ open: hovered.workspaceId }));
+    } else {
+      // A host without messages watches for this address instead.
+      location.href = "tammi://open/" + encodeURIComponent(hovered.workspaceId);
+    }
+  });
+
   const showHover = (hover) => {
+    hovered = hover;
+    canvas.classList.toggle("clickable", !!hover);
     if (!hover) {
       hoverKey = null;
       tip.classList.remove("shown");

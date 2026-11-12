@@ -6,7 +6,7 @@ namespace Deosrc.Tammi.Windows.PlatformServices;
 /// Shows the visualiser in a second MAUI window holding a plain web view. The page has no Blazor in it: it's shown
 /// from a string, and sent each snapshot by calling a script function.
 /// </summary>
-internal sealed class MauiVisualiserWindow(VisualiserFeed feed) : IVisualiserWindow
+internal sealed class MauiVisualiserWindow(VisualiserFeed feed, WorkspaceOpenRequests openRequests) : IVisualiserWindow
 {
     private Window? _window;
 
@@ -41,6 +41,18 @@ internal sealed class MauiVisualiserWindow(VisualiserFeed feed) : IVisualiserWin
         }
 
         feed.Changed += Push;
+
+        // A click on a workspace goes to an address the page can't load: it opens the workspace instead.
+        webView.Navigating += (_, e) =>
+        {
+            const string prefix = "tammi://open/";
+            if (e.Url.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                e.Cancel = true;
+                openRequests.Request(Uri.UnescapeDataString(e.Url[prefix.Length..]));
+                application.ActivateWindow(application.Windows[0]);
+            }
+        };
         webView.Navigated += (_, _) => Push();
         window.Destroying += (_, _) =>
         {
