@@ -136,13 +136,13 @@ function create(canvas) {
         ) / 8 + 0.5;
         const edge = Math.max(0, 1 - distance);
         // Brightness follows the bands, and only the brightest tend to white, so the status colour still shows.
-        const brightness = 0.5 + v * 0.6;
-        const white = v * v * v * v * 0.2;
+        const brightness = 0.4 + v * 0.45;
+        const white = v * v * v * v * 0.1;
         const k = (py * plasmaSize + px) * 4;
         data[k] = Math.min(255, red * brightness + 255 * white);
         data[k + 1] = Math.min(255, green * brightness + 255 * white);
         data[k + 2] = Math.min(255, blue * brightness + 255 * white);
-        data[k + 3] = 255 * Math.pow(edge, 1.2) * (0.3 + v * 0.7);
+        data[k + 3] = 255 * Math.pow(edge, 1.2) * (0.3 + v * 0.7) * 0.75;
       }
     }
     w.plasma.surface.putImageData(w.plasma.image, 0, 0);
