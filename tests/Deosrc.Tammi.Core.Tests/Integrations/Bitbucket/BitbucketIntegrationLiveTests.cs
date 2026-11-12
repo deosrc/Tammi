@@ -22,37 +22,33 @@ public sealed class BitbucketIntegrationLiveTests : IDisposable
     public void Dispose() => _httpClient.Dispose();
 
     [Fact]
-    public async Task ReadsTheUserTheirRepositoriesAndTasks()
+    public async Task ReadsTheUserAndTheirRepositories()
     {
         BitbucketIntegration bitbucket = await CreateAsync();
 
         string user = await bitbucket.GetAuthenticatedUserAsync(CancellationToken);
         IReadOnlyList<IntegrationRepository> repositories = await bitbucket.GetRepositoriesAsync(CancellationToken);
-        IReadOnlyList<TaskInfo> assigned = await bitbucket.GetAssignedTasksAsync(CancellationToken);
 
-        TestContext.Current.SendDiagnosticMessage(
-            $"{user}: {repositories.Count} repositories, {assigned.Count} issues to do");
+        TestContext.Current.SendDiagnosticMessage($"{user}: {repositories.Count} repositories");
         Assert.False(string.IsNullOrEmpty(user));
         Assert.All(repositories, repository => Assert.Equal(2, repository.CloneUrls.Count));
-        Assert.Equal(assigned.Count, assigned.DistinctBy(task => task.Key).Count());
+        Assert.Equal(repositories.Count, repositories.DistinctBy(repository => repository.FullName).Count());
     }
 
     [Fact]
-    public async Task FindsAnIssueBySearchKeyAndUrl()
+    public async Task ReadsThePullRequestsOfARepositoriesBranch()
     {
         BitbucketIntegration bitbucket = await CreateAsync();
-        IReadOnlyList<TaskInfo> found = await bitbucket.SearchTasksAsync("the", CancellationToken);
-        if (found.Count == 0)
+        IReadOnlyList<IntegrationRepository> repositories = await bitbucket.GetRepositoriesAsync(CancellationToken);
+        if (repositories.Count == 0)
         {
-            Assert.Skip("The user can't see any open issue that mentions 'the'.");
+            Assert.Skip("The user can't access any repository.");
         }
 
-        TaskInfo task = found[0];
-        TaskInfo? byKey = await bitbucket.GetTaskAsync(task.Key, CancellationToken);
-        Assert.True(bitbucket.TryParseTaskReference(task.Url.AbsoluteUri, out string? keyFromUrl));
+        IReadOnlyList<PullRequestInfo> pullRequests = await bitbucket.GetPullRequestsAsync(
+            repositories[0].CloneUrls, "main", CancellationToken);
 
-        Assert.Equal(task.Key, byKey?.Key);
-        Assert.Equal(task.Key, keyFromUrl);
+        Assert.All(pullRequests, pullRequest => Assert.Equal(repositories[0].FullName, pullRequest.Repository));
     }
 
     private async Task<BitbucketIntegration> CreateAsync()

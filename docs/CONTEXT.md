@@ -47,22 +47,21 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 ## Core Flow: Creating a Workspace
 
 1. **Choose tasks.** The user picks tasks first, because they drive the rest of the setup.
-   - Tasks come from integrations (Bitbucket, GitHub, JIRA).
+   - Tasks come from integrations (GitHub, JIRA).
    - Tasks are optional. A workspace with no tasks is described by its name alone.
    - One workspace can mix tasks from any sources.
    - Tammi only reads tasks from integrations. It doesn't write back status changes or PR links yet.
    - The task list can be changed after the workspace is created.
    - **Finding tasks.** One search box covers every connected Task Source at once, and the results are combined,
      most recently updated first. What the user enters decides what's searched:
-     - **Nothing:** the tasks assigned to the user that are still to do: open GitHub issues, Bitbucket issues
-       that are new, open or on hold, and JIRA issues whose status is in the To Do category (not in progress or done). Tasks already in a workspace are left out.
+     - **Nothing:** the tasks assigned to the user that are still to do: open GitHub issues, and JIRA issues whose
+       status is in the To Do category (not in progress or done). Tasks already in a workspace are left out.
      - **A link or reference** to a task, e.g. an issue's URL, `owner/repo#42` or `ABC-123`: that task, from each
        source that recognises it. This is the only way to find public tasks outside the user's organisations. A link
        that no source recognises isn't searched.
      - **Any other text:** a search of the text of the tasks of the user and their organisations that aren't done:
-       open GitHub issues, Bitbucket issues that are new, open or on hold, and JIRA issues whose status isn't in the Done
-       category (see [Integrations](#integrations)).
-       Tasks already in a workspace are found too, and marked with its name.
+       open GitHub issues, and JIRA issues whose status isn't in the Done category (see
+       [Integrations](#integrations)). Tasks already in a workspace are found too, and marked with its name.
    - Search starts when the user stops typing. A source that fails doesn't stop the others: its error is shown
      with their results.
    - Tasks chosen from several searches and sources are kept together in one list.
@@ -825,26 +824,17 @@ are left to other tools for now.
 
 ### Bitbucket
 
-- Provides **tasks** (issues), **repositories** and **Pull Requests**. It works with Bitbucket Cloud (bitbucket.org),
-  which can be connected once. Bitbucket Data Center isn't supported yet: its API differs (projects, no issue tracker,
-  HTTP access tokens), so it needs its own implementation.
+- Provides **repositories** and **Pull Requests**, but no tasks: Bitbucket has retired its issue tracker. It works with
+  Bitbucket Cloud (bitbucket.org), which can be connected once. Bitbucket Data Center isn't supported yet: its API
+  differs (projects, HTTP access tokens), so it needs its own implementation.
 - **Authentication:** the Atlassian account's email address (a setting) and an API token with scopes (kept in the
-  credential store), sent as basic authentication. The token needs the scopes `read:issue:bitbucket`,
+  credential store), sent as basic authentication. The token needs the scopes
   `read:pullrequest:bitbucket`, `read:repository:bitbucket`, `read:user:bitbucket` and `read:workspace:bitbucket`. App
   passwords aren't supported, because Atlassian is retiring them. When Bitbucket says a scope is missing, Tammi says which scopes it needs.
 - **Repositories** are those the user is a member of (`role=member`: owned, administered or contributed to) in each
   workspace they can access (`user/workspaces`, then `repositories/<workspace>`), because Bitbucket has no single list
   of them. Each has its HTTPS and SSH clone URLs; the user name Bitbucket puts
   in the HTTPS URL is left out so it matches other forms of the same URL.
-- **Task keys** are `workspace/repo#number`. Only repositories that have the issue tracker enabled have tasks.
-  Bitbucket has no in-progress state: new, open and on hold issues are to do, and resolved, duplicate, invalid, won't
-  fix and closed issues are done.
-- **Finding tasks:** Bitbucket can't search issues across repositories, so each search reads the issue tracker of every
-  repository the user can access that has one (a few at a time) and combines the results, most recently updated
-  first. Tammi remembers which repositories to search for 10 minutes.
-  - **Assigned:** the user's issues that are new, open or on hold.
-  - **Text search** covers titles and descriptions of issues that are new, open or on hold.
-  - A task key or an issue's page URL finds that issue.
 - **Pull Requests** are read from each Bitbucket repository a workspace repository's remotes point at, for the
   workspace branch's name as the source branch, in every state, oldest first. Only those whose source is in one of those
   repositories count. Their checks are the PR's commit statuses (builds): failed if any failed or stopped, in progress

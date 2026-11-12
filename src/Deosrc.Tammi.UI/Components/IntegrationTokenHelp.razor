@@ -8,13 +8,12 @@
     {
         <p>An API token with scopes, used with your Atlassian account's email address. Create it for Bitbucket with these scopes:</p>
         <ul class="token-scopes">
-            <li><code>read:issue:bitbucket</code></li>
             <li><code>read:pullrequest:bitbucket</code></li>
             <li><code>read:repository:bitbucket</code></li>
             <li><code>read:user:bitbucket</code></li>
             <li><code>read:workspace:bitbucket</code></li>
         </ul>
-        <p>They let @AppInfo.Name list your repositories and issues, and show pull requests and their builds.</p>
+        <p>They let @AppInfo.Name list your repositories, and show pull requests and their builds.</p>
         <p><a href="@BitbucketTokenUrl" @onclick="() => Open.InvokeAsync(BitbucketTokenUrl)"
            @onclick:preventDefault>Create a token</a></p>
     }

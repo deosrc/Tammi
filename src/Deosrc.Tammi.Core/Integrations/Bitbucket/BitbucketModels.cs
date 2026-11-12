@@ -19,16 +19,13 @@ internal static class BitbucketModels
         Link? Html,
         [property: JsonPropertyName("clone")] IReadOnlyList<Link>? CloneLinks);
 
-    public sealed record Content(string? Raw);
-
     /// <summary>
     /// The user a token belongs to.
     /// </summary>
-    public sealed record User(string? DisplayName, string? Nickname, string? AccountId);
+    public sealed record User(string? DisplayName, string? Nickname);
 
     /// <param name="FullName">The workspace and repository slugs, e.g. <c>acme/api</c>.</param>
-    /// <param name="HasIssues">Whether the issue tracker is enabled, or <see langword="null"/> if not said.</param>
-    public sealed record Repository(string? FullName, string? Name, bool? HasIssues, Links? Links);
+    public sealed record Repository(string? FullName, string? Name, Links? Links);
 
     public sealed record Workspace(string? Slug);
 
@@ -40,14 +37,6 @@ internal static class BitbucketModels
     {
         public string? WorkspaceSlug => Workspace?.Slug ?? Slug;
     }
-
-    public sealed record Issue(
-        int Id,
-        string? Title,
-        Content? Content,
-        string? State,
-        DateTimeOffset? UpdatedOn,
-        Links? Links);
 
     public sealed record Branch(string? Name);
 

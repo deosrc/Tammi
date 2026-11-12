@@ -12,15 +12,11 @@ public class BitbucketIntegrationTests : IDisposable
 {
     private const string Token = "ATATT3xFfGF0test";
     private const string Email = "mia@example.com";
-    private const string AccountId = "557058:7f1a0c1e-0000-4000-8000-000000000001";
     private const string WorkspacesPath = "user/workspaces?pagelen=100";
     private const string ReposPath = "repositories/acme?role=member&pagelen=100";
     private const string ReposPage2Url = "https://api.bitbucket.org/2.0/repositories/acme?role=member&pagelen=100&page=2";
     private const string MiaReposPath = "repositories/mia?role=member&pagelen=100";
     private const string OnlyAcmeWorkspace = """{"values":[{"workspace":{"slug":"acme"}}]}""";
-    private const string ToDo = "(state = \"new\" OR state = \"open\" OR state = \"on hold\")";
-
-    private static readonly string AssignedFilter = $"assignee.account_id = \"{AccountId}\" AND {ToDo}";
 
     private readonly InMemoryCredentialStore _store = new();
     private readonly FakeBitbucketApi _api = new();
@@ -50,18 +46,6 @@ public class BitbucketIntegrationTests : IDisposable
             .Respond(ReposPath, FakeBitbucketApi.Response("repos.json"))
             .Respond(ReposPage2Url, FakeBitbucketApi.Response("repos-page2.json"))
             .Respond(MiaReposPath, FakeBitbucketApi.Response("repos-mia.json"));
-
-    /// <summary>
-    /// Answers a user with only the acme workspace, whose repositories are acme/api and acme/web.
-    /// </summary>
-    private FakeBitbucketApi RespondWithAcmeRepositories() =>
-        (FakeBitbucketApi)_api
-            .Respond(WorkspacesPath, OnlyAcmeWorkspace)
-            .Respond(ReposPath, FakeBitbucketApi.Response("repos.json").Replace(
-                "\"next\": \"" + ReposPage2Url + "\",", ""));
-
-    private static string IssuesPath(string repository, string filter) =>
-        $"repositories/{repository}/issues?q={Uri.EscapeDataString(filter)}&sort=-updated_on&pagelen=100";
 
     [Fact]
     public async Task Authenticates_WithTheEmailAndApiToken()
@@ -180,165 +164,6 @@ public class BitbucketIntegrationTests : IDisposable
 
         Assert.Equal(2, repositories.Count);
         Assert.Equal(2, _api.Requests.Count);
-    }
-
-    [Fact]
-    public async Task GetAssignedTasks_ReadsTheIssueTrackersOfRepositoriesThatHaveOne()
-    {
-        BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-        RespondWithRepositories();
-        _api.Respond("user", FakeBitbucketApi.Response("user.json"))
-            .Respond(IssuesPath("acme/api", AssignedFilter), FakeBitbucketApi.Response("issues-api.json"))
-            .Respond(IssuesPath("mia/notes", AssignedFilter), FakeBitbucketApi.Response("issues-notes.json"));
-
-        IReadOnlyList<TaskInfo> tasks = await bitbucket.GetAssignedTasksAsync(CancellationToken);
-
-        // Most recently updated first, across repositories.
-        Assert.Equal(["mia/notes#3", "acme/api#42", "acme/api#7"], tasks.Select(task => task.Key));
-        TaskInfo login = tasks[1];
-        Assert.Equal("Login fails", login.Title);
-        Assert.Equal(new Uri("https://bitbucket.org/acme/api/issues/42"), login.Url);
-        Assert.Equal("Logging in **fails** with a 500.", login.Description);
-        Assert.Equal(new DateTimeOffset(2026, 11, 3, 10, 0, 0, TimeSpan.Zero), login.Updated);
-        Assert.Equal(new Uri("https://bitbucket.org/acme/api"), login.RepositoryUrl);
-        Assert.Equal(("Open", TaskStatusCategory.ToDo), (login.Status, login.StatusCategory));
-        Assert.Null(tasks[2].Description);
-        Assert.Equal("On hold", tasks[2].Status);
-        Assert.All(tasks, task => Assert.Equal("bitbucket", task.Source));
-
-        // acme/web has the issue tracker turned off, so it isn't asked.
-        Assert.DoesNotContain(_api.Requests, request => request.Url.AbsolutePath.Contains("/acme/web/"));
-    }
-
-    [Fact]
-    public async Task SearchTasks_SearchesTitlesAndDescriptions_OfIssuesThatAreStillToDo()
-    {
-        BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-        string filter = $"(title ~ \"say \\\"hi\\\"\" OR content.raw ~ \"say \\\"hi\\\"\") AND {ToDo}";
-        RespondWithAcmeRepositories();
-        _api.Respond(IssuesPath("acme/api", filter), FakeBitbucketApi.Response("issues-api.json"));
-
-        IReadOnlyList<TaskInfo> tasks = await bitbucket.SearchTasksAsync(" say \"hi\" ", CancellationToken);
-
-        Assert.Equal(["acme/api#42", "acme/api#7"], tasks.Select(task => task.Key));
-    }
-
-    [Fact]
-    public async Task SearchTasks_WithBlankText_Throws()
-    {
-        BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-
-        await Assert.ThrowsAsync<ArgumentException>(() => bitbucket.SearchTasksAsync(" ", CancellationToken));
-    }
-
-    [Fact]
-    public async Task SearchTasks_ReturnsAtMostTheMaximum_MostRecentlyUpdatedFirst()
-    {
-        BitbucketIntegration bitbucket = await CreateAuthenticatedAsync(
-            new BitbucketIntegrationOptions { Email = Email, MaxSearchResults = 2 });
-        string filter = $"(title ~ \"x\" OR content.raw ~ \"x\") AND {ToDo}";
-        RespondWithRepositories();
-        _api.Respond($"repositories/acme/api/issues?q={Uri.EscapeDataString(filter)}&sort=-updated_on&pagelen=2",
-                FakeBitbucketApi.Response("issues-api.json"))
-            .Respond($"repositories/mia/notes/issues?q={Uri.EscapeDataString(filter)}&sort=-updated_on&pagelen=2",
-                FakeBitbucketApi.Response("issues-notes.json"));
-
-        IReadOnlyList<TaskInfo> tasks = await bitbucket.SearchTasksAsync("x", CancellationToken);
-
-        Assert.Equal(["mia/notes#3", "acme/api#42"], tasks.Select(task => task.Key));
-    }
-
-    [Fact]
-    public async Task SearchTasks_RemembersTheRepositoriesBetweenSearches_UntilTheyExpire()
-    {
-        BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-        string filter = $"(title ~ \"x\" OR content.raw ~ \"x\") AND {ToDo}";
-        RespondWithAcmeRepositories();
-        _api.Respond(IssuesPath("acme/api", filter), FakeBitbucketApi.Response("issues-api.json"));
-
-        await bitbucket.SearchTasksAsync("x", CancellationToken);
-        await bitbucket.SearchTasksAsync("x", CancellationToken);
-        int before = _api.Requests.Count(request => request.Url.AbsolutePath.EndsWith("/user/workspaces"));
-        _time.Advance(TimeSpan.FromMinutes(11));
-        await bitbucket.SearchTasksAsync("x", CancellationToken);
-
-        Assert.Equal(1, before);
-        Assert.Equal(2, _api.Requests.Count(request => request.Url.AbsolutePath.EndsWith("/user/workspaces")));
-    }
-
-    [Fact]
-    public async Task SearchTasks_SkipsARepositoryWhoseIssueTrackerIsGone()
-    {
-        BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-        string filter = $"(title ~ \"x\" OR content.raw ~ \"x\") AND {ToDo}";
-        RespondWithRepositories();
-        _api.Respond(IssuesPath("acme/api", filter), FakeBitbucketApi.Response("not-found.json"),
-                HttpStatusCode.NotFound)
-            .Respond(IssuesPath("mia/notes", filter), FakeBitbucketApi.Response("issues-notes.json"));
-
-        IReadOnlyList<TaskInfo> tasks = await bitbucket.SearchTasksAsync("x", CancellationToken);
-
-        Assert.Equal(["mia/notes#3"], tasks.Select(task => task.Key));
-    }
-
-    [Theory]
-    [InlineData("acme/api#42", "acme/api#42")]
-    [InlineData(" acme/api#42 ", "acme/api#42")]
-    [InlineData("https://bitbucket.org/acme/api/issues/42", "acme/api#42")]
-    [InlineData("https://bitbucket.org/acme/api/issues/42/login-fails", "acme/api#42")]
-    [InlineData("https://BITBUCKET.org/acme/api/issues/42?x=1", "acme/api#42")]
-    public void TryParseTaskReference_ReadsReferencesAndUrls(string text, string expected)
-    {
-        Assert.True(Create().TryParseTaskReference(text, out string? key));
-        Assert.Equal(expected, key);
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("ABC-123")]
-    [InlineData("acme/api#0")]
-    [InlineData("acme/api#x")]
-    [InlineData("acme#42")]
-    [InlineData("https://github.com/acme/api/issues/42")]
-    [InlineData("https://bitbucket.org/acme/api/pull-requests/42")]
-    [InlineData("https://bitbucket.org/acme/api/issues")]
-    public void TryParseTaskReference_RejectsOtherText(string? text)
-    {
-        Assert.False(Create().TryParseTaskReference(text, out string? key));
-        Assert.Null(key);
-    }
-
-    [Fact]
-    public async Task GetTask_ReadsTheIssue_AndMapsDoneStatuses()
-    {
-        BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-        _api.Respond("repositories/acme/api/issues/12", FakeBitbucketApi.Response("issue.json"));
-
-        TaskInfo? task = await bitbucket.GetTaskAsync("acme/api#12", CancellationToken);
-
-        Assert.NotNull(task);
-        Assert.Equal("acme/api#12", task.Key);
-        Assert.Equal(new Uri("https://bitbucket.org/acme/api/issues/12/wont-be-fixed"), task.Url);
-        Assert.Equal(("Won't fix", TaskStatusCategory.Done), (task.Status, task.StatusCategory));
-    }
-
-    [Fact]
-    public async Task GetTask_ForAnIssueThatDoesntExist_ReturnsNull()
-    {
-        BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-        _api.Respond("repositories/acme/api/issues/99", FakeBitbucketApi.Response("not-found.json"),
-            HttpStatusCode.NotFound);
-
-        Assert.Null(await bitbucket.GetTaskAsync("acme/api#99", CancellationToken));
-    }
-
-    [Fact]
-    public async Task GetTask_WithAnInvalidKey_Throws()
-    {
-        BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-
-        await Assert.ThrowsAsync<ArgumentException>(() => bitbucket.GetTaskAsync("ABC-1", CancellationToken));
     }
 
     private static readonly string[] AcmeApiRemotes =

@@ -1,9 +1,0 @@
-{
-  "type": "issue",
-  "id": 12,
-  "title": "Won't be fixed",
-  "content": { "raw": "Details" },
-  "state": "wontfix",
-  "updated_on": "2026-09-15T14:00:00.000000+00:00",
-  "links": { "html": { "href": "https://bitbucket.org/acme/api/issues/12/wont-be-fixed" } }
-}

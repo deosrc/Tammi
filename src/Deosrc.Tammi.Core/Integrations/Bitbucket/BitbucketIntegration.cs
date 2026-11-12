@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Deosrc.Tammi.Core.Credentials;
 using Deosrc.Tammi.Core.Git;
@@ -8,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Deosrc.Tammi.Core.Integrations.Bitbucket;
 
 /// <summary>
-/// Reads repositories, issues (as tasks) and Pull Requests from Bitbucket Cloud.
+/// Reads repositories and Pull Requests from Bitbucket Cloud.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -16,22 +14,14 @@ namespace Deosrc.Tammi.Core.Integrations.Bitbucket;
 /// <see cref="BitbucketIntegrationOptions.Email"/> as basic authentication. It needs the scopes in
 /// <see cref="RequiredScopes"/>. Bitbucket Data Center isn't supported yet.
 /// </para>
-/// <para>
-/// Bitbucket's issue trackers are per repository, and only repositories that have the tracker enabled have issues.
-/// Bitbucket can't search issues across repositories, so lists and searches read the tracker of each repository the
-/// user can access (up to <see cref="BitbucketIntegrationOptions.MaxConcurrentRepositories"/> at a time) and combine
-/// the results. Task keys have the form <c>workspace/repo#number</c>. Bitbucket issues are never in progress: a new,
-/// open or on-hold issue is to do, and any other is done.
-/// </para>
 /// </remarks>
-public sealed class BitbucketIntegration : ITaskIntegration, IRepositoryIntegration, IPullRequestIntegration
+public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestIntegration
 {
     /// <summary>
-    /// The scopes an API token needs: to read the user it belongs to, their workspaces, repositories, issues and Pull Requests.
+    /// The scopes an API token needs: to read the user it belongs to, their workspaces, repositories and Pull Requests.
     /// </summary>
     public const string RequiredScopes =
-        "read:issue:bitbucket, read:pullrequest:bitbucket, read:repository:bitbucket, read:user:bitbucket and "
-        + "read:workspace:bitbucket";
+        "read:pullrequest:bitbucket, read:repository:bitbucket, read:user:bitbucket and read:workspace:bitbucket";
 
     /// <summary>
     /// The message for a token that can't read Pull Requests, naming the scope it needs.
@@ -39,21 +29,11 @@ public sealed class BitbucketIntegration : ITaskIntegration, IRepositoryIntegrat
     internal const string PullRequestPermissionMessage =
         "This token can't read pull requests. Give it the read:pullrequest:bitbucket scope, then authenticate again.";
 
-    /// <summary>
-    /// The issue states that are still to do. Bitbucket's others (resolved, duplicate, invalid, wontfix and closed)
-    /// are done.
-    /// </summary>
-    internal static readonly IReadOnlyList<string> ToDoStates = ["new", "open", "on hold"];
-
     private static readonly string[] PullRequestStates = ["OPEN", "MERGED", "DECLINED", "SUPERSEDED"];
 
     private readonly BitbucketIntegrationOptions _options;
     private readonly BitbucketApiClient _api;
     private readonly ILogger _logger;
-    private readonly TimeProvider _timeProvider;
-    private readonly Lock _scopeLock = new();
-    private IReadOnlyList<BitbucketModels.Repository>? _issueRepositories;
-    private DateTimeOffset _scopeExpires;
 
     /// <param name="options">How to connect to Bitbucket.</param>
     /// <param name="credentialStore">Where the API token is kept.</param>
@@ -74,8 +54,6 @@ public sealed class BitbucketIntegration : ITaskIntegration, IRepositoryIntegrat
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentOutOfRangeException.ThrowIfLessThan(options.PageSize, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(options.PageSize, 100);
-        ArgumentOutOfRangeException.ThrowIfLessThan(options.MaxSearchResults, 1);
-        ArgumentOutOfRangeException.ThrowIfLessThan(options.MaxConcurrentRepositories, 1);
         if (!options.ApiUrl.IsAbsoluteUri || options.ApiUrl.Scheme is not ("https" or "http"))
         {
             throw new ArgumentException("The API URL must be an absolute HTTP or HTTPS URL.", nameof(options));
@@ -89,7 +67,6 @@ public sealed class BitbucketIntegration : ITaskIntegration, IRepositoryIntegrat
 
         _options = options;
         _logger = logger;
-        _timeProvider = timeProvider;
         Credentials = new IntegrationCredentials(credentialStore, options.Id);
         _api = new BitbucketApiClient(options, Credentials, httpClient, logger, timeProvider);
     }
@@ -203,157 +180,6 @@ public sealed class BitbucketIntegration : ITaskIntegration, IRepositoryIntegrat
         }
 
         return [https, ssh ?? $"git@{BitbucketIntegrationOptions.WebHost}:{workspace}/{slug}.git"];
-    }
-
-    /// <summary>
-    /// Lists the user's issues that are still to do (see <see cref="ToDoStates"/>), most recently updated first.
-    /// </summary>
-    /// <returns>Up to <see cref="BitbucketIntegrationOptions.MaxSearchResults"/> issues.</returns>
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<TaskInfo>> GetAssignedTasksAsync(CancellationToken cancellationToken = default)
-    {
-        BitbucketModels.User user = await GetUserAsync(cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrEmpty(user.AccountId))
-        {
-            throw new IntegrationException("Bitbucket didn't say which account the token belongs to.");
-        }
-
-        return await SearchIssuesAsync(
-            $"assignee.account_id = {Quote(user.AccountId)} AND {ToDoFilter}", cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Searches the titles and descriptions of the issues that aren't done in the repositories the user can access
-    /// that have an issue tracker. Results are most recently updated first.
-    /// </summary>
-    /// <returns>Up to <see cref="BitbucketIntegrationOptions.MaxSearchResults"/> issues.</returns>
-    /// <inheritdoc/>
-    public Task<IReadOnlyList<TaskInfo>> SearchTasksAsync(string text, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        string quoted = Quote(text.Trim());
-        return SearchIssuesAsync(
-            $"(title ~ {quoted} OR content.raw ~ {quoted}) AND {ToDoFilter}", cancellationToken);
-    }
-
-    /// <summary>
-    /// Reads an issue reference (<c>workspace/repo#42</c>) or the URL of an issue's page on Bitbucket.
-    /// </summary>
-    /// <inheritdoc/>
-    public bool TryParseTaskReference(string? text, [NotNullWhen(true)] out string? key)
-    {
-        key = BitbucketIssueKey.TryParse(text, out BitbucketIssueKey? issue)
-            || BitbucketIssueKey.TryParseUrl(text, BitbucketIntegrationOptions.WebHost, out issue)
-                ? issue.ToString()
-                : null;
-        return key is not null;
-    }
-
-    /// <inheritdoc/>
-    /// <exception cref="ArgumentException">
-    /// <paramref name="key"/> isn't in the form <c>workspace/repo#number</c>.
-    /// </exception>
-    public async Task<TaskInfo?> GetTaskAsync(string key, CancellationToken cancellationToken = default)
-    {
-        if (!BitbucketIssueKey.TryParse(key, out BitbucketIssueKey? issueKey))
-        {
-            throw new ArgumentException($"'{key}' isn't a Bitbucket task key such as 'workspace/repo#42'.",
-                nameof(key));
-        }
-
-        string path = string.Create(CultureInfo.InvariantCulture,
-            $"repositories/{Uri.EscapeDataString(issueKey.Workspace)}/{Uri.EscapeDataString(issueKey.Repository)}"
-            + $"/issues/{issueKey.Number}");
-        BitbucketModels.Issue? issue = await _api.GetAsync<BitbucketModels.Issue>(
-            path, allowNotFound: true, cancellationToken).ConfigureAwait(false);
-        return issue is null ? null : ToTask(issueKey.Workspace, issueKey.Repository, issue);
-    }
-
-    /// <summary>
-    /// Matches the issues that aren't done. Bitbucket has no in-progress state, so these are the ones still to do.
-    /// </summary>
-    private static string ToDoFilter =>
-        "(" + string.Join(" OR ", ToDoStates.Select(state => $"state = \"{state}\"")) + ")";
-
-
-    /// <summary>
-    /// Reads the matching issues of every repository that has an issue tracker, and keeps the most recently updated.
-    /// </summary>
-    private async Task<IReadOnlyList<TaskInfo>> SearchIssuesAsync(string filter, CancellationToken cancellationToken)
-    {
-        IReadOnlyList<BitbucketModels.Repository> repositories =
-            await GetIssueRepositoriesAsync(cancellationToken).ConfigureAwait(false);
-
-        string perPage = Math.Min(_options.PageSize, _options.MaxSearchResults).ToString(CultureInfo.InvariantCulture);
-        var found = new ConcurrentBag<TaskInfo>();
-        await Parallel.ForEachAsync(
-            repositories,
-            new ParallelOptions
-            {
-                MaxDegreeOfParallelism = _options.MaxConcurrentRepositories,
-                CancellationToken = cancellationToken,
-            },
-            async (repository, token) =>
-            {
-                (string workspace, string slug) = SplitFullName(repository.FullName)!.Value;
-                string path = $"repositories/{Uri.EscapeDataString(workspace)}/{Uri.EscapeDataString(slug)}/issues"
-                    + $"?q={Uri.EscapeDataString(filter)}&sort=-updated_on&pagelen={perPage}";
-                int count = 0;
-
-                // A repository whose tracker was turned off since the list was read has no issues.
-                await foreach (BitbucketModels.Issue issue in _api
-                    .GetPagesAsync<BitbucketModels.Issue>(path, allowNotFound: true, token).ConfigureAwait(false))
-                {
-                    found.Add(ToTask(workspace, slug, issue));
-                    if (++count >= _options.MaxSearchResults)
-                    {
-                        break;
-                    }
-                }
-            }).ConfigureAwait(false);
-
-        List<TaskInfo> tasks =
-        [
-            .. found
-                .OrderByDescending(task => task.Updated ?? DateTimeOffset.MinValue)
-                .ThenBy(task => task.Key, StringComparer.Ordinal)
-                .Take(_options.MaxSearchResults),
-        ];
-        _logger.LogDebug("Found {Count} tasks for {Filter} in {Repositories} repositories at {Url}.",
-            tasks.Count, filter, repositories.Count, _options.ApiUrl);
-        return tasks;
-    }
-
-    /// <summary>
-    /// The repositories whose issue trackers a search covers, remembered for
-    /// <see cref="BitbucketIntegrationOptions.SearchScopeLifetime"/>. A repository that doesn't say whether it has a
-    /// tracker is searched, because a missing tracker is just answered with not found.
-    /// </summary>
-    private async Task<IReadOnlyList<BitbucketModels.Repository>> GetIssueRepositoriesAsync(
-        CancellationToken cancellationToken)
-    {
-        DateTimeOffset now = _timeProvider.GetUtcNow();
-        lock (_scopeLock)
-        {
-            if (_issueRepositories is { } cached && now < _scopeExpires)
-            {
-                return cached;
-            }
-        }
-
-        BitbucketModels.Repository[] repositories =
-        [
-            .. (await ReadRepositoriesAsync(cancellationToken).ConfigureAwait(false))
-                .Where(repository => repository.HasIssues != false && SplitFullName(repository.FullName) is not null),
-        ];
-        lock (_scopeLock)
-        {
-            _issueRepositories = repositories;
-            _scopeExpires = now + _options.SearchScopeLifetime;
-        }
-
-        return repositories;
     }
 
     /// <inheritdoc/>
@@ -546,42 +372,6 @@ public sealed class BitbucketIntegration : ITaskIntegration, IRepositoryIntegrat
 
         return states.All(state => state == "SUCCESSFUL") ? PullRequestChecks.Succeeded : PullRequestChecks.InProgress;
     }
-
-    private TaskInfo ToTask(string workspace, string repository, BitbucketModels.Issue issue)
-    {
-        var key = new BitbucketIssueKey(workspace, repository, issue.Id);
-        string repositoryUrl = $"https://{BitbucketIntegrationOptions.WebHost}/{workspace}/{repository}";
-        Uri url = Uri.TryCreate(issue.Links?.Html?.Href, UriKind.Absolute, out Uri? html)
-            ? html
-            : new Uri($"{repositoryUrl}/issues/{issue.Id.ToString(CultureInfo.InvariantCulture)}");
-        string? status = StatusName(issue.State);
-        return new TaskInfo(Id, key.ToString(), issue.Title ?? "", url)
-        {
-            Description = string.IsNullOrEmpty(issue.Content?.Raw) ? null : issue.Content.Raw,
-            Updated = issue.UpdatedOn,
-            RepositoryUrl = new Uri(repositoryUrl),
-            Status = status,
-            StatusCategory = issue.State is null ? null
-                : ToDoStates.Contains(issue.State) ? TaskStatusCategory.ToDo
-                : TaskStatusCategory.Done,
-        };
-    }
-
-    /// <summary>
-    /// Names an issue's status as Bitbucket shows it. Bitbucket has no in-progress state.
-    /// </summary>
-    private static string? StatusName(string? state) => state switch
-    {
-        "new" => "New",
-        "open" => "Open",
-        "on hold" => "On hold",
-        "resolved" => "Resolved",
-        "duplicate" => "Duplicate",
-        "invalid" => "Invalid",
-        "wontfix" => "Won't fix",
-        "closed" => "Closed",
-        _ => state,
-    };
 
     private static (string Workspace, string Repository)? SplitFullName(string? fullName) =>
         fullName?.Split('/') is [{ Length: > 0 } workspace, { Length: > 0 } repository]

@@ -1,6 +1,5 @@
 @* The logo of a task's source, or nothing for a source Tammi has no logo for (e.g. one that was removed). *@
 @using Deosrc.Tammi.Core.Integrations
-@using Deosrc.Tammi.Core.Integrations.Bitbucket
 @using Deosrc.Tammi.Core.Integrations.GitHub
 @using Deosrc.Tammi.Core.Integrations.Jira
 
@@ -18,7 +17,6 @@
 
     private IntegrationService? Service => Source switch
     {
-        BitbucketIntegration => IntegrationService.Bitbucket,
         GitHubIntegration => IntegrationService.GitHub,
         JiraIntegration => IntegrationService.Jira,
         _ => null,

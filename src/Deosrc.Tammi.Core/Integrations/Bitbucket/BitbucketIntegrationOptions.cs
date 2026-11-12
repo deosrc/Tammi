@@ -48,22 +48,6 @@ public sealed record BitbucketIntegrationOptions
     public int PageSize { get; init; } = 100;
 
     /// <summary>
-    /// The most tasks a search returns.
-    /// </summary>
-    public int MaxSearchResults { get; init; } = 100;
-
-    /// <summary>
-    /// How many repositories' issue trackers are searched at once. Bitbucket can only search the issues of one
-    /// repository at a time.
-    /// </summary>
-    public int MaxConcurrentRepositories { get; init; } = 4;
-
-    /// <summary>
-    /// How long the list of repositories a search covers is remembered before it's read again.
-    /// </summary>
-    public TimeSpan SearchScopeLifetime { get; init; } = TimeSpan.FromMinutes(10);
-
-    /// <summary>
     /// The longest Tammi waits for a rate limit to reset before retrying a request. When Bitbucket asks for a longer
     /// wait, the request fails with an <see cref="IntegrationRateLimitException"/> instead.
     /// </summary>

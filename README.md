@@ -2,7 +2,7 @@
 
 A task-first software development workspace management tool.
 
-Pick the tasks you're working on (from Bitbucket, GitHub or JIRA), and Tammi sets up a workspace around them.
+Pick the tasks you're working on (from GitHub or JIRA), and Tammi sets up a workspace around them.
 The workspace holds the relevant git repositories, shows their status, runs AI agents on the work and
 opens everything in your other tools.
 
