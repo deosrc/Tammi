@@ -24,8 +24,11 @@ internal sealed class MauiVisualiserWindow(VisualiserFeed feed, WorkspaceOpenReq
         var window = new Window(new ContentPage { Content = webView, Padding = 0 })
         {
             Title = "Visualiser",
-            Width = 1800,
-            Height = 1400,
+            // The smallest the window can be, which is also the size it opens at until it's been resized.
+            MinimumWidth = 400,
+            MinimumHeight = 300,
+            Width = 400,
+            Height = 300,
         };
         _window = window;
 

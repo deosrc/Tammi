@@ -80,6 +80,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<GitGraphViewOptions>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();
+        services.AddSingleton<VisualiserWindowStateStore>();
         services.AddSingleton<LayoutStateStore>();
         services.AddSingleton<IWorkspaceStore, WorkspaceStore>();
         services.AddSingleton<WorkspaceGitStatusMonitors>();
