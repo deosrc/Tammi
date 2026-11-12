@@ -296,7 +296,8 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - Changes and unpushed commits inside a submodule make its parent repository changed too.
 - **Keeping git status current:**
   - Workspaces open in a tab watch their worktrees for file changes and update live.
-  - Other workspaces refresh when Home is shown, and on a timer (interval in Settings).
+  - Other workspaces refresh when Home is shown, and on a timer (interval in Settings). The Visualiser's window does
+    the same while it's open: it reads them when it opens, and then on the timer.
   - Agent status is always live, because Tammi runs the agent processes itself.
   - A workspace's card shows its open agents below the git badges, after a divider: an indicator for each, in the order
     they started (a spinner while Working, a bell icon when it Needs input, otherwise a dot coloured by its state),

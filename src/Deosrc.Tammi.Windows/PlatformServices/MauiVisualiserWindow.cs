@@ -36,8 +36,8 @@ internal sealed class MauiVisualiserWindow(
         };
         _window = window;
 
-        // As when Home is opened, the statuses are read again.
-        _ = feed.RefreshStatusAsync();
+        // As when Home is opened, the statuses are read again, and then on its timer while the window's open.
+        var refreshing = feed.StartRefreshing();
 
         async void Push()
         {
@@ -79,6 +79,7 @@ internal sealed class MauiVisualiserWindow(
         window.Destroying += (_, _) =>
         {
             feed.Changed -= Push;
+            refreshing.Dispose();
             settings.Changed -= ApplyAlwaysOnTop;
             _window = null;
         };

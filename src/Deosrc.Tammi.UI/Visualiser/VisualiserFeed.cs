@@ -62,7 +62,7 @@ public sealed class VisualiserFeed
     public event Action? Changed;
 
     /// <summary>
-    /// Reads the git status and Pull Requests of the workspaces again, as Home does when it's opened, so the
+    /// Reads the git status and Pull Requests of the workspaces again, once, as Home does when it's opened, so the
     /// statuses are up to date. The visualiser then follows them as they're read. Workspaces that are open in a tab are
     /// already live, so they aren't read.
     /// </summary>
@@ -78,6 +78,40 @@ public sealed class VisualiserFeed
         }
         catch (Exception ex) when (ex is OperationCanceledException or IOException)
         {
+        }
+    }
+
+    /// <summary>
+    /// Reads the statuses now, as <see cref="RefreshStatusAsync"/> does, and then every
+    /// <see cref="GitSettings.StatusRefreshInterval"/> from the settings, as Home does while it's shown, until the
+    /// returned subscription is disposed.
+    /// </summary>
+    public IDisposable StartRefreshing()
+    {
+        var cts = new CancellationTokenSource();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (!cts.IsCancellationRequested)
+                {
+                    await RefreshStatusAsync(cts.Token).ConfigureAwait(false);
+                    await Task.Delay(_settings.Current.Git.StatusRefreshInterval, cts.Token).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        });
+        return new Refreshing(cts);
+    }
+
+    private sealed class Refreshing(CancellationTokenSource cts) : IDisposable
+    {
+        public void Dispose()
+        {
+            cts.Cancel();
+            cts.Dispose();
         }
     }
 

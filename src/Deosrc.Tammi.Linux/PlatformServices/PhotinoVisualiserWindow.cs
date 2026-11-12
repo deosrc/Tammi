@@ -126,8 +126,8 @@ internal sealed class PhotinoVisualiserWindow(
         _window = window;
         TrackState(window, placement);
 
-        // As when Home is opened, the statuses are read again.
-        _ = feed.RefreshStatusAsync();
+        // As when Home is opened, the statuses are read again, and then on its timer while the window's open.
+        var refreshing = feed.StartRefreshing();
 
         void Push() => app.MainWindow.Invoke(async () => window.SendWebMessage(await feed.SnapshotAsync()));
         feed.Changed += Push;
@@ -138,6 +138,7 @@ internal sealed class PhotinoVisualiserWindow(
         window.RegisterWindowClosingHandler((_, _) =>
         {
             feed.Changed -= Push;
+            refreshing.Dispose();
             settings.Changed -= ApplyAlwaysOnTop;
             _saveTimer?.Dispose();
             _saveTimer = null;
