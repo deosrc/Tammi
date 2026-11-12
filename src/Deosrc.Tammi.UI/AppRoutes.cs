@@ -44,14 +44,14 @@ public static class AppRoutes
     public const string ThirdPartySoftware = About + "/third-party";
 
     /// <summary>
-    /// The Create Workspace flow. It isn't under <c>workspaces/</c>, so it can't clash with a workspace's tab.
+    /// The Create Workspace flow, which has its own tab. It isn't under <c>workspaces/</c>, so it can't clash with a workspace's tab.
     /// </summary>
     public const string NewWorkspace = "new-workspace";
 
     private const string EditWorkspacePrefix = "edit-workspace/";
 
     /// <summary>
-    /// The path of the flow that changes a workspace's tasks and repositories. It isn't under <c>workspaces/</c>, so it
+    /// The path of the flow that changes a workspace's tasks and repositories. It is shown in the workspace's tab. It isn't under <c>workspaces/</c>, so it
     /// can't clash with the workspace's tab.
     /// </summary>
     public static string EditWorkspace(string workspaceId) =>
@@ -70,18 +70,21 @@ public static class AppRoutes
     public static string DeleteWorkspace(string workspaceId) => Workspace(workspaceId) + "?delete=true";
 
     /// <summary>
-    /// Gets the workspace a path is the tab of.
+    /// Gets the workspace a path is shown in the tab of: the workspace's own page, or its edit flow.
     /// </summary>
     /// <param name="path">A path relative to the base URI, without its query or fragment.</param>
     public static string? WorkspaceIdOf(string path)
     {
         var trimmed = path.TrimEnd('/');
-        if (!trimmed.StartsWith(WorkspacePrefix, StringComparison.Ordinal) || trimmed.Length == WorkspacePrefix.Length
-            || trimmed.IndexOf('/', WorkspacePrefix.Length) >= 0)
+        foreach (var prefix in (ReadOnlySpan<string>)[WorkspacePrefix, EditWorkspacePrefix])
         {
-            return null;
+            if (trimmed.StartsWith(prefix, StringComparison.Ordinal) && trimmed.Length > prefix.Length
+                && trimmed.IndexOf('/', prefix.Length) < 0)
+            {
+                return Uri.UnescapeDataString(trimmed[prefix.Length..]);
+            }
         }
 
-        return Uri.UnescapeDataString(trimmed[WorkspacePrefix.Length..]);
+        return null;
     }
 }

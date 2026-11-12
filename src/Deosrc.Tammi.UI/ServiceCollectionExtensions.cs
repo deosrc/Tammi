@@ -67,6 +67,8 @@ public static class ServiceCollectionExtensions
             time: services.GetRequiredService<TimeProvider>()));
         services.AddSingleton<AgentUsageMonitor>();
         services.AddSingleton<UsageTabState>();
+        services.AddSingleton<NewWorkspaceTabState>();
+        services.AddSingleton<EditWorkspaceSessions>();
         services.AddSingleton<VisualiserFeed>();
         services.AddSingleton<WorkspaceOpenRequests>();
         services.AddSingleton<ToolImages>();
@@ -75,6 +77,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<WorkspaceTerminals>();
         services.AddSingleton<WorkspaceAgents>();
         services.AddSingleton<WorkspaceGitGraphs>();
+        services.AddSingleton<WorkspaceHistoryTabs>();
         services.AddSingleton<WorkspaceTabRestorer>();
         services.AddSingleton<WorkspaceViewState>();
         services.AddSingleton<GitGraphViewOptions>();

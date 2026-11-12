@@ -11,10 +11,12 @@
 <body>
   <div id="app">Loading...</div>
 
-  <div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
+  <div id="blazor-error-ui" role="alertdialog" aria-modal="true" aria-labelledby="blazor-error-title">
+    <div class="error-dialog">
+      <h2 id="blazor-error-title">Something went wrong</h2>
+      <p>An unhandled error has occurred and the UI can no longer be used. Reload to continue.</p>
+      <button type="button" class="reload" onclick="location.reload()">Reload</button>
+    </div>
   </div>
 
   <script src="_framework/blazor.webview.js"></script>

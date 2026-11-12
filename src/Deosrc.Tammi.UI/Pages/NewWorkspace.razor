@@ -1,10 +1,7 @@
 @page "/new-workspace"
 @using Deosrc.Tammi.Core.Platform
-@using Deosrc.Tammi.Core.Settings
-@inject ISettingsStore SettingsStore
 @inject IFolderPicker FolderPicker
-@inject WorkspaceCreator Creator
-@inject WorkspaceTabs WorkspaceTabs
+@inject Deosrc.Tammi.UI.Layout.NewWorkspaceTabState TabState
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -24,7 +21,7 @@
 
     @switch (_step)
     {
-        case WizardStep.Tasks:
+        case NewWorkspaceStep.Tasks:
             <section class="wizard-body">
                 <h2>Choose tasks</h2>
                 <p class="settings-help settings-intro">
@@ -34,7 +31,7 @@
             </section>
             break;
 
-        case WizardStep.NameAndLocation:
+        case NewWorkspaceStep.NameAndLocation:
             <section class="wizard-body">
                 <h2>Name and location</h2>
                 <div class="settings-form">
@@ -119,7 +116,7 @@
             </section>
             break;
 
-        case WizardStep.Repositories:
+        case NewWorkspaceStep.Repositories:
             <section class="wizard-body">
                 <h2>Repositories</h2>
                 <dl class="workspace-details-facts">
@@ -203,7 +200,7 @@
     <div class="wizard-actions">
         @if (_created is not null)
         {
-            <a class="button button-secondary" href="@AppRoutes.Home">Home</a>
+            <button type="button" class="button button-secondary" @onclick="Close">Home</button>
             <div class="wizard-actions-end">
                 <button type="button" class="button" @onclick="OpenCreated">Open workspace</button>
             </div>
@@ -216,13 +213,13 @@
         }
         else
         {
-            <a class="button button-secondary" href="@AppRoutes.Home">Cancel</a>
+            <button type="button" class="button button-secondary" @onclick="Close">Cancel</button>
             <div class="wizard-actions-end">
-                @if (_step > WizardStep.Tasks)
+                @if (_step > NewWorkspaceStep.Tasks)
                 {
                     <button type="button" class="button button-secondary" @onclick="Back">Back</button>
                 }
-                @if (_step < WizardStep.Repositories)
+                @if (_step < NewWorkspaceStep.Repositories)
                 {
                     <button type="button" class="button" disabled="@(!CanGoNext)" @onclick="Next">Next</button>
                 }
@@ -237,116 +234,70 @@
 </div>
 
 @code {
-    private enum WizardStep
-    {
-        Tasks,
-        NameAndLocation,
-        Repositories,
-    }
-
-    private static readonly IReadOnlyList<(WizardStep Step, string Title)> Steps =
+    private static readonly IReadOnlyList<(NewWorkspaceStep Step, string Title)> Steps =
     [
-        (WizardStep.Tasks, "Tasks"),
-        (WizardStep.NameAndLocation, "Name and location"),
-        (WizardStep.Repositories, "Repositories"),
+        (NewWorkspaceStep.Tasks, "Tasks"),
+        (NewWorkspaceStep.NameAndLocation, "Name and location"),
+        (NewWorkspaceStep.Repositories, "Repositories"),
     ];
 
-    private WorkspaceDraft _draft = null!;
-    private WizardStep _step = WizardStep.Tasks;
-    private bool _creating;
-    private bool _cancelling;
-    private CancellationTokenSource? _creation;
-    private WorkspaceCreationProgress? _progress;
-    private WorkspaceCreationException? _failure;
-    private WorkspaceCreationResult? _created;
+    private NewWorkspaceSession _session = null!;
+
+    private WorkspaceDraft _draft => _session.Draft;
+    private NewWorkspaceStep _step => _session.Step;
+    private bool _creating => _session.IsCreating;
+    private bool _cancelling => _session.IsCancelling;
+    private WorkspaceCreationProgress? _progress => _session.Progress;
+    private WorkspaceCreationException? _failure => _session.Failure;
+    private WorkspaceCreationResult? _created => _session.Created;
 
     // The location is checked against the disk again on Next, since a render's result can be out of date.
-    private bool CanGoNext => _step != WizardStep.NameAndLocation || _draft.IsLocationValid;
+    private bool CanGoNext => _step != NewWorkspaceStep.NameAndLocation || _draft.IsLocationValid;
 
     protected override void OnInitialized()
     {
-        var general = SettingsStore.Current.General;
-        _draft = new WorkspaceDraft(
-            general.DefaultWorkspaceParentFolder,
-            general.WorkspaceFolderNameFormat,
-            general.WorkspaceNameTemplate);
+        // Resumes the flow if the tab was already open. Also covers arriving here by address rather than from Home.
+        _session = TabState.Open();
+        _session.Changed += OnSessionChanged;
+        _session.Completed += OnCompleted;
     }
+
+    public void Dispose()
+    {
+        // Leaving the page keeps the session, and a creation carries on.
+        _session.Changed -= OnSessionChanged;
+        _session.Completed -= OnCompleted;
+    }
+
+    private void OnSessionChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnCompleted(Deosrc.Tammi.Core.Workspaces.Workspace workspace) =>
+        InvokeAsync(() => Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id)));
 
     private void Next()
     {
         if (CanGoNext)
         {
-            _step++;
+            _session.Step++;
         }
     }
 
     private void Back()
     {
-        _failure = null;
-        _step--;
+        _session.Failure = null;
+        _session.Step--;
     }
 
-    public void Dispose()
-    {
-        // Leaving the page while creating stops it, and removes what was created.
-        _creation?.Cancel();
-    }
+    private Task CreateAsync() => _session.CreateAsync();
 
-    private async Task CreateAsync()
-    {
-        if (!_draft.IsLocationValid)
-        {
-            // Something appeared at the Workspace Folder since the last step.
-            _step = WizardStep.NameAndLocation;
-            return;
-        }
+    private void CancelCreating() => _session.CancelCreating();
 
-        _failure = null;
-        _progress = null;
-        _creating = true;
-        _cancelling = false;
-        using var creation = _creation = new CancellationTokenSource();
-        var progress = new Progress<WorkspaceCreationProgress>(update =>
-        {
-            _progress = update;
-            StateHasChanged();
-        });
-        try
-        {
-            _created = await Creator.CreateAsync(_draft.ToCreationRequest(), progress, creation.Token);
-            if (_created.Warnings.Count == 0)
-            {
-                OpenCreated();
-            }
-        }
-        catch (WorkspaceCreationException ex)
-        {
-            _failure = ex;
-        }
-        catch (OperationCanceledException)
-        {
-            // Cancelled by the user, or by leaving the page. Nothing is left on disk.
-        }
-        finally
-        {
-            _creation = null;
-            _creating = false;
-        }
-    }
+    private void OpenCreated() => _session.OpenCreated();
 
-    private void CancelCreating()
+    private void Close()
     {
-        _cancelling = true;
-        _creation?.Cancel();
-    }
-
-    private void OpenCreated()
-    {
-        if (_created?.Workspace is { } workspace)
-        {
-            WorkspaceTabs.Open(workspace.Id, workspace.Name);
-            Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id));
-        }
+        TabState.Close();
+        Navigation.NavigateTo(AppRoutes.Home);
     }
 
     private async Task PickParentFolderAsync()
