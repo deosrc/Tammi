@@ -35,6 +35,11 @@ public sealed record AppSettings
     public ToolSettings Tools { get; init; } = new();
 
     /// <summary>
+    /// The visualiser's settings.
+    /// </summary>
+    public VisualiserSettings Visualiser { get; init; } = new();
+
+    /// <summary>
     /// Replaces missing and out-of-range values with valid ones.
     /// </summary>
     public AppSettings Normalize() => this with
@@ -44,5 +49,6 @@ public sealed record AppSettings
         Integrations = (Integrations ?? new IntegrationsSettings()).Normalize(),
         Agents = (Agents ?? new AgentSettings()).Normalize(),
         Tools = (Tools ?? new ToolSettings()).Normalize(),
+        Visualiser = (Visualiser ?? new VisualiserSettings()).Normalize(),
     };
 }

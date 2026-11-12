@@ -418,6 +418,24 @@ a {
   color: var(--color-text);
 }
 
+.visualiser-toggle {
+  height: 100%;
+  margin-left: auto;
+  padding: 0 var(--space-4);
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.visualiser-toggle:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
 .usage-footer-title {
   font-size: 0.625rem;
   letter-spacing: 0.08em;

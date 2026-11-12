@@ -15,6 +15,9 @@ public static class MauiProgram
     // Held until the process ends.
     private static SingleInstanceLock? _instanceLock;
 
+    // Set once the main window has been created.
+    private static bool _mainWindowCreated;
+
     public static MauiApp CreateMauiApp()
     {
         var dataDirectory = new WindowsAppPaths().DataDirectory;
@@ -42,6 +45,15 @@ public static class MauiProgram
         builder.Services.AddWindowsPlatformServices();
         builder.ConfigureLifecycleEvents(events => events.AddWindows(windows => windows.OnWindowCreated(window =>
         {
+            // This is called for every window, and what follows is only for the main window, which is created first.
+            // The visualiser's window is another one: with this it would open at the main window's size, save its own
+            // size as the main window's, and ask about running agents and end them all when it closed.
+            if (_mainWindowCreated)
+            {
+                return;
+            }
+
+            _mainWindowCreated = true;
             var services = IPlatformApplication.Current!.Services;
             WindowStatePersistence.Attach(window, services.GetRequiredService<WindowStateStore>());
 

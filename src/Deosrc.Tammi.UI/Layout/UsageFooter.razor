@@ -1,8 +1,10 @@
 @implements IDisposable
 @using Deosrc.Tammi.Core.Usage
 @using Deosrc.Tammi.UI.Components
+@using Deosrc.Tammi.UI.Visualiser
 @inject AgentUsageMonitor Monitor
 @inject UsageTabState TabState
+@inject IVisualiserWindow VisualiserWindow
 @inject NavigationManager Navigation
 
 @* The chosen agent's limits as small progress bars, shown throughout the app. Clicking opens the usage tab. *@
@@ -27,6 +29,10 @@
                 }
             </span>
         }
+    </button>
+    <button type="button" class="visualiser-toggle" title="Open the visualiser" aria-label="Open the visualiser"
+            @onclick="VisualiserWindow.OpenOrFocus">
+        VISUALISER
     </button>
 </footer>
 

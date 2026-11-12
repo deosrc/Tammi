@@ -15,6 +15,7 @@ using Deosrc.Tammi.Core.Workspaces;
 using Deosrc.Tammi.UI.Components;
 using Deosrc.Tammi.UI.Layout;
 using Deosrc.Tammi.UI.Logging;
+using Deosrc.Tammi.UI.Visualiser;
 using Deosrc.Tammi.UI.Workspaces;
 using Microsoft.Extensions.Logging;
 
@@ -68,6 +69,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<UsageTabState>();
         services.AddSingleton<NewWorkspaceTabState>();
         services.AddSingleton<EditWorkspaceSessions>();
+        services.AddSingleton<VisualiserFeed>();
+        services.AddSingleton<WorkspaceOpenRequests>();
         services.AddSingleton<ToolImages>();
         services.AddSingleton<WorkspaceTools>();
         services.AddSingleton<TerminalLauncher>();
@@ -80,6 +83,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<GitGraphViewOptions>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();
+        services.AddSingleton<VisualiserWindowStateStore>();
         services.AddSingleton<LayoutStateStore>();
         services.AddSingleton<IWorkspaceStore, WorkspaceStore>();
         services.AddSingleton<WorkspaceGitStatusMonitors>();
