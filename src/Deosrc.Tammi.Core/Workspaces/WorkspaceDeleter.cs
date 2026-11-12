@@ -318,7 +318,7 @@ public sealed class WorkspaceDeleter(
         // branch, if it had one.
         var candidates = plan.Worktrees
             .Select(worktree => worktree.Repository is { } repository
-                ? new BranchCandidate(worktree.LocalRepositoryPath, repository.Branch, repository.BaseBranch, true)
+                ? new BranchCandidate(worktree.LocalRepositoryPath, repository.Branch, repository.MergeTarget, true)
                 : new BranchCandidate(worktree.LocalRepositoryPath, worktree.Status?.Branch, null, false))
             .Where(candidate => candidate.Branch is not null && Directory.Exists(candidate.Repository))
             .DistinctBy(candidate => (FileSystemPaths.Normalize(candidate.Repository), candidate.Branch));
@@ -329,7 +329,7 @@ public sealed class WorkspaceDeleter(
             var state = await GetBranchStateAsync(
                 candidate.Repository,
                 candidate.Branch!,
-                candidate.BaseBranch,
+                candidate.MergeTarget,
                 cancellationToken).ConfigureAwait(false);
             if (state.Exists)
             {
@@ -347,15 +347,15 @@ public sealed class WorkspaceDeleter(
     private async Task<BranchState> GetBranchStateAsync(
         string repository,
         string branch,
-        string? baseBranch,
+        string? mergeTarget,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await worktrees.GetBranchStateAsync(repository, branch, baseBranch, cancellationToken)
+            return await worktrees.GetBranchStateAsync(repository, branch, mergeTarget, cancellationToken)
                 .ConfigureAwait(false);
         }
-        catch (GitException) when (baseBranch is not null)
+        catch (GitException) when (mergeTarget is not null)
         {
             // The base may be gone, e.g. its remote-tracking branch was pruned. Try the remote's default branch.
             return await GetBranchStateAsync(repository, branch, null, cancellationToken).ConfigureAwait(false);
@@ -380,6 +380,6 @@ public sealed class WorkspaceDeleter(
     private sealed record BranchCandidate(
         string Repository,
         string? Branch,
-        string? BaseBranch,
+        string? MergeTarget,
         bool IsWorkspaceBranch);
 }

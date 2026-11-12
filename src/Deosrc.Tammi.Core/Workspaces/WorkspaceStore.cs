@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Deosrc.Tammi.Core.Integrations;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Storage;
@@ -582,9 +583,9 @@ public sealed class WorkspaceStore : IWorkspaceStore
                     + "isn't a full path.";
             }
 
-            if (string.IsNullOrWhiteSpace(repository.Branch) || string.IsNullOrWhiteSpace(repository.BaseBranch))
+            if (string.IsNullOrWhiteSpace(repository.Branch) || string.IsNullOrWhiteSpace(repository.MergeTarget))
             {
-                return $"The repository '{repository.FolderName}' has no branch or base branch.";
+                return $"The repository '{repository.FolderName}' has no branch or merge target.";
             }
         }
 
@@ -608,7 +609,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
             repository.FolderName,
             repository.LocalRepositoryPath,
             repository.Branch,
-            repository.BaseBranch))]);
+            repository.MergeTarget))]);
 
     /// <summary>
     /// Builds a workspace from its metadata. Missing values are left empty or <see langword="null"/>, for
@@ -628,7 +629,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
                     repository.Folder!,
                     repository.LocalRepository!,
                     repository.Branch!,
-                    repository.BaseBranch!)),
+                    repository.MergeTarget!)),
         ],
     };
 
@@ -646,5 +647,6 @@ public sealed class WorkspaceStore : IWorkspaceStore
 
     private sealed record MetadataTask(string? Source, string? Key);
 
-    private sealed record MetadataRepository(string? Folder, string? LocalRepository, string? Branch, string? BaseBranch);
+    private sealed record MetadataRepository(string? Folder, string? LocalRepository, string? Branch,
+        [property: JsonPropertyName("baseBranch")] string? MergeTarget);
 }

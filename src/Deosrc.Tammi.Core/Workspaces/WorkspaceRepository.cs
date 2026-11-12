@@ -9,8 +9,8 @@ namespace Deosrc.Tammi.Core.Workspaces;
 /// </param>
 /// <param name="LocalRepositoryPath">The full path of the Local Repository the worktree was created from.</param>
 /// <param name="Branch">The worktree's branch, created for the workspace.</param>
-/// <param name="BaseBranch">
+/// <param name="MergeTarget">
 /// What <paramref name="Branch"/> was created from, e.g. <c>origin/main</c>. The branch counts as merged when its tip
 /// is reachable from it.
 /// </param>
-public sealed record WorkspaceRepository(string FolderName, string LocalRepositoryPath, string Branch, string BaseBranch);
+public sealed record WorkspaceRepository(string FolderName, string LocalRepositoryPath, string Branch, string MergeTarget);

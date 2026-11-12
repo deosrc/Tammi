@@ -120,10 +120,10 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
        Repositories.)
    - Choosing a repository fetches it, to find the remote's default branch (see [Branches](#repositories-on-disk)).
      A repository that can't be fetched still offers the branches fetched before, and one with no remotes needs its
-     base branch chosen.
+     merge target chosen.
    - A workspace can be created without repositories.
-4. **Create the workspace.** Tammi checks everything first (the Workspace Folder is still free, the branch name is
-   valid and doesn't exist in any of the repositories, each base branch exists, the folder names are valid and
+4. **Create the workspace.** Tammi checks everything first (the Workspace Folder is still free, the branch names are
+   valid, each merge target exists, the folder names are valid and
    different), so nothing is created when a check fails. It then creates the Workspace Folder (and its parent
    folders), fetches each repository again and creates its worktree and submodules, and writes the metadata and index
    entry last, showing each step as it goes.
@@ -209,9 +209,16 @@ own branch. It is created automatically when the workspace is created:
     `acme/api#42` "Fix login" suggests `api-42-fix-login`. It's cut at a word to at most 80 characters.
   - It follows the tasks and the workspace name until the user edits it.
 - The user can edit the suggested name before the workspace is created.
-- The same branch name is used in every repository in the workspace.
+- The workspace has a default branch name. Each chosen repository has a branch input that starts as it, and follows
+  it while the two are the same, so changing the default changes every repository still using it. The user can enter
+  any other name for a repository, and is offered its existing branches as they type.
+- A branch that already exists in the repository is reused, and one that doesn't is created. Tammi shows which under
+  the input. A local branch is checked out as it is, and a branch that's only on the remote gets a local branch that
+  tracks it. Git won't check a branch out if another worktree has it. For a reused branch the merge target is only what
+  it's compared to for being merged.
+  - Branches Tammi creates are removed again if creating the workspace fails. Existing branches are kept.
 - **Base:** Tammi fetches each Local Repository, then branches from the remote's default branch
-  (e.g. `origin/main`). The user can choose a different base branch for each repository, from its remote-tracking
+  (e.g. `origin/main`). The user can choose a different merge target for each repository, from its remote-tracking
   and local branches or by entering any commit-ish.
 - The new branch doesn't track its base, so pushing it publishes it under its own name rather than to the base.
 
@@ -228,8 +235,8 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
 1. **Tasks.** The workspace's tasks are chosen already. The user adds or removes tasks as when creating a workspace.
    Tasks the workspace has don't choose repositories again; tasks added now do, as in the repository step.
 2. **Repositories.** The workspace's repositories are listed as already in it: they can't be removed or chosen again,
-   and their folder names are taken. The user chooses more Local Repositories, each with a folder name and base branch.
-   They get the workspace's own branch, which can't be changed once the workspace has repositories. A workspace with
+   and their folder names are taken. The user chooses more Local Repositories, each with a folder name and merge target.
+   They get the workspace's own branch unless they choose their own, as when it's created. The default can't be changed once the workspace has repositories. A workspace with
    none chooses the branch as when it's created.
 - Tammi checks everything first, as when creating a workspace (plus that each new worktree's folder doesn't exist in
   the Workspace Folder, and that the branch doesn't exist in the added repositories), then fetches each added
@@ -250,7 +257,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
    is already gone is only unregistered, and one git no longer lists (e.g. after `git worktree prune`) is skipped.
 3. Tammi offers to delete the workspace branches from the Local Repositories. Branches that are merged or pushed are
    selected for deletion by default. Others are kept unless the user selects them. Other branches are never offered.
-   - **Merged** means the branch's tip is reachable from its base branch (e.g. `origin/main`). Squash and rebase
+   - **Merged** means the branch's tip is reachable from its merge target (e.g. `origin/main`). Squash and rebase
      merges aren't detected.
    - **Pushed** means every commit on the branch is on a remote-tracking branch, as for unpushed commits on Home.
 - **A workspace whose metadata can't be read** is deleted the same way. Worktrees are always created directly in the
@@ -291,7 +298,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   or unpushed commits, i.e. work that could be lost. Being **behind** the remote is shown separately,
   for information, and doesn't count as changed.
   - **Unpushed commits** are commits on HEAD that aren't on any remote-tracking branch. This doesn't depend on
-    the upstream, so it works for new workspace branches (which track the base branch, or nothing) and for
+    the upstream, so it works for new workspace branches (which track the merge target, or nothing) and for
     submodules (which usually have a detached HEAD). A repository with no remotes has no unpushed commits.
   - Changes and unpushed commits inside a submodule make its parent repository changed too.
 - **Keeping git status current:**
@@ -394,7 +401,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     Graph column fits the graph's lanes, and a wider graph is cut off at the column's edge. The widths are shared by
     every graph until the app closes.
   - A toggle chooses which commits it shows: **Workspace branch** (HEAD, the workspace branch, its upstream and its
-    base branch; HEAD and its branch's upstream for a submodule) or **Everything** (every local and remote-tracking
+    merge target; HEAD and its branch's upstream for a submodule) or **Everything** (every local and remote-tracking
     branch and tag). It starts as Settings → Git says, which defaults to the workspace branch.
   - Large histories stay fast: only the rows in view are drawn, and commits are read 500 at a time as the list
     scrolls. The repository stays open while the tab is, so later pages don't walk the history again.
@@ -717,7 +724,7 @@ are left to other tools for now.
     gets a file that says so.
   - A separate **Repositories** section follows, because the Workspace Folder isn't a git repository itself and an
     agent started in it can otherwise be confused. It says so, then has a subsection for each Workspace Worktree: its
-    folder, its branch and its base branch. A workspace without repositories gets a line that says so.
+    folder, its branch and its merge target. A workspace without repositories gets a line that says so.
   - It's written each time the workspace's tasks have all been read (see [Tasks section](#workspace-view-tab)): when
     the tab opens, on Refresh, when integrations are added or removed, and when the task list changes. It's only
     rewritten when its contents change, and always in full, so an agent never reads half a file. A task that can't be

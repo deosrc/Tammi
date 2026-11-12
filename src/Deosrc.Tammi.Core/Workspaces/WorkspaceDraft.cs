@@ -258,7 +258,7 @@ public sealed class WorkspaceDraft
         get => _branchName;
         set
         {
-            _branchName = value ?? string.Empty;
+            SetBranchName(value ?? string.Empty);
             IsBranchNameEdited = !string.IsNullOrWhiteSpace(_branchName);
         }
     }
@@ -290,7 +290,7 @@ public sealed class WorkspaceDraft
 
     /// <summary>
     /// Chooses a repository. Its folder name is suggested; call <see cref="WorkspaceDraftRepository.LoadAsync"/> to
-    /// find its base branch.
+    /// find its merge target.
     /// </summary>
     /// <returns>The chosen repository, or <see langword="null"/> if it was chosen already.</returns>
     public WorkspaceDraftRepository? AddRepository(CatalogueRepository repository)
@@ -321,7 +321,7 @@ public sealed class WorkspaceDraft
     /// </para>
     /// </remarks>
     /// <param name="catalogue">The Repository Catalogue's repositories.</param>
-    /// <returns>The repositories it chose, so their base branches can be loaded.</returns>
+    /// <returns>The repositories it chose, so their merge targets can be loaded.</returns>
     public IReadOnlyList<WorkspaceDraftRepository> ChooseTaskRepositories(IReadOnlyList<CatalogueRepository> catalogue)
     {
         ArgumentNullException.ThrowIfNull(catalogue);
@@ -405,12 +405,15 @@ public sealed class WorkspaceDraft
 
     /// <summary>
     /// Whether the repositories and branch can be used as far as the draft can tell, so the workspace can be created.
-    /// <see cref="WorkspaceCreator.CheckAsync"/> checks the rest, such as whether the branch exists.
+    /// <see cref="WorkspaceCreator.CheckAsync"/> checks the rest, such as whether git accepts the branch names.
     /// </summary>
     public bool IsRepositoriesValid =>
-        (BranchNameProblem is null || (IsEditing && _repositories.Count == 0))
+        (BranchNameProblem is null || IsEditing || _repositories.Count > 0)
         && _repositories.TrueForAll(repository =>
-            repository.FolderNameProblem is null && !repository.IsLoading && repository.BaseBranch.Trim().Length > 0);
+            repository.FolderNameProblem is null
+            && repository.BranchNameProblem is null
+            && !repository.IsLoading
+            && repository.MergeTarget.Trim().Length > 0);
 
     /// <summary>
     /// The request to create the workspace as drafted.
@@ -509,7 +512,20 @@ public sealed class WorkspaceDraft
 
         if (!IsBranchNameEdited)
         {
-            _branchName = SuggestedBranchName ?? string.Empty;
+            SetBranchName(SuggestedBranchName ?? string.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Sets the branch name, and the branch of each repository that has the same one, so they keep following it.
+    /// </summary>
+    private void SetBranchName(string value)
+    {
+        string previous = _branchName;
+        _branchName = value;
+        foreach (var repository in _repositories.Where(repository => repository.BranchName == previous))
+        {
+            repository.BranchName = value;
         }
     }
 
