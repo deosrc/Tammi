@@ -457,7 +457,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     deleting the workspace closes its graphs.
 - **Agents**: start, interact with and stop AI agents (see [Agents](#agents))
 - **Agents section:** a card for each of the workspace's open agents, in the order they started, with its icon, its
-  [state](#agents) as an icon (a progress spinner while Working) and the card's colour: blue for Working, the warning
+  [state](#agents) as an icon (a progress spinner while Working; none while Idle or Running) and the card's colour: blue for Working, the warning
   colour (as a repository with changes) for Needs input, grey for Idle, Running and Exited, red for Error. Needs input
   and Error also tint the card's background. Clicking the card shows its tab. Cards have no Stop button: closing the
   agent's tab stops it. An agent that ended with an error shows its exit code.
