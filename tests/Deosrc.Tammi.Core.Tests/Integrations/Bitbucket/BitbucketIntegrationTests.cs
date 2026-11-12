@@ -13,8 +13,11 @@ public class BitbucketIntegrationTests : IDisposable
     private const string Token = "ATATT3xFfGF0test";
     private const string Email = "mia@example.com";
     private const string AccountId = "557058:7f1a0c1e-0000-4000-8000-000000000001";
-    private const string ReposPath = "user/permissions/repositories?pagelen=100";
-    private const string ReposPage2Url = "https://api.bitbucket.org/2.0/user/permissions/repositories?pagelen=100&page=2";
+    private const string WorkspacesPath = "user/workspaces?pagelen=100";
+    private const string ReposPath = "repositories/acme?role=member&pagelen=100";
+    private const string ReposPage2Url = "https://api.bitbucket.org/2.0/repositories/acme?role=member&pagelen=100&page=2";
+    private const string MiaReposPath = "repositories/mia?role=member&pagelen=100";
+    private const string OnlyAcmeWorkspace = """{"values":[{"workspace":{"slug":"acme"}}]}""";
     private const string ToDo = "(state = \"new\" OR state = \"open\" OR state = \"on hold\")";
 
     private static readonly string AssignedFilter = $"assignee.account_id = \"{AccountId}\" AND {ToDo}";
@@ -38,10 +41,24 @@ public class BitbucketIntegrationTests : IDisposable
     }
 
     /// <summary>
-    /// The first page of repositories, without the link to the second: acme/api and acme/web.
+    /// Answers the user's workspaces, acme and mia, and their repositories: acme/api, acme/web and acme/docs (over two
+    /// pages) and mia/notes.
     /// </summary>
-    private static string SingleReposPage() =>
-        FakeBitbucketApi.Response("repos.json").Replace("\"next\": \"" + ReposPage2Url + "\",", "");
+    private FakeBitbucketApi RespondWithRepositories() =>
+        (FakeBitbucketApi)_api
+            .Respond(WorkspacesPath, FakeBitbucketApi.Response("workspaces.json"))
+            .Respond(ReposPath, FakeBitbucketApi.Response("repos.json"))
+            .Respond(ReposPage2Url, FakeBitbucketApi.Response("repos-page2.json"))
+            .Respond(MiaReposPath, FakeBitbucketApi.Response("repos-mia.json"));
+
+    /// <summary>
+    /// Answers a user with only the acme workspace, whose repositories are acme/api and acme/web.
+    /// </summary>
+    private FakeBitbucketApi RespondWithAcmeRepositories() =>
+        (FakeBitbucketApi)_api
+            .Respond(WorkspacesPath, OnlyAcmeWorkspace)
+            .Respond(ReposPath, FakeBitbucketApi.Response("repos.json").Replace(
+                "\"next\": \"" + ReposPage2Url + "\",", ""));
 
     private static string IssuesPath(string repository, string filter) =>
         $"repositories/{repository}/issues?q={Uri.EscapeDataString(filter)}&sort=-updated_on&pagelen=100";
@@ -111,30 +128,43 @@ public class BitbucketIntegrationTests : IDisposable
     public async Task Calls_ThrowPermissionException_WhenTheTokenLacksAScope()
     {
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-        _api.Respond(ReposPath, FakeBitbucketApi.Response("forbidden.json"), HttpStatusCode.Forbidden);
+        _api.Respond(WorkspacesPath, FakeBitbucketApi.Response("forbidden.json"), HttpStatusCode.Forbidden);
 
         var exception = await Assert.ThrowsAsync<IntegrationPermissionException>(
             () => bitbucket.GetRepositoriesAsync(CancellationToken));
 
         Assert.Contains("lack one or more required privilege scopes", exception.Message);
-        Assert.Contains("read:repository:bitbucket", exception.Message);
+        Assert.Contains("read:workspace:bitbucket", exception.Message);
     }
 
     [Fact]
     public async Task GetRepositories_ListsEveryPage_WithCloneUrlsForHttpsAndSsh()
     {
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
-        _api.Respond(ReposPath, FakeBitbucketApi.Response("repos.json"))
-            .Respond(ReposPage2Url, FakeBitbucketApi.Response("repos-page2.json"));
+        RespondWithRepositories();
 
         IReadOnlyList<IntegrationRepository> repositories = await bitbucket.GetRepositoriesAsync(CancellationToken);
 
-        Assert.Equal(["acme/api", "acme/web", "mia/notes"], repositories.Select(repository => repository.FullName));
+        Assert.Equal(["acme/api", "acme/web", "acme/docs", "mia/notes"],
+            repositories.Select(repository => repository.FullName));
         IntegrationRepository api = repositories[0];
         Assert.Equal(("bitbucket", "acme", "api"), (api.Source, api.Owner, api.Name));
         // The user name in Bitbucket's HTTPS URL is left out.
         Assert.Equal(["https://bitbucket.org/acme/api.git", "git@bitbucket.org:acme/api.git"], api.CloneUrls);
         Assert.Equal(new Uri("https://bitbucket.org/acme/api"), api.Url);
+        Assert.Equal(
+            [WorkspacesPath, ReposPath, "repositories/acme?role=member&pagelen=100&page=2", MiaReposPath],
+            _api.Requests.Select(request => request.Url.AbsoluteUri.Replace("https://api.bitbucket.org/2.0/", "")));
+    }
+
+    [Fact]
+    public async Task GetRepositories_ReadsAWorkspaceListedAsItself()
+    {
+        BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
+        _api.Respond(WorkspacesPath, """{"values":[{"slug":"acme"}]}""")
+            .Respond(ReposPath, """{"values":[]}""");
+
+        Assert.Empty(await bitbucket.GetRepositoriesAsync(CancellationToken));
         Assert.Equal(2, _api.Requests.Count);
     }
 
@@ -144,21 +174,20 @@ public class BitbucketIntegrationTests : IDisposable
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
         string page = FakeBitbucketApi.Response("repos.json").Replace(
             ReposPage2Url, "https://evil.example.com/steal", StringComparison.Ordinal);
-        _api.Respond(ReposPath, page);
+        _api.Respond(WorkspacesPath, OnlyAcmeWorkspace).Respond(ReposPath, page);
 
         IReadOnlyList<IntegrationRepository> repositories = await bitbucket.GetRepositoriesAsync(CancellationToken);
 
         Assert.Equal(2, repositories.Count);
-        Assert.Single(_api.Requests);
+        Assert.Equal(2, _api.Requests.Count);
     }
 
     [Fact]
     public async Task GetAssignedTasks_ReadsTheIssueTrackersOfRepositoriesThatHaveOne()
     {
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
+        RespondWithRepositories();
         _api.Respond("user", FakeBitbucketApi.Response("user.json"))
-            .Respond(ReposPath, FakeBitbucketApi.Response("repos.json"))
-            .Respond(ReposPage2Url, FakeBitbucketApi.Response("repos-page2.json"))
             .Respond(IssuesPath("acme/api", AssignedFilter), FakeBitbucketApi.Response("issues-api.json"))
             .Respond(IssuesPath("mia/notes", AssignedFilter), FakeBitbucketApi.Response("issues-notes.json"));
 
@@ -186,8 +215,8 @@ public class BitbucketIntegrationTests : IDisposable
     {
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
         string filter = $"(title ~ \"say \\\"hi\\\"\" OR content.raw ~ \"say \\\"hi\\\"\") AND {ToDo}";
-        _api.Respond(ReposPath, SingleReposPage())
-            .Respond(IssuesPath("acme/api", filter), FakeBitbucketApi.Response("issues-api.json"));
+        RespondWithAcmeRepositories();
+        _api.Respond(IssuesPath("acme/api", filter), FakeBitbucketApi.Response("issues-api.json"));
 
         IReadOnlyList<TaskInfo> tasks = await bitbucket.SearchTasksAsync(" say \"hi\" ", CancellationToken);
 
@@ -208,10 +237,8 @@ public class BitbucketIntegrationTests : IDisposable
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync(
             new BitbucketIntegrationOptions { Email = Email, MaxSearchResults = 2 });
         string filter = $"(title ~ \"x\" OR content.raw ~ \"x\") AND {ToDo}";
-        string reposPage = FakeBitbucketApi.Response("repos.json");
-        _api.Respond(ReposPath, reposPage)
-            .Respond(ReposPage2Url, FakeBitbucketApi.Response("repos-page2.json"))
-            .Respond($"repositories/acme/api/issues?q={Uri.EscapeDataString(filter)}&sort=-updated_on&pagelen=2",
+        RespondWithRepositories();
+        _api.Respond($"repositories/acme/api/issues?q={Uri.EscapeDataString(filter)}&sort=-updated_on&pagelen=2",
                 FakeBitbucketApi.Response("issues-api.json"))
             .Respond($"repositories/mia/notes/issues?q={Uri.EscapeDataString(filter)}&sort=-updated_on&pagelen=2",
                 FakeBitbucketApi.Response("issues-notes.json"));
@@ -226,17 +253,17 @@ public class BitbucketIntegrationTests : IDisposable
     {
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
         string filter = $"(title ~ \"x\" OR content.raw ~ \"x\") AND {ToDo}";
-        _api.Respond(ReposPath, SingleReposPage())
-            .Respond(IssuesPath("acme/api", filter), FakeBitbucketApi.Response("issues-api.json"));
+        RespondWithAcmeRepositories();
+        _api.Respond(IssuesPath("acme/api", filter), FakeBitbucketApi.Response("issues-api.json"));
 
         await bitbucket.SearchTasksAsync("x", CancellationToken);
         await bitbucket.SearchTasksAsync("x", CancellationToken);
-        int before = _api.Requests.Count(request => request.Url.AbsolutePath.EndsWith("/repositories"));
+        int before = _api.Requests.Count(request => request.Url.AbsolutePath.EndsWith("/user/workspaces"));
         _time.Advance(TimeSpan.FromMinutes(11));
         await bitbucket.SearchTasksAsync("x", CancellationToken);
 
         Assert.Equal(1, before);
-        Assert.Equal(2, _api.Requests.Count(request => request.Url.AbsolutePath.EndsWith("/repositories")));
+        Assert.Equal(2, _api.Requests.Count(request => request.Url.AbsolutePath.EndsWith("/user/workspaces")));
     }
 
     [Fact]
@@ -244,9 +271,8 @@ public class BitbucketIntegrationTests : IDisposable
     {
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
         string filter = $"(title ~ \"x\" OR content.raw ~ \"x\") AND {ToDo}";
-        _api.Respond(ReposPath, FakeBitbucketApi.Response("repos.json"))
-            .Respond(ReposPage2Url, FakeBitbucketApi.Response("repos-page2.json"))
-            .Respond(IssuesPath("acme/api", filter), FakeBitbucketApi.Response("not-found.json"),
+        RespondWithRepositories();
+        _api.Respond(IssuesPath("acme/api", filter), FakeBitbucketApi.Response("not-found.json"),
                 HttpStatusCode.NotFound)
             .Respond(IssuesPath("mia/notes", filter), FakeBitbucketApi.Response("issues-notes.json"));
 

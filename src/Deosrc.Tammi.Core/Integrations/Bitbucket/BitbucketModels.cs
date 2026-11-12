@@ -30,10 +30,16 @@ internal static class BitbucketModels
     /// <param name="HasIssues">Whether the issue tracker is enabled, or <see langword="null"/> if not said.</param>
     public sealed record Repository(string? FullName, string? Name, bool? HasIssues, Links? Links);
 
+    public sealed record Workspace(string? Slug);
+
     /// <summary>
-    /// A repository the user has a permission on, as <c>user/permissions/repositories</c> lists them.
+    /// A workspace the user can access, as <c>user/workspaces</c> lists them. Bitbucket nests the workspace in an
+    /// access record, or lists the workspace itself, so both are read.
     /// </summary>
-    public sealed record RepositoryPermission(Repository? Repository);
+    public sealed record WorkspaceAccess(Workspace? Workspace, string? Slug)
+    {
+        public string? WorkspaceSlug => Workspace?.Slug ?? Slug;
+    }
 
     public sealed record Issue(
         int Id,

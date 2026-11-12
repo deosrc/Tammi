@@ -830,10 +830,11 @@ are left to other tools for now.
   HTTP access tokens), so it needs its own implementation.
 - **Authentication:** the Atlassian account's email address (a setting) and an API token with scopes (kept in the
   credential store), sent as basic authentication. The token needs the scopes `read:user:bitbucket`,
-  `read:repository:bitbucket`, `read:issue:bitbucket` and `read:pullrequest:bitbucket`. App passwords aren't
+  `read:workspace:bitbucket`, `read:repository:bitbucket`, `read:issue:bitbucket` and `read:pullrequest:bitbucket`. App passwords aren't
   supported, because Atlassian is retiring them. When Bitbucket says a scope is missing, Tammi says which scopes it needs.
-- **Repositories** are those the user has a permission on (`user/permissions/repositories`): their own, their
-  workspaces' and those they were given access to. Each has its HTTPS and SSH clone URLs; the user name Bitbucket puts
+- **Repositories** are those the user is a member of (`role=member`: owned, administered or contributed to) in each
+  workspace they can access (`user/workspaces`, then `repositories/<workspace>`), because Bitbucket has no single list
+  of them. Each has its HTTPS and SSH clone URLs; the user name Bitbucket puts
   in the HTTPS URL is left out so it matches other forms of the same URL.
 - **Task keys** are `workspace/repo#number`. Only repositories that have the issue tracker enabled have tasks.
   Bitbucket has no in-progress state: new, open and on hold issues are to do, and resolved, duplicate, invalid, won't

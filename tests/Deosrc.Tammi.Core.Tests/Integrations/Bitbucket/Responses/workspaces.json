@@ -1,0 +1,20 @@
+{
+  "pagelen": 10,
+  "page": 1,
+  "values": [
+    {
+      "type": "workspace_access",
+      "workspace": {
+        "type": "workspace",
+        "slug": "acme"
+      }
+    },
+    {
+      "type": "workspace_access",
+      "workspace": {
+        "type": "workspace",
+        "slug": "mia"
+      }
+    }
+  ]
+}

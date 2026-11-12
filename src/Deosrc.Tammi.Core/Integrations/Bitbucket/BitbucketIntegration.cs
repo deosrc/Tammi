@@ -27,10 +27,11 @@ namespace Deosrc.Tammi.Core.Integrations.Bitbucket;
 public sealed class BitbucketIntegration : ITaskIntegration, IRepositoryIntegration, IPullRequestIntegration
 {
     /// <summary>
-    /// The scopes an API token needs: to read the user it belongs to, repositories, issues and Pull Requests.
+    /// The scopes an API token needs: to read the user it belongs to, their workspaces, repositories, issues and Pull Requests.
     /// </summary>
     public const string RequiredScopes =
-        "read:user:bitbucket, read:repository:bitbucket, read:issue:bitbucket and read:pullrequest:bitbucket";
+        "read:user:bitbucket, read:workspace:bitbucket, read:repository:bitbucket, read:issue:bitbucket and "
+        + "read:pullrequest:bitbucket";
 
     /// <summary>
     /// The message for a token that can't read Pull Requests, naming the scope it needs.
@@ -122,8 +123,7 @@ public sealed class BitbucketIntegration : ITaskIntegration, IRepositoryIntegrat
         ?? throw new IntegrationException("Bitbucket didn't return the authenticated user.");
 
     /// <summary>
-    /// Lists the repositories the user has a permission on: their own, those of workspaces they belong to, and those
-    /// they were given access to.
+    /// Lists the repositories the user is a member of in the workspaces they can access.
     /// </summary>
     /// <inheritdoc/>
     public async Task<IReadOnlyList<IntegrationRepository>> GetRepositoriesAsync(
@@ -147,18 +147,38 @@ public sealed class BitbucketIntegration : ITaskIntegration, IRepositoryIntegrat
         return repositories;
     }
 
+    /// <summary>
+    /// Reads the repositories the user is a member of (<c>role=member</c>, which includes those they own, administer
+    /// and contribute to) in each workspace they can access. Bitbucket has no single list of them.
+    /// </summary>
     private async Task<List<BitbucketModels.Repository>> ReadRepositoriesAsync(CancellationToken cancellationToken)
     {
-        var path = $"user/permissions/repositories?pagelen={_options.PageSize.ToString(CultureInfo.InvariantCulture)}";
-        var repositories = new List<BitbucketModels.Repository>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        await foreach (BitbucketModels.RepositoryPermission permission in _api
-            .GetPagesAsync<BitbucketModels.RepositoryPermission>(path, allowNotFound: false, cancellationToken)
+        string perPage = _options.PageSize.ToString(CultureInfo.InvariantCulture);
+        var workspaces = new List<string>();
+        await foreach (BitbucketModels.WorkspaceAccess access in _api
+            .GetPagesAsync<BitbucketModels.WorkspaceAccess>(
+                $"user/workspaces?pagelen={perPage}", allowNotFound: false, cancellationToken)
             .ConfigureAwait(false))
         {
-            if (permission.Repository is { FullName: { } fullName } repository && seen.Add(fullName))
+            if (access.WorkspaceSlug is { Length: > 0 } slug)
             {
-                repositories.Add(repository);
+                workspaces.Add(slug);
+            }
+        }
+
+        var repositories = new List<BitbucketModels.Repository>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string workspace in workspaces)
+        {
+            string path = $"repositories/{Uri.EscapeDataString(workspace)}?role=member&pagelen={perPage}";
+            await foreach (BitbucketModels.Repository repository in _api
+                .GetPagesAsync<BitbucketModels.Repository>(path, allowNotFound: true, cancellationToken)
+                .ConfigureAwait(false))
+            {
+                if (repository.FullName is { } fullName && seen.Add(fullName))
+                {
+                    repositories.Add(repository);
+                }
             }
         }
 

@@ -3,20 +3,24 @@
   "page": 2,
   "values": [
     {
-      "type": "repository_permission",
-      "permission": "admin",
-      "repository": {
-        "type": "repository",
-        "full_name": "mia/notes",
-        "name": "Notes",
-        "has_issues": true,
-        "links": {
-          "html": { "href": "https://bitbucket.org/mia/notes" },
-          "clone": [
-            { "name": "https", "href": "https://mia@bitbucket.org/mia/notes.git" },
-            { "name": "ssh", "href": "git@bitbucket.org:mia/notes.git" }
-          ]
-        }
+      "type": "repository",
+      "full_name": "acme/docs",
+      "name": "Docs",
+      "has_issues": false,
+      "links": {
+        "html": {
+          "href": "https://bitbucket.org/acme/docs"
+        },
+        "clone": [
+          {
+            "name": "https",
+            "href": "https://mia@bitbucket.org/acme/docs.git"
+          },
+          {
+            "name": "ssh",
+            "href": "git@bitbucket.org:acme/docs.git"
+          }
+        ]
       }
     }
   ]
