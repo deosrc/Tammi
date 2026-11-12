@@ -35,6 +35,13 @@ public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestI
     /// </summary>
     internal const int MaxPullRequestPageSize = 50;
 
+    /// <summary>
+    /// Adds the participants (reviewers and whether they approved) to the Pull Requests Bitbucket lists, which leaves
+    /// them out by default. The <c>+</c> (escaped, so it isn't read as a space) adds to the default fields rather than
+    /// replacing them.
+    /// </summary>
+    private const string ParticipantsField = "&fields=%2Bvalues.participants";
+
     private static readonly string[] PullRequestStates = ["OPEN", "MERGED", "DECLINED", "SUPERSEDED"];
 
     private readonly BitbucketIntegrationOptions _options;
@@ -220,7 +227,8 @@ public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestI
         foreach ((string workspace, string slug) in repositories)
         {
             string repositoryPath = $"repositories/{Uri.EscapeDataString(workspace)}/{Uri.EscapeDataString(slug)}";
-            string path = $"{repositoryPath}/pullrequests?q={query}&{states}&sort=created_on&pagelen={perPage}";
+            string path = $"{repositoryPath}/pullrequests?q={query}&{states}&sort=created_on&pagelen={perPage}"
+                + ParticipantsField;
             var list = new List<BitbucketModels.PullRequest>();
             bool exists = false;
             try

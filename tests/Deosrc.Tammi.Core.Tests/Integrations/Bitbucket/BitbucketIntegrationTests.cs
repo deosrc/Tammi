@@ -172,7 +172,7 @@ public class BitbucketIntegrationTests : IDisposable
     private static readonly string PullRequestsPath =
         "repositories/acme/api/pullrequests?q="
         + Uri.EscapeDataString("source.branch.name = \"api-42-fix-login\"")
-        + "&state=OPEN&state=MERGED&state=DECLINED&state=SUPERSEDED&sort=created_on&pagelen=50";
+        + "&state=OPEN&state=MERGED&state=DECLINED&state=SUPERSEDED&sort=created_on&pagelen=50&fields=%2Bvalues.participants";
 
     [Fact]
     public async Task GetPullRequests_ReadsStateReviewAndChecks_OfPullRequestsFromTheBranch()
