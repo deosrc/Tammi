@@ -6,6 +6,7 @@
 @inject WorkspaceTerminals Terminals
 @inject WorkspaceAgents Agents
 @inject WorkspaceGitGraphs GitGraphs
+@inject WorkspaceHistoryTabs HistoryTabs
 @inject WorkspaceTabRestorer TabRestorer
 
 @* The Delete Workspace flow: check for work that would be lost, confirm, delete, then offer to delete the branches. *@
@@ -248,6 +249,7 @@
             // tab, so it doesn't stop half-way.
             TabRestorer.Forget(WorkspaceId);
             GitGraphs.CloseAll(WorkspaceId);
+            HistoryTabs.CloseAll(WorkspaceId);
             await Task.WhenAll(Terminals.CloseAllAsync(WorkspaceId), Agents.CloseAllAsync(WorkspaceId));
             branches = await Deleter.DeleteAsync(_plan!, CancellationToken.None);
         }

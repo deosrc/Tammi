@@ -986,13 +986,28 @@ label.task-choice {
 }
 
 .side-panel-section-title {
-  flex: 1;
   min-width: 0;
+}
+
+/* A chip for each state agents are in, holding their count, in the state's colours. It follows the Agents section's
+   title. */
+.agent-count {
+  flex: none;
+  min-width: 1.6em;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--agent-state-tone);
+  color: var(--agent-state-tone-text);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  line-height: 1.6;
+  text-align: center;
 }
 
 .side-panel-section-actions {
   display: flex;
   flex: none;
+  margin-left: auto;
   gap: var(--space-1);
 }
 
@@ -1061,7 +1076,7 @@ label.task-choice {
   margin: 0;
 }
 
-/* The side panel's Agents section: a card for each open agent, then the workspace's past Agent Sessions. */
+/* The side panel's Agents section: a card for each open agent. */
 .agent-list,
 .agent-session-list {
   display: flex;
@@ -1102,28 +1117,9 @@ label.task-choice {
   white-space: nowrap;
 }
 
-.agent-state-badge {
-  flex: none;
+/* The card's state icon sits at the end of its heading. */
+.agent-card-heading .agent-tab-state {
   margin-left: auto;
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  background: var(--agent-state-tone);
-  color: var(--agent-state-tone-text);
-  font-size: var(--font-size-small);
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-/* A Working badge has a spinner before its label, smaller than usual and in the badge's text colour. */
-.agent-state-badge .spinner {
-  width: 10px;
-  height: 10px;
-  border-width: 2px;
-  border-color: color-mix(in srgb, currentColor 35%, transparent);
-  border-top-color: currentColor;
 }
 
 .side-panel-section-body .agent-card-detail,
@@ -1141,21 +1137,20 @@ label.task-choice {
   gap: var(--space-2);
 }
 
-.side-panel-section-body .agent-section-error {
-  margin-top: var(--space-2);
-  font-size: var(--font-size-small);
+/* The History tab: the workspace's past Agent Sessions, in the main area. */
+.workspace-history {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-4);
+  overflow-y: auto;
 }
 
-.agent-sessions {
-  margin-top: var(--space-3);
+.workspace-history h2 {
+  margin-top: 0;
 }
 
-.agent-sessions > summary {
-  margin-bottom: var(--space-2);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-  font-weight: 600;
-  cursor: pointer;
+.workspace-history .agent-session-list {
+  max-width: 600px;
 }
 
 .agent-session {
@@ -1163,8 +1158,42 @@ label.task-choice {
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
-  border: 1px dashed var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+/* The agent's name at the left and when the session was last started at the right. */
+.agent-session-heading,
+.agent-session-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.agent-session-heading {
+  justify-content: space-between;
+}
+
+.agent-session-time {
+  flex: none;
+}
+
+/* The repository the session was started in, at the left, and the buttons at the right. */
+.agent-session-footer {
+  justify-content: space-between;
+}
+
+.agent-session-location {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-session-footer .agent-card-actions {
+  flex: none;
+  margin-left: auto;
 }
 
 .agent-session-name {
@@ -1172,11 +1201,6 @@ label.task-choice {
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.agent-session-folder {
-  color: var(--color-text-muted);
-  font-weight: normal;
 }
 
 /* The side panel's git status section: a card for each repository, with its submodules nested inside it. The card's
@@ -1609,7 +1633,7 @@ label.task-choice {
   font-size: var(--font-size-small);
 }
 
-/* An agent's state, as a coloured dot on its tab and a badge on its card in the side panel. Each state sets the tone
+/* An agent's state, as an icon on its tab and on its card in the side panel. Each state sets the tone
    both use: blue while working, warning (as a repository with changes) when it needs input, grey when idle, red on error. */
 .agent-state-active {
   --agent-state-tone: var(--color-info);
@@ -1649,7 +1673,7 @@ label.task-choice {
   --agent-state-tone-text: var(--color-surface);
 }
 
-/* An agent tab's state at its end, in the state's tone: a spinner, an icon or a dot. */
+/* An agent's state icon, in the state's tone: a spinner, an icon or a dot. */
 .agent-tab-state {
   display: inline-flex;
   flex: none;
