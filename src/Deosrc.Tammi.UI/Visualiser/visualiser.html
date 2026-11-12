@@ -40,13 +40,10 @@ const states = {
 
 function create(canvas) {
   const context = canvas.getContext("2d");
-  const colours = {
-    agent: "#d97757",
-    jira: "#4c9aff",
-    other: "#8a6cf0",
-    NeedsInput: "#d29922",
-    Error: "#ff7b72",
-  };
+  // An agent is the colour of its status dot in the app's dark theme: blue while working, amber when it needs the
+  // user, red on error, and grey otherwise (idle, running or ended).
+  const agentColours = { Working: "#4c9aff", NeedsInput: "#d29922", Error: "#ff7b72" };
+  const grey = "#9ba1a8";
 
   let workspaces = [];
   let particles = [];
@@ -89,7 +86,7 @@ function create(canvas) {
     Done: "#3fb950",
   };
   const statusColour = (status) => statusColours[status] ?? "#ffffff";
-  const agentColour = (state) => colours[state] ?? colours.agent;
+  const agentColour = (state) => agentColours[state] ?? grey;
 
   // Sources sit on a ring, and a source's workspaces on a smaller ring around it, so spacing follows the grouping.
   const layout = () => {
