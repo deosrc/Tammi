@@ -5,6 +5,7 @@
 @inject IntegrationRegistry Registry
 @inject ISettingsStore SettingsStore
 @inject WorkspaceEditor Editor
+@inject EditWorkspaceSessions Sessions
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -39,7 +40,7 @@
 
         @switch (_step)
         {
-            case EditStep.Tasks:
+            case EditWorkspaceStep.Tasks:
                 <section class="wizard-body">
                     <h2>Change tasks</h2>
                     <p class="settings-help settings-intro">
@@ -49,7 +50,7 @@
                 </section>
                 break;
 
-            case EditStep.Repositories:
+            case EditWorkspaceStep.Repositories:
                 <section class="wizard-body">
                     <h2>Add repositories</h2>
                     @if (_saving)
@@ -116,7 +117,7 @@
             @if (_saved is not null)
             {
                 <div class="wizard-actions-end">
-                    <button type="button" class="button" @onclick="Finish">Back to workspace</button>
+                    <button type="button" class="button" @onclick="Discard">Back to workspace</button>
                 </div>
             }
             else if (_saving)
@@ -127,13 +128,13 @@
             }
             else
             {
-                <a class="button button-secondary" href="@AppRoutes.Workspace(_workspace.Id)">Cancel</a>
+                <button type="button" class="button button-secondary" @onclick="Discard">Cancel</button>
                 <div class="wizard-actions-end">
-                    @if (_step > EditStep.Tasks)
+                    @if (_step > EditWorkspaceStep.Tasks)
                     {
                         <button type="button" class="button button-secondary" @onclick="Back">Back</button>
                     }
-                    @if (_step < EditStep.Repositories)
+                    @if (_step < EditWorkspaceStep.Repositories)
                     {
                         <button type="button" class="button" @onclick="Next">Next</button>
                     }
@@ -149,33 +150,28 @@
 </div>
 
 @code {
-    private enum EditStep
-    {
-        Tasks,
-        Repositories,
-    }
-
-    private static readonly IReadOnlyList<(EditStep Step, string Title)> Steps =
+    private static readonly IReadOnlyList<(EditWorkspaceStep Step, string Title)> Steps =
     [
-        (EditStep.Tasks, "Tasks"),
-        (EditStep.Repositories, "Repositories"),
+        (EditWorkspaceStep.Tasks, "Tasks"),
+        (EditWorkspaceStep.Repositories, "Repositories"),
     ];
 
     [Parameter]
     public string WorkspaceId { get; set; } = "";
 
     private readonly CancellationTokenSource _disposed = new();
-    private Deosrc.Tammi.Core.Workspaces.Workspace? _workspace;
-    private WorkspaceDraft? _draft;
+    private EditWorkspaceSession? _session;
     private string? _loadProblem;
     private string? _loadedId;
-    private EditStep _step = EditStep.Tasks;
-    private bool _saving;
-    private bool _cancelling;
-    private CancellationTokenSource? _saveToken;
-    private WorkspaceCreationProgress? _progress;
-    private WorkspaceEditException? _failure;
-    private WorkspaceCreationResult? _saved;
+
+    private Deosrc.Tammi.Core.Workspaces.Workspace? _workspace => _session?.Workspace;
+    private WorkspaceDraft? _draft => _session?.Draft;
+    private EditWorkspaceStep _step => _session?.Step ?? EditWorkspaceStep.Tasks;
+    private bool _saving => _session?.IsSaving ?? false;
+    private bool _cancelling => _session?.IsCancelling ?? false;
+    private WorkspaceCreationProgress? _progress => _session?.Progress;
+    private WorkspaceEditException? _failure => _session?.Failure;
+    private WorkspaceCreationResult? _saved => _session?.Saved;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -185,9 +181,16 @@
         }
 
         _loadedId = WorkspaceId;
-        _workspace = null;
-        _draft = null;
+        Detach();
         _loadProblem = null;
+
+        // Resumes the flow if the workspace's tab already had one.
+        if (Sessions.Find(WorkspaceId) is { } existing)
+        {
+            Attach(existing);
+            return;
+        }
+
         WorkspaceListing? listing;
         try
         {
@@ -217,9 +220,28 @@
         }
 
         var general = SettingsStore.Current.General;
-        _draft = WorkspaceDraft.ForEditing(
+        var draft = WorkspaceDraft.ForEditing(
             workspace, tasks, general.WorkspaceFolderNameFormat, general.WorkspaceNameTemplate);
-        _workspace = workspace;
+        var session = new EditWorkspaceSession(workspace, draft, Editor);
+        Sessions.Add(session);
+        Attach(session);
+    }
+
+    private void Attach(EditWorkspaceSession session)
+    {
+        _session = session;
+        session.Changed += OnSessionChanged;
+        session.Completed += OnCompleted;
+    }
+
+    private void Detach()
+    {
+        if (_session is { } session)
+        {
+            session.Changed -= OnSessionChanged;
+            session.Completed -= OnCompleted;
+            _session = null;
+        }
     }
 
     /// <summary>
@@ -251,71 +273,36 @@
         return tasks;
     }
 
-    private void Next() => _step++;
+    private void Next() => _session!.Step++;
 
     private void Back()
     {
-        _failure = null;
-        _step--;
+        _session!.Failure = null;
+        _session.Step--;
     }
 
     public void Dispose()
     {
-        // Leaving the page while saving stops it, and removes what was added.
-        _saveToken?.Cancel();
+        // Leaving the page keeps the flow, and a save carries on. Only loading stops.
+        Detach();
         _disposed.Cancel();
         _disposed.Dispose();
     }
 
-    private async Task SaveAsync()
+    private void OnSessionChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnCompleted() => InvokeAsync(Discard);
+
+    private Task SaveAsync() => _session is { } session ? session.SaveAsync() : Task.CompletedTask;
+
+    private void CancelSaving() => _session?.CancelSaving();
+
+    /// <summary>
+    /// Ends the flow, and returns to the workspace.
+    /// </summary>
+    private void Discard()
     {
-        if (_draft is null || _workspace is null)
-        {
-            return;
-        }
-
-        _failure = null;
-        _progress = null;
-        _saving = true;
-        _cancelling = false;
-        using var save = _saveToken = new CancellationTokenSource();
-        var progress = new Progress<WorkspaceCreationProgress>(update =>
-        {
-            _progress = update;
-            StateHasChanged();
-        });
-        try
-        {
-            _saved = await Editor.EditAsync(_workspace.Id, _draft.ToEditRequest(), progress, save.Token);
-            if (_saved.Warnings.Count == 0)
-            {
-                Finish();
-            }
-        }
-        catch (WorkspaceEditException ex)
-        {
-            _failure = ex;
-        }
-        catch (WorkspaceException ex)
-        {
-            _failure = new WorkspaceEditException(ex.Message, ex.Folder, innerException: ex);
-        }
-        catch (OperationCanceledException)
-        {
-            // Cancelled by the user, or by leaving the page. Whatever was added has been removed.
-        }
-        finally
-        {
-            _saveToken = null;
-            _saving = false;
-        }
+        Sessions.Discard(WorkspaceId);
+        Navigation.NavigateTo(AppRoutes.Workspace(WorkspaceId));
     }
-
-    private void CancelSaving()
-    {
-        _cancelling = true;
-        _saveToken?.Cancel();
-    }
-
-    private void Finish() => Navigation.NavigateTo(AppRoutes.Workspace(WorkspaceId));
 }

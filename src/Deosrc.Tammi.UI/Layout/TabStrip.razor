@@ -3,6 +3,8 @@
 @inject WorkspaceTabs WorkspaceTabs
 @inject WorkspaceAgents Agents
 @inject UsageTabState UsageTabState
+@inject Deosrc.Tammi.UI.Workspaces.EditWorkspaceSessions EditSessions
+@inject NewWorkspaceTabState NewWorkspaceTabState
 @inject NavigationManager Navigation
 
 <nav class="tab-strip" aria-label="Main">
@@ -16,9 +18,13 @@
 
     @foreach (var tab in WorkspaceTabs.Tabs)
     {
-        var route = AppRoutes.Workspace(tab.WorkspaceId);
-        <div class="tab workspace-tab @ActiveClass(route)" @key="tab.WorkspaceId">
-            <a class="tab-label" href="@route" title="@tab.Name" aria-current="@AriaCurrent(route)">
+        // Returns to the edit flow if the workspace has one in progress.
+        var route = EditSessions.Find(tab.WorkspaceId) is null
+            ? AppRoutes.Workspace(tab.WorkspaceId)
+            : AppRoutes.EditWorkspace(tab.WorkspaceId);
+        var shown = IsWorkspaceShown(tab.WorkspaceId);
+        <div class="tab workspace-tab @(shown ? "active" : null)" @key="tab.WorkspaceId">
+            <a class="tab-label" href="@route" title="@tab.Name" aria-current="@(shown ? "page" : null)">
                 <span class="tab-label-text">@tab.Name</span>
                 @* The state of the workspace's agents that most needs the user, if it has any. *@
                 @if (AgentStates.Summarise(Agents.For(tab.WorkspaceId).Select(agent => agent.State)) is { } agentState)
@@ -28,6 +34,20 @@
             </a>
             <button type="button" class="tab-close" title="Close @tab.Name" aria-label="Close @tab.Name"
                     @onclick="() => Close(tab)">
+                &times;
+            </button>
+        </div>
+    }
+
+    @if (NewWorkspaceTabState.IsOpen)
+    {
+        <div class="tab workspace-tab @ActiveClass(AppRoutes.NewWorkspace)">
+            <a class="tab-label" href="@AppRoutes.NewWorkspace" title="New workspace"
+               aria-current="@AriaCurrent(AppRoutes.NewWorkspace)">
+                <span class="tab-label-text">New workspace</span>
+            </a>
+            <button type="button" class="tab-close" title="Close New workspace" aria-label="Close New workspace"
+                    @onclick="CloseNewWorkspace">
                 &times;
             </button>
         </div>
@@ -65,6 +85,8 @@
         WorkspaceTabs.Changed += OnTabsChanged;
         Agents.Changed += OnAgentsChanged;
         UsageTabState.Changed += OnTabsChanged;
+        NewWorkspaceTabState.Changed += OnTabsChanged;
+        EditSessions.Changed += OnTabsChanged;
         Navigation.LocationChanged += OnLocationChanged;
     }
 
@@ -73,16 +95,28 @@
         WorkspaceTabs.Changed -= OnTabsChanged;
         Agents.Changed -= OnAgentsChanged;
         UsageTabState.Changed -= OnTabsChanged;
+        NewWorkspaceTabState.Changed -= OnTabsChanged;
+        EditSessions.Changed -= OnTabsChanged;
         Navigation.LocationChanged -= OnLocationChanged;
     }
 
     private void Close(WorkspaceTab tab)
     {
-        var wasShown = IsCurrent(AppRoutes.Workspace(tab.WorkspaceId));
+        var wasShown = IsWorkspaceShown(tab.WorkspaceId);
         var next = WorkspaceTabs.Close(tab.WorkspaceId);
         if (wasShown)
         {
             Navigation.NavigateTo(next is null ? AppRoutes.Home : AppRoutes.Workspace(next.WorkspaceId));
+        }
+    }
+
+    private void CloseNewWorkspace()
+    {
+        var wasShown = IsCurrent(AppRoutes.NewWorkspace);
+        NewWorkspaceTabState.Close();
+        if (wasShown)
+        {
+            Navigation.NavigateTo(AppRoutes.Home);
         }
     }
 
@@ -100,6 +134,9 @@
         IsCurrent(AppRoutes.Settings) || _currentPath.StartsWith(AppRoutes.Settings + "/", StringComparison.Ordinal);
 
     private bool IsCurrent(string route) => string.Equals(_currentPath, route, StringComparison.Ordinal);
+
+    // A workspace's tab also shows its edit flow.
+    private bool IsWorkspaceShown(string workspaceId) => AppRoutes.WorkspaceIdOf(_currentPath) == workspaceId;
 
     private string? ActiveClass(string route) => IsCurrent(route) ? "active" : null;
 
