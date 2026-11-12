@@ -57,6 +57,9 @@ internal sealed class PhotinoVisualiserWindow(
             .LoadRawString(VisualiserPage.Html);
         _window = window;
 
+        // As when Home is opened, the statuses are read again.
+        _ = feed.RefreshStatusAsync();
+
         void Push() => app.MainWindow.Invoke(async () => window.SendWebMessage(await feed.SnapshotAsync()));
         feed.Changed += Push;
         window.RegisterWindowClosingHandler((_, _) =>

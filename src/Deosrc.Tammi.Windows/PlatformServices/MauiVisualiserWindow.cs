@@ -29,6 +29,9 @@ internal sealed class MauiVisualiserWindow(VisualiserFeed feed, WorkspaceOpenReq
         };
         _window = window;
 
+        // As when Home is opened, the statuses are read again.
+        _ = feed.RefreshStatusAsync();
+
         async void Push()
         {
             var json = await feed.SnapshotAsync();

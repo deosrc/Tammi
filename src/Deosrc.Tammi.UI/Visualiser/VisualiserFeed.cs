@@ -41,6 +41,27 @@ public sealed class VisualiserFeed
     public event Action? Changed;
 
     /// <summary>
+    /// Reads the git status and Pull Requests of the workspaces again, as Home does when it's opened, so the
+    /// statuses are up to date. The visualiser then follows them as they're read. Workspaces that are open in a tab are
+    /// already live, so they aren't read.
+    /// </summary>
+    public async Task RefreshStatusAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var listings = await _workspaceStore.ListAsync(cancellationToken);
+            Workspace[] workspaces = [.. listings.Select(listing => listing.Workspace).OfType<Workspace>()];
+            if (workspaces.Length > 0)
+            {
+                await _gitStatus.RefreshAsync(workspaces, cancellationToken);
+            }
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or IOException)
+        {
+        }
+    }
+
+    /// <summary>
     /// The current snapshot, as JSON.
     /// </summary>
     public async Task<string> SnapshotAsync(CancellationToken cancellationToken = default)
