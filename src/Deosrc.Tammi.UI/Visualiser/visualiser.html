@@ -61,49 +61,52 @@ function create(canvas) {
 
   // Each frame is faded rather than cleared, which leaves the trails. Colours are whole numbers, and the engine rounds
   // the fade colour and each blend, so a pixel stops fading some way short of the colour it fades towards. If that's
-  // the background, a grey patch is left wherever something was drawn. Where it stops depends on the engine and on the
-  // size of the canvas, so it's measured on a canvas like this one: the fade colour is the one that bright pixels settle
-  // nearest the dark level wanted, and the background is made that level, so there is nothing left to see.
+  // the background, a grey patch is left wherever something was drawn. Where it stops depends on the engine, on whether
+  // the canvas is drawn by the GPU, and on its size, so it's measured on this canvas itself before anything is drawn:
+  // the fade colour is the one that bright pixels settle nearest the dark level wanted, and the background is the
+  // colour they settle on, so there is nothing left to see.
   const fadeAlpha = 0.14;
   const wantedLevel = 11;
   let fadeLevel = wantedLevel;
-  let backgroundLevel = wantedLevel;
+  let backgroundColour = `rgb(${wantedLevel}, ${wantedLevel}, ${wantedLevel})`;
   let calibrated = false;
 
   const calibrateFade = () => {
-    if (!canvas.width || !canvas.height) {
+    const levels = 21;
+    const tile = 8;
+    if (!canvas.width || width < levels * tile) {
       return;
     }
 
     calibrated = true;
     const ratio = window.devicePixelRatio || 1;
-    const scratch = document.createElement("canvas");
-    scratch.width = canvas.width;
-    scratch.height = canvas.height;
-    const probe = scratch.getContext("2d");
-    probe.setTransform(ratio, 0, 0, ratio, 0, 0);
 
-    let best = null;
-    for (let level = 0; level <= 20; level++) {
-      probe.fillStyle = "rgb(255, 255, 255)";
-      probe.fillRect(0, 0, 8, 8);
-      for (let frame = 0; frame < 60; frame++) {
-        probe.fillStyle = `rgba(${level}, ${level}, ${level}, ${fadeAlpha})`;
-        probe.fillRect(0, 0, 8, 8);
+    // A tile of white for each fade colour, all faded together, so that one read of the canvas covers them all.
+    context.globalCompositeOperation = "source-over";
+    context.fillStyle = "rgb(255, 255, 255)";
+    context.fillRect(0, 0, levels * tile, tile);
+    for (let frame = 0; frame < 60; frame++) {
+      for (let level = 0; level < levels; level++) {
+        context.fillStyle = `rgba(${level}, ${level}, ${level}, ${fadeAlpha})`;
+        context.fillRect(level * tile, 0, tile, tile);
       }
+    }
 
-      const pixel = probe.getImageData(0, 0, 1, 1).data;
-      const settled = Math.max(pixel[0], pixel[1], pixel[2]);
-      if (best === null || Math.abs(settled - wantedLevel) < Math.abs(best.settled - wantedLevel)) {
-        best = { level, settled };
+    const row = context.getImageData(0, Math.floor((tile / 2) * ratio), Math.ceil(levels * tile * ratio), 1).data;
+    let best = null;
+    for (let level = 0; level < levels; level++) {
+      const k = Math.floor((level * tile + tile / 2) * ratio) * 4;
+      const settled = [row[k], row[k + 1], row[k + 2]];
+      const distance = Math.abs(Math.max(...settled) - wantedLevel);
+      if (best === null || distance < best.distance) {
+        best = { level, settled, distance };
       }
     }
 
     fadeLevel = best.level;
-    backgroundLevel = best.settled;
-    const background = `rgb(${backgroundLevel}, ${backgroundLevel}, ${backgroundLevel})`;
-    document.documentElement.style.background = background;
-    document.body.style.background = background;
+    backgroundColour = `rgb(${best.settled.join(", ")})`;
+    document.documentElement.style.background = backgroundColour;
+    document.body.style.background = backgroundColour;
   };
 
   const resize = () => {
@@ -117,7 +120,7 @@ function create(canvas) {
       calibrateFade();
     }
 
-    context.fillStyle = `rgb(${backgroundLevel}, ${backgroundLevel}, ${backgroundLevel})`;
+    context.fillStyle = backgroundColour;
     context.fillRect(0, 0, width, height);
   };
   // On a resize the canvas is redrawn at its new size and the nodes move to their places in it.
