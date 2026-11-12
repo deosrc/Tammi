@@ -110,7 +110,7 @@ internal sealed class PhotinoVisualiserWindow(
 
         var window = new PhotinoWindow(main)
             .SetLogVerbosity(0)
-            .SetTitle("Visualiser")
+            .SetTitle("Tammi Visualiser")
             .SetMinSize(MinWidth, MinHeight)
             .SetMaxSize(100_000, 100_000)
             .SetUseOsDefaultSize(false)
