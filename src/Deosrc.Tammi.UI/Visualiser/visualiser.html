@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Tammi Visualiser</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0b0d; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0b0b; }
   canvas { display: block; width: 100%; height: 100%; }
   /* Tooltips are dark glass: the page shows through them, and the hovered thing's colour glows at the edge. */
   #tip {
@@ -59,6 +59,53 @@ function create(canvas) {
   canvas.addEventListener("pointermove", (e) => (pointer = { x: e.clientX, y: e.clientY }));
   canvas.addEventListener("pointerleave", () => (pointer = null));
 
+  // Each frame is faded rather than cleared, which leaves the trails. Colours are whole numbers, and the engine rounds
+  // the fade colour and each blend, so a pixel stops fading some way short of the colour it fades towards. If that's
+  // the background, a grey patch is left wherever something was drawn. Where it stops depends on the engine and on the
+  // size of the canvas, so it's measured on a canvas like this one: the fade colour is the one that bright pixels settle
+  // nearest the dark level wanted, and the background is made that level, so there is nothing left to see.
+  const fadeAlpha = 0.14;
+  const wantedLevel = 11;
+  let fadeLevel = wantedLevel;
+  let backgroundLevel = wantedLevel;
+  let calibrated = false;
+
+  const calibrateFade = () => {
+    if (!canvas.width || !canvas.height) {
+      return;
+    }
+
+    calibrated = true;
+    const ratio = window.devicePixelRatio || 1;
+    const scratch = document.createElement("canvas");
+    scratch.width = canvas.width;
+    scratch.height = canvas.height;
+    const probe = scratch.getContext("2d");
+    probe.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+    let best = null;
+    for (let level = 0; level <= 20; level++) {
+      probe.fillStyle = "rgb(255, 255, 255)";
+      probe.fillRect(0, 0, 8, 8);
+      for (let frame = 0; frame < 60; frame++) {
+        probe.fillStyle = `rgba(${level}, ${level}, ${level}, ${fadeAlpha})`;
+        probe.fillRect(0, 0, 8, 8);
+      }
+
+      const pixel = probe.getImageData(0, 0, 1, 1).data;
+      const settled = Math.max(pixel[0], pixel[1], pixel[2]);
+      if (best === null || Math.abs(settled - wantedLevel) < Math.abs(best.settled - wantedLevel)) {
+        best = { level, settled };
+      }
+    }
+
+    fadeLevel = best.level;
+    backgroundLevel = best.settled;
+    const background = `rgb(${backgroundLevel}, ${backgroundLevel}, ${backgroundLevel})`;
+    document.documentElement.style.background = background;
+    document.body.style.background = background;
+  };
+
   const resize = () => {
     const ratio = window.devicePixelRatio || 1;
     width = canvas.clientWidth;
@@ -66,7 +113,11 @@ function create(canvas) {
     canvas.width = width * ratio;
     canvas.height = height * ratio;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.fillStyle = "#0b0b0d";
+    if (!calibrated) {
+      calibrateFade();
+    }
+
+    context.fillStyle = `rgb(${backgroundLevel}, ${backgroundLevel}, ${backgroundLevel})`;
     context.fillRect(0, 0, width, height);
   };
   // On a resize the canvas is redrawn at its new size and the nodes move to their places in it.
@@ -388,9 +439,9 @@ function create(canvas) {
     time += dt;
     scale += (targetScale - scale) * Math.min(dt * 3, 1);
 
-    // Fade the last frame rather than clearing it.
+    // Fade the last frame rather than clearing it (see calibrateFade).
     context.globalCompositeOperation = "source-over";
-    context.fillStyle = "rgba(11, 11, 13, 0.14)";
+    context.fillStyle = `rgba(${fadeLevel}, ${fadeLevel}, ${fadeLevel}, ${fadeAlpha})`;
     context.fillRect(0, 0, width, height);
     context.globalCompositeOperation = "lighter";
 
