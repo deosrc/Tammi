@@ -1071,7 +1071,7 @@ label.task-choice {
   margin: 0;
 }
 
-/* The side panel's Agents section: a card for each open agent, then the workspace's past Agent Sessions. */
+/* The side panel's Agents section: a card for each open agent. */
 .agent-list,
 .agent-session-list {
   display: flex;
@@ -1132,11 +1132,6 @@ label.task-choice {
   gap: var(--space-2);
 }
 
-.side-panel-section-body .agent-section-error {
-  margin-top: var(--space-2);
-  font-size: var(--font-size-small);
-}
-
 /* The History tab: the workspace's past Agent Sessions, in the main area. */
 .workspace-history {
   flex: 1;
@@ -1151,18 +1146,6 @@ label.task-choice {
 
 .workspace-history .agent-session-list {
   max-width: 600px;
-}
-
-.agent-sessions {
-  margin-top: var(--space-3);
-}
-
-.agent-sessions > summary {
-  margin-bottom: var(--space-2);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .agent-session {
