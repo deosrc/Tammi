@@ -9,27 +9,34 @@ namespace Deosrc.Tammi.UI.Visualiser;
 /// </summary>
 /// <remarks>
 /// A workspace's status is worked out as Home does, from the git status that's been read so far. This doesn't read any
-/// itself, so a workspace shows as it would with no changes until Home or a tab has read its status.
+/// itself, so a workspace shows as it would with no changes until Home or a tab has read its status. It follows
+/// Home's reads as they happen.
 /// </remarks>
 public sealed class VisualiserFeed
 {
+    private static readonly TimeSpan Quiet = TimeSpan.FromMilliseconds(250);
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IWorkspaceStore _workspaceStore;
     private readonly WorkspaceAgents _agents;
     private readonly HomeGitStatus _gitStatus;
+    private int _scheduled;
+    private string? _last;
 
     public VisualiserFeed(IWorkspaceStore workspaceStore, WorkspaceAgents agents, HomeGitStatus gitStatus)
     {
         _workspaceStore = workspaceStore;
         _agents = agents;
         _gitStatus = gitStatus;
-        _workspaceStore.Changed += OnChanged;
-        _agents.Changed += _ => OnChanged();
+        _workspaceStore.Changed += OnSourceChanged;
+        _agents.Changed += _ => OnSourceChanged();
+        _gitStatus.Changed += OnSourceChanged;
     }
 
     /// <summary>
-    /// Raised when a workspace or one of its agents changes. It can be raised on a background thread.
+    /// Raised when the snapshot has changed: a workspace, its status or one of its agents. It can be raised on a
+    /// background thread.
     /// </summary>
     public event Action? Changed;
 
@@ -62,5 +69,28 @@ public sealed class VisualiserFeed
         return JsonSerializer.Serialize(nodes, JsonOptions);
     }
 
-    private void OnChanged() => Changed?.Invoke();
+    // Git status can change many times in a moment, so changes that come close together are looked at once, and
+    // Changed is raised only if what the page would draw is different.
+    private void OnSourceChanged()
+    {
+        if (Interlocked.Exchange(ref _scheduled, 1) == 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(Quiet).ConfigureAwait(false);
+                Volatile.Write(ref _scheduled, 0);
+                try
+                {
+                    var snapshot = await SnapshotAsync().ConfigureAwait(false);
+                    if (Interlocked.Exchange(ref _last, snapshot) != snapshot)
+                    {
+                        Changed?.Invoke();
+                    }
+                }
+                catch (IOException)
+                {
+                }
+            });
+        }
+    }
 }
