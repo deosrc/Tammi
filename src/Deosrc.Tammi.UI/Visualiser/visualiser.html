@@ -465,7 +465,7 @@ function create(canvas) {
         const colour = agentColour(agent.state);
         if (agent.burst) {
           agent.burst = false;
-          for (let n = 0; n < 70; n++) {
+          for (let n = 0; n < 160; n++) {
             const direction = Math.random() * Math.PI * 2;
             const speed = 40 + Math.random() * 110;
             particles.push({ x: ex, y: ey, vx: Math.cos(direction) * speed, vy: Math.sin(direction) * speed, life: 1, colour });
