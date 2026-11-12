@@ -1686,6 +1686,14 @@ label.task-choice {
   border-top-color: currentColor;
 }
 
+.agent-state-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--agent-state-tone);
+}
+
 /* The shown terminal fills the rest of the main area, with a small gap around it. */
 .workspace-terminal {
   flex: 1;
