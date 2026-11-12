@@ -18,6 +18,18 @@ public sealed class VisualiserSettingsTests
     }
 
     [Fact]
+    public void AlwaysOnTop_DefaultsToOn()
+    {
+        Assert.True(new VisualiserSettings().AlwaysOnTop);
+    }
+
+    [Fact]
+    public void Normalize_KeepsAlwaysOnTopOff()
+    {
+        Assert.False(new VisualiserSettings { AlwaysOnTop = false }.Normalize().AlwaysOnTop);
+    }
+
+    [Fact]
     public void Normalize_KeepsBurstWhenWorkingFinishesOff()
     {
         Assert.False(new VisualiserSettings { BurstWhenWorkingFinishes = false }.Normalize().BurstWhenWorkingFinishes);

@@ -19,6 +19,11 @@ public sealed record VisualiserSettings
     public bool BurstWhenWorkingFinishes { get; init; } = true;
 
     /// <summary>
+    /// Whether the visualiser's window stays above other windows.
+    /// </summary>
+    public bool AlwaysOnTop { get; init; } = true;
+
+    /// <summary>
     /// Replaces values this version of Tammi doesn't know with the default.
     /// </summary>
     public VisualiserSettings Normalize() => this with

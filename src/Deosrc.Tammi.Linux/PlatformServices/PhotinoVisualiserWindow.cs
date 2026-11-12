@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Text.Json;
 using Photino.Blazor;
 using Photino.NET;
+using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.UI.Visualiser;
 
@@ -15,7 +16,8 @@ internal sealed class PhotinoVisualiserWindow(
     PhotinoBlazorApp app,
     VisualiserFeed feed,
     WorkspaceOpenRequests openRequests,
-    VisualiserWindowStateStore stateStore) : IVisualiserWindow
+    VisualiserWindowStateStore stateStore,
+    ISettingsStore settings) : IVisualiserWindow
 {
     // The smallest the window can be, which is also the size it opens at until it's been resized.
     private const int MinWidth = 400;
@@ -92,9 +94,10 @@ internal sealed class PhotinoVisualiserWindow(
     {
         if (_window is { } open)
         {
+            // Raised above the other windows, then left where the setting says.
             open.SetMinimized(false);
             open.SetTopMost(true);
-            open.SetTopMost(false);
+            open.SetTopMost(settings.Current.Visualiser.AlwaysOnTop);
             return;
         }
 
@@ -118,6 +121,7 @@ internal sealed class PhotinoVisualiserWindow(
             .SetUseOsDefaultLocation(false)
             .SetLocation(new Point(placement.Bounds.X, placement.Bounds.Y))
             .SetMaximized(placement.IsMaximized)
+            .SetTopMost(settings.Current.Visualiser.AlwaysOnTop)
             .LoadRawString(VisualiserPage.Html);
         _window = window;
         TrackState(window, placement);
@@ -127,9 +131,14 @@ internal sealed class PhotinoVisualiserWindow(
 
         void Push() => app.MainWindow.Invoke(async () => window.SendWebMessage(await feed.SnapshotAsync()));
         feed.Changed += Push;
+
+        // The setting applies to the window while it's open.
+        void ApplyAlwaysOnTop() => main.Invoke(() => window.SetTopMost(settings.Current.Visualiser.AlwaysOnTop));
+        settings.Changed += ApplyAlwaysOnTop;
         window.RegisterWindowClosingHandler((_, _) =>
         {
             feed.Changed -= Push;
+            settings.Changed -= ApplyAlwaysOnTop;
             _saveTimer?.Dispose();
             _saveTimer = null;
             SaveState(window);

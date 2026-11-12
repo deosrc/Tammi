@@ -3,6 +3,7 @@ using Photino.Blazor;
 using Deosrc.Tammi.Core.Credentials;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Platform.Pty;
+using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.UI.Visualiser;
 
@@ -30,7 +31,8 @@ internal static class PlatformServiceCollectionExtensions
             provider.GetRequiredService<PhotinoBlazorApp>(),
             provider.GetRequiredService<VisualiserFeed>(),
             provider.GetRequiredService<WorkspaceOpenRequests>(),
-            provider.GetRequiredService<VisualiserWindowStateStore>()));
+            provider.GetRequiredService<VisualiserWindowStateStore>(),
+            provider.GetRequiredService<ISettingsStore>()));
         return services;
     }
 }

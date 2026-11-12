@@ -1,3 +1,4 @@
+using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.UI.Visualiser;
 
 namespace Deosrc.Tammi.Windows.PlatformServices;
@@ -6,7 +7,10 @@ namespace Deosrc.Tammi.Windows.PlatformServices;
 /// Shows the visualiser in a second MAUI window holding a plain web view. The page has no Blazor in it: it's shown
 /// from a string, and sent each snapshot by calling a script function.
 /// </summary>
-internal sealed class MauiVisualiserWindow(VisualiserFeed feed, WorkspaceOpenRequests openRequests) : IVisualiserWindow
+internal sealed class MauiVisualiserWindow(
+    VisualiserFeed feed,
+    WorkspaceOpenRequests openRequests,
+    ISettingsStore settings) : IVisualiserWindow
 {
     private Window? _window;
 
@@ -48,6 +52,18 @@ internal sealed class MauiVisualiserWindow(VisualiserFeed feed, WorkspaceOpenReq
 
         feed.Changed += Push;
 
+        // The setting applies to the window while it's open, and once its native window exists.
+        void ApplyAlwaysOnTop() => MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (window.Handler?.PlatformView is Microsoft.UI.Xaml.Window native
+                && native.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter)
+            {
+                presenter.IsAlwaysOnTop = settings.Current.Visualiser.AlwaysOnTop;
+            }
+        });
+        settings.Changed += ApplyAlwaysOnTop;
+        window.HandlerChanged += (_, _) => ApplyAlwaysOnTop();
+
         // A click on a workspace goes to an address the page can't load: it opens the workspace instead.
         webView.Navigating += (_, e) =>
         {
@@ -63,6 +79,7 @@ internal sealed class MauiVisualiserWindow(VisualiserFeed feed, WorkspaceOpenReq
         window.Destroying += (_, _) =>
         {
             feed.Changed -= Push;
+            settings.Changed -= ApplyAlwaysOnTop;
             _window = null;
         };
         application.OpenWindow(window);
