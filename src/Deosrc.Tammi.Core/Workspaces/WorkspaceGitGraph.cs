@@ -656,7 +656,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         _ when SubmodulePath is not null => new HistoryOptions { StartingPoints = ["HEAD"], IncludeUpstreams = true },
         _ => new HistoryOptions
         {
-            StartingPoints = ["HEAD", Repository.Branch, Repository.BaseBranch],
+            StartingPoints = ["HEAD", Repository.Branch, Repository.MergeTarget],
             IncludeUpstreams = true,
         },
     };

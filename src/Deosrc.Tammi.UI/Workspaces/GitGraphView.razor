@@ -14,7 +14,7 @@
     <div class="git-graph-toolbar">
         <div class="segmented" role="group" aria-label="Commits shown">
             <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.WorkspaceBranch)"
-                    title="HEAD, the workspace branch, its upstream and its base branch"
+                    title="HEAD, the workspace branch, its upstream and its merge target"
                     @onclick="() => Graph.SetScopeAsync(GitGraphScope.WorkspaceBranch)">
                 Workspace branch
             </button>

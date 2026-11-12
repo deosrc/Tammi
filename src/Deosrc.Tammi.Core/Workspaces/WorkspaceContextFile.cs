@@ -132,7 +132,7 @@ public static class WorkspaceContextFile
             text.Append("\n### ").Append(repository.FolderName).Append("\n\n");
             text.Append("- Folder: ").Append(workspace.GetWorktreePath(repository)).Append('\n');
             text.Append("- Branch: ").Append(repository.Branch).Append('\n');
-            text.Append("- Base branch: ").Append(repository.BaseBranch).Append('\n');
+            text.Append("- Merge target: ").Append(repository.MergeTarget).Append('\n');
         }
     }
 

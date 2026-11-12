@@ -206,7 +206,35 @@ public sealed class WorkspaceDraftRepositoriesTests
     }
 
     [Fact]
-    public void IsRepositoriesValid_NeedsBaseBranch()
+    public void BranchName_StartsAsTheDefault_AndFollowsItWhileTheyMatch()
+    {
+        var draft = NewDraft();
+        draft.BranchName = "feature";
+        var api = draft.AddRepository(Repository("acme", "api"))!;
+        var web = draft.AddRepository(Repository("acme", "web"))!;
+        web.BranchName = "web-only";
+
+        draft.BranchName = "feature-2";
+
+        Assert.Equal("feature-2", api.BranchName);
+        Assert.Equal("web-only", web.BranchName);
+    }
+
+    [Fact]
+    public void BranchName_ChangedForARepository_StopsFollowingTheDefault()
+    {
+        var draft = NewDraft();
+        draft.BranchName = "feature";
+        var api = draft.AddRepository(Repository("acme", "api"))!;
+        api.BranchName = "other";
+
+        draft.BranchName = "feature-2";
+
+        Assert.Equal("other", api.BranchName);
+    }
+
+    [Fact]
+    public void IsRepositoriesValid_NeedsMergeTarget()
     {
         var draft = NewDraft();
         draft.Name = "Work";
@@ -214,7 +242,7 @@ public sealed class WorkspaceDraftRepositoriesTests
 
         Assert.False(draft.IsRepositoriesValid);
 
-        api.BaseBranch = "origin/main";
+        api.MergeTarget = "origin/main";
         Assert.True(draft.IsRepositoriesValid);
     }
 
@@ -227,7 +255,7 @@ public sealed class WorkspaceDraftRepositoriesTests
         draft.FolderName = " work ";
         var api = draft.AddRepository(Repository("acme", "api"))!;
         api.FolderName = " server ";
-        api.BaseBranch = " origin/develop ";
+        api.MergeTarget = " origin/develop ";
 
         var request = draft.ToCreationRequest();
 
@@ -236,7 +264,7 @@ public sealed class WorkspaceDraftRepositoriesTests
         Assert.Equal([new TaskReference("source", "ABC-1")], request.Tasks);
         Assert.Equal("ABC-1-one", request.BranchName);
         var repository = Assert.Single(request.Repositories);
-        Assert.Equal(new WorkspaceCreationRepository("server", api.Repository.Path, "origin/develop", "origin"), repository);
+        Assert.Equal(new WorkspaceCreationRepository("server", api.Repository.Path, "origin/develop", "origin", "ABC-1-one"), repository);
     }
 
     [Fact]

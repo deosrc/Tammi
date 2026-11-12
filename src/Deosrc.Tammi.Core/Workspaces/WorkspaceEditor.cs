@@ -78,7 +78,7 @@ public sealed class WorkspaceEditor(
             workspace.Id,
             request.Tasks.Count,
             request.AddedRepositories.Count);
-        var created = new List<(string RepositoryPath, string WorktreePath)>();
+        var created = new List<CreatedWorktree>();
         var warnings = new List<string>();
         try
         {
@@ -112,13 +112,13 @@ public sealed class WorkspaceEditor(
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Editing the workspace {Name} was cancelled. Rolling it back.", workspace.Name);
-            await _steps.RollBackAsync(created, request.BranchName).ConfigureAwait(false);
+            await _steps.RollBackAsync(created).ConfigureAwait(false);
             throw;
         }
         catch (Exception ex) when (ex is GitException or WorkspaceException or IOException or UnauthorizedAccessException)
         {
             _logger.LogError(ex, "Couldn't edit the workspace {Name}. Rolling it back.", workspace.Name);
-            var cleanupProblems = await _steps.RollBackAsync(created, request.BranchName).ConfigureAwait(false);
+            var cleanupProblems = await _steps.RollBackAsync(created).ConfigureAwait(false);
             throw new WorkspaceEditException(
                 $"Couldn't edit the workspace '{workspace.Name}'. {ex.Message}",
                 workspace.Folder,
@@ -154,16 +154,17 @@ public sealed class WorkspaceEditor(
             return problems;
         }
 
-        // The branch is the workspace's own when it has repositories, so the new ones join it.
+        // The default branch is the workspace's own when it has repositories, so the new ones join it, unless they
+        // choose their own branch.
+        bool usesDefault = request.AddedRepositories.Any(repository => repository.BranchName is null);
         string? ownBranch = workspace.Repositories.Select(repository => repository.Branch).FirstOrDefault();
-        if (ownBranch is not null && request.BranchName != ownBranch)
+        if (usesDefault && ownBranch is not null && request.BranchName != ownBranch)
         {
             problems.Add($"The workspace's branch is '{ownBranch}', so added repositories must use it.");
         }
 
-        bool branchIsValid = await worktrees.IsValidBranchNameAsync(request.BranchName, cancellationToken)
-            .ConfigureAwait(false);
-        if (!branchIsValid)
+        if (usesDefault && !await worktrees.IsValidBranchNameAsync(request.BranchName, cancellationToken)
+            .ConfigureAwait(false))
         {
             problems.Add($"'{request.BranchName}' isn't a valid branch name.");
         }
@@ -172,7 +173,6 @@ public sealed class WorkspaceEditor(
             request.AddedRepositories,
             workspace.Repositories,
             request.BranchName,
-            branchIsValid,
             problems,
             workspace.Folder,
             cancellationToken).ConfigureAwait(false);
@@ -187,7 +187,8 @@ public sealed class WorkspaceEditor(
             .. request.AddedRepositories.Select(repository => repository with
             {
                 FolderName = repository.FolderName?.Trim() ?? string.Empty,
-                BaseBranch = repository.BaseBranch?.Trim() ?? string.Empty,
+                MergeTarget = repository.MergeTarget?.Trim() ?? string.Empty,
+                BranchName = repository.BranchName?.Trim(),
             }),
         ],
     };

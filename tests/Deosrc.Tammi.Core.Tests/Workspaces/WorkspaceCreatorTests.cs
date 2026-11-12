@@ -139,23 +139,20 @@ public sealed class WorkspaceCreatorTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_BranchExists_FailsBeforeCreatingAnything()
+    public async Task Create_WorkspaceBranchExistsInARepository_ReusesIt()
     {
         string api = await _repos.CloneAsync(await _repos.CreateRemoteAsync("api"), "clones/api");
         string web = await _repos.CloneAsync(await _repos.CreateRemoteAsync("web"), "clones/web");
         await _repos.RunAsync(web, "branch", Branch);
 
-        var ex = await Assert.ThrowsAsync<WorkspaceCreationException>(() => _creator.CreateAsync(
+        var result = await _creator.CreateAsync(
             Request(
                 new WorkspaceCreationRepository("api", api, "origin/main", "origin"),
                 new WorkspaceCreationRepository("web", web, "origin/main", "origin")),
-            cancellationToken: Token));
+            cancellationToken: Token);
 
-        var problem = Assert.Single(ex.Problems);
-        Assert.StartsWith("web: the branch", problem, StringComparison.Ordinal);
-        Assert.Empty(ex.CleanupProblems);
-        Assert.False(Directory.Exists(_repos.PathTo("workspaces")));
-        Assert.Equal(BranchState.Missing, await _worktrees.GetBranchStateAsync(api, Branch, cancellationToken: Token));
+        Assert.All(result.Workspace.Repositories, repository => Assert.Equal(Branch, repository.Branch));
+        Assert.Equal(Branch, _reader.ReadStatus(Path.Combine(Folder, "web")).Branch);
     }
 
     [Theory]
@@ -163,7 +160,7 @@ public sealed class WorkspaceCreatorTests : IDisposable
     [InlineData("../api", "web", "origin/main", "folder name")]
     [InlineData("api", ".tammi", "origin/main", "Tammi keeps")]
     [InlineData("api", "web", "origin/missing", "doesn't exist")]
-    [InlineData("api", "web", "", "choose a base branch")]
+    [InlineData("api", "web", "", "choose a merge target")]
     public async Task Check_FindsProblems(string apiFolder, string webFolder, string webBase, string expected)
     {
         string api = await _repos.CloneAsync(await _repos.CreateRemoteAsync("api"), "clones/api");
@@ -282,6 +279,107 @@ public sealed class WorkspaceCreatorTests : IDisposable
             cancellation.Token));
 
         await AssertNothingLeftAsync(api, web);
+    }
+
+    [Fact]
+    public async Task Create_RepositoryWithOwnBranch_UsesItInsteadOfTheWorkspaces()
+    {
+        string api = await _repos.CloneAsync(await _repos.CreateRemoteAsync("api"), "clones/api");
+        string web = await _repos.CloneAsync(await _repos.CreateRemoteAsync("web"), "clones/web");
+
+        var result = await _creator.CreateAsync(
+            Request(
+                new WorkspaceCreationRepository("api", api, "origin/main", "origin"),
+                new WorkspaceCreationRepository("web", web, "origin/main", "origin", "web-only")),
+            cancellationToken: Token);
+
+        Assert.Equal(
+            [Branch, "web-only"],
+            result.Workspace.Repositories.Select(repository => repository.Branch));
+        Assert.True((await _worktrees.GetBranchStateAsync(web, "web-only", cancellationToken: Token)).Exists);
+        Assert.False((await _worktrees.GetBranchStateAsync(web, Branch, cancellationToken: Token)).Exists);
+    }
+
+    [Fact]
+    public async Task Create_ExistingLocalBranch_ChecksItOutAndKeepsItWhenRolledBack()
+    {
+        string api = await _repos.CloneAsync(await _repos.CreateRemoteAsync("api"), "clones/api");
+        string web = await _repos.CloneAsync(await _repos.CreateRemoteAsync("web"), "clones/web");
+        await _repos.RunAsync(api, "branch", "existing", "origin/main");
+
+        var result = await _creator.CreateAsync(
+            Request(new WorkspaceCreationRepository("api", api, "origin/main", "origin", "existing")),
+            cancellationToken: Token);
+
+        Assert.Equal("existing", Assert.Single(result.Workspace.Repositories).Branch);
+        var head = await _repos.RunAsync(Path.Combine(Folder, "api"), "rev-parse", "--abbrev-ref", "HEAD");
+        Assert.Equal("existing", head.StandardOutput.Trim());
+
+        // A failure later in the same request removes the worktree, but not a branch that was already there.
+        string app = await _repos.CloneAsync(await _repos.CreateRemoteWithSubmoduleAsync(), "clones/app");
+        await _repos.RunAsync(web, "branch", "taken", "origin/main");
+        Directory.Move(_repos.PathTo("lib.git"), _repos.PathTo("lib.gone"));
+        await Assert.ThrowsAsync<WorkspaceCreationException>(() => _creator.CreateAsync(
+            Request(
+                new WorkspaceCreationRepository("web", web, "origin/main", "origin", "taken"),
+                new WorkspaceCreationRepository("app", app, "origin/main", "origin")) with
+            {
+                Folder = _repos.PathTo("workspaces/Another"),
+            },
+            cancellationToken: Token));
+        Assert.True((await _worktrees.GetBranchStateAsync(web, "taken", cancellationToken: Token)).Exists);
+        Assert.False(Directory.Exists(_repos.PathTo("workspaces/Another/web")));
+    }
+
+    [Fact]
+    public async Task Create_ExistingRemoteBranch_CreatesLocalBranchTrackingIt()
+    {
+        string remote = await _repos.CreateRemoteAsync("api");
+        await _repos.RunAsync(remote, "branch", "feature", "main");
+        string api = await _repos.CloneAsync(remote, "clones/api");
+
+        var request = Request(new WorkspaceCreationRepository("api", api, "origin/main", "origin", "feature"));
+        var result = await _creator.CreateAsync(request, cancellationToken: Token);
+
+        Assert.Equal("feature", Assert.Single(result.Workspace.Repositories).Branch);
+        var upstream = await _repos.RunAsync(api, "rev-parse", "--abbrev-ref", "feature@{upstream}");
+        Assert.Equal("origin/feature", upstream.StandardOutput.Trim());
+    }
+
+    [Fact]
+    public async Task Check_BlankRepositoryBranch_IsAProblem()
+    {
+        string api = await _repos.CloneAsync(await _repos.CreateRemoteAsync("api"), "clones/api");
+
+        var problems = await _creator.CheckAsync(
+            Request(new WorkspaceCreationRepository("api", api, "origin/main", "origin", " ")),
+            Token);
+
+        Assert.Contains(problems, problem => problem.Contains("enter a branch name", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Check_RepositoryBranchThatExists_IsntAProblem()
+    {
+        string api = await _repos.CloneAsync(await _repos.CreateRemoteAsync("api"), "clones/api");
+
+        var problems = await _creator.CheckAsync(
+            Request(new WorkspaceCreationRepository("api", api, "origin/main", "origin", "main")),
+            Token);
+
+        Assert.Empty(problems);
+    }
+
+    [Fact]
+    public async Task Check_AllRepositoriesHaveOwnBranches_DefaultBranchNeedntBeValid()
+    {
+        string api = await _repos.CloneAsync(await _repos.CreateRemoteAsync("api"), "clones/api");
+
+        var problems = await _creator.CheckAsync(
+            Request(new WorkspaceCreationRepository("api", api, "origin/main", "origin", "own")) with { BranchName = "" },
+            Token);
+
+        Assert.Empty(problems);
     }
 
     private async Task AssertNothingLeftAsync(params string[] repositories)

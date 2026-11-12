@@ -231,7 +231,7 @@ public sealed class WorkspaceStoreTests : IDisposable
         "duplicate tasks",
         "task without key",
         "blank branch",
-        "blank base branch",
+        "blank merge target",
         "relative local repository",
     ];
 
@@ -697,7 +697,7 @@ public sealed class WorkspaceStoreTests : IDisposable
             "duplicate tasks" => workspace with { Tasks = [workspace.Tasks[0], workspace.Tasks[0]] },
             "task without key" => workspace with { Tasks = [new TaskReference("github", " ")] },
             "blank branch" => WithRepository(workspace, repository with { Branch = "" }),
-            "blank base branch" => WithRepository(workspace, repository with { BaseBranch = " " }),
+            "blank merge target" => WithRepository(workspace, repository with { MergeTarget = " " }),
             "relative local repository" => WithRepository(workspace, repository with { LocalRepositoryPath = "api" }),
             _ => throw new ArgumentOutOfRangeException(nameof(problem), problem, null),
         };
@@ -721,7 +721,7 @@ public sealed class WorkspaceStoreTests : IDisposable
             ["folder"] = repository.FolderName,
             ["localRepository"] = repository.LocalRepositoryPath,
             ["branch"] = repository.Branch,
-            ["baseBranch"] = repository.BaseBranch,
+            ["baseBranch"] = repository.MergeTarget,
         })]),
     }.ToJsonString();
 

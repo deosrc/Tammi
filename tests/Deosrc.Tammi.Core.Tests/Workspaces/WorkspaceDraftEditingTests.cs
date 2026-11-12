@@ -92,7 +92,7 @@ public sealed class WorkspaceDraftEditingTests
         var draft = WorkspaceDraft.ForEditing(Workspace(), [Task("ABC-1")]);
         draft.AddTask(Task("ABC-2"));
         var web = draft.AddRepository(Repository("acme", "web"))!;
-        web.BaseBranch = "origin/main";
+        web.MergeTarget = "origin/main";
 
         var request = draft.ToEditRequest();
 
@@ -101,7 +101,7 @@ public sealed class WorkspaceDraftEditingTests
         Assert.Equal("my-branch", request.BranchName);
         var added = Assert.Single(request.AddedRepositories);
         Assert.Equal("web", added.FolderName);
-        Assert.Equal("origin/main", added.BaseBranch);
+        Assert.Equal("origin/main", added.MergeTarget);
     }
 
     [Fact]

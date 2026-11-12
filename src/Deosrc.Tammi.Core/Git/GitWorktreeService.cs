@@ -131,15 +131,23 @@ public sealed class GitWorktreeService(IGitCli git, IGitRepositoryReader reader)
             await FetchAsync(repository, request.Remote, cancellationToken).ConfigureAwait(false);
         }
 
-        string baseBranch = request.BaseBranch
-            ?? await GetDefaultBranchReferenceAsync(repository, request.Remote, cancellationToken)
+        if (request.UseExistingBranch)
+        {
+            await AddWorktreeOnExistingBranchAsync(repository, worktree, request, cancellationToken)
                 .ConfigureAwait(false);
+        }
+        else
+        {
+            string baseBranch = request.BaseBranch
+                ?? await GetDefaultBranchReferenceAsync(repository, request.Remote, cancellationToken)
+                    .ConfigureAwait(false);
 
-        // --no-track: the branch is new, so it's published under its own name rather than pushed to the base.
-        await git.RunAsync(
-            repository,
-            ["worktree", "add", "--no-track", "-b", request.BranchName, worktree, baseBranch],
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+            // --no-track: the branch is new, so it's published under its own name rather than pushed to the base.
+            await git.RunAsync(
+                repository,
+                ["worktree", "add", "--no-track", "-b", request.BranchName, worktree, baseBranch],
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
 
         if (request.InitSubmodules)
         {
@@ -147,6 +155,35 @@ public sealed class GitWorktreeService(IGitCli git, IGitRepositoryReader reader)
         }
 
         return worktree;
+    }
+
+    private async Task AddWorktreeOnExistingBranchAsync(
+        string repository,
+        string worktree,
+        CreateWorktreeRequest request,
+        CancellationToken cancellationToken)
+    {
+        if ((await GetBranchStateAsync(repository, request.BranchName, cancellationToken: cancellationToken)
+            .ConfigureAwait(false)).Exists)
+        {
+            await git.RunAsync(
+                repository,
+                ["worktree", "add", worktree, request.BranchName],
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        string remoteBranch = $"{request.Remote}/{request.BranchName}";
+        if (!await CommitExistsAsync(repository, $"refs/remotes/{remoteBranch}", cancellationToken).ConfigureAwait(false))
+        {
+            throw new GitException($"The branch '{request.BranchName}' doesn't exist in '{repository}'.");
+        }
+
+        // A local branch that tracks the remote's, so pulling and pushing work as they do for a checkout of it.
+        await git.RunAsync(
+            repository,
+            ["worktree", "add", "--track", "-b", request.BranchName, worktree, remoteBranch],
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

@@ -1,35 +1,10 @@
 @* Step 3 of the Create Workspace flow: choose Local Repositories from the Repository Catalogue, with each worktree's
-   folder name and base branch, and the branch to create in all of them. *@
+   folder name, merge target and branch, and the default branch for all of them. *@
 @implements IDisposable
 @using Deosrc.Tammi.Core.Catalogue
 @using Deosrc.Tammi.Core.Git
 @inject IRepositoryCatalogue Catalogue
 @inject IGitWorktreeService Worktrees
-
-<div class="settings-form">
-    <div class="settings-field">
-        <label for="workspace-branch">Branch</label>
-        <input id="workspace-branch" class="settings-text @(BranchProblem is null ? null : "invalid")"
-               autocomplete="off" spellcheck="false" value="@Draft.BranchName" disabled="@Draft.IsBranchFixed"
-               @oninput="OnBranchInput" />
-        @if (BranchProblem is { } branchProblem)
-        {
-            <p class="error">@branchProblem</p>
-        }
-        else if (Draft.IsBranchFixed)
-        {
-            <p class="settings-help">The workspace's branch. Added repositories get it too.</p>
-        }
-        else
-        {
-            <p class="settings-help">
-                Created in every repository. @(Draft.IsBranchNameEdited ? null : Draft.Tasks.Count == 1
-                    ? "Suggested from the task."
-                    : "Suggested from the workspace's name.")
-            </p>
-        }
-    </div>
-</div>
 
 <div class="repository-picker">
     <section class="repository-picker-catalogue" aria-labelledby="catalogue-heading">
@@ -83,6 +58,30 @@
         <h3 id="chosen-repositories-heading">
             @(Draft.IsEditing ? "Repositories to add" : "Chosen repositories") (@Draft.Repositories.Count)
         </h3>
+        <div class="settings-form">
+            <div class="settings-field">
+                <label for="workspace-branch">Default branch</label>
+                <input id="workspace-branch" class="settings-text @(BranchProblem is null ? null : "invalid")"
+                       autocomplete="off" spellcheck="false" value="@Draft.BranchName" disabled="@Draft.IsBranchFixed"
+                       @oninput="OnBranchInput" />
+                @if (BranchProblem is { } branchProblem)
+                {
+                    <p class="error">@branchProblem</p>
+                }
+                else if (Draft.IsBranchFixed)
+                {
+                    <p class="settings-help">The workspace's branch. Added repositories use it unless you change their branch.</p>
+                }
+                else
+                {
+                    <p class="settings-help">
+                        Each repository uses it, unless you change its branch. @(Draft.IsBranchNameEdited ? null : Draft.Tasks.Count == 1
+                            ? "Suggested from the task."
+                            : "Suggested from the workspace's name.")
+                    </p>
+                }
+            </div>
+        </div>
         @if (Draft.ExistingRepositories.Count > 0)
         {
             <p class="settings-help">
@@ -103,7 +102,8 @@
                 @foreach (var (repository, index) in Draft.Repositories.Select((repository, index) => (repository, index)))
                 {
                     var folderId = $"repository-folder-{index}";
-                    var baseId = $"repository-base-{index}";
+                    var mergeTargetId = $"repository-base-{index}";
+                    var branchId = $"repository-branch-{index}";
                     <li class="chosen-repository" @key="repository.Repository.Path">
                         <div class="chosen-repository-heading">
                             <span class="repository-name">@repository.Repository.Name</span>
@@ -134,13 +134,13 @@
                             </div>
 
                             <div class="settings-field">
-                                <label for="@baseId">Base branch</label>
-                                <input id="@baseId" list="@($"{baseId}-options")"
+                                <label for="@mergeTargetId">Merge target</label>
+                                <input id="@mergeTargetId" list="@($"{mergeTargetId}-options")"
                                        class="settings-text @(BaseProblem(repository) is null ? null : "invalid")"
                                        autocomplete="off" spellcheck="false"
                                        placeholder="@(repository.IsLoading ? "Fetching…" : null)"
-                                       @bind="repository.BaseBranch" @bind:event="oninput" />
-                                <datalist id="@($"{baseId}-options")">
+                                       @bind="repository.MergeTarget" @bind:event="oninput" />
+                                <datalist id="@($"{mergeTargetId}-options")">
                                     @foreach (var branch in repository.Branches)
                                     {
                                         <option value="@branch"></option>
@@ -154,13 +154,45 @@
                                 {
                                     <p class="error">@baseProblem</p>
                                 }
-                                else if (repository.BaseBranch.Trim() == repository.DefaultBranch)
+                                else if (repository.MergeTarget.Trim() == repository.DefaultBranch)
                                 {
                                     <p class="settings-help">The remote's default branch.</p>
                                 }
                                 @if (repository.FetchProblem is { } fetchProblem)
                                 {
                                     <p class="warning">@fetchProblem</p>
+                                }
+                            </div>
+
+                            <div class="settings-field">
+                                <label for="@branchId">Branch</label>
+                                <input id="@branchId" list="@($"{branchId}-options")"
+                                       class="settings-text @(repository.BranchNameProblem is null ? null : "invalid")"
+                                       autocomplete="off" spellcheck="false"
+                                       @bind="repository.BranchName" @bind:event="oninput" />
+                                <datalist id="@($"{branchId}-options")">
+                                    @foreach (var branch in repository.ExistingBranches)
+                                    {
+                                        <option value="@branch"></option>
+                                    }
+                                </datalist>
+                                @if (repository.BranchNameProblem is { } branchNameProblem)
+                                {
+                                    <p class="error">@branchNameProblem</p>
+                                }
+                                else if (!repository.IsLoaded)
+                                {
+                                    <p class="settings-help">Checking the existing branches…</p>
+                                }
+                                else if (repository.BranchExists)
+                                {
+                                    <p class="settings-help">The branch exists, so it will be reused.</p>
+                                }
+                                else
+                                {
+                                    <p class="settings-help">
+                                        The branch doesn't exist, so it will be created from the merge target.
+                                    </p>
                                 }
                             </div>
                         </div>
@@ -261,7 +293,7 @@
     }
 
     private static string? BaseProblem(WorkspaceDraftRepository repository) =>
-        repository.IsLoading || repository.BaseBranch.Trim().Length > 0
+        repository.IsLoading || repository.MergeTarget.Trim().Length > 0
             ? null
             : repository.DefaultBranchProblem ?? "Choose the branch to start from.";
 
@@ -281,7 +313,7 @@
     }
 
     /// <summary>
-    /// Fetches a chosen repository and finds its base branch.
+    /// Fetches a chosen repository and finds its merge target.
     /// </summary>
     private async Task LoadAsync(WorkspaceDraftRepository repository)
     {
