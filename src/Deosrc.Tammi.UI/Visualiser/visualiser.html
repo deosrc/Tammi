@@ -30,7 +30,7 @@
 // Each frame fades the last one instead of clearing it, which leaves the trails.
 
 const states = {
-  Working: { rate: 6, speed: 1.6, pulse: false },
+  Working: { rate: 3, speed: 1.6, pulse: false, orbit: 3, trail: true },
   NeedsInput: { rate: 0.5, speed: 0.4, pulse: true },
   Error: { rate: 2, speed: 2.2, pulse: false },
   Running: { rate: 0.3, speed: 0.3, pulse: false },
@@ -223,7 +223,7 @@ function create(canvas) {
 
       w.agents.forEach((agent, i) => {
         const config = states[agent.state] ?? states.Running;
-        const angle = time * 0.6 * (config.speed + 0.3) + w.phase + (i / w.agents.length) * Math.PI * 2;
+        const angle = time * 0.6 * (config.speed + 0.3) * (config.orbit ?? 1) + w.phase + (i / w.agents.length) * Math.PI * 2;
         const ex = w.x + Math.cos(angle) * 34;
         const ey = w.y + Math.sin(angle) * 34;
         agent.ex = ex;
@@ -231,8 +231,12 @@ function create(canvas) {
         const colour = agentColour(agent.state);
         const rate = config.pulse ? config.rate + 6 * Math.max(0, Math.sin(time * 3)) ** 4 : config.rate;
         for (let n = rate * dt * 60 * 0.5 + Math.random(); n >= 1; n--) {
-          const direction = Math.random() * Math.PI * 2;
-          const speed = (0.3 + Math.random()) * config.speed * 60;
+          // A trailing state's particles drift back along the path the agent came by, so they stream out behind it.
+          // The others are thrown out in every direction.
+          const direction = config.trail
+            ? angle - Math.PI / 2 + (Math.random() - 0.5) * 0.5
+            : Math.random() * Math.PI * 2;
+          const speed = config.trail ? 10 + Math.random() * 30 : (0.3 + Math.random()) * config.speed * 60;
           particles.push({ x: ex, y: ey, vx: Math.cos(direction) * speed, vy: Math.sin(direction) * speed, life: 1, colour });
         }
         context.fillStyle = colour;
