@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
+using System.Text.RegularExpressions;
 using Deosrc.Tammi.Core.Credentials;
 using Deosrc.Tammi.Core.Git;
 using Microsoft.Extensions.Logging;
@@ -23,7 +24,7 @@ namespace Deosrc.Tammi.Core.Integrations.GitHub;
 /// found by its reference or URL.
 /// </para>
 /// </remarks>
-public sealed class GitHubIntegration
+public sealed partial class GitHubIntegration
     : ITaskIntegration, IRepositoryIntegration, IPullRequestIntegration, ISshKeyIntegration
 {
     /// <summary>
@@ -37,7 +38,7 @@ public sealed class GitHubIntegration
     private readonly string _webHost;
     private readonly TimeProvider _timeProvider;
     private readonly Lock _scopeLock = new();
-    private IReadOnlyList<string>? _scope;
+    private SearchScope? _scope;
     private DateTimeOffset _scopeExpires;
 
     /// <param name="options">How to connect to GitHub.</param>
@@ -184,10 +185,10 @@ public sealed class GitHubIntegration
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        IReadOnlyList<string> scope = await GetSearchScopeAsync(cancellationToken).ConfigureAwait(false);
+        SearchScope scope = await GetSearchScopeAsync(cancellationToken).ConfigureAwait(false);
 
         // GitHub matches any of several user:, org: and repo: qualifiers, so each request covers a batch of them.
-        IEnumerable<string> searches = scope
+        IEnumerable<string> searches = scope.Qualifiers
             .Chunk(_options.MaxScopeQualifiers)
             .Select(batch => $"is:issue state:open archived:false {string.Join(' ', batch)} {text.Trim()}");
         return await SearchIssuesAsync([.. searches], sortByUpdated: false, cancellationToken).ConfigureAwait(false);
@@ -254,7 +255,7 @@ public sealed class GitHubIntegration
     /// each organisation that owns a repository they can reach, and <c>repo:</c> for each other user's repository
     /// they collaborate on (so that user's other repositories aren't searched).
     /// </summary>
-    private async Task<IReadOnlyList<string>> GetSearchScopeAsync(CancellationToken cancellationToken)
+    private async Task<SearchScope> GetSearchScopeAsync(CancellationToken cancellationToken)
     {
         DateTimeOffset now = _timeProvider.GetUtcNow();
         lock (_scopeLock)
@@ -269,6 +270,7 @@ public sealed class GitHubIntegration
         var owners = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { user.Login };
         var scope = new List<string> { $"user:{user.Login}" };
         var repositories = new List<string>();
+        var reachable = new List<(string Owner, string Name)>();
 
         // The user's own repositories, those they collaborate on, and those of the organisations they're in.
         string path = $"user/repos?per_page={_options.PageSize.ToString(CultureInfo.InvariantCulture)}";
@@ -277,6 +279,7 @@ public sealed class GitHubIntegration
             .ConfigureAwait(false))
         {
             GitHubAccount owner = repository.Owner;
+            reachable.Add((owner.Login, repository.Name));
             if (owner.IsOrganization)
             {
                 if (owners.Add(owner.Login))
@@ -291,14 +294,84 @@ public sealed class GitHubIntegration
         }
 
         scope.AddRange(repositories);
+        var result = new SearchScope(scope, reachable);
         lock (_scopeLock)
         {
-            _scope = scope;
+            _scope = result;
             _scopeExpires = now + _options.SearchScopeLifetime;
         }
 
-        return scope;
+        return result;
     }
+
+    /// <summary>
+    /// What a text search covers: the qualifiers for the accounts and repositories, and every repository the user can
+    /// reach, which shorthands such as <c>repo#42</c> are completed from.
+    /// </summary>
+    private sealed record SearchScope(
+        IReadOnlyList<string> Qualifiers,
+        IReadOnlyList<(string Owner, string Name)> Repositories);
+
+    /// <summary>
+    /// Finds issues from a shorthand that leaves out the owner of a repository the user can reach: <c>repo#42</c>
+    /// (that issue), or <c>repo some words</c> (the open issues of the repository that match the words). If several
+    /// reachable repositories have the name, each is covered.
+    /// </summary>
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<TaskInfo>> FindByShorthandAsync(
+        string text,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        text = text.Trim();
+        Match number = ShorthandNumberPattern().Match(text);
+        Match words = ShorthandWordsPattern().Match(text);
+        if (!number.Success && !words.Success)
+        {
+            return [];
+        }
+
+        string name = (number.Success ? number : words).Groups["repo"].Value;
+        SearchScope scope = await GetSearchScopeAsync(cancellationToken).ConfigureAwait(false);
+        List<(string Owner, string Name)> matches =
+        [
+            .. scope.Repositories
+                .Where(repository => string.Equals(repository.Name, name, StringComparison.OrdinalIgnoreCase))
+                .Take(MaxShorthandRepositories),
+        ];
+
+        if (number.Success)
+        {
+            int issueNumber = int.Parse(number.Groups["number"].Value, CultureInfo.InvariantCulture);
+            TaskInfo?[] found = await Task.WhenAll(matches.Select(repository => GetTaskAsync(
+                new GitHubIssueKey(repository.Owner, repository.Name, issueNumber), cancellationToken)))
+                .ConfigureAwait(false);
+            return [.. found.OfType<TaskInfo>()];
+        }
+
+        if (matches.Count == 0)
+        {
+            return [];
+        }
+
+        string rest = words.Groups["words"].Value;
+        IEnumerable<string> searches = matches.Select(repository =>
+            $"is:issue state:open archived:false repo:{repository.Owner}/{repository.Name} {rest}");
+        return await SearchIssuesAsync([.. searches], sortByUpdated: false, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The most repositories of the same name a shorthand is completed for.
+    /// </summary>
+    private const int MaxShorthandRepositories = 5;
+
+    // A repository's name, #, and the issue's number.
+    [GeneratedRegex(@"^(?<repo>[A-Za-z0-9_.-]+)#(?<number>[1-9][0-9]{0,8})$")]
+    private static partial Regex ShorthandNumberPattern();
+
+    // A repository's name, then the words to look for in its issues.
+    [GeneratedRegex(@"^(?<repo>[A-Za-z0-9_.-]+)\s+(?<words>\S.*)$")]
+    private static partial Regex ShorthandWordsPattern();
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentException">

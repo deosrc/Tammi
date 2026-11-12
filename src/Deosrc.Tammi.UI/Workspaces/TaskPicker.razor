@@ -19,14 +19,16 @@
         else
         {
             <form class="task-search" @onsubmit="SearchNowAsync">
-                <input type="search" class="task-query" aria-label="Search tasks" autocomplete="off"
+                <input type="search" class="task-query" aria-label="Search tasks" autocomplete="off" @ref="_queryInput"
                        placeholder="Search your tasks, or paste a link or reference"
                        value="@_query" @oninput="OnQueryInput" />
                 <button type="submit" class="button">Search</button>
             </form>
             <p class="settings-help">
                 Words are searched in your own and your organisations' tasks in @SourceNames. To add any other task, paste its
-                link, or its reference such as <code>owner/repo#42</code> or <code>ABC-123</code>.
+                link, or its reference such as <code>owner/repo#42</code> or <code>ABC-123</code>. For your own
+                repositories, <code>repo#42</code> and <code>repo some words</code> work too, and so does just
+                <code>123</code> for JIRA issues.
             </p>
 
             <div class="task-results" aria-live="polite" aria-busy="@(_searching ? "true" : "false")">
@@ -138,6 +140,8 @@
     private string _query = "";
     private TaskSearchResults? _results;
     private bool _searching;
+    private ElementReference _queryInput;
+    private bool _focused;
     private CancellationTokenSource? _search;
 
     // The workspace each task is already in, so it can be left out of the assigned tasks and marked elsewhere.
@@ -165,6 +169,16 @@
         _hasSources = Registry.TaskIntegrations.Count > 0;
         await LoadWorkspaceTasksAsync();
         await SearchAsync(delay: false);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The search field only exists once a source is connected, so this waits for it.
+        if (!_focused && _hasSources)
+        {
+            _focused = true;
+            await _queryInput.FocusAsync();
+        }
     }
 
     public void Dispose()
@@ -205,13 +219,15 @@
         return SearchAsync(delay: true);
     }
 
-    private Task SearchNowAsync() => SearchAsync(delay: false);
+    private Task SearchNowAsync() => SearchAsync(delay: false, addLinkedTask: true);
 
     /// <summary>
-    /// Searches for <see cref="_query"/>, replacing any search still running. The last results stay on screen,
+    /// Searches for <see cref="_query"/>, replacing any search still running. When <paramref name="addLinkedTask"/>
+    /// is set (the user pressed enter) and the search finds the one task a link or reference is to, it's chosen.
+    /// The last results stay on screen,
     /// dimmed, until the new ones arrive.
     /// </summary>
-    private async Task SearchAsync(bool delay)
+    private async Task SearchAsync(bool delay, bool addLinkedTask = false)
     {
         // The cancelled search disposes of its own token source when it finishes.
         _search?.Cancel();
@@ -241,6 +257,12 @@
             {
                 _results = results;
                 _searching = false;
+
+                // Pressing enter on a link or reference means the user wants that task: don't make them tick it.
+                if (addLinkedTask && results is { Kind: TaskSearchKind.Reference, Tasks: [var linked] })
+                {
+                    Draft.AddTask(linked);
+                }
             }
         }
         catch (OperationCanceledException) when (search.IsCancellationRequested)

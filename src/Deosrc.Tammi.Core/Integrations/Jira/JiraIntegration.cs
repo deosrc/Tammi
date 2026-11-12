@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using Deosrc.Tammi.Core.Credentials;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +21,7 @@ namespace Deosrc.Tammi.Core.Integrations.Jira;
 /// version 2 returns them.
 /// </para>
 /// </remarks>
-public sealed class JiraIntegration : ITaskIntegration
+public sealed partial class JiraIntegration : ITaskIntegration
 {
     /// <summary>
     /// The search for the tasks assigned to the user: their issues that are still to do (neither in progress nor
@@ -126,6 +127,40 @@ public sealed class JiraIntegration : ITaskIntegration
     /// <inheritdoc/>
     public bool TryParseTaskReference(string? text, [NotNullWhen(true)] out string? key) =>
         JiraIssueKey.TryParse(text, out key) || JiraIssueKey.TryParseUrl(text, _siteUrl, out key);
+
+    /// <summary>
+    /// The most projects a bare issue number is tried in.
+    /// </summary>
+    private const int MaxShorthandProjects = 25;
+
+    /// <summary>
+    /// Finds the issues a bare number (<c>1234</c>) could mean, by trying it with each of the site's project keys.
+    /// Each connected JIRA integration does this, so a number can find an issue on every site.
+    /// </summary>
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<TaskInfo>> FindByShorthandAsync(
+        string text,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        if (!IssueNumberPattern().IsMatch(text.Trim()))
+        {
+            return [];
+        }
+
+        string number = text.Trim();
+        IReadOnlyList<JiraProject> projects = await _api
+            .GetAsync<IReadOnlyList<JiraProject>>("project", allowNotFound: false, cancellationToken)
+            .ConfigureAwait(false) ?? [];
+        TaskInfo?[] found = await Task.WhenAll(projects
+            .Where(project => !string.IsNullOrWhiteSpace(project.Key))
+            .Take(MaxShorthandProjects)
+            .Select(project => GetIssueAsync($"{project.Key}-{number}", cancellationToken))).ConfigureAwait(false);
+        return [.. found.OfType<TaskInfo>()];
+    }
+
+    [GeneratedRegex("^[1-9][0-9]{0,8}$")]
+    private static partial Regex IssueNumberPattern();
 
     /// <summary>
     /// The JQL that searches issues' text (summary, description and comments) for words. Characters that JQL or its
