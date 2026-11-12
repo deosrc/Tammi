@@ -144,6 +144,10 @@
         {
             // The web view has gone, and the terminal with it.
         }
+        catch (JSException)
+        {
+            // The page was reloaded (for example from the crash screen), so the terminal no longer exists in it.
+        }
 
         _self?.Dispose();
         _disposed.Dispose();
