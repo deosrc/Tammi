@@ -20,13 +20,19 @@ public static class GitHubTokenTemplate
         ["issues", "contents", "metadata", "pull_requests", "statuses"];
 
     /// <summary>
+    /// The account permissions the token needs for Tammi to add SSH keys from Settings → Git, with write access. They
+    /// can only be filled in when the user owns the token.
+    /// </summary>
+    public static IReadOnlyList<string> WritePermissions { get; } = ["keys"];
+
+    /// <summary>
     /// The link to github.com's new fine-grained token page.
     /// </summary>
     public static Uri GitHubComUrl { get; } = NewTokenUrl(new Uri("https://github.com/"));
 
     /// <summary>
     /// Returns the link to the new fine-grained token page on a GitHub server, with the token's name, description
-    /// and <see cref="Permissions"/> filled in.
+    /// and <see cref="Permissions"/> and <see cref="WritePermissions"/> filled in.
     /// </summary>
     /// <param name="webUrl">The server's web address, e.g. <c>https://github.com/</c>.</param>
     public static Uri NewTokenUrl(Uri webUrl)
@@ -40,8 +46,9 @@ public static class GitHubTokenTemplate
         string[] query =
         [
             $"name={Uri.EscapeDataString(AppInfo.Name)}",
-            $"description={Uri.EscapeDataString($"Lets {AppInfo.Name} read your issues and pull requests to build workspaces.")}",
+            $"description={Uri.EscapeDataString($"Lets {AppInfo.Name} read your issues and pull requests to build workspaces, and add SSH keys when you ask.")}",
             .. Permissions.Select(permission => $"{permission}=read"),
+            .. WritePermissions.Select(permission => $"{permission}=write"),
         ];
         return new Uri($"{webUrl.GetLeftPart(UriPartial.Authority)}/settings/personal-access-tokens/new?"
             + string.Join('&', query));

@@ -10,6 +10,13 @@ Use its glossary terms in code and UI. When a decision resolves an open question
 Put each top-level type in its own file, named after the type (e.g. `FolderPickerOptions.cs`). Nested types can stay
 in their containing type's file.
 
+## Token scopes and permissions
+
+Wherever the UI names the scopes or permissions an integration's token needs (e.g. the token help in Settings →
+Integrations), show them as a bulleted list in alphabetical order, one to a line, with scope names in `<code>`. Keep the
+lists in messages and docs in the same order. Don't run them together in a sentence. Separate lists for fine-grained
+and classic tokens, or for optional extras, are fine, each in alphabetical order.
+
 ## Third-party software
 
 Every third-party library that ships with the app must be listed on the About page's third-party software list.

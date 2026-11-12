@@ -3,43 +3,75 @@
 @using Deosrc.Tammi.Core.Settings
 
 @* Says which token an integration needs, and where to create one. *@
-<p class="settings-help">
-    @if (ForGitHub)
+<div class="settings-help">
+    @if (ForBitbucket)
     {
-        <text>
-            A fine-grained token with read access to issues, contents, metadata, pull requests and commit statuses on
-            the repositories to include, or a classic token with the <code>repo</code> scope for private repositories.
-            GitHub's search only finds private issues when a fine-grained token can read contents too, and pull
-            requests and commit statuses show the workspace branches' pull requests and their checks. On github.com, the link below fills in
-            these permissions: choose the token's owner and its repositories (All repositories is simplest).
-            To let Tammi add SSH keys from Settings → Git, also give it read and write access to the account's Git SSH
-            keys (classic tokens: <code>write:public_key</code>). Without it, Tammi opens GitHub's page for adding a
-            key instead.
-        </text>
+        <p>An API token with scopes, used with your Atlassian account's email address. Create it for Bitbucket with these scopes:</p>
+        <ul class="token-scopes">
+            <li><code>read:pullrequest:bitbucket</code></li>
+            <li><code>read:repository:bitbucket</code></li>
+            <li><code>read:user:bitbucket</code></li>
+            <li><code>read:workspace:bitbucket</code></li>
+        </ul>
+        <p>They let @AppInfo.Name list your repositories, and show pull requests and their builds.</p>
+        <p><a href="@BitbucketTokenUrl" @onclick="() => Open.InvokeAsync(BitbucketTokenUrl)"
+           @onclick:preventDefault>Create a token</a></p>
+    }
+    else if (ForGitHub)
+    {
+        @if (GitHub is { IsGitHubCom: true })
+        {
+            @* The link fills in a fine-grained token's name and permissions, so only its owner and repositories are left. *@
+            <p>A fine-grained personal access token. Choose its owner and repositories (All repositories is simplest).</p>
+        }
+        else
+        {
+            @* An Enterprise Server's link can't fill in the permissions. *@
+            <p>A fine-grained personal access token with read access to these permissions on the repositories to include:</p>
+            <ul class="token-scopes">
+                <li>Commit statuses</li>
+                <li>Contents</li>
+                <li>Issues</li>
+                <li>Metadata</li>
+                <li>Pull requests</li>
+            </ul>
+            <p>To add SSH keys from Settings → Git, also give it this permission:</p>
+            <ul class="token-scopes">
+                <li>Git SSH keys, read and write</li>
+            </ul>
+        }
         @* The link needs the server, so it waits until a GitHub Enterprise Server URL is entered. *@
         @if (GitHub is not null)
         {
-            <a href="@GitHubTokenUrl(GitHub)" @onclick="() => Open.InvokeAsync(GitHubTokenUrl(GitHub))"
-               @onclick:preventDefault>Create a token</a>
+            <p><a href="@GitHubTokenUrl(GitHub)" @onclick="() => Open.InvokeAsync(GitHubTokenUrl(GitHub))"
+               @onclick:preventDefault>Create a token</a></p>
         }
     }
     else if (Deployment == JiraDeployment.Cloud)
     {
-        <text>
-            An API token, used with your Atlassian account's email address. A token with scopes needs the JIRA scopes
-            <code>read:jira-work</code> and <code>read:jira-user</code>. A token without scopes needs nothing more.
-        </text>
-        <a href="@JiraCloudTokenUrl" @onclick="() => Open.InvokeAsync(JiraCloudTokenUrl)"
-           @onclick:preventDefault>Create a token</a>
+        <p>An API token, used with your Atlassian account's email address. A token without scopes needs nothing more. A token with scopes needs these JIRA scopes:</p>
+        <ul class="token-scopes">
+            <li><code>read:jira-user</code></li>
+            <li><code>read:jira-work</code></li>
+        </ul>
+        <p><a href="@JiraCloudTokenUrl" @onclick="() => Open.InvokeAsync(JiraCloudTokenUrl)"
+           @onclick:preventDefault>Create a token</a></p>
     }
     else if (Deployment == JiraDeployment.DataCenter)
     {
-        <text>A personal access token (JIRA 8.14 or later). Create one in JIRA from your profile's Personal Access Tokens page.</text>
+        <p>A personal access token (JIRA 8.14 or later). Create one in JIRA from your profile's Personal Access Tokens page.</p>
     }
-</p>
+</div>
 
 @code {
+    private const string BitbucketTokenUrl = "https://id.atlassian.com/manage-profile/security/api-tokens";
     private const string JiraCloudTokenUrl = "https://id.atlassian.com/manage-profile/security/api-tokens";
+
+    /// <summary>
+    /// Whether the token is for Bitbucket Cloud.
+    /// </summary>
+    [Parameter]
+    public bool ForBitbucket { get; set; }
 
     /// <summary>
     /// Whether the token is for GitHub.

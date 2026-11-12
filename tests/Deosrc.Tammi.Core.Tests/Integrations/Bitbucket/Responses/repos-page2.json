@@ -1,0 +1,27 @@
+{
+  "pagelen": 2,
+  "page": 2,
+  "values": [
+    {
+      "type": "repository",
+      "full_name": "acme/docs",
+      "name": "Docs",
+      "has_issues": false,
+      "links": {
+        "html": {
+          "href": "https://bitbucket.org/acme/docs"
+        },
+        "clone": [
+          {
+            "name": "https",
+            "href": "https://mia@bitbucket.org/acme/docs.git"
+          },
+          {
+            "name": "ssh",
+            "href": "git@bitbucket.org:acme/docs.git"
+          }
+        ]
+      }
+    }
+  ]
+}

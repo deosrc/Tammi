@@ -1,0 +1,64 @@
+{
+  "pagelen": 50,
+  "page": 1,
+  "values": [
+    {
+      "type": "pullrequest",
+      "id": 5,
+      "title": "Fix login",
+      "state": "OPEN",
+      "draft": false,
+      "source": {
+        "branch": { "name": "api-42-fix-login" },
+        "repository": { "full_name": "acme/api" }
+      },
+      "links": { "html": { "href": "https://bitbucket.org/acme/api/pull-requests/5" } },
+      "participants": [
+        { "role": "REVIEWER", "approved": true, "state": "approved" },
+        { "role": "REVIEWER", "approved": false, "state": null },
+        { "role": "PARTICIPANT", "approved": false, "state": null }
+      ]
+    },
+    {
+      "type": "pullrequest",
+      "id": 6,
+      "title": "Draft: another way",
+      "state": "OPEN",
+      "draft": true,
+      "source": {
+        "branch": { "name": "api-42-fix-login" },
+        "repository": { "full_name": "acme/api" }
+      },
+      "links": { "html": { "href": "https://bitbucket.org/acme/api/pull-requests/6" } },
+      "participants": [
+        { "role": "REVIEWER", "approved": false, "state": "changes_requested" }
+      ]
+    },
+    {
+      "type": "pullrequest",
+      "id": 8,
+      "title": "From a fork",
+      "state": "MERGED",
+      "draft": false,
+      "source": {
+        "branch": { "name": "api-42-fix-login" },
+        "repository": { "full_name": "someone/api" }
+      },
+      "links": { "html": { "href": "https://bitbucket.org/acme/api/pull-requests/8" } },
+      "participants": []
+    },
+    {
+      "type": "pullrequest",
+      "id": 9,
+      "title": "Declined",
+      "state": "DECLINED",
+      "draft": false,
+      "source": {
+        "branch": { "name": "api-42-fix-login" },
+        "repository": { "full_name": "acme/api" }
+      },
+      "links": { "html": { "href": "https://bitbucket.org/acme/api/pull-requests/9" } },
+      "participants": []
+    }
+  ]
+}

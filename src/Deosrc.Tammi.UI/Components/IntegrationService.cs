@@ -5,6 +5,7 @@ namespace Deosrc.Tammi.UI.Components;
 /// </summary>
 public enum IntegrationService
 {
+    Bitbucket,
     GitHub,
     Jira,
 }

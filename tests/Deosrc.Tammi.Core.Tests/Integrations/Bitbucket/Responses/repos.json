@@ -1,0 +1,49 @@
+{
+  "pagelen": 2,
+  "page": 1,
+  "next": "https://api.bitbucket.org/2.0/repositories/acme?role=member&pagelen=100&page=2",
+  "values": [
+    {
+      "type": "repository",
+      "full_name": "acme/api",
+      "name": "API",
+      "has_issues": true,
+      "links": {
+        "html": {
+          "href": "https://bitbucket.org/acme/api"
+        },
+        "clone": [
+          {
+            "name": "https",
+            "href": "https://mia@bitbucket.org/acme/api.git"
+          },
+          {
+            "name": "ssh",
+            "href": "git@bitbucket.org:acme/api.git"
+          }
+        ]
+      }
+    },
+    {
+      "type": "repository",
+      "full_name": "acme/web",
+      "name": "Web",
+      "has_issues": false,
+      "links": {
+        "html": {
+          "href": "https://bitbucket.org/acme/web"
+        },
+        "clone": [
+          {
+            "name": "https",
+            "href": "https://mia@bitbucket.org/acme/web.git"
+          },
+          {
+            "name": "ssh",
+            "href": "git@bitbucket.org:acme/web.git"
+          }
+        ]
+      }
+    }
+  ]
+}

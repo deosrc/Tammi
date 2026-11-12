@@ -13,7 +13,7 @@ public static class AppInfo
     public const string Name = "Tammi";
 
     /// <summary>
-    /// The product version shown in the UI, e.g. <c>0.1.0</c>. Build metadata such as the commit hash is dropped.
+    /// The product version shown in the UI, e.g. <c>0.1.0</c>, or <c>0.0.0-dev</c> for a local build. Build metadata such as the commit hash is dropped.
     /// </summary>
     public static string Version { get; } = ReadVersion();
 

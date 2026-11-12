@@ -15,7 +15,7 @@
 
     <ApplicationTitle>Tammi</ApplicationTitle>
     <ApplicationId>com.deosrc.tammi</ApplicationId>
-    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+    <ApplicationDisplayVersion>0.0.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
   </PropertyGroup>
 
