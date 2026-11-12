@@ -1,0 +1,35 @@
+@page "/settings/visualiser"
+@layout SettingsLayout
+@inherits SettingsSectionBase
+@using Deosrc.Tammi.Core.Settings
+
+<h1>Visualiser</h1>
+
+<div class="settings-form">
+    <div class="settings-field">
+        <label for="visualiser-workspace-visualisation">Workspace visualisation</label>
+        <div class="settings-field-row">
+            <select id="visualiser-workspace-visualisation"
+                    value="@SettingsStore.Current.Visualiser.WorkspaceVisualisation"
+                    @onchange="OnWorkspaceVisualisationChanged">
+                <option value="@WorkspaceVisualisationType.Glow">Glow</option>
+                <option value="@WorkspaceVisualisationType.Plasma">Plasma</option>
+            </select>
+        </div>
+        <p class="settings-help">
+            How the visualiser draws each workspace: a soft glow, or a ball of animated plasma. Either way it's in the
+            colour of the workspace's status. It applies straight away, including in a visualiser that's already open.
+        </p>
+        @if (SaveError is not null)
+        {
+            <p class="error">@SaveError</p>
+        }
+    </div>
+</div>
+
+@code {
+    private Task OnWorkspaceVisualisationChanged(ChangeEventArgs e) =>
+        Enum.TryParse(e.Value?.ToString(), out WorkspaceVisualisationType type)
+            ? UpdateAsync(settings => settings with { Visualiser = settings.Visualiser with { WorkspaceVisualisation = type } })
+            : Task.CompletedTask;
+}

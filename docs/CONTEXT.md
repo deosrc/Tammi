@@ -585,6 +585,10 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
 Lists of arguments (for the terminal shell and Custom Agents) are edited one argument per line, so they need no
 quoting. Blank lines are ignored.
+- **Visualiser**
+  - **Workspace visualisation:** how the visualiser draws each workspace: **Plasma** (the default), a ball of animated
+    plasma, or **Glow**, a soft glow. Either is in the colour of the workspace's status. It applies straight away,
+    including in a visualiser that's already open.
 - **About:** the Tammi version, and the git CLI and libgit2 versions
 
 Changes are saved as soon as they're made. The settings live in `settings.json` in the app's Config folder (see

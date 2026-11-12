@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Deosrc.Tammi.Core.Agents;
 using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Workspaces;
 
 namespace Deosrc.Tammi.UI.Visualiser;
@@ -26,6 +27,7 @@ public sealed class VisualiserFeed
     private readonly HomeGitStatus _gitStatus;
     private readonly WorkspaceTabs _tabs;
     private readonly IntegrationRegistry _registry;
+    private readonly ISettingsStore _settings;
     private readonly ConcurrentDictionary<string, WorkspaceStatus> _statuses = new(StringComparer.Ordinal);
     private int _scheduled;
     private string? _last;
@@ -36,13 +38,16 @@ public sealed class VisualiserFeed
         WorkspaceAgents agents,
         HomeGitStatus gitStatus,
         WorkspaceTabs tabs,
-        IntegrationRegistry registry)
+        IntegrationRegistry registry,
+        ISettingsStore settings)
     {
         _workspaceStore = workspaceStore;
         _agents = agents;
         _gitStatus = gitStatus;
         _tabs = tabs;
         _registry = registry;
+        _settings = settings;
+        _settings.Changed += OnSourceChanged;
         _workspaceStore.Changed += OnWorkspacesChanged;
         _tabs.Changed += OnWorkspacesChanged;
         _agents.Changed += _ => OnSourceChanged();
@@ -134,7 +139,13 @@ public sealed class VisualiserFeed
                     .ToArray(),
             };
         });
-        return JsonSerializer.Serialize(nodes, JsonOptions);
+        return JsonSerializer.Serialize(
+            new
+            {
+                workspaceVisualisation = _settings.Current.Visualiser.WorkspaceVisualisation.ToString(),
+                workspaces = nodes,
+            },
+            JsonOptions);
     }
 
     // Git status can change many times in a moment, so changes that come close together are looked at once, and

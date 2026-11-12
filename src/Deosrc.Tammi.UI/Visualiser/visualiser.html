@@ -86,6 +86,67 @@ function create(canvas) {
     Done: "#3fb950",
   };
   const statusColour = (status) => statusColours[status] ?? "#ffffff";
+
+  // A workspace is a ball of plasma: drifting bands of light, worked out on a small grid and stretched over the node,
+  // in its status colour with the brighter bands tending to white, fading out towards the edge.
+  const plasmaSize = 40;
+  // Each workspace has a surface of its own. Some browsers draw a canvas onto another later than the drawImage call, so
+  // one surface shared by every workspace would show them all as the last one drawn.
+  const makePlasmaSurface = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = plasmaSize;
+    canvas.height = plasmaSize;
+    const surface = canvas.getContext("2d");
+    return { canvas, surface, image: surface.createImageData(plasmaSize, plasmaSize) };
+  };
+  const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
+  // How workspaces are drawn: "Plasma" or "Glow", as the settings say.
+  let workspaceVisualisation = "Plasma";
+
+  const drawGlow = (w) => {
+    const glow = context.createRadialGradient(w.x, w.y, 0, w.x, w.y, nodeRadius());
+    glow.addColorStop(0, statusColour(w.status) + "55");
+    glow.addColorStop(1, "transparent");
+    context.fillStyle = glow;
+    context.beginPath();
+    context.arc(w.x, w.y, nodeRadius(), 0, Math.PI * 2);
+    context.fill();
+  };
+
+  const drawPlasma = (w) => {
+    const [red, green, blue] = rgbOf(statusColour(w.status));
+    const t = time * 0.9 * w.plasmaSpeed + w.phase;
+    w.plasma ??= makePlasmaSurface();
+    const data = w.plasma.image.data;
+    for (let py = 0; py < plasmaSize; py++) {
+      for (let px = 0; px < plasmaSize; px++) {
+        // Position from the middle, from -1 to 1.
+        const x = (px + 0.5) / plasmaSize * 2 - 1;
+        const y = (py + 0.5) / plasmaSize * 2 - 1;
+        const distance = Math.hypot(x, y);
+        const v = (
+          Math.sin(x * 4 + t) +
+          Math.sin(y * 5 - t * 1.3) +
+          Math.sin((x + y) * 3.5 + t * 0.7) +
+          Math.sin(distance * 7 - t * 1.6)
+        ) / 8 + 0.5;
+        const edge = Math.max(0, 1 - distance);
+        // Brightness follows the bands, and only the brightest tend to white, so the status colour still shows.
+        const brightness = 0.5 + v * 0.6;
+        const white = v * v * v * v * 0.2;
+        const k = (py * plasmaSize + px) * 4;
+        data[k] = Math.min(255, red * brightness + 255 * white);
+        data[k + 1] = Math.min(255, green * brightness + 255 * white);
+        data[k + 2] = Math.min(255, blue * brightness + 255 * white);
+        data[k + 3] = 255 * Math.pow(edge, 1.2) * (0.3 + v * 0.7);
+      }
+    }
+    w.plasma.surface.putImageData(w.plasma.image, 0, 0);
+    // Smaller than the glow, so the agents' orbits and the hover ring sit just outside it.
+    const radius = nodeRadius() * 0.8;
+    context.drawImage(w.plasma.canvas, w.x - radius, w.y - radius, radius * 2, radius * 2);
+  };
   const agentColour = (state) => agentColours[state] ?? grey;
 
   // How big everything is, from 1 (full size) down so that every workspace fits in the window. It moves towards
@@ -206,7 +267,13 @@ function create(canvas) {
     });
   };
 
-  const update = (nodes) => {
+  const update = (payload) => {
+    // A snapshot is the settings and the workspaces. (A bare list of workspaces is still accepted.)
+    const nodes = Array.isArray(payload) ? payload : payload.workspaces;
+    if (!Array.isArray(payload) && payload.workspaceVisualisation) {
+      workspaceVisualisation = payload.workspaceVisualisation;
+    }
+
     workspaces = nodes.map((node) => {
       const old = workspaces.find((w) => w.id === node.id);
       // An agent that has stopped working bursts in the colour of the state it moved to, once, on the next frame.
@@ -214,7 +281,10 @@ function create(canvas) {
         const before = old?.agents.find((a) => a.id === agent.id);
         return { ...agent, burst: before?.burst || (before?.state === "Working" && agent.state !== "Working") };
       });
-      return { ...node, agents, x: old?.x ?? width / 2, y: old?.y ?? height / 2, tx: 0, ty: 0, phase: old?.phase ?? Math.random() * 6 };
+      return { ...node, agents, x: old?.x ?? width / 2, y: old?.y ?? height / 2, tx: 0, ty: 0, phase: old?.phase ?? Math.random() * 6,
+        plasma: old?.plasma,
+        // Each plasma ball runs a little faster or slower than the others (within 6%), so they drift out of step.
+        plasmaSpeed: old?.plasmaSpeed ?? 1 + (Math.random() - 0.5) * 0.12 };
     });
     layout();
   };
@@ -319,13 +389,11 @@ function create(canvas) {
       w.x += (w.tx - w.x) * Math.min(dt * 2, 1);
       w.y += (w.ty - w.y) * Math.min(dt * 2, 1);
 
-      const glow = context.createRadialGradient(w.x, w.y, 0, w.x, w.y, nodeRadius());
-      glow.addColorStop(0, statusColour(w.status) + "55");
-      glow.addColorStop(1, "transparent");
-      context.fillStyle = glow;
-      context.beginPath();
-      context.arc(w.x, w.y, nodeRadius(), 0, Math.PI * 2);
-      context.fill();
+      if (workspaceVisualisation === "Glow") {
+        drawGlow(w);
+      } else {
+        drawPlasma(w);
+      }
 
       w.agents.forEach((agent, i) => {
         const config = states[agent.state] ?? states.Running;
