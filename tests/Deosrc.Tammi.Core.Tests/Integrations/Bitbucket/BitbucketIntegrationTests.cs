@@ -172,18 +172,18 @@ public class BitbucketIntegrationTests : IDisposable
     private static readonly string PullRequestsPath =
         "repositories/acme/api/pullrequests?q="
         + Uri.EscapeDataString("source.branch.name = \"api-42-fix-login\"")
-        + "&state=OPEN&state=MERGED&state=DECLINED&state=SUPERSEDED&sort=created_on&pagelen=100";
+        + "&state=OPEN&state=MERGED&state=DECLINED&state=SUPERSEDED&sort=created_on&pagelen=50";
 
     [Fact]
     public async Task GetPullRequests_ReadsStateReviewAndChecks_OfPullRequestsFromTheBranch()
     {
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
         _api.Respond(PullRequestsPath, FakeBitbucketApi.Response("pullrequests.json"))
-            .Respond("repositories/acme/api/pullrequests/5/statuses?pagelen=100",
+            .Respond("repositories/acme/api/pullrequests/5/statuses?pagelen=50",
                 FakeBitbucketApi.Response("statuses-successful.json"))
-            .Respond("repositories/acme/api/pullrequests/6/statuses?pagelen=100",
+            .Respond("repositories/acme/api/pullrequests/6/statuses?pagelen=50",
                 FakeBitbucketApi.Response("statuses-failed.json"))
-            .Respond("repositories/acme/api/pullrequests/9/statuses?pagelen=100", """{"values":[]}""");
+            .Respond("repositories/acme/api/pullrequests/9/statuses?pagelen=50", """{"values":[]}""");
 
         IReadOnlyList<PullRequestInfo> pullRequests =
             await bitbucket.GetPullRequestsAsync(AcmeApiRemotes, "api-42-fix-login", CancellationToken);
@@ -221,7 +221,7 @@ public class BitbucketIntegrationTests : IDisposable
         BitbucketIntegration bitbucket = await CreateAuthenticatedAsync();
         string only = """{"values":[{"id":5,"title":"Fix","state":"MERGED","source":{"repository":{"full_name":"acme/api"}},"links":{"html":{"href":"https://bitbucket.org/acme/api/pull-requests/5"}}}]}""";
         _api.Respond(PullRequestsPath, only)
-            .Respond("repositories/acme/api/pullrequests/5/statuses?pagelen=100",
+            .Respond("repositories/acme/api/pullrequests/5/statuses?pagelen=50",
                 FakeBitbucketApi.Response("forbidden.json"), HttpStatusCode.Forbidden);
 
         PullRequestInfo pullRequest = Assert.Single(

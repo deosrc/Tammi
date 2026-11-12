@@ -29,6 +29,12 @@ public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestI
     internal const string PullRequestPermissionMessage =
         "This token can't read pull requests. Give it the read:pullrequest:bitbucket scope, then authenticate again.";
 
+    /// <summary>
+    /// The most Pull Requests (and their statuses) Bitbucket returns in a page. A larger page size is refused with
+    /// "Invalid pagelen", unlike the lists of workspaces and repositories, which allow 100.
+    /// </summary>
+    internal const int MaxPullRequestPageSize = 50;
+
     private static readonly string[] PullRequestStates = ["OPEN", "MERGED", "DECLINED", "SUPERSEDED"];
 
     private readonly BitbucketIntegrationOptions _options;
@@ -210,7 +216,7 @@ public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestI
         int found = 0;
         string states = string.Join('&', PullRequestStates.Select(state => $"state={state}"));
         string query = Uri.EscapeDataString($"source.branch.name = {Quote(branch)}");
-        string perPage = _options.PageSize.ToString(CultureInfo.InvariantCulture);
+        string perPage = Math.Min(_options.PageSize, MaxPullRequestPageSize).ToString(CultureInfo.InvariantCulture);
         foreach ((string workspace, string slug) in repositories)
         {
             string repositoryPath = $"repositories/{Uri.EscapeDataString(workspace)}/{Uri.EscapeDataString(slug)}";
@@ -343,7 +349,7 @@ public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestI
         CancellationToken cancellationToken)
     {
         string path = string.Create(CultureInfo.InvariantCulture,
-            $"{repositoryPath}/pullrequests/{number}/statuses?pagelen={_options.PageSize}");
+            $"{repositoryPath}/pullrequests/{number}/statuses?pagelen={Math.Min(_options.PageSize, MaxPullRequestPageSize)}");
         var states = new List<string?>();
         try
         {
