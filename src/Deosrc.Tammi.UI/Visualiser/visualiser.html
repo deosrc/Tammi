@@ -95,18 +95,34 @@ function create(canvas) {
   const nodeRadius = () => 40 * scale;
   const orbitRadius = () => 34 * scale;
 
-  // Sources sit on a ring, and a source's workspaces on a smaller ring around it, so spacing follows the grouping.
-  // The rings are as big as the workspaces need to keep clear of each other, so workspaces are made smaller until
-  // the whole layout fits.
+  // Sources sit on a ring, and a source's workspaces fill an offset grid around its centre: rows of about equal length,
+  // each row shifted half a space from the one above, so every workspace is the same distance from its neighbours.
+  // The grids are as big as the workspaces need to keep clear of each other, so workspaces are made smaller until the
+  // whole layout fits.
+  const gridOffsets = (count, spacing) => {
+    const columns = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / columns);
+    const points = [];
+    for (let i = 0; i < count; i++) {
+      const row = Math.floor(i / columns);
+      points.push({
+        x: (i - row * columns) * spacing + (row % 2 ? spacing / 2 : 0),
+        y: (row - (rows - 1) / 2) * spacing * Math.sqrt(3) / 2,
+      });
+    }
+    // The grid is then centred on its middle.
+    const middle = (Math.min(...points.map((p) => p.x)) + Math.max(...points.map((p) => p.x))) / 2;
+    return points.map((p) => ({ x: p.x - middle, y: p.y }));
+  };
+
   const arrange = (size) => {
     const sources = [...new Set(workspaces.map((w) => w.source))];
     const groups = sources.map((source) => workspaces.filter((w) => w.source === source));
     const radius = 40 * size;
-    // Workspaces of a source are apart: centres 1 workspace-width from each other.
+    // Neighbours are a workspace-width apart, centre to centre.
     const spacing = radius * 2;
-    const inner = groups.map((group) =>
-      group.length > 1 ? spacing / (2 * Math.sin(Math.PI / group.length)) : 0);
-    const extent = inner.map((r) => r + radius * 1.5);
+    const offsets = groups.map((group) => gridOffsets(group.length, spacing));
+    const extent = offsets.map((points) => Math.max(...points.map((p) => Math.hypot(p.x, p.y))) + radius * 1.5);
     let ring = 0;
     if (sources.length > 1) {
       const half = 2 * Math.sin(Math.PI / sources.length);
@@ -115,7 +131,7 @@ function create(canvas) {
         ring = Math.max(ring, (extent[i] + extent[next] + radius) / half);
       }
     }
-    return { sources, groups, inner, ring, fits: ring + Math.max(0, ...extent) };
+    return { sources, groups, offsets, ring, fits: ring + Math.max(0, ...extent) };
   };
 
   const layout = () => {
@@ -124,15 +140,14 @@ function create(canvas) {
     while (size > 0.2 && arrange(size).fits > room) size -= 0.025;
     targetScale = size;
 
-    const { sources, groups, inner, ring } = arrange(size);
+    const { sources, groups, offsets, ring } = arrange(size);
     sources.forEach((source, s) => {
       const angle = (s / sources.length) * Math.PI * 2;
       const cx = width / 2 + Math.cos(angle) * ring;
       const cy = height / 2 + Math.sin(angle) * ring;
       groups[s].forEach((w, i) => {
-        const a = (i / groups[s].length) * Math.PI * 2 + angle;
-        w.tx = cx + Math.cos(a) * inner[s];
-        w.ty = cy + Math.sin(a) * inner[s];
+        w.tx = cx + offsets[s][i].x;
+        w.ty = cy + offsets[s][i].y;
       });
     });
   };
