@@ -109,7 +109,12 @@ function create(canvas) {
   const update = (nodes) => {
     workspaces = nodes.map((node) => {
       const old = workspaces.find((w) => w.id === node.id);
-      return { ...node, x: old?.x ?? width / 2, y: old?.y ?? height / 2, tx: 0, ty: 0, phase: old?.phase ?? Math.random() * 6 };
+      // An agent that has stopped working bursts in the colour of the state it moved to, once, on the next frame.
+      const agents = node.agents.map((agent) => {
+        const before = old?.agents.find((a) => a.id === agent.id);
+        return { ...agent, burst: before?.burst || (before?.state === "Working" && agent.state !== "Working") };
+      });
+      return { ...node, agents, x: old?.x ?? width / 2, y: old?.y ?? height / 2, tx: 0, ty: 0, phase: old?.phase ?? Math.random() * 6 };
     });
     layout();
   };
@@ -229,6 +234,14 @@ function create(canvas) {
         agent.ex = ex;
         agent.ey = ey;
         const colour = agentColour(agent.state);
+        if (agent.burst) {
+          agent.burst = false;
+          for (let n = 0; n < 70; n++) {
+            const direction = Math.random() * Math.PI * 2;
+            const speed = 40 + Math.random() * 110;
+            particles.push({ x: ex, y: ey, vx: Math.cos(direction) * speed, vy: Math.sin(direction) * speed, life: 1, colour });
+          }
+        }
         const rate = config.pulse ? config.rate + 6 * Math.max(0, Math.sin(time * 3)) ** 4 : config.rate;
         for (let n = rate * dt * 60 * 0.5 + Math.random(); n >= 1; n--) {
           // A trailing state's particles drift back along the path the agent came by, so they stream out behind it.
