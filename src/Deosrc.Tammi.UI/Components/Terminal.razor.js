@@ -76,6 +76,30 @@ export function create(element, dotNet, options) {
 
   terminal.open(element);
 
+  // Right-click, as in Windows Terminal: copies the selection, or pastes when nothing is selected. It acts once, on
+  // button down. The 'contextmenu' event can't be used for that, because web views raise it differently (on button
+  // down, button up, or repeatedly while the button is held). It's only stopped, so the web view's own menu doesn't
+  // show, and its copy can't reach xterm.js's selection.
+  const onRightMouseDown = event => {
+    if (event.button !== 2) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (terminal.hasSelection()) {
+      copySelection(terminal, true);
+    } else {
+      paste(terminal);
+    }
+  };
+  const suppressContextMenu = event => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  element.addEventListener('mousedown', onRightMouseDown, true);
+  element.addEventListener('contextmenu', suppressContextMenu, true);
+
   // Keep the terminal the size of its element. The PTY follows through onResize.
   const fit = () => {
     try {
@@ -98,6 +122,8 @@ export function create(element, dotNet, options) {
     focus: () => terminal.focus(),
     getSize: () => ({ columns: terminal.cols, rows: terminal.rows }),
     dispose: () => {
+      element.removeEventListener('mousedown', onRightMouseDown, true);
+      element.removeEventListener('contextmenu', suppressContextMenu, true);
       observer.disconnect();
       cancelAnimationFrame(frame);
       subscriptions.forEach(subscription => subscription.dispose());
@@ -116,6 +142,29 @@ function handleClipboardKeys(terminal, event) {
     return true;
   }
 
+  // Ctrl+Enter. Terminals can't tell it from Enter, so send a line feed, which programs such as Claude Code treat as
+  // a newline rather than a submit.
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    terminal.input('\n');
+    return false;
+  }
+
+  // Ctrl+Delete deletes the next word. Shells don't bind xterm.js's sequence for it, but all bind Alt+D (ESC d).
+  if (event.key === 'Delete' && !event.shiftKey) {
+    event.preventDefault();
+    terminal.input('\x1bd');
+    return false;
+  }
+
+  // Ctrl+Backspace deletes the previous word. xterm.js sends ^H, which shells treat as a plain Backspace. Alt+Backspace
+  // (ESC DEL) is the word deletion that shells bind.
+  if (event.key === 'Backspace' && !event.shiftKey) {
+    event.preventDefault();
+    terminal.input('\x1b\x7f');
+    return false;
+  }
+
   const key = event.key.toLowerCase();
   if (key === 'c' && (event.shiftKey || (isWindows && terminal.hasSelection()))) {
     event.preventDefault();
@@ -132,13 +181,13 @@ function handleClipboardKeys(terminal, event) {
   return true;
 }
 
-function copySelection(terminal) {
+function copySelection(terminal, clearAfter = false) {
   if (!terminal.hasSelection()) {
     return;
   }
 
   const copied = () => {
-    if (isWindows) {
+    if (isWindows || clearAfter) {
       terminal.clearSelection();
     }
   };
@@ -159,12 +208,12 @@ function copySelection(terminal) {
 
 function paste(terminal) {
   if (!navigator.clipboard?.readText) {
-    console.warn('The clipboard can\'t be read here. Right-click the terminal and choose Paste.');
+    console.warn('The clipboard can\'t be read here.');
     return;
   }
 
   // paste() wraps the text in bracketed paste sequences when the program has asked for them.
   navigator.clipboard.readText()
     .then(text => terminal.paste(text))
-    .catch(error => console.warn('Couldn\'t read the clipboard. Right-click the terminal and choose Paste.', error));
+    .catch(error => console.warn('Couldn\'t read the clipboard.', error));
 }

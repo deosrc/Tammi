@@ -56,7 +56,7 @@ public static class WorkspaceStatuses
             return WorkspaceStatus.RequiresAttention;
         }
 
-        if (open.Length > 0)
+        if (open.Any(pr => pr.State == PullRequestState.Open))
         {
             return WorkspaceStatus.InReview;
         }

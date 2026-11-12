@@ -36,6 +36,16 @@ public sealed class WorkspaceStatusesTests
         Assert.Equal(WorkspaceStatus.InReview, WorkspaceStatuses.Of(Summary(Pr(PullRequestState.Open, checks)), []));
 
     [Fact]
+    public void Only_draft_is_in_development() =>
+        Assert.Equal(WorkspaceStatus.InDevelopment, WorkspaceStatuses.Of(Summary(Pr(PullRequestState.Draft)), []));
+
+    [Fact]
+    public void Draft_and_open_is_in_review() =>
+        Assert.Equal(
+            WorkspaceStatus.InReview,
+            WorkspaceStatuses.Of(Summary(Pr(PullRequestState.Draft), Pr(PullRequestState.Open)), []));
+
+    [Fact]
     public void Failed_checks_require_attention() =>
         Assert.Equal(
             WorkspaceStatus.RequiresAttention,
