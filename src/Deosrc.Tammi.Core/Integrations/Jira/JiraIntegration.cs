@@ -32,7 +32,7 @@ public sealed class JiraIntegration : ITaskIntegration
     /// The scopes a JIRA Cloud API token with scopes needs: to read issues, and to read the user it belongs to. A
     /// token without scopes can do whatever the user can.
     /// </summary>
-    public const string CloudScopes = "read:jira-work and read:jira-user";
+    public const string CloudScopes = "read:jira-user and read:jira-work";
 
     private readonly JiraIntegrationOptions _options;
     private readonly JiraApiClient _api;

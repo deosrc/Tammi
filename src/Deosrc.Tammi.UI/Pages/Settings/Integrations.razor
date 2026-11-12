@@ -3,6 +3,7 @@
 @implements IDisposable
 @using Deosrc.Tammi.Core.Credentials
 @using Deosrc.Tammi.Core.Integrations
+@using Deosrc.Tammi.Core.Integrations.Bitbucket
 @using Deosrc.Tammi.Core.Integrations.GitHub
 @using Deosrc.Tammi.Core.Integrations.Jira
 @using Deosrc.Tammi.Core.Platform
@@ -31,7 +32,7 @@ else
             <li class="integration-item" @key="integration.Id">
                 <div class="integration-header">
                     <div class="integration-heading">
-                        <IntegrationIcon Service="@(integration.GitHub is not null ? IntegrationService.GitHub : IntegrationService.Jira)" />
+                        <IntegrationIcon Service="@ServiceOf(integration)" />
                         <div class="integration-title">
                             <span class="integration-name">@integration.Name</span>
                             <span class="placeholder">@integration.Detail</span>
@@ -82,7 +83,7 @@ else
                 else if (_authenticatingId == integration.Id)
                 {
                     <form class="integration-panel settings-form" @onsubmit="() => AuthenticateAsync(integration)">
-                        @if (integration.Jira is { Deployment: JiraDeployment.Cloud })
+                        @if (integration.Jira is { Deployment: JiraDeployment.Cloud } || integration.Bitbucket is not null)
                         {
                             <div class="settings-field">
                                 <label for="authenticate-email">Atlassian account email</label>
@@ -94,7 +95,7 @@ else
                             <label for="authenticate-token">@TokenLabel(integration)</label>
                             <input id="authenticate-token" type="password" class="settings-text"
                                    autocomplete="off" @bind="_authToken" @bind:event="oninput" />
-                            <IntegrationTokenHelp ForGitHub="@(integration.GitHub is not null)" GitHub="integration.GitHub" Deployment="integration.Jira?.Deployment" Open="OpenExternal" />
+                            <IntegrationTokenHelp ForBitbucket="@(integration.Bitbucket is not null)" ForGitHub="@(integration.GitHub is not null)" GitHub="integration.GitHub" Deployment="integration.Jira?.Deployment" Open="OpenExternal" />
                         </div>
                         <div class="settings-field-row">
                             <button type="submit" class="button" disabled="@(_busy || !CanAuthenticate(integration))">
@@ -143,6 +144,34 @@ else
             </ul>
         }
     </div>
+}
+else if (_adding == IntegrationService.Bitbucket)
+{
+    <form class="settings-form integration-add" @onsubmit="AddBitbucketAsync">
+        <div class="settings-field">
+            <label for="bitbucket-email">Atlassian account email</label>
+            <input id="bitbucket-email" type="email" class="settings-text" autocomplete="off"
+                   @bind="_bitbucketEmail" @bind:event="oninput" />
+            <p class="settings-help">Bitbucket Cloud (bitbucket.org). Bitbucket Data Center isn't supported yet.</p>
+        </div>
+        <div class="settings-field">
+            <label for="bitbucket-token">API token</label>
+            <input id="bitbucket-token" type="password" class="settings-text" autocomplete="off"
+                   @bind="_addToken" @bind:event="oninput" />
+            <IntegrationTokenHelp ForBitbucket="true" Open="OpenExternal" />
+        </div>
+        <div>
+            <div class="settings-field-row">
+                <button type="submit" class="button" disabled="@(_busy || !CanAddBitbucket)">@(_busy ? "Connecting…" : "Connect")</button>
+                <button type="button" class="button button-secondary" disabled="@_busy" @onclick="CancelAdding">Cancel</button>
+            </div>
+            <p class="settings-help">@AppInfo.Name checks the token with the service before saving it.</p>
+        </div>
+        @if (_addError is not null)
+        {
+            <p class="error">@_addError</p>
+        }
+    </form>
 }
 else if (_adding == IntegrationService.GitHub)
 {
@@ -242,7 +271,12 @@ else
     // The integration types the Add menu offers, in alphabetical order.
     private static readonly IReadOnlyList<(IntegrationService Service, string Name)> AddableServices =
     [
-        .. new[] { (IntegrationService.GitHub, "GitHub"), (IntegrationService.Jira, "JIRA") }
+        .. new[]
+        {
+            (IntegrationService.Bitbucket, "Bitbucket"),
+            (IntegrationService.GitHub, "GitHub"),
+            (IntegrationService.Jira, "JIRA"),
+        }
             .OrderBy(service => service.Item2, StringComparer.CurrentCultureIgnoreCase),
     ];
 
@@ -262,6 +296,7 @@ else
     private bool _gitHubEnterprise;
     private string _gitHubUrl = "";
     private string _jiraUrl = "";
+    private string _bitbucketEmail = "";
     private JiraDeployment _jiraDeployment = JiraDeployment.Cloud;
     private string _jiraEmail = "";
 
@@ -273,7 +308,13 @@ else
         string Name,
         string Detail,
         GitHubIntegrationSettings? GitHub,
-        JiraIntegrationSettings? Jira);
+        JiraIntegrationSettings? Jira,
+        BitbucketIntegrationSettings? Bitbucket = null);
+
+    private static IntegrationService ServiceOf(ConfiguredIntegration integration) =>
+        integration.Bitbucket is not null ? IntegrationService.Bitbucket
+        : integration.GitHub is not null ? IntegrationService.GitHub
+        : IntegrationService.Jira;
 
     private IReadOnlyList<ConfiguredIntegration> Configured
     {
@@ -282,6 +323,8 @@ else
             var settings = SettingsStore.Current.Integrations;
             IEnumerable<ConfiguredIntegration> integrations =
             [
+                .. settings.Bitbucket.Select(bitbucket => new ConfiguredIntegration(
+                    bitbucket.Id, bitbucket.Name, $"Bitbucket Cloud · {bitbucket.Email}", null, null, bitbucket)),
                 .. settings.GitHub.Select(github => new ConfiguredIntegration(
                     github.Id, github.Name, github.ApiUrl.AbsoluteUri, github, null)),
                 .. settings.Jira.Select(jira => new ConfiguredIntegration(
@@ -306,6 +349,10 @@ else
         JiraIntegrationSettings.ParseSiteUrl(_jiraUrl) is { } siteUrl
             ? JiraIntegrationSettings.For(siteUrl, _jiraDeployment, _jiraEmail)
             : null;
+
+    private BitbucketIntegrationSettings PendingBitbucket => BitbucketIntegrationSettings.For(_bitbucketEmail);
+
+    private bool CanAddBitbucket => PendingBitbucket.IsValid() && !string.IsNullOrWhiteSpace(_addToken);
 
     private bool CanAddGitHub => PendingGitHub is not null && !string.IsNullOrWhiteSpace(_addToken);
 
@@ -368,6 +415,7 @@ else
         _jiraUrl = "";
         _jiraDeployment = JiraDeployment.Cloud;
         _jiraEmail = "";
+        _bitbucketEmail = "";
     }
 
     private void CancelAdding()
@@ -389,6 +437,11 @@ else
     private Task AddGitHubAsync() =>
         PendingGitHub is { } settings
             ? AddAsync(() => IntegrationManager.AddGitHubAsync(settings, _addToken, _disposed.Token))
+            : Task.CompletedTask;
+
+    private Task AddBitbucketAsync() =>
+        CanAddBitbucket
+            ? AddAsync(() => IntegrationManager.AddBitbucketAsync(PendingBitbucket, _addToken, _disposed.Token))
             : Task.CompletedTask;
 
     private Task AddJiraAsync() =>
@@ -429,7 +482,7 @@ else
         CancelPanel();
         _authenticatingId = integration.Id;
         _authToken = "";
-        _authEmail = integration.Jira?.Email ?? "";
+        _authEmail = integration.Jira?.Email ?? integration.Bitbucket?.Email ?? "";
     }
 
     private void StartRemoving(string id)
@@ -448,12 +501,14 @@ else
 
     private bool CanAuthenticate(ConfiguredIntegration integration) =>
         !string.IsNullOrWhiteSpace(_authToken)
-        && (integration.Jira is not { Deployment: JiraDeployment.Cloud } || !string.IsNullOrWhiteSpace(_authEmail));
+        && ((integration.Jira is not { Deployment: JiraDeployment.Cloud } && integration.Bitbucket is null)
+            || !string.IsNullOrWhiteSpace(_authEmail));
 
     private Task AuthenticateAsync(ConfiguredIntegration integration) =>
         CanAuthenticate(integration)
             ? RunPanelAsync(() => IntegrationManager.AuthenticateAsync(
-                integration.Id, _authToken, integration.Jira is null ? null : _authEmail, _disposed.Token))
+                integration.Id, _authToken, integration.Jira is null && integration.Bitbucket is null ? null : _authEmail,
+                _disposed.Token))
             : Task.CompletedTask;
 
     private Task RemoveAsync(string id) => RunPanelAsync(() => IntegrationManager.RemoveAsync(id, _disposed.Token));
@@ -498,7 +553,9 @@ else
     };
 
     private static string TokenLabel(ConfiguredIntegration integration) =>
-        integration.Jira is { Deployment: JiraDeployment.Cloud } ? "API token" : "Personal access token";
+        integration.Jira is { Deployment: JiraDeployment.Cloud } || integration.Bitbucket is not null
+            ? "API token"
+            : "Personal access token";
 
     private static string StatusText(IntegrationStatus status) => status.State switch
     {

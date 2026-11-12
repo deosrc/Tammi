@@ -1,4 +1,5 @@
 using Deosrc.Tammi.Core.Credentials;
+using Deosrc.Tammi.Core.Integrations.Bitbucket;
 using Deosrc.Tammi.Core.Integrations.GitHub;
 using Deosrc.Tammi.Core.Integrations.Jira;
 using Deosrc.Tammi.Core.Settings;
@@ -57,6 +58,7 @@ public sealed class IntegrationManager
 
         IntegrationsSettings settings = settingsStore.Current.Integrations;
         Registry = new IntegrationRegistry([
+            .. settings.Bitbucket.Select(bitbucket => Create(bitbucket, credentialStore)),
             .. settings.GitHub.Select(github => Create(github, credentialStore)),
             .. settings.Jira.Select(jira => Create(jira, credentialStore)),
         ]);
@@ -159,6 +161,36 @@ public sealed class IntegrationManager
     }
 
     /// <summary>
+    /// Connects Bitbucket Cloud: checks the API token with Bitbucket, then saves it and the integration.
+    /// </summary>
+    /// <exception cref="ArgumentException">The settings aren't valid, e.g. they have no email address.</exception>
+    /// <exception cref="IntegrationAuthenticationException">Bitbucket rejected the token.</exception>
+    /// <exception cref="IntegrationException">
+    /// Bitbucket is already connected, or it couldn't be reached or returned an error.
+    /// </exception>
+    /// <exception cref="CredentialStoreException">The token couldn't be saved.</exception>
+    /// <exception cref="IOException">The settings couldn't be saved.</exception>
+    public Task<IIntegration> AddBitbucketAsync(
+        BitbucketIntegrationSettings settings,
+        string token,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (!settings.IsValid())
+        {
+            throw new ArgumentException("The Bitbucket settings need an ID and an email address.", nameof(settings));
+        }
+
+        return AddAsync(
+            settings.Id,
+            settings.Name,
+            token,
+            store => Create(settings, store),
+            integrations => integrations with { Bitbucket = [.. integrations.Bitbucket, settings] },
+            cancellationToken);
+    }
+
+    /// <summary>
     /// Connects a JIRA site: checks the token with JIRA, then saves it and the integration.
     /// </summary>
     /// <exception cref="ArgumentException">The settings aren't valid, e.g. a JIRA Cloud site has no email address.</exception>
@@ -197,7 +229,7 @@ public sealed class IntegrationManager
     /// <param name="secret">The new token.</param>
     /// <param name="email">
     /// For a JIRA Cloud site, the account's email address to use with the token, or <see langword="null"/> to keep
-    /// the current one. Other integrations ignore it.
+    /// the current one. For Bitbucket Cloud, the account's email address likewise. Other integrations ignore it.
     /// </param>
     /// <param name="cancellationToken">Cancels the check.</param>
     /// <exception cref="ArgumentException">There is no integration with that ID.</exception>
@@ -220,7 +252,17 @@ public sealed class IntegrationManager
             IntegrationsSettings integrations = _settingsStore.Current.Integrations;
             Func<ICredentialStore, IIntegration> create;
             JiraIntegrationSettings? changedJira = null;
-            if (integrations.GitHub.FirstOrDefault(github => github.Id == id) is { } github)
+            BitbucketIntegrationSettings? changedBitbucket = null;
+            if (integrations.Bitbucket.FirstOrDefault(bitbucket => bitbucket.Id == id) is { } bitbucket)
+            {
+                if (!string.IsNullOrWhiteSpace(email) && email.Trim() != bitbucket.Email)
+                {
+                    bitbucket = changedBitbucket = bitbucket with { Email = email.Trim() };
+                }
+
+                create = store => Create(bitbucket, store);
+            }
+            else if (integrations.GitHub.FirstOrDefault(github => github.Id == id) is { } github)
             {
                 create = store => Create(github, store);
             }
@@ -245,6 +287,27 @@ public sealed class IntegrationManager
 
             await new IntegrationCredentials(_credentialStore, id).SaveAsync(secret, cancellationToken)
                 .ConfigureAwait(false);
+
+            if (changedBitbucket is not null)
+            {
+                await _settingsStore.UpdateAsync(
+                    settings => settings with
+                    {
+                        Integrations = settings.Integrations with
+                        {
+                            Bitbucket =
+                            [
+                                .. settings.Integrations.Bitbucket.Select(
+                                    bitbucket => bitbucket.Id == id ? changedBitbucket : bitbucket),
+                            ],
+                        },
+                    },
+                    CancellationToken.None).ConfigureAwait(false);
+
+                // The options are fixed when an integration is created, so replace it.
+                Registry.Remove(id);
+                Registry.Add(create(_credentialStore));
+            }
 
             if (changedJira is not null)
             {
@@ -292,7 +355,9 @@ public sealed class IntegrationManager
         try
         {
             IntegrationsSettings integrations = _settingsStore.Current.Integrations;
-            if (!integrations.GitHub.Any(github => github.Id == id) && !integrations.Jira.Any(jira => jira.Id == id))
+            if (!integrations.Bitbucket.Any(bitbucket => bitbucket.Id == id)
+                && !integrations.GitHub.Any(github => github.Id == id)
+                && !integrations.Jira.Any(jira => jira.Id == id))
             {
                 return false;
             }
@@ -312,6 +377,7 @@ public sealed class IntegrationManager
                 {
                     Integrations = settings.Integrations with
                     {
+                        Bitbucket = [.. settings.Integrations.Bitbucket.Where(bitbucket => bitbucket.Id != id)],
                         GitHub = [.. settings.Integrations.GitHub.Where(github => github.Id != id)],
                         Jira = [.. settings.Integrations.Jira.Where(jira => jira.Id != id)],
                     },
@@ -420,6 +486,11 @@ public sealed class IntegrationManager
         return false;
     }
 
+    private IIntegration Create(BitbucketIntegrationSettings settings, ICredentialStore store) =>
+        new BitbucketIntegration(
+            settings.ToOptions(), store, _httpClient, _loggerFactory.CreateLogger<BitbucketIntegration>(),
+            _timeProvider);
+
     private IIntegration Create(GitHubIntegrationSettings settings, ICredentialStore store) =>
         new GitHubIntegration(
             settings.ToOptions(), store, _httpClient, _loggerFactory.CreateLogger<GitHubIntegration>(), _timeProvider);
@@ -430,6 +501,7 @@ public sealed class IntegrationManager
 
     private static IntegrationCredentials CredentialsOf(IIntegration integration) => integration switch
     {
+        BitbucketIntegration bitbucket => bitbucket.Credentials,
         GitHubIntegration github => github.Credentials,
         JiraIntegration jira => jira.Credentials,
         _ => throw new NotSupportedException($"Integration '{integration.Id}' isn't one Settings manages."),
@@ -468,6 +540,8 @@ public sealed class IntegrationManager
     {
         switch (integration)
         {
+            case BitbucketIntegration bitbucket:
+                return await bitbucket.GetAuthenticatedUserAsync(cancellationToken).ConfigureAwait(false);
             case GitHubIntegration github:
                 GitHubUser user = await github.GetAuthenticatedUserAsync(cancellationToken).ConfigureAwait(false);
                 return user.Login;

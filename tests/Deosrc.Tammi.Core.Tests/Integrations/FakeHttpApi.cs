@@ -75,21 +75,29 @@ internal class FakeHttpApi(string baseUrl) : HttpMessageHandler
         CancellationToken cancellationToken)
     {
         Uri url = request.RequestUri!;
-        Requests.Add(new RecordedRequest(
+        string? requestBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
+        var recorded = new RecordedRequest(
             request.Method,
             url,
             request.Headers.Authorization?.ToString(),
             request.Headers.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)))
         {
-            Body = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken),
-        });
+            Body = requestBody,
+        };
 
-        if (!_responses.TryGetValue(url.AbsoluteUri, out Queue<Func<HttpResponseMessage>>? queue))
+        // Integrations can send requests at the same time.
+        Func<HttpResponseMessage> respond;
+        lock (Requests)
         {
-            throw new InvalidOperationException($"No response is set up for {url}.");
+            Requests.Add(recorded);
+            if (!_responses.TryGetValue(url.AbsoluteUri, out Queue<Func<HttpResponseMessage>>? queue))
+            {
+                throw new InvalidOperationException($"No response is set up for {url}.");
+            }
+
+            respond = queue.Count > 1 ? queue.Dequeue() : queue.Peek();
         }
 
-        Func<HttpResponseMessage> respond = queue.Count > 1 ? queue.Dequeue() : queue.Peek();
         return respond();
     }
 }

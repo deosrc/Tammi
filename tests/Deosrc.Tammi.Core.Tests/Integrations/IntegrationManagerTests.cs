@@ -4,10 +4,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Deosrc.Tammi.Core.Credentials;
 using Deosrc.Tammi.Core.Integrations;
+using Deosrc.Tammi.Core.Integrations.Bitbucket;
 using Deosrc.Tammi.Core.Integrations.GitHub;
 using Deosrc.Tammi.Core.Integrations.Jira;
 using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Tests.Credentials;
+using Deosrc.Tammi.Core.Tests.Integrations.Bitbucket;
 using Deosrc.Tammi.Core.Tests.Integrations.GitHub;
 using Deosrc.Tammi.Core.Tests.Integrations.Jira;
 
@@ -19,11 +21,14 @@ public sealed class IntegrationManagerTests : IDisposable
     private const string NewToken = "token-2";
     private const string Email = "mia@example.com";
     private const string GitHubKey = "integration:github";
+    private const string BitbucketKey = "integration:bitbucket";
     private const string JiraId = "jira-acme.atlassian.net";
     private const string JiraKey = "integration:" + JiraId;
 
     private static readonly GitHubIntegrationSettings GitHubCom =
         GitHubIntegrationSettings.For(GitHubIntegrationOptions.GitHubComApiUrl);
+
+    private static readonly BitbucketIntegrationSettings MiaBitbucket = BitbucketIntegrationSettings.For(Email);
 
     private static readonly JiraIntegrationSettings AcmeJira =
         JiraIntegrationSettings.For(new Uri(FakeJiraApi.CloudSiteUrl), JiraDeployment.Cloud, Email);
@@ -164,6 +169,74 @@ public sealed class IntegrationManagerTests : IDisposable
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => manager.AddGitHubAsync(GitHubCom with { Id = "" }, Token, CancellationToken));
+    }
+
+    [Fact]
+    public async Task AddBitbucketAsync_ChecksTheTokenWithTheEmailAddress_ThenSavesIt()
+    {
+        var api = new FakeBitbucketApi().Respond("user", FakeBitbucketApi.Response("user.json"));
+        IntegrationManager manager = CreateManager(api);
+
+        await manager.AddBitbucketAsync(MiaBitbucket, Token, CancellationToken);
+
+        Assert.Equal(BasicAuthorization(Email, Token), Assert.Single(api.Requests).Authorization);
+        Assert.Equal(Token, _credentials.Secrets[BitbucketKey]);
+        Assert.IsType<BitbucketIntegration>(Assert.Single(manager.Registry.All));
+        Assert.Equal(MiaBitbucket, Assert.Single(CreateSettingsStore().Current.Integrations.Bitbucket));
+        Assert.Equal(new IntegrationStatus(IntegrationConnectionState.Connected, "Mia Krystof"),
+            manager.GetStatus("bitbucket"));
+    }
+
+    [Fact]
+    public async Task AddBitbucketAsync_WithoutAnEmailAddress_Throws()
+    {
+        IntegrationManager manager = CreateManager(new FakeBitbucketApi());
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => manager.AddBitbucketAsync(BitbucketIntegrationSettings.For(" "), Token, CancellationToken));
+    }
+
+    [Fact]
+    public async Task AddBitbucketAsync_WithARejectedToken_SavesNothing()
+    {
+        var api = new FakeBitbucketApi().Respond("user", "{}", HttpStatusCode.Unauthorized);
+        IntegrationManager manager = CreateManager(api);
+
+        await Assert.ThrowsAsync<IntegrationAuthenticationException>(
+            () => manager.AddBitbucketAsync(MiaBitbucket, Token, CancellationToken));
+
+        Assert.Empty(_credentials.Secrets);
+        Assert.Empty(manager.Registry.All);
+        Assert.Empty(CreateSettingsStore().Current.Integrations.Bitbucket);
+    }
+
+    [Fact]
+    public async Task AuthenticateAsync_WithANewEmailAddress_UpdatesBitbucket()
+    {
+        const string newEmail = "mia@acme.example";
+        var api = new FakeBitbucketApi().Respond("user", FakeBitbucketApi.Response("user.json"));
+        IntegrationManager manager = CreateManager(api, await With(new IntegrationsSettings { Bitbucket = [MiaBitbucket] }));
+
+        await manager.AuthenticateAsync("bitbucket", NewToken, newEmail, CancellationToken);
+        await manager.CheckAsync("bitbucket", CancellationToken);
+
+        Assert.All(api.Requests, request => Assert.Equal(BasicAuthorization(newEmail, NewToken), request.Authorization));
+        Assert.Equal(newEmail, Assert.Single(CreateSettingsStore().Current.Integrations.Bitbucket).Email);
+        Assert.Single(manager.Registry.All);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_RemovesBitbucketAndItsToken()
+    {
+        IntegrationManager manager = CreateManager(
+            new FakeBitbucketApi(), await With(new IntegrationsSettings { Bitbucket = [MiaBitbucket] }));
+        await _credentials.SaveAsync(BitbucketKey, Token, CancellationToken);
+
+        Assert.True(await manager.RemoveAsync("bitbucket", CancellationToken));
+
+        Assert.Empty(_credentials.Secrets);
+        Assert.Empty(manager.Registry.All);
+        Assert.Empty(CreateSettingsStore().Current.Integrations.Bitbucket);
     }
 
     [Fact]

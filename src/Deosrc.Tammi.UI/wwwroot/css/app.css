@@ -1969,6 +1969,21 @@ label.task-choice {
   color: var(--color-text-muted);
 }
 
+/* Token help is a few short paragraphs, with the scopes an API token needs listed one to a line between them. */
+.settings-help > p {
+  margin: 0 0 var(--space-2);
+}
+
+.settings-help > :last-child {
+  margin-bottom: 0;
+}
+
+.token-scopes {
+  margin: 0 0 var(--space-2);
+  padding-left: var(--space-4);
+  list-style: disc;
+}
+
 /* A heading for a field that has no single input to label, e.g. a list of folders. */
 .settings-field-title {
   margin: 0 0 var(--space-1);
