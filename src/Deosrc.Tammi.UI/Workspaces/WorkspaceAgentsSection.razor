@@ -27,13 +27,7 @@ else
                             aria-current="@(shown ? "true" : null)">
                         @agent.Name
                     </button>
-                    <span class="agent-state-badge">
-                        @if (state == AgentState.Working)
-                        {
-                            <span class="spinner" role="progressbar" aria-label="Working"></span>
-                        }
-                        @AgentStateText.Label(state)
-                    </span>
+                    <AgentStateIndicator State="state" />
                 </div>
                 @if (state == AgentState.Error && agent.Agent.ExitCode is { } exitCode)
                 {

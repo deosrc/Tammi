@@ -1,7 +1,7 @@
 @using Deosrc.Tammi.Core.Agents
 
-@* An agent's state as a tab shows it, in the state's tone: a spinner while it works, an icon when it needs the user, and
-   a dot for any other state. *@
+@* An agent's state as an icon in the state's tone: a progress spinner while it works, and an icon for each other state
+   (a dot while it runs without finer detail). Shown on the agent's tab and its card in the side panel. *@
 <span class="agent-tab-state @AgentStateText.ToneClass(State)" title="@(Title ?? AgentStateText.Label(State))">
     @if (State == AgentState.Working)
     {
@@ -14,9 +14,30 @@
             <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </svg>
     }
+    else if (State == AgentState.Idle)
+    {
+        <svg class="icon icon-small" viewBox="0 0 24 24" role="img" aria-label="Idle">
+            <circle cx="12" cy="12" r="9" />
+            <path d="m8 12.5 3 3 5-6" />
+        </svg>
+    }
+    else if (State == AgentState.Error)
+    {
+        <svg class="icon icon-small" viewBox="0 0 24 24" role="img" aria-label="Error">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7.5v5.5M12 16.5v.01" />
+        </svg>
+    }
+    else if (State == AgentState.Exited)
+    {
+        <svg class="icon icon-small" viewBox="0 0 24 24" role="img" aria-label="Exited">
+            <circle cx="12" cy="12" r="9" />
+            <rect x="9" y="9" width="6" height="6" rx="1" />
+        </svg>
+    }
     else
     {
-        <span class="agent-state-dot"></span>
+        <span class="agent-state-dot" role="img" aria-label="Running"></span>
     }
 </span>
 

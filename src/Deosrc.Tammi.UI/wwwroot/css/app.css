@@ -1102,28 +1102,9 @@ label.task-choice {
   white-space: nowrap;
 }
 
-.agent-state-badge {
-  flex: none;
+/* The card's state icon sits at the end of its heading. */
+.agent-card-heading .agent-tab-state {
   margin-left: auto;
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  background: var(--agent-state-tone);
-  color: var(--agent-state-tone-text);
-  font-size: var(--font-size-small);
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-/* A Working badge has a spinner before its label, smaller than usual and in the badge's text colour. */
-.agent-state-badge .spinner {
-  width: 10px;
-  height: 10px;
-  border-width: 2px;
-  border-color: color-mix(in srgb, currentColor 35%, transparent);
-  border-top-color: currentColor;
 }
 
 .side-panel-section-body .agent-card-detail,
@@ -1609,7 +1590,7 @@ label.task-choice {
   font-size: var(--font-size-small);
 }
 
-/* An agent's state, as a coloured dot on its tab and a badge on its card in the side panel. Each state sets the tone
+/* An agent's state, as an icon on its tab and on its card in the side panel. Each state sets the tone
    both use: blue while working, warning (as a repository with changes) when it needs input, grey when idle, red on error. */
 .agent-state-active {
   --agent-state-tone: var(--color-info);
@@ -1649,7 +1630,7 @@ label.task-choice {
   --agent-state-tone-text: var(--color-surface);
 }
 
-/* An agent tab's state at its end, in the state's tone: a spinner, an icon or a dot. */
+/* An agent's state icon, in the state's tone: a spinner, an icon or a dot. */
 .agent-tab-state {
   display: inline-flex;
   flex: none;
