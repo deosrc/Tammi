@@ -14,6 +14,11 @@ public sealed record VisualiserSettings
     public WorkspaceVisualisationType WorkspaceVisualisation { get; init; } = WorkspaceVisualisationType.Plasma;
 
     /// <summary>
+    /// Whether an agent that stops working throws out a one-off burst of particles, in the colour of its new state.
+    /// </summary>
+    public bool BurstWhenWorkingFinishes { get; init; } = true;
+
+    /// <summary>
     /// Replaces values this version of Tammi doesn't know with the default.
     /// </summary>
     public VisualiserSettings Normalize() => this with

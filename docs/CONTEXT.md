@@ -589,6 +589,8 @@ quoting. Blank lines are ignored.
   - **Workspace visualisation:** how the visualiser draws each workspace: **Plasma** (the default), a ball of animated
     plasma, or **Glow**, a soft glow. Either is in the colour of the workspace's status. It applies straight away,
     including in a visualiser that's already open.
+  - **Burst when an agent finishes working:** a switch, on by default. When an agent stops working, it throws out a
+    one-off burst of particles in the colour of the state it moved to. It also applies straight away.
 - **About:** the Tammi version, and the git CLI and libgit2 versions
 
 Changes are saved as soon as they're made. The settings live in `settings.json` in the app's Config folder (see

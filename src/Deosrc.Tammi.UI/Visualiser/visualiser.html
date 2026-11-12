@@ -104,6 +104,9 @@ function create(canvas) {
   // How workspaces are drawn: "Plasma" or "Glow", as the settings say.
   let workspaceVisualisation = "Plasma";
 
+  // Whether an agent that stops working bursts, as the settings say.
+  let burstWhenWorkingFinishes = true;
+
   const drawGlow = (w) => {
     const glow = context.createRadialGradient(w.x, w.y, 0, w.x, w.y, nodeRadius());
     glow.addColorStop(0, statusColour(w.status) + "55");
@@ -274,12 +277,18 @@ function create(canvas) {
       workspaceVisualisation = payload.workspaceVisualisation;
     }
 
+    if (!Array.isArray(payload) && typeof payload.burstWhenWorkingFinishes === "boolean") {
+      burstWhenWorkingFinishes = payload.burstWhenWorkingFinishes;
+    }
+
     workspaces = nodes.map((node) => {
       const old = workspaces.find((w) => w.id === node.id);
       // An agent that has stopped working bursts in the colour of the state it moved to, once, on the next frame.
       const agents = node.agents.map((agent) => {
         const before = old?.agents.find((a) => a.id === agent.id);
-        return { ...agent, burst: before?.burst || (before?.state === "Working" && agent.state !== "Working") };
+        const burst = burstWhenWorkingFinishes
+          && (before?.burst || (before?.state === "Working" && agent.state !== "Working"));
+        return { ...agent, burst };
       });
       return { ...node, agents, x: old?.x ?? width / 2, y: old?.y ?? height / 2, tx: 0, ty: 0, phase: old?.phase ?? Math.random() * 6,
         plasma: old?.plasma,

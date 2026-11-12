@@ -12,6 +12,18 @@ public sealed class VisualiserSettingsTests
     }
 
     [Fact]
+    public void BurstWhenWorkingFinishes_DefaultsToOn()
+    {
+        Assert.True(new VisualiserSettings().BurstWhenWorkingFinishes);
+    }
+
+    [Fact]
+    public void Normalize_KeepsBurstWhenWorkingFinishesOff()
+    {
+        Assert.False(new VisualiserSettings { BurstWhenWorkingFinishes = false }.Normalize().BurstWhenWorkingFinishes);
+    }
+
+    [Fact]
     public void Normalize_UnknownWorkspaceVisualisation_IsPlasma()
     {
         var settings = new VisualiserSettings { WorkspaceVisualisation = (WorkspaceVisualisationType)42 }.Normalize();

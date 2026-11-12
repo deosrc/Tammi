@@ -25,9 +25,26 @@
             <p class="error">@SaveError</p>
         }
     </div>
+
+    <div class="settings-field">
+        <label for="visualiser-burst">Burst when an agent finishes working</label>
+        <div class="settings-field-row">
+            <Switch Id="visualiser-burst"
+                    Checked="SettingsStore.Current.Visualiser.BurstWhenWorkingFinishes"
+                    Label="Burst when an agent finishes working"
+                    CheckedChanged="OnBurstChanged" />
+        </div>
+        <p class="settings-help">
+            When an agent stops working, it throws out a one-off burst of particles in the colour of the state it moved
+            to. It applies straight away, including in a visualiser that's already open.
+        </p>
+    </div>
 </div>
 
 @code {
+    private Task OnBurstChanged(bool burst) =>
+        UpdateAsync(settings => settings with { Visualiser = settings.Visualiser with { BurstWhenWorkingFinishes = burst } });
+
     private Task OnWorkspaceVisualisationChanged(ChangeEventArgs e) =>
         Enum.TryParse(e.Value?.ToString(), out WorkspaceVisualisationType type)
             ? UpdateAsync(settings => settings with { Visualiser = settings.Visualiser with { WorkspaceVisualisation = type } })

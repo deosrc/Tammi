@@ -143,6 +143,7 @@ public sealed class VisualiserFeed
             new
             {
                 workspaceVisualisation = _settings.Current.Visualiser.WorkspaceVisualisation.ToString(),
+                burstWhenWorkingFinishes = _settings.Current.Visualiser.BurstWhenWorkingFinishes,
                 workspaces = nodes,
             },
             JsonOptions);
