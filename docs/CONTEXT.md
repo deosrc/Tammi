@@ -866,16 +866,16 @@ are left to other tools for now.
   requests. A fine-grained token belongs to one account or organisation, so an organisation's private
   repositories need a token owned by that organisation (or a classic token).
   - For github.com, Settings links to GitHub's new fine-grained token page with the token's name, description and
-    read-only Commit statuses, Contents, Issues, Metadata and Pull requests permissions filled in. GitHub can't fill in the owner or repository access,
+    read-only Commit statuses, Contents, Issues, Metadata and Pull requests permissions, and write access to the account's Git SSH keys, filled in.
+    GitHub can't fill in the owner or repository access,
     so the user chooses them. An Enterprise Server's link opens its token settings, because servers before 3.20 can't
-    fill in the details.
+    fill in the details, so the help lists the permissions instead. The help for github.com doesn't repeat what the link fills in.
   - GitHub has no way to list a fine-grained token's permissions, so when a fine-grained token is saved or tested,
     Tammi reads the latest commit of one private repository the token reaches. If that's refused, the integration is
     still connected but shows a warning that private issues won't appear in searches until the token can read
     Contents. Repositories the token wasn't given at all can't be detected, and classic tokens aren't checked.
   - **SSH keys:** to add SSH keys from Settings → Git, a fine-grained token also needs read and write access to the
-    account's Git SSH keys (classic tokens: `write:public_key`). Tammi doesn't ask for it by default, so the token
-    link leaves it out. Without it, the key's status is unknown, and adding it opens GitHub's page for adding a key with
+    account's Git SSH keys (classic tokens: `write:public_key`), which the token link fills in. Without it, the key's status is unknown, and adding it opens GitHub's page for adding a key with
     the public key on the clipboard. A key GitHub says is already in use counts as added if it's on the user's account.
 - **Task keys** are GitHub's issue references, `owner/repo#number`. Pull requests aren't tasks.
 - **Finding tasks:**
