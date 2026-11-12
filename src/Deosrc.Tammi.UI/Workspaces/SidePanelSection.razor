@@ -3,6 +3,7 @@
 <details class="side-panel-section" open>
     <summary class="side-panel-section-header">
         <span class="side-panel-section-title">@Title</span>
+        @HeaderContent
         @if (Actions is not null)
         {
             @* Clicks on the actions don't expand or collapse the section. *@
@@ -23,6 +24,12 @@
     /// </summary>
     [Parameter]
     public RenderFragment? Actions { get; set; }
+
+    /// <summary>
+    /// Shown in the section's header after its title, e.g. a summary of what's in it.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? HeaderContent { get; set; }
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }

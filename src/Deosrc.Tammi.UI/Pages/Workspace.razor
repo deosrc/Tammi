@@ -133,10 +133,15 @@ else
                     </ChildContent>
                 </SidePanelSection>
                 <SidePanelSection Title="Agents">
-                    @if (_listing?.Workspace is { } agentsWorkspace)
-                    {
-                        <WorkspaceAgentsSection Workspace="agentsWorkspace" Shown="_shown" OnShow="ShowTab" />
-                    }
+                    <HeaderContent>
+                        <WorkspaceAgentCounts WorkspaceId="@WorkspaceId" />
+                    </HeaderContent>
+                    <ChildContent>
+                        @if (_listing?.Workspace is { } agentsWorkspace)
+                        {
+                            <WorkspaceAgentsSection Workspace="agentsWorkspace" Shown="_shown" OnShow="ShowTab" />
+                        }
+                    </ChildContent>
                 </SidePanelSection>
                 <SidePanelSection Title="Repositories">
                     <Actions>

@@ -1,0 +1,51 @@
+@implements IDisposable
+@using Deosrc.Tammi.Core.Agents
+@inject WorkspaceAgents Agents
+
+@* How many of the workspace's open agents are in each state, as the state's icon and a count. Shown in the Agents
+   section's header, so it's there when the section is collapsed. States no agent is in aren't shown. *@
+@foreach (var (state, count) in Counts)
+{
+    <span class="agent-count @AgentStateText.ToneClass(state)" @key="state"
+          title="@count @AgentStateText.Label(state).ToLowerInvariant()">
+        <AgentStateIndicator State="state" />
+        <span class="agent-count-number">@count</span>
+    </span>
+}
+
+@code {
+    /// <summary>
+    /// The ID of the workspace.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string WorkspaceId { get; set; } = "";
+
+    private IEnumerable<(AgentState State, int Count)> Counts => Agents.For(WorkspaceId)
+        .GroupBy(agent => agent.State)
+        .OrderBy(group => Array.IndexOf(DisplayOrder, group.Key))
+        .Select(group => (group.Key, group.Count()));
+
+    // Most in need of the user first.
+    private static readonly AgentState[] DisplayOrder =
+    [
+        AgentState.NeedsInput,
+        AgentState.Working,
+        AgentState.Idle,
+        AgentState.Running,
+        AgentState.Error,
+        AgentState.Exited,
+    ];
+
+    protected override void OnInitialized() => Agents.Changed += OnAgentsChanged;
+
+    public void Dispose() => Agents.Changed -= OnAgentsChanged;
+
+    // Raised on a background thread, e.g. when an agent's state changes.
+    private void OnAgentsChanged(string workspaceId)
+    {
+        if (workspaceId == WorkspaceId)
+        {
+            InvokeAsync(StateHasChanged);
+        }
+    }
+}

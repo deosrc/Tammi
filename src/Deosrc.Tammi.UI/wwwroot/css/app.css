@@ -990,6 +990,16 @@ label.task-choice {
   min-width: 0;
 }
 
+/* The count of agents in each state, in the Agents section's header, after its title. */
+.agent-count {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--agent-state-tone);
+  font-weight: 700;
+}
+
 .side-panel-section-actions {
   display: flex;
   flex: none;
