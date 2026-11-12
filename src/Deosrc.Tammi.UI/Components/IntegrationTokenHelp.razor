@@ -20,16 +20,28 @@
     }
     else if (ForGitHub)
     {
+        <text>A fine-grained or classic personal access token. A fine-grained token needs read access to these permissions on the repositories to include:</text>
+        <ul class="token-scopes">
+            <li>Commit statuses</li>
+            <li>Contents</li>
+            <li>Issues</li>
+            <li>Metadata</li>
+            <li>Pull requests</li>
+        </ul>
         <text>
-            A fine-grained token with read access to issues, contents, metadata, pull requests and commit statuses on
-            the repositories to include, or a classic token with the <code>repo</code> scope for private repositories.
-            GitHub's search only finds private issues when a fine-grained token can read contents too, and pull
-            requests and commit statuses show the workspace branches' pull requests and their checks. On github.com, the link below fills in
-            these permissions: choose the token's owner and its repositories (All repositories is simplest).
-            To let Tammi add SSH keys from Settings → Git, also give it read and write access to the account's Git SSH
-            keys (classic tokens: <code>write:public_key</code>). Without it, Tammi opens GitHub's page for adding a
-            key instead.
+            Without Contents, GitHub's search leaves out private issues. Pull requests and commit statuses show the
+            workspace branches' pull requests and their checks. On github.com, the link below fills in these
+            permissions: choose the token's owner and its repositories (All repositories is simplest).
         </text>
+        <text>A classic token needs these scopes:</text>
+        <ul class="token-scopes">
+            <li><code>repo</code> (for private repositories)</li>
+        </ul>
+        <text>To let @AppInfo.Name add SSH keys from Settings → Git, also give the token these optional permissions. Without them, @AppInfo.Name opens GitHub's page for adding a key instead:</text>
+        <ul class="token-scopes">
+            <li>Git SSH keys, read and write (fine-grained tokens)</li>
+            <li><code>write:public_key</code> (classic tokens)</li>
+        </ul>
         @* The link needs the server, so it waits until a GitHub Enterprise Server URL is entered. *@
         @if (GitHub is not null)
         {
@@ -39,10 +51,11 @@
     }
     else if (Deployment == JiraDeployment.Cloud)
     {
-        <text>
-            An API token, used with your Atlassian account's email address. A token with scopes needs the JIRA scopes
-            <code>read:jira-work</code> and <code>read:jira-user</code>. A token without scopes needs nothing more.
-        </text>
+        <text>An API token, used with your Atlassian account's email address. A token without scopes needs nothing more. A token with scopes needs these JIRA scopes:</text>
+        <ul class="token-scopes">
+            <li><code>read:jira-user</code></li>
+            <li><code>read:jira-work</code></li>
+        </ul>
         <a href="@JiraCloudTokenUrl" @onclick="() => Open.InvokeAsync(JiraCloudTokenUrl)"
            @onclick:preventDefault>Create a token</a>
     }

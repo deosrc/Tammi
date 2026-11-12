@@ -120,7 +120,7 @@ public class JiraIntegrationTests : IDisposable
 
         Assert.Equal("jira-acme", exception.IntegrationId);
         Assert.Contains("email address and API token", exception.Message);
-        Assert.Contains("read:jira-work and read:jira-user", exception.Message);
+        Assert.Contains("read:jira-user and read:jira-work", exception.Message);
         Assert.Contains("Settings", exception.Message);
     }
 
@@ -321,7 +321,7 @@ public class JiraIntegrationTests : IDisposable
             () => jira.GetAuthenticatedUserAsync(CancellationToken));
 
         Assert.Contains("doesn't have the scopes", exception.Message);
-        Assert.Contains("read:jira-work and read:jira-user", exception.Message);
+        Assert.Contains("read:jira-user and read:jira-work", exception.Message);
     }
 
     [Fact]

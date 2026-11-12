@@ -860,12 +860,13 @@ are left to other tools for now.
 - Provides **tasks** (issues), **repositories** and **Pull Requests**. It works with github.com and with GitHub Enterprise Server,
   given its API URL.
 - **Authentication:** a personal access token (fine-grained, or classic with the `repo` scope for private
-  repositories), kept in the credential store. Fine-grained tokens need read access to issues, contents, metadata, pull
-  requests and commit statuses on the repositories to include: GitHub's issue search leaves out private repositories' issues unless the token can
-  read their contents, and Pull Requests and their checks need the last two. A fine-grained token belongs to one account or organisation, so an organisation's private
+  repositories), kept in the credential store. Fine-grained tokens need read access to commit statuses, contents, issues,
+  metadata and pull requests on the repositories to include: GitHub's issue search leaves out private repositories'
+  issues unless the token can read their contents, and Pull Requests and their checks need commit statuses and pull
+  requests. A fine-grained token belongs to one account or organisation, so an organisation's private
   repositories need a token owned by that organisation (or a classic token).
   - For github.com, Settings links to GitHub's new fine-grained token page with the token's name, description and
-    read-only Issues, Contents, Metadata, Pull requests and Commit statuses permissions filled in. GitHub can't fill in the owner or repository access,
+    read-only Commit statuses, Contents, Issues, Metadata and Pull requests permissions filled in. GitHub can't fill in the owner or repository access,
     so the user chooses them. An Enterprise Server's link opens its token settings, because servers before 3.20 can't
     fill in the details.
   - GitHub has no way to list a fine-grained token's permissions, so when a fine-grained token is saved or tested,
@@ -904,7 +905,7 @@ are left to other tools for now.
   Each JIRA site is a separate integration.
 - **Authentication:**
   - **JIRA Cloud:** the Atlassian account's email address (a setting) and an API token (kept in the credential store).
-    The token can be one without scopes, or one with the JIRA scopes `read:jira-work` and `read:jira-user`. Tokens
+    The token can be one without scopes, or one with the JIRA scopes `read:jira-user` and `read:jira-work`. Tokens
     with scopes only work through Atlassian's API gateway (`api.atlassian.com/ex/jira/<cloud ID>`), so when the site
     rejects a token, Tammi reads the site's cloud ID (`_edge/tenant_info`) and tries the gateway, then keeps using
     whichever worked. Only reading the user (`myself`) is rejected at the site: searches and issues answer as if
