@@ -3,15 +3,17 @@
 @using Deosrc.Tammi.Core.Settings
 
 @* Says which token an integration needs, and where to create one. *@
-<p class="settings-help">
+<div class="settings-help">
     @if (ForBitbucket)
     {
-        <text>
-            An API token with scopes, used with your Atlassian account's email address. Create it for Bitbucket with the
-            scopes <code>read:user:bitbucket</code>, <code>read:repository:bitbucket</code>,
-            <code>read:issue:bitbucket</code> and <code>read:pullrequest:bitbucket</code>: they let @AppInfo.Name list
-            your repositories and issues, and show pull requests and their builds.
-        </text>
+        <text>An API token with scopes, used with your Atlassian account's email address. Create it for Bitbucket with these scopes:</text>
+        <ul class="token-scopes">
+            <li><code>read:user:bitbucket</code></li>
+            <li><code>read:repository:bitbucket</code></li>
+            <li><code>read:issue:bitbucket</code></li>
+            <li><code>read:pullrequest:bitbucket</code></li>
+        </ul>
+        <text>They let @AppInfo.Name list your repositories and issues, and show pull requests and their builds.</text>
         <a href="@BitbucketTokenUrl" @onclick="() => Open.InvokeAsync(BitbucketTokenUrl)"
            @onclick:preventDefault>Create a token</a>
     }
@@ -47,7 +49,7 @@
     {
         <text>A personal access token (JIRA 8.14 or later). Create one in JIRA from your profile's Personal Access Tokens page.</text>
     }
-</p>
+</div>
 
 @code {
     private const string BitbucketTokenUrl = "https://id.atlassian.com/manage-profile/security/api-tokens";
