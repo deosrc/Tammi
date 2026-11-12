@@ -43,6 +43,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Supported Agent** | An agent CLI that Tammi knows how to start, with a built-in Agent Definition (e.g. Claude Code). It's always offered and isn't configured by the user. |
 | **Custom Agent** | An agent CLI the user sets up with their own Agent Definition (e.g. Codex CLI or Gemini CLI). |
 | **Tools** | Actions that open the workspace or a repository in a tool (IDE, terminal, file manager, …). |
+| **Visualiser** | A separate window that draws every workspace as a ball of animated plasma, grouped by source, with its agents orbiting it, so the status of everything can be seen at a glance. See [Visualiser](#visualiser-window). |
 
 ## Core Flow: Creating a Workspace
 
@@ -501,6 +502,55 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - A session that's already running in one of the workspace's agents can't be resumed again.
   - **Copy and paste:** Ctrl+Shift+C and Ctrl+Shift+V on every platform. On Windows, as in Windows Terminal,
     Ctrl+C also copies when text is selected (otherwise it interrupts the process) and Ctrl+V pastes.
+
+### Visualiser (window)
+
+A separate window, not a tab, that shows the state of everything at once. Each workspace is a ball, and each of its
+open agents orbits it, throwing off particles that show what it's doing. It's opened with the **Visualiser** button at
+the right of the footer, which brings the window forward instead if it's already open. There is only ever one.
+
+- **Workspaces:** every workspace is drawn, whether or not its tab is open. Its colour is the colour of its status tab
+  on Home, and its status is worked out the same way (see [Home](#home)): **Requires Attention** is red, **In Review**
+  amber, **In Development** blue, **Done** green and **Planning** white. How it's drawn is a setting: a ball of
+  animated **Plasma** (the default, each ball running slightly faster or slower than the others so they drift out of
+  step) or a soft **Glow**.
+- **Layout:** workspaces are grouped by source as Home groups them (see [Home](#home)). Sources are always in
+  alphabetical order with "No task" last, whatever order Home is set to. A source's workspaces fill an offset grid:
+  rows of about equal length, each shifted half a space from the one above, so every workspace is the same distance
+  from its neighbours. The groups are boxes as big as their grids, and are set out in rows in the same way: a wide
+  group takes the room of as many cells as it needs, every other row is shifted half a cell, and the number of rows is
+  the one whose shape best fits the window. When the window is too small for everything, the workspaces, the agents'
+  orbits and their dots all shrink together (down to a fifth of their size) until it fits.
+- **Agents:** each of a workspace's agents orbits it as a dot in the colour of its state (see [agent states](#agents)):
+  blue while **Working**, amber when it **Needs input**, red on **Error**, and grey for anything else (**Running**,
+  **Idle** or **Exited**). A closed agent disappears.
+  - A working agent orbits faster, and its particles stream out behind it along the path it came by.
+  - An agent that needs input pulses slowly like a beacon, and one that failed throws off quick sparks. Running and idle
+    agents give off a faint drift, and an exited one hardly any.
+  - When an agent stops working, it throws out a one-off burst of particles in the colour of the state it moved to.
+    A setting turns this off.
+  - Agents keep running when a workspace's tab is closed (see [Lifetime](#agents)), so they stay in the visualiser.
+- **Interaction:**
+  - Hovering a workspace shows a tooltip with its name, status, source and how many agents it has (and how many are
+    working). Hovering an agent shows its name, its state and its workspace. The tooltip is a dark translucent panel
+    that glows in the colour of what's hovered, and a ring marks the hovered ball or dot.
+  - Clicking a workspace, or one of its agents, opens the workspace in the main window (or shows its tab if it's
+    already open) and brings the main window to the front.
+- **Keeping it current:** it follows agents as they change state, and git status and Pull Requests as they're read.
+  Statuses are read when the window opens and then every status refresh interval from Settings, as on Home, until it's
+  closed. Workspaces open in a tab are live, so they aren't read. While a workspace's status is being read again (for
+  example just after its tab opens), it keeps the status it last had, rather than briefly changing colour.
+- **Window:**
+  - It's titled "Tammi Visualiser" and stays above other windows by default (a setting).
+  - It opens at the smallest size it can be (400×300) until the user has resized it. Its size, position and whether it's
+    maximised are kept (see [Technical Constraints](#technical-constraints)). If it was left where no screen shows its
+    top left corner any more (for example a monitor was disconnected), it opens centred over the main window instead,
+    and if it would then go past the edge of the screen it goes back to its default size.
+  - Closing it only closes the visualiser: the main window, workspaces and agents are unaffected.
+  - Trails are drawn by fading each frame rather than clearing it. Where the fade stops depends on the web view's
+    engine, so the page measures it when it starts and fades to exactly the background colour, to leave no grey
+    patches where something was drawn.
+- **Settings:** the visualisation type, the burst and keeping the window on top are in Settings → Visualiser.
 
 ### Settings
 
@@ -963,6 +1013,11 @@ are left to other tools for now.
 - **Window state:** Tammi opens its window at the size it had when it was last closed, maximised if it was then.
   The state is kept in `window-state.json` in the Data folder, apart from the settings. If it's missing or can't be
   read, the window opens at its default size.
+- **Visualiser window state:** the [Visualiser's](#visualiser-window) window keeps its own size, position and whether it's
+  maximised in `visualiser-window-state.json` in the Data folder, apart from the main window's state, so the two
+  windows never share a size. Sizes and positions are in pixels. They're saved as the window changes, after
+  changes have stopped, and when it closes. A maximised window keeps the size and position it had before. If the file is
+  missing or can't be read, the window opens at its default size, centred over the main window.
 - **Layout state:** the sizes the user gives parts of the window (so far, the width of a Git Graph's commit details and
   the height of its message body) are kept in `layout-state.json` in the Data folder, apart from the window state,
   which the host writes as the window closes. It's written each time the user finishes resizing. If it's missing or
