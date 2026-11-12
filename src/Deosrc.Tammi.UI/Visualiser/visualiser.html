@@ -79,7 +79,15 @@ function create(canvas) {
   observer.observe(canvas);
   resize();
 
-  const sourceColour = (source) => (source === "jira" ? colours.jira : colours.other);
+  // A workspace is the colour of its status tab on Home, in the app's dark theme. Grey (Planning) is white.
+  const statusColours = {
+    RequiresAttention: "#ff7b72",
+    InReview: "#d29922",
+    InDevelopment: "#4c9aff",
+    Planning: "#ffffff",
+    Done: "#3fb950",
+  };
+  const statusColour = (status) => statusColours[status] ?? "#ffffff";
   const agentColour = (state) => colours[state] ?? colours.agent;
 
   // Sources sit on a ring, and a source's workspaces on a smaller ring around it, so spacing follows the grouping.
@@ -129,8 +137,9 @@ function create(canvas) {
         const working = w.agents.filter((a) => a.state === "Working").length;
         const count = `${w.agents.length} agent${w.agents.length === 1 ? "" : "s"}`;
         return {
-          key: w.id, x: w.x, y: w.y, r: 40, colour: sourceColour(w.source), title: w.name,
+          key: w.id, x: w.x, y: w.y, r: 40, colour: statusColour(w.status), title: w.name,
           lines: [
+            w.statusLabel,
             w.source === "local" ? "No task source" : `Source: ${w.source}`,
             w.agents.length ? `${count}${working ? `, ${working} working` : ""}` : "No agents",
           ],
@@ -192,7 +201,7 @@ function create(canvas) {
       w.y += (w.ty - w.y) * Math.min(dt * 2, 1);
 
       const glow = context.createRadialGradient(w.x, w.y, 0, w.x, w.y, 40);
-      glow.addColorStop(0, sourceColour(w.source) + "55");
+      glow.addColorStop(0, statusColour(w.status) + "55");
       glow.addColorStop(1, "transparent");
       context.fillStyle = glow;
       context.beginPath();
