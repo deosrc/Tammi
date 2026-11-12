@@ -95,10 +95,8 @@ function create(canvas) {
   const nodeRadius = () => 40 * scale;
   const orbitRadius = () => 34 * scale;
 
-  // Sources sit on a ring, and a source's workspaces fill an offset grid around its centre: rows of about equal length,
-  // each row shifted half a space from the one above, so every workspace is the same distance from its neighbours.
-  // The grids are as big as the workspaces need to keep clear of each other, so workspaces are made smaller until the
-  // whole layout fits.
+  // A source's workspaces fill an offset grid around its centre: rows of about equal length, each row shifted half a
+  // space from the one above, so every workspace is the same distance from its neighbours.
   const gridOffsets = (count, spacing) => {
     const columns = Math.ceil(Math.sqrt(count));
     const rows = Math.ceil(count / columns);
@@ -115,6 +113,36 @@ function create(canvas) {
     return points.map((p) => ({ x: p.x - middle, y: p.y }));
   };
 
+  // Splits boxes, in order, into the given number of rows so the widest row is as narrow as it can be.
+  const splitRows = (widths, rows, gap) => {
+    const n = widths.length;
+    const rowWidth = (from, to) => widths.slice(from, to).reduce((sum, w) => sum + w, 0) + gap * (to - from - 1);
+    // best[k][i]: the narrowest the widest row can be, with the first i boxes in k rows.
+    const best = Array.from({ length: rows + 1 }, () => Array(n + 1).fill(Infinity));
+    const cut = Array.from({ length: rows + 1 }, () => Array(n + 1).fill(0));
+    best[0][0] = 0;
+    for (let k = 1; k <= rows; k++) {
+      for (let i = k; i <= n; i++) {
+        for (let j = k - 1; j < i; j++) {
+          const widest = Math.max(best[k - 1][j], rowWidth(j, i));
+          if (widest < best[k][i]) {
+            best[k][i] = widest;
+            cut[k][i] = j;
+          }
+        }
+      }
+    }
+    const result = [];
+    for (let k = rows, i = n; k > 0; k--) {
+      result.unshift([cut[k][i], i]);
+      i = cut[k][i];
+    }
+    return result;
+  };
+
+  // Groups are boxes as big as their grids. They're set out in rows, like a grid in which a wide group takes the room
+  // of as many cells as it needs, and every other row is shifted half a cell across. The number of rows is the one
+  // whose shape fits the window best.
   const arrange = (size) => {
     // In the order Home lists them: alphabetical, with workspaces that have no task last.
     const noTask = "No task";
@@ -123,34 +151,57 @@ function create(canvas) {
     const groups = sources.map((source) => workspaces.filter((w) => w.source === source));
     const radius = 40 * size;
     // Neighbours are a workspace-width apart, centre to centre.
-    const spacing = radius * 2;
-    const offsets = groups.map((group) => gridOffsets(group.length, spacing));
-    const extent = offsets.map((points) => Math.max(...points.map((p) => Math.hypot(p.x, p.y))) + radius * 1.5);
-    let ring = 0;
-    if (sources.length > 1) {
-      const half = 2 * Math.sin(Math.PI / sources.length);
-      for (let i = 0; i < sources.length; i++) {
-        const next = (i + 1) % sources.length;
-        ring = Math.max(ring, (extent[i] + extent[next] + radius) / half);
+    const offsets = groups.map((group) => gridOffsets(group.length, radius * 2));
+    const pad = radius * 1.5;
+    const boxes = offsets.map((points) => ({
+      width: Math.max(...points.map((p) => p.x)) - Math.min(...points.map((p) => p.x)) + pad * 2,
+      height: Math.max(...points.map((p) => p.y)) - Math.min(...points.map((p) => p.y)) + pad * 2,
+    }));
+    const roomWidth = Math.max(width - 40, 1);
+    const roomHeight = Math.max(height - 40, 1);
+    const gap = radius;
+    const shift = boxes.length ? boxes.reduce((sum, b) => sum + b.width, 0) / boxes.length / 2 : 0;
+
+    let chosen = { ratio: 0, centres: [] };
+    for (let rows = 1; rows <= boxes.length; rows++) {
+      const spans = splitRows(boxes.map((b) => b.width), rows, gap);
+      const placed = [];
+      let top = 0;
+      let left = Infinity;
+      let right = -Infinity;
+      spans.forEach(([from, to], r) => {
+        const height = Math.max(...boxes.slice(from, to).map((b) => b.height));
+        const widthOfRow = boxes.slice(from, to).reduce((sum, b) => sum + b.width, 0) + gap * (to - from - 1);
+        // Rows are centred, and every other one is shifted half a cell.
+        let x = -widthOfRow / 2 + (r % 2 ? shift : 0);
+        left = Math.min(left, x);
+        right = Math.max(right, x + widthOfRow);
+        for (let i = from; i < to; i++) {
+          placed[i] = { x: x + boxes[i].width / 2, y: top + height / 2 };
+          x += boxes[i].width + gap;
+        }
+        top += height + gap;
+      });
+      const total = top - gap;
+      const centre = (left + right) / 2;
+      const ratio = Math.max((right - left) / roomWidth, total / roomHeight);
+      if (!chosen.centres.length || ratio < chosen.ratio) {
+        chosen = { ratio, centres: placed.map((p) => ({ x: p.x - centre, y: p.y - total / 2 })) };
       }
     }
-    return { sources, groups, offsets, ring, fits: ring + Math.max(0, ...extent) };
+    return { sources, groups, offsets, centres: chosen.centres, ratio: chosen.ratio };
   };
 
   const layout = () => {
-    const room = Math.max(Math.min(width, height) / 2 - 20, 1);
     let size = 1;
-    while (size > 0.2 && arrange(size).fits > room) size -= 0.025;
+    while (size > 0.2 && arrange(size).ratio > 1) size -= 0.025;
     targetScale = size;
 
-    const { sources, groups, offsets, ring } = arrange(size);
-    sources.forEach((source, s) => {
-      const angle = (s / sources.length) * Math.PI * 2;
-      const cx = width / 2 + Math.cos(angle) * ring;
-      const cy = height / 2 + Math.sin(angle) * ring;
-      groups[s].forEach((w, i) => {
-        w.tx = cx + offsets[s][i].x;
-        w.ty = cy + offsets[s][i].y;
+    const { groups, offsets, centres } = arrange(size);
+    groups.forEach((group, s) => {
+      group.forEach((w, i) => {
+        w.tx = width / 2 + centres[s].x + offsets[s][i].x;
+        w.ty = height / 2 + centres[s].y + offsets[s][i].y;
       });
     });
   };
