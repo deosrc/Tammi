@@ -829,9 +829,9 @@ are left to other tools for now.
   which can be connected once. Bitbucket Data Center isn't supported yet: its API differs (projects, no issue tracker,
   HTTP access tokens), so it needs its own implementation.
 - **Authentication:** the Atlassian account's email address (a setting) and an API token with scopes (kept in the
-  credential store), sent as basic authentication. The token needs the scopes `read:user:bitbucket`,
-  `read:workspace:bitbucket`, `read:repository:bitbucket`, `read:issue:bitbucket` and `read:pullrequest:bitbucket`. App passwords aren't
-  supported, because Atlassian is retiring them. When Bitbucket says a scope is missing, Tammi says which scopes it needs.
+  credential store), sent as basic authentication. The token needs the scopes `read:issue:bitbucket`,
+  `read:pullrequest:bitbucket`, `read:repository:bitbucket`, `read:user:bitbucket` and `read:workspace:bitbucket`. App
+  passwords aren't supported, because Atlassian is retiring them. When Bitbucket says a scope is missing, Tammi says which scopes it needs.
 - **Repositories** are those the user is a member of (`role=member`: owned, administered or contributed to) in each
   workspace they can access (`user/workspaces`, then `repositories/<workspace>`), because Bitbucket has no single list
   of them. Each has its HTTPS and SSH clone URLs; the user name Bitbucket puts

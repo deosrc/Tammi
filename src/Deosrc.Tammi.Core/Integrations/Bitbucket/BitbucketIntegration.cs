@@ -30,8 +30,8 @@ public sealed class BitbucketIntegration : ITaskIntegration, IRepositoryIntegrat
     /// The scopes an API token needs: to read the user it belongs to, their workspaces, repositories, issues and Pull Requests.
     /// </summary>
     public const string RequiredScopes =
-        "read:user:bitbucket, read:workspace:bitbucket, read:repository:bitbucket, read:issue:bitbucket and "
-        + "read:pullrequest:bitbucket";
+        "read:issue:bitbucket, read:pullrequest:bitbucket, read:repository:bitbucket, read:user:bitbucket and "
+        + "read:workspace:bitbucket";
 
     /// <summary>
     /// The message for a token that can't read Pull Requests, naming the scope it needs.
