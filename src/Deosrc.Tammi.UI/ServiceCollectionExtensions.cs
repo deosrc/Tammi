@@ -67,6 +67,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AgentUsageMonitor>();
         services.AddSingleton<UsageTabState>();
         services.AddSingleton<NewWorkspaceTabState>();
+        services.AddSingleton<EditWorkspaceSessions>();
         services.AddSingleton<ToolImages>();
         services.AddSingleton<WorkspaceTools>();
         services.AddSingleton<TerminalLauncher>();

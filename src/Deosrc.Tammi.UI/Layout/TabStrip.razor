@@ -3,6 +3,7 @@
 @inject WorkspaceTabs WorkspaceTabs
 @inject WorkspaceAgents Agents
 @inject UsageTabState UsageTabState
+@inject Deosrc.Tammi.UI.Workspaces.EditWorkspaceSessions EditSessions
 @inject NewWorkspaceTabState NewWorkspaceTabState
 @inject NavigationManager Navigation
 
@@ -17,7 +18,10 @@
 
     @foreach (var tab in WorkspaceTabs.Tabs)
     {
-        var route = AppRoutes.Workspace(tab.WorkspaceId);
+        // Returns to the edit flow if the workspace has one in progress.
+        var route = EditSessions.Find(tab.WorkspaceId) is null
+            ? AppRoutes.Workspace(tab.WorkspaceId)
+            : AppRoutes.EditWorkspace(tab.WorkspaceId);
         var shown = IsWorkspaceShown(tab.WorkspaceId);
         <div class="tab workspace-tab @(shown ? "active" : null)" @key="tab.WorkspaceId">
             <a class="tab-label" href="@route" title="@tab.Name" aria-current="@(shown ? "page" : null)">
@@ -82,6 +86,7 @@
         Agents.Changed += OnAgentsChanged;
         UsageTabState.Changed += OnTabsChanged;
         NewWorkspaceTabState.Changed += OnTabsChanged;
+        EditSessions.Changed += OnTabsChanged;
         Navigation.LocationChanged += OnLocationChanged;
     }
 
@@ -91,6 +96,7 @@
         Agents.Changed -= OnAgentsChanged;
         UsageTabState.Changed -= OnTabsChanged;
         NewWorkspaceTabState.Changed -= OnTabsChanged;
+        EditSessions.Changed -= OnTabsChanged;
         Navigation.LocationChanged -= OnLocationChanged;
     }
 
