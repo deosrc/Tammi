@@ -1,0 +1,23 @@
+{
+  "pagelen": 2,
+  "page": 2,
+  "values": [
+    {
+      "type": "repository_permission",
+      "permission": "admin",
+      "repository": {
+        "type": "repository",
+        "full_name": "mia/notes",
+        "name": "Notes",
+        "has_issues": true,
+        "links": {
+          "html": { "href": "https://bitbucket.org/mia/notes" },
+          "clone": [
+            { "name": "https", "href": "https://mia@bitbucket.org/mia/notes.git" },
+            { "name": "ssh", "href": "git@bitbucket.org:mia/notes.git" }
+          ]
+        }
+      }
+    }
+  ]
+}

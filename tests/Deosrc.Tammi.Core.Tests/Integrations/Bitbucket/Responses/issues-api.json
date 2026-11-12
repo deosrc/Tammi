@@ -1,0 +1,24 @@
+{
+  "pagelen": 50,
+  "page": 1,
+  "values": [
+    {
+      "type": "issue",
+      "id": 42,
+      "title": "Login fails",
+      "content": { "raw": "Logging in **fails** with a 500." },
+      "state": "open",
+      "updated_on": "2026-11-03T10:00:00.000000+00:00",
+      "links": { "html": { "href": "https://bitbucket.org/acme/api/issues/42" } }
+    },
+    {
+      "type": "issue",
+      "id": 7,
+      "title": "Old thing",
+      "content": { "raw": "" },
+      "state": "on hold",
+      "updated_on": "2026-10-01T09:30:00.000000+00:00",
+      "links": { "html": { "href": "https://bitbucket.org/acme/api/issues/7" } }
+    }
+  ]
+}

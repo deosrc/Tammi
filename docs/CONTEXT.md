@@ -36,7 +36,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Workspace Worktree** | A `git worktree` of a Local Repository, created inside the Workspace Folder. This is how a repository is included in a workspace. |
 | **Git Graph** | A repository's (or submodule's) commits drawn as lanes, with their branches and tags, shown as a main area tab in the Workspace View. |
 | **Pull Request** | A request, on the service hosting a repository (e.g. a GitHub pull request), to merge a branch into another. It's a draft, open, merged or closed (declined), and its checks (e.g. CI builds) passed, are in progress or failed. Tammi shows those from each workspace branch. |
-| **Integration** | A connection to an external service (GitHub, JIRA, …). It can provide tasks, repositories or both. |
+| **Integration** | A connection to an external service (Bitbucket, GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |
 | **Agent Definition** | A configured agent CLI (e.g. Claude Code) that Tammi can start: name, command, arguments, how to pass the initial prompt, and how to resume a session. |
 | **Agent Session** | One conversation with an agent. Tammi records it so it can be resumed after a restart, with the agent's own resume command. |
@@ -47,20 +47,21 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 ## Core Flow: Creating a Workspace
 
 1. **Choose tasks.** The user picks tasks first, because they drive the rest of the setup.
-   - Tasks come from integrations (GitHub, JIRA).
+   - Tasks come from integrations (Bitbucket, GitHub, JIRA).
    - Tasks are optional. A workspace with no tasks is described by its name alone.
    - One workspace can mix tasks from any sources.
    - Tammi only reads tasks from integrations. It doesn't write back status changes or PR links yet.
    - The task list can be changed after the workspace is created.
    - **Finding tasks.** One search box covers every connected Task Source at once, and the results are combined,
      most recently updated first. What the user enters decides what's searched:
-     - **Nothing:** the tasks assigned to the user that are still to do: open GitHub issues, and JIRA issues whose
-       status is in the To Do category (not in progress or done). Tasks already in a workspace are left out.
+     - **Nothing:** the tasks assigned to the user that are still to do: open GitHub issues, Bitbucket issues
+       that are new, open or on hold, and JIRA issues whose status is in the To Do category (not in progress or done). Tasks already in a workspace are left out.
      - **A link or reference** to a task, e.g. an issue's URL, `owner/repo#42` or `ABC-123`: that task, from each
        source that recognises it. This is the only way to find public tasks outside the user's organisations. A link
        that no source recognises isn't searched.
      - **Any other text:** a search of the text of the tasks of the user and their organisations that aren't done:
-       open GitHub issues, and JIRA issues whose status isn't in the Done category (see [Integrations](#integrations)).
+       open GitHub issues, Bitbucket issues that are new, open or on hold, and JIRA issues whose status isn't in the Done
+       category (see [Integrations](#integrations)).
        Tasks already in a workspace are found too, and marked with its name.
    - Search starts when the user stops typing. A source that fails doesn't stop the others: its error is shown
      with their results.
@@ -501,8 +502,8 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
   - Log level: Trace, Debug, Information (the default), Warning or Error. It applies straight away. A button opens the
     folder the log files are in (see [Technical Constraints](#technical-constraints)) in the system file manager.
 - **Integrations:** the connected integrations, each with its connection status, in alphabetical order
-  - A single Add button opens a menu of the integration types (GitHub, JIRA), in alphabetical order.
-  - The user adds GitHub (github.com or a GitHub Enterprise Server) and JIRA sites, authenticates them again with a new
+  - A single Add button opens a menu of the integration types (Bitbucket, GitHub, JIRA), in alphabetical order.
+  - The user adds Bitbucket Cloud, GitHub (github.com or a GitHub Enterprise Server) and JIRA sites, authenticates them again with a new
     token, tests them and removes them.
   - Tammi checks a token with the service before saving it, so a rejected token is never saved and an integration is
     never added without working credentials.
@@ -510,7 +511,7 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     not authenticated (no token saved), authentication failed (the token was rejected), or couldn't connect (with the
     reason, e.g. the service can't be reached or there's no credential store).
   - Removing an integration deletes its token. An integration's ID comes from the service it connects to (`github`
-    for github.com, `github-<host>` for an Enterprise Server, `jira-<host>[-<path>]` for a JIRA site), so connecting
+    for github.com, `github-<host>` for an Enterprise Server, `bitbucket` for Bitbucket Cloud, `jira-<host>[-<path>]` for a JIRA site), so connecting
     the same service again gives the same ID, and workspace tasks from it find their source again. The same service
     can't be connected twice.
 - **Git**
@@ -821,6 +822,37 @@ are left to other tools for now.
     session aren't kept. Terminals are left out, as keeping them would depend on the terminal supporting it.
 
 ## Integrations
+
+### Bitbucket
+
+- Provides **tasks** (issues), **repositories** and **Pull Requests**. It works with Bitbucket Cloud (bitbucket.org),
+  which can be connected once. Bitbucket Data Center isn't supported yet: its API differs (projects, no issue tracker,
+  HTTP access tokens), so it needs its own implementation.
+- **Authentication:** the Atlassian account's email address (a setting) and an API token with scopes (kept in the
+  credential store), sent as basic authentication. The token needs the scopes `read:user:bitbucket`,
+  `read:repository:bitbucket`, `read:issue:bitbucket` and `read:pullrequest:bitbucket`. App passwords aren't
+  supported, because Atlassian is retiring them. When Bitbucket says a scope is missing, Tammi says which scopes it needs.
+- **Repositories** are those the user has a permission on (`user/permissions/repositories`): their own, their
+  workspaces' and those they were given access to. Each has its HTTPS and SSH clone URLs; the user name Bitbucket puts
+  in the HTTPS URL is left out so it matches other forms of the same URL.
+- **Task keys** are `workspace/repo#number`. Only repositories that have the issue tracker enabled have tasks.
+  Bitbucket has no in-progress state: new, open and on hold issues are to do, and resolved, duplicate, invalid, won't
+  fix and closed issues are done.
+- **Finding tasks:** Bitbucket can't search issues across repositories, so each search reads the issue tracker of every
+  repository the user can access that has one (a few at a time) and combines the results, most recently updated
+  first. Tammi remembers which repositories to search for 10 minutes.
+  - **Assigned:** the user's issues that are new, open or on hold.
+  - **Text search** covers titles and descriptions of issues that are new, open or on hold.
+  - A task key or an issue's page URL finds that issue.
+- **Pull Requests** are read from each Bitbucket repository a workspace repository's remotes point at, for the
+  workspace branch's name as the source branch, in every state, oldest first. Only those whose source is in one of those
+  repositories count. Their checks are the PR's commit statuses (builds): failed if any failed or stopped, in progress
+  if any hasn't finished, otherwise passed. Their review is changes requested if any participant asked for changes,
+  approved if every reviewer approved, and review required if a reviewer hasn't yet. When the token can't read
+  statuses, the Pull Request is shown without checks; when it can't read Pull Requests, the repository says so.
+- **Rate limits:** when Bitbucket asks Tammi to wait a few seconds, it waits and retries. Bitbucket usually limits by
+  the hour, so otherwise the request fails and says when to try again. Lists are read page by page, following the
+  links Bitbucket gives, but only on its own API host.
 
 ### GitHub
 

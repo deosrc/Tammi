@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Deosrc.Tammi.Core.Integrations.Bitbucket;
 using Deosrc.Tammi.Core.Integrations.GitHub;
 using Deosrc.Tammi.Core.Integrations.Jira;
 using Deosrc.Tammi.Core.Settings;
@@ -86,6 +87,47 @@ public sealed class IntegrationsSettingsTests : IDisposable
         Assert.Equal(
             ("jira-jira.example.com-jira", "JIRA (jira.example.com/jira)", (string?)null),
             (dataCenter.Id, dataCenter.Name, dataCenter.Email));
+    }
+
+    [Fact]
+    public void BitbucketFor_GivesTheIdNameAndOptions()
+    {
+        BitbucketIntegrationSettings bitbucket = BitbucketIntegrationSettings.For(" mia@example.com ");
+
+        Assert.Equal(("bitbucket", "Bitbucket", "mia@example.com"), (bitbucket.Id, bitbucket.Name, bitbucket.Email));
+        Assert.True(bitbucket.IsValid());
+        Assert.Equal("mia@example.com", bitbucket.ToOptions().Email);
+        Assert.False(BitbucketIntegrationSettings.For(null).IsValid());
+    }
+
+    [Fact]
+    public void Normalize_DropsBitbucketWithoutAnEmailAddress_AndDuplicatesOfAnotherIntegrationsId()
+    {
+        BitbucketIntegrationSettings bitbucket = BitbucketIntegrationSettings.For("mia@example.com");
+
+        IntegrationsSettings normalized = new IntegrationsSettings
+        {
+            Bitbucket = [bitbucket, bitbucket, BitbucketIntegrationSettings.For(null), null!],
+        }.Normalize();
+
+        Assert.Equal([bitbucket], normalized.Bitbucket);
+    }
+
+    [Fact]
+    public async Task BitbucketSettings_AreSavedAndLoaded_WithoutTheirName()
+    {
+        var store = new SettingsStore(_directory, []);
+        BitbucketIntegrationSettings bitbucket = BitbucketIntegrationSettings.For("mia@example.com");
+
+        await store.UpdateAsync(
+            settings => settings with { Integrations = new IntegrationsSettings { Bitbucket = [bitbucket] } },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(new IntegrationsSettings { Bitbucket = [bitbucket] },
+            new SettingsStore(_directory, []).Current.Integrations);
+        var json = JsonNode.Parse(File.ReadAllText(store.FilePath))!["integrations"]!["bitbucket"]![0]!;
+        Assert.Equal("mia@example.com", json["email"]!.GetValue<string>());
+        Assert.Null(json["name"]);
     }
 
     [Fact]
