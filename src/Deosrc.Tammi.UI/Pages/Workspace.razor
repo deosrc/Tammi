@@ -136,6 +136,15 @@ else
                     <HeaderContent>
                         <WorkspaceAgentCounts WorkspaceId="@WorkspaceId" />
                     </HeaderContent>
+                    <Actions>
+                        <button type="button" class="side-panel-section-action" title="Start a new agent"
+                                aria-label="New agent" aria-haspopup="menu" disabled="@(AgentDefinitions.Count == 0)"
+                                @onclick="OpenNewAgentMenu">
+                            <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                        </button>
+                    </Actions>
                     <ChildContent>
                         @if (_listing?.Workspace is { } agentsWorkspace)
                         {
@@ -681,6 +690,25 @@ else
         </li>
     };
 
+    // The Agents section's New Agent menu: each Agent Definition, with a submenu of where to start it. It's a context
+    // menu, as the side panel scrolls and would clip a drop-down.
+    private void OpenNewAgentMenu(MouseEventArgs e) =>
+        OpenContextMenu(e, "New agent", NewAgentMenuItems());
+
+    private RenderFragment NewAgentMenuItems() => __builder =>
+    {
+        for (var i = 0; i < AgentDefinitions.Count; i++)
+        {
+            var definition = AgentDefinitions[i];
+            var name = string.IsNullOrWhiteSpace(definition.Name) ? WorkspaceAgents.DefaultName : definition.Name;
+            @NewMenuItem(
+                $"agent-{i}",
+                name,
+                @<AgentIcon Definition="definition" />,
+                repository => StartAgentAsync(definition, repository))
+        }
+    };
+
     // Opens a right-click menu at the pointer. Only one menu is open at a time.
     private void OpenContextMenu(MouseEventArgs e, string label, RenderFragment items)
     {
@@ -925,6 +953,7 @@ else
     private async Task StartAgentAsync(AgentDefinition definition, WorkspaceRepository? repository)
     {
         CloseNewMenu();
+        CloseContextMenu();
         _startError = null;
         if (_listing?.Workspace is not { } workspace)
         {
