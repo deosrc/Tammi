@@ -986,23 +986,28 @@ label.task-choice {
 }
 
 .side-panel-section-title {
-  flex: 1;
   min-width: 0;
 }
 
-/* The count of agents in each state, in the Agents section's header, after its title. */
+/* A chip for each state agents are in, holding their count, in the state's colours. It follows the Agents section's
+   title. */
 .agent-count {
-  display: inline-flex;
   flex: none;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--agent-state-tone);
+  min-width: 1.6em;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--agent-state-tone);
+  color: var(--agent-state-tone-text);
+  font-size: var(--font-size-small);
   font-weight: 700;
+  line-height: 1.6;
+  text-align: center;
 }
 
 .side-panel-section-actions {
   display: flex;
   flex: none;
+  margin-left: auto;
   gap: var(--space-1);
 }
 

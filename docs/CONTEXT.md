@@ -461,9 +461,9 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   colour (as a repository with changes) for Needs input, grey for Idle, Running and Exited, red for Error. Needs input
   and Error also tint the card's background. Clicking the card shows its tab. Cards have no Stop button: closing the
   agent's tab stops it. An agent that ended with an error shows its exit code.
-  - The header shows a count of the agents in each state (as the state's icon and a number), and has two buttons on its
-    right: **New Agent**, a menu of the Agent Definitions, each with where to start it (as the New menu's), and
-    **History**, which opens the History tab.
+  - The header shows, right after the title, a chip for each state the agents are in, in the state's colour and holding
+    the number of agents in it. On its right are two buttons: **History**, which opens the History tab, and
+    **New Agent**, a menu of the Agent Definitions, each with where to start it (as the New menu's).
   - The **History tab** (one per workspace, closed with its × like any tab) lists the workspace's recorded Agent
     Sessions that aren't running, most recently started first, each with its agent's name, the repository it was
     started in (if it wasn't the Workspace Folder) and when it was last started. Each one can be resumed, which opens

@@ -138,16 +138,16 @@ else
                         <WorkspaceAgentCounts WorkspaceId="@WorkspaceId" />
                     </HeaderContent>
                     <Actions>
+                        <button type="button" class="side-panel-section-action" title="Past sessions" aria-label="History"
+                                @onclick="OpenHistory">
+                            @HistoryIcon
+                        </button>
                         <button type="button" class="side-panel-section-action" title="Start a new agent"
                                 aria-label="New agent" aria-haspopup="menu" disabled="@(AgentDefinitions.Count == 0)"
                                 @onclick="OpenNewAgentMenu">
                             <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <path d="M12 5v14M5 12h14" />
                             </svg>
-                        </button>
-                        <button type="button" class="side-panel-section-action" title="Past sessions" aria-label="History"
-                                @onclick="OpenHistory">
-                            @HistoryIcon
                         </button>
                     </Actions>
                     <ChildContent>

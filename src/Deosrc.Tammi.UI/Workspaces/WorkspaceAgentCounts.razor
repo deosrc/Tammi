@@ -2,15 +2,14 @@
 @using Deosrc.Tammi.Core.Agents
 @inject WorkspaceAgents Agents
 
-@* How many of the workspace's open agents are in each state, as the state's icon and a count. Shown in the Agents
-   section's header, so it's there when the section is collapsed. States no agent is in aren't shown. *@
+@* How many of the workspace's open agents are in each state: a chip for each state, in the state's colour, holding the
+   count. Shown in the Agents section's header, so it's there when the section is collapsed. States no agent is in
+   aren't shown. *@
 @foreach (var (state, count) in Counts)
 {
     <span class="agent-count @AgentStateText.ToneClass(state)" @key="state"
-          title="@count @AgentStateText.Label(state).ToLowerInvariant()">
-        <AgentStateIndicator State="state" />
-        <span class="agent-count-number">@count</span>
-    </span>
+          title="@count @AgentStateText.Label(state).ToLowerInvariant()"
+          aria-label="@count @AgentStateText.Label(state).ToLowerInvariant()">@count</span>
 }
 
 @code {
