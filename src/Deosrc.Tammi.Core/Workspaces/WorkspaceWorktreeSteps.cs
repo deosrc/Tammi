@@ -14,8 +14,9 @@ internal sealed class WorkspaceWorktreeSteps(IGitWorktreeService worktrees, ILog
     /// </summary>
     /// <param name="repositories">The repositories to add.</param>
     /// <param name="existing">The repositories the workspace already has, which the new ones mustn't clash with.</param>
-    /// <param name="branchName">The branch to create in each repository.</param>
-    /// <param name="branchIsValid">Whether git accepts <paramref name="branchName"/>.</param>
+    /// <param name="defaultBranch">
+    /// The branch for each repository that doesn't choose its own (see <see cref="WorkspaceCreationRepository.BranchName"/>).
+    /// </param>
     /// <param name="problems">Gets the problems found.</param>
     /// <param name="existingFolder">
     /// The Workspace Folder, when it already exists, so a worktree's folder mustn't exist in it yet.
@@ -23,8 +24,7 @@ internal sealed class WorkspaceWorktreeSteps(IGitWorktreeService worktrees, ILog
     public async Task CheckAsync(
         IReadOnlyList<WorkspaceCreationRepository> repositories,
         IReadOnlyList<WorkspaceRepository> existing,
-        string branchName,
-        bool branchIsValid,
+        string defaultBranch,
         List<string> problems,
         string? existingFolder,
         CancellationToken cancellationToken)
@@ -66,40 +66,40 @@ internal sealed class WorkspaceWorktreeSteps(IGitWorktreeService worktrees, ILog
                 continue;
             }
 
-            if (branchIsValid)
+            string branchName = repository.GetBranch(defaultBranch);
+            bool branchIsValid = await worktrees.IsValidBranchNameAsync(branchName, cancellationToken)
+                .ConfigureAwait(false);
+            if (repository.BranchName is not null && !branchIsValid)
             {
-                var branch = await worktrees.GetBranchStateAsync(
-                    repository.LocalRepositoryPath, branchName, cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
-                if (branch.Exists)
-                {
-                    problems.Add($"{label}: the branch '{branchName}' already exists. Choose another branch name.");
-                }
+                // The workspace's own branch is checked by the caller.
+                problems.Add(string.IsNullOrWhiteSpace(repository.BranchName)
+                    ? $"{label}: enter a branch name."
+                    : $"{label}: '{branchName}' isn't a valid branch name.");
             }
 
             bool baseExists = await worktrees.CommitExistsAsync(
-                repository.LocalRepositoryPath, repository.BaseBranch ?? string.Empty, cancellationToken)
+                repository.LocalRepositoryPath, repository.MergeTarget ?? string.Empty, cancellationToken)
                 .ConfigureAwait(false);
             if (!baseExists)
             {
-                problems.Add(string.IsNullOrWhiteSpace(repository.BaseBranch)
-                    ? $"{label}: choose a base branch."
-                    : $"{label}: the base branch '{repository.BaseBranch}' doesn't exist.");
+                problems.Add(string.IsNullOrWhiteSpace(repository.MergeTarget)
+                    ? $"{label}: choose a merge target."
+                    : $"{label}: the merge target '{repository.MergeTarget}' doesn't exist.");
             }
         }
     }
 
     /// <summary>
-    /// Fetches a repository, creates its worktree on the new branch and checks out its submodules.
+    /// Fetches a repository, creates its worktree on its branch (new, or an existing one) and checks out its submodules.
     /// </summary>
     /// <param name="created">Gets the worktree as soon as it's started, so it can be rolled back if this fails.</param>
     /// <param name="warnings">Gets a warning if the repository couldn't be fetched.</param>
     /// <param name="fetching">Called when the fetch starts, then when the worktree starts, then the submodules.</param>
     public async Task<WorkspaceRepository> AddAsync(
         string workspaceFolder,
-        string branchName,
+        string defaultBranch,
         WorkspaceCreationRepository repository,
-        List<(string RepositoryPath, string WorktreePath)> created,
+        List<CreatedWorktree> created,
         List<string> warnings,
         Action<string> report,
         Action fetched,
@@ -119,27 +119,41 @@ internal sealed class WorkspaceWorktreeSteps(IGitWorktreeService worktrees, ILog
             {
                 logger.LogWarning(
                     "Couldn't fetch {Remote} for {Repository}, so its branch starts from the last fetched "
-                    + "{BaseBranch}.",
+                    + "{MergeTarget}.",
                     remote,
                     repository.LocalRepositoryPath,
-                    repository.BaseBranch);
+                    repository.MergeTarget);
                 warnings.Add($"{repository.FolderName}: couldn't fetch '{remote}', so the branch starts from "
-                    + $"the last fetched '{repository.BaseBranch}'. {ex.Message}");
+                    + $"the last fetched '{repository.MergeTarget}'. {ex.Message}");
             }
         }
 
         fetched();
 
+        string branchName = repository.GetBranch(defaultBranch);
         report($"Creating the worktree for {repository.FolderName}…");
         string worktreePath = Path.Combine(workspaceFolder, repository.FolderName);
-        created.Add((repository.LocalRepositoryPath, worktreePath));
+        // A branch that exists is checked out as it is. Otherwise it's created: new, or a local branch that tracks the
+        // remote's. Only a branch Tammi creates is rolled back.
+        bool existsLocally = (await worktrees.GetBranchStateAsync(
+            repository.LocalRepositoryPath, branchName, cancellationToken: cancellationToken)
+            .ConfigureAwait(false)).Exists;
+        bool existsOnRemote = !existsLocally
+            && repository.Remote is not null
+            && await worktrees.CommitExistsAsync(
+                repository.LocalRepositoryPath, $"refs/remotes/{repository.Remote}/{branchName}", cancellationToken)
+                .ConfigureAwait(false);
+        bool createsBranch = !existsLocally;
+        created.Add(new CreatedWorktree(repository.LocalRepositoryPath, worktreePath, branchName, createsBranch));
         await worktrees.CreateWorktreeAsync(
             new CreateWorktreeRequest
             {
                 RepositoryPath = repository.LocalRepositoryPath,
                 WorktreePath = worktreePath,
                 BranchName = branchName,
-                BaseBranch = repository.BaseBranch,
+                UseExistingBranch = existsLocally || existsOnRemote,
+                Remote = repository.Remote ?? GitWorktreeService.DefaultRemote,
+                BaseBranch = repository.MergeTarget,
                 Fetch = false,
                 InitSubmodules = false,
             },
@@ -153,21 +167,20 @@ internal sealed class WorkspaceWorktreeSteps(IGitWorktreeService worktrees, ILog
             repository.FolderName,
             repository.LocalRepositoryPath,
             branchName,
-            repository.BaseBranch);
+            repository.MergeTarget);
     }
 
     /// <summary>
-    /// Removes worktrees and their new branches, in the reverse order they were created.
+    /// Removes worktrees and the branches created for them, in the reverse order they were created. Existing branches
+    /// are kept.
     /// </summary>
     /// <returns>What couldn't be removed.</returns>
-    public async Task<List<string>> RollBackAsync(
-        IReadOnlyList<(string RepositoryPath, string WorktreePath)> created,
-        string branchName)
+    public async Task<List<string>> RollBackAsync(IReadOnlyList<CreatedWorktree> created)
     {
         var problems = new List<string>();
         for (int i = created.Count - 1; i >= 0; i--)
         {
-            var (repositoryPath, worktreePath) = created[i];
+            var (repositoryPath, worktreePath, branchName, createdBranch) = created[i];
             try
             {
                 // Git may have registered the worktree, or created the branch, before failing. A folder git didn't
@@ -180,6 +193,11 @@ internal sealed class WorkspaceWorktreeSteps(IGitWorktreeService worktrees, ILog
             catch (Exception ex) when (ex is GitException or IOException or UnauthorizedAccessException)
             {
                 problems.Add($"Couldn't remove the worktree '{worktreePath}'. {ex.Message}");
+            }
+
+            if (!createdBranch)
+            {
+                continue;
             }
 
             try

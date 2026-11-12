@@ -52,15 +52,16 @@ public sealed class WorkspaceCreator(
             problems.Add($"'{request.Folder}' already exists. Choose another folder name or parent folder.");
         }
 
-        bool branchIsValid = await worktrees.IsValidBranchNameAsync(request.BranchName ?? string.Empty, cancellationToken)
-            .ConfigureAwait(false);
-        if (!branchIsValid)
+        // Only needed if a repository uses it, or the workspace has no repositories to check it against.
+        if ((request.Repositories.Count == 0 || request.Repositories.Any(repository => repository.BranchName is null))
+            && !await worktrees.IsValidBranchNameAsync(request.BranchName ?? string.Empty, cancellationToken)
+                .ConfigureAwait(false))
         {
             problems.Add($"'{request.BranchName}' isn't a valid branch name.");
         }
 
         await _steps.CheckAsync(
-            request.Repositories, [], request.BranchName ?? string.Empty, branchIsValid, problems, null, cancellationToken)
+            request.Repositories, [], request.BranchName ?? string.Empty, problems, null, cancellationToken)
             .ConfigureAwait(false);
 
         return problems;
@@ -153,13 +154,13 @@ public sealed class WorkspaceCreator(
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Creating the workspace {Name} was cancelled. Rolling it back.", request.Name);
-            await RollBackAsync(created, request.BranchName).ConfigureAwait(false);
+            await RollBackAsync(created).ConfigureAwait(false);
             throw;
         }
         catch (Exception ex) when (ex is GitException or WorkspaceException or IOException or UnauthorizedAccessException)
         {
             _logger.LogError(ex, "Couldn't create the workspace {Name}. Rolling it back.", request.Name);
-            var cleanupProblems = await RollBackAsync(created, request.BranchName).ConfigureAwait(false);
+            var cleanupProblems = await RollBackAsync(created).ConfigureAwait(false);
             foreach (string problem in cleanupProblems)
             {
                 _logger.LogWarning("Rolling back the workspace {Name}: {Problem}", request.Name, problem);
@@ -177,9 +178,9 @@ public sealed class WorkspaceCreator(
     /// Removes what was created for a workspace that failed, in the reverse order it was created.
     /// </summary>
     /// <returns>What couldn't be removed.</returns>
-    private async Task<IReadOnlyList<string>> RollBackAsync(CreatedItems created, string branchName)
+    private async Task<IReadOnlyList<string>> RollBackAsync(CreatedItems created)
     {
-        var problems = await _steps.RollBackAsync(created.Worktrees, branchName).ConfigureAwait(false);
+        var problems = await _steps.RollBackAsync(created.Worktrees).ConfigureAwait(false);
 
         try
         {
@@ -205,7 +206,8 @@ public sealed class WorkspaceCreator(
             .. request.Repositories.Select(repository => repository with
             {
                 FolderName = repository.FolderName?.Trim() ?? string.Empty,
-                BaseBranch = repository.BaseBranch?.Trim() ?? string.Empty,
+                MergeTarget = repository.MergeTarget?.Trim() ?? string.Empty,
+                BranchName = repository.BranchName?.Trim(),
             }),
         ],
     };
@@ -225,9 +227,9 @@ public sealed class WorkspaceCreator(
         public string Folder { get; } = folder;
 
         /// <summary>
-        /// The worktrees started, as (Local Repository, worktree folder), including one that failed part way.
+        /// The worktrees started, including one that failed part way.
         /// </summary>
-        public List<(string RepositoryPath, string WorktreePath)> Worktrees { get; } = [];
+        public List<CreatedWorktree> Worktrees { get; } = [];
 
         public void CreateFolder()
         {

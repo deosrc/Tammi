@@ -5,23 +5,24 @@ using Deosrc.Tammi.Core.Integrations;
 namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
-/// A repository chosen in the Create Workspace flow, with its worktree's folder name and base branch.
+/// A repository chosen in the Create Workspace flow, with its worktree's folder name and merge target.
 /// </summary>
 /// <remarks>
 /// The folder name follows the suggestion (see <see cref="WorktreeFolderNames.Suggest"/>) until the user edits it, like
-/// the workspace's name. The base branch is the remote's default branch, found by <see cref="LoadAsync"/>, until the
+/// the workspace's name. The branch is the workspace's, until the user enters another for this repository. The merge target is the remote's default branch, found by <see cref="LoadAsync"/>, until the
 /// user chooses another.
 /// </remarks>
 public sealed class WorkspaceDraftRepository
 {
     private readonly WorkspaceDraft _draft;
     private string _folderName = string.Empty;
-    private string _baseBranch = string.Empty;
+    private string _mergeTarget = string.Empty;
     private readonly HashSet<TaskReference> _chosenForTasks = [];
 
     internal WorkspaceDraftRepository(WorkspaceDraft draft, CatalogueRepository repository)
     {
         _draft = draft;
+        BranchName = draft.BranchName;
         Repository = repository;
         Remote = ChooseRemote(repository);
         Owner = GitRemoteUrls.GetOwner(Remote?.Url)
@@ -79,23 +80,60 @@ public sealed class WorkspaceDraftRepository
             .Concat(_draft.ExistingRepositories.Select(existing => existing.FolderName)));
 
     /// <summary>
-    /// What the workspace's branch starts from, e.g. <c>origin/main</c>. Empty until <see cref="LoadAsync"/> finds the
-    /// remote's default branch, or if it can't.
+    /// The branch the worktree is on. It starts as, and follows, the workspace's <see cref="WorkspaceDraft.BranchName"/>
+    /// while they match. If the branch already exists in the repository it's reused, and otherwise it's created.
     /// </summary>
-    public string BaseBranch
+    public string BranchName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Why the <see cref="BranchName"/> can't be used, or <see langword="null"/> if it might. Git has the final say
+    /// (see <see cref="WorkspaceCreator.CheckAsync"/>).
+    /// </summary>
+    public string? BranchNameProblem => string.IsNullOrWhiteSpace(BranchName) ? "Enter a branch name." : null;
+
+    /// <summary>
+    /// Whether the <see cref="BranchName"/> is an existing branch, so it's reused. Only known once the branches are
+    /// loaded (see <see cref="IsLoaded"/>).
+    /// </summary>
+    public bool BranchExists => ExistingBranches.Contains(BranchName.Trim(), StringComparer.Ordinal);
+
+    /// <summary>
+    /// The existing branches to choose from, without the remote's name, once they're loaded.
+    /// </summary>
+    public IReadOnlyList<string> ExistingBranches
     {
-        get => _baseBranch;
-        set
+        get
         {
-            _baseBranch = value ?? string.Empty;
-            IsBaseBranchEdited = true;
+            string prefix = Remote is { } remote ? remote.Name + "/" : string.Empty;
+            return
+            [
+                .. Branches
+                    .Select(branch => prefix.Length > 0 && branch.StartsWith(prefix, StringComparison.Ordinal)
+                        ? branch[prefix.Length..]
+                        : branch)
+                    .Distinct(StringComparer.Ordinal),
+            ];
         }
     }
 
     /// <summary>
-    /// Whether the user chose the <see cref="BaseBranch"/>.
+    /// What the workspace's branch starts from, e.g. <c>origin/main</c>. Empty until <see cref="LoadAsync"/> finds the
+    /// remote's default branch, or if it can't.
     /// </summary>
-    public bool IsBaseBranchEdited { get; private set; }
+    public string MergeTarget
+    {
+        get => _mergeTarget;
+        set
+        {
+            _mergeTarget = value ?? string.Empty;
+            IsMergeTargetEdited = true;
+        }
+    }
+
+    /// <summary>
+    /// Whether the user chose the <see cref="MergeTarget"/>.
+    /// </summary>
+    public bool IsMergeTargetEdited { get; private set; }
 
     /// <summary>
     /// The remote's default branch, e.g. <c>origin/main</c>, once it's found.
@@ -128,7 +166,7 @@ public sealed class WorkspaceDraftRepository
     public string? DefaultBranchProblem { get; private set; }
 
     /// <summary>
-    /// Fetches <see cref="Remote"/>, then finds its default branch, which becomes the <see cref="BaseBranch"/> unless
+    /// Fetches <see cref="Remote"/>, then finds its default branch, which becomes the <see cref="MergeTarget"/> unless
     /// the user has chosen one, and the branches to choose from.
     /// </summary>
     public async Task LoadAsync(IGitWorktreeService worktrees, CancellationToken cancellationToken = default)
@@ -176,9 +214,9 @@ public sealed class WorkspaceDraftRepository
                 Branches = [];
             }
 
-            if (!IsBaseBranchEdited && DefaultBranch is not null)
+            if (!IsMergeTargetEdited && DefaultBranch is not null)
             {
-                _baseBranch = DefaultBranch;
+                _mergeTarget = DefaultBranch;
             }
 
             IsLoaded = true;
@@ -212,6 +250,7 @@ public sealed class WorkspaceDraftRepository
     internal WorkspaceCreationRepository ToCreationRepository() => new(
         _folderName.Trim(),
         Repository.Path,
-        _baseBranch.Trim(),
-        Remote?.Name);
+        _mergeTarget.Trim(),
+        Remote?.Name,
+        BranchName.Trim());
 }

@@ -17,9 +17,16 @@ public sealed record CreateWorktreeRequest
     public required string WorktreePath { get; init; }
 
     /// <summary>
-    /// The new branch to create and check out. It must not exist yet.
+    /// The branch to check out. It's created unless <see cref="UseExistingBranch"/> is set, and then it must not exist
+    /// yet.
     /// </summary>
     public required string BranchName { get; init; }
+
+    /// <summary>
+    /// Whether <see cref="BranchName"/> already exists, so it's checked out rather than created. A branch that exists
+    /// only on <see cref="Remote"/> gets a local branch that tracks it.
+    /// </summary>
+    public bool UseExistingBranch { get; init; }
 
     /// <summary>
     /// The commit-ish to branch from (e.g. <c>origin/develop</c>), or <see langword="null"/> for

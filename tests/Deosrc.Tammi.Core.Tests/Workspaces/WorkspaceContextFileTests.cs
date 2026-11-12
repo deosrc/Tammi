@@ -115,11 +115,11 @@ public sealed class WorkspaceContextFileTests : IDisposable
             "\n### api\n\n"
             + $"- Folder: {Path.Combine(workspace.Folder, "api")}\n"
             + "- Branch: api-42-fix-login\n"
-            + "- Base branch: origin/main\n",
+            + "- Merge target: origin/main\n",
             contents,
             StringComparison.Ordinal);
         Assert.Contains("\n### web\n", contents, StringComparison.Ordinal);
-        Assert.Contains("- Base branch: origin/develop\n", contents, StringComparison.Ordinal);
+        Assert.Contains("- Merge target: origin/develop\n", contents, StringComparison.Ordinal);
     }
 
     [Fact]

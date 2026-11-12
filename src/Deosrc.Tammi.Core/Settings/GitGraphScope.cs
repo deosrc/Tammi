@@ -6,7 +6,7 @@ namespace Deosrc.Tammi.Core.Settings;
 public enum GitGraphScope
 {
     /// <summary>
-    /// The workspace branch and what it depends on: HEAD, the workspace branch, its upstream and its base branch. A
+    /// The workspace branch and what it depends on: HEAD, the workspace branch, its upstream and its merge target. A
     /// submodule shows HEAD and its branch's upstream.
     /// </summary>
     WorkspaceBranch,
