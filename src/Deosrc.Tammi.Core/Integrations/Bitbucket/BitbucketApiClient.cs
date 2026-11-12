@@ -91,15 +91,31 @@ internal sealed class BitbucketApiClient(
         }
     }
 
+    /// <summary>
+    /// Sends a JSON body, e.g. to add a resource.
+    /// </summary>
+    /// <param name="path">The path relative to the API URL.</param>
+    /// <param name="body">What to send, as JSON.</param>
+    /// <exception cref="IntegrationException">The request failed.</exception>
+    public async Task PostAsync<TBody>(string path, TBody body, CancellationToken cancellationToken)
+    {
+        string json = JsonSerializer.Serialize(body, JsonOptions);
+        using HttpResponseMessage? response = await SendAsync(
+            new Uri(_apiUrl, path), allowNotFound: false, cancellationToken, HttpMethod.Post, json)
+            .ConfigureAwait(false);
+    }
+
     private async Task<HttpResponseMessage?> SendAsync(
         Uri url,
         bool allowNotFound,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        HttpMethod? method = null,
+        string? json = null)
     {
         string token = await credentials.GetRequiredAsync(cancellationToken).ConfigureAwait(false);
         for (int attempt = 0; ; attempt++)
         {
-            HttpResponseMessage response = await SendOnceAsync(url, token, cancellationToken).ConfigureAwait(false);
+            HttpResponseMessage response = await SendOnceAsync(url, token, method ?? HttpMethod.Get, json, cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
                 return response;
@@ -157,9 +173,19 @@ internal sealed class BitbucketApiClient(
         }
     }
 
-    private async Task<HttpResponseMessage> SendOnceAsync(Uri url, string token, CancellationToken cancellationToken)
+    private async Task<HttpResponseMessage> SendOnceAsync(
+        Uri url,
+        string token,
+        HttpMethod method,
+        string? json,
+        CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var request = new HttpRequestMessage(method, url);
+        if (json is not null)
+        {
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+        }
+
         request.Headers.Authorization = new AuthenticationHeaderValue(
             "Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{options.Email}:{token}")));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -170,7 +196,7 @@ internal sealed class BitbucketApiClient(
             HttpResponseMessage response = await httpClient
                 .SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken)
                 .ConfigureAwait(false);
-            logger.LogDebug("GET {Url} returned {StatusCode}.", url, (int)response.StatusCode);
+            logger.LogDebug("{Method} {Url} returned {StatusCode}.", method, url, (int)response.StatusCode);
             return response;
         }
         catch (HttpRequestException exception)

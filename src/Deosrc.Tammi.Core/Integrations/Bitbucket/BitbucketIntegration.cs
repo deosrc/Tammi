@@ -15,13 +15,25 @@ namespace Deosrc.Tammi.Core.Integrations.Bitbucket;
 /// <see cref="RequiredScopes"/>. Bitbucket Data Center isn't supported yet.
 /// </para>
 /// </remarks>
-public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestIntegration
+public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestIntegration, ISshKeyIntegration
 {
     /// <summary>
     /// The scopes an API token needs: to read the user it belongs to, their workspaces, repositories and Pull Requests.
     /// </summary>
     public const string RequiredScopes =
         "read:pullrequest:bitbucket, read:repository:bitbucket, read:user:bitbucket and read:workspace:bitbucket";
+
+    /// <summary>
+    /// The scopes an API token also needs for Settings → Git to read and add SSH keys.
+    /// </summary>
+    public const string SshKeyScopes = "read:ssh-key:bitbucket and write:ssh-key:bitbucket";
+
+    /// <summary>
+    /// The message for a token that can't add SSH keys, naming the scopes it needs.
+    /// </summary>
+    internal const string SshKeyPermissionMessage =
+        "This token can't add SSH keys. Give it the " + SshKeyScopes + " scopes and authenticate again, or add the "
+        + "key on Bitbucket.";
 
     /// <summary>
     /// The message for a token that can't read Pull Requests, naming the scope it needs.
@@ -385,6 +397,100 @@ public sealed class BitbucketIntegration : IRepositoryIntegration, IPullRequestI
         }
 
         return states.All(state => state == "SUCCESSFUL") ? PullRequestChecks.Succeeded : PullRequestChecks.InProgress;
+    }
+
+    /// <inheritdoc/>
+    public string SshHost => BitbucketIntegrationOptions.WebHost;
+
+    /// <summary>
+    /// The user's page for adding an SSH key: their personal settings, as Bitbucket has no direct link to the form.
+    /// </summary>
+    public Uri NewSshKeyUrl => new($"https://{BitbucketIntegrationOptions.WebHost}/account/settings/ssh-keys/");
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The token needs the <c>read:ssh-key:bitbucket</c> scope. A token without it (e.g. one saved before Tammi used
+    /// it) gives <see langword="null"/>, not an error.
+    /// </remarks>
+    public async Task<IReadOnlyList<string>?> GetSshKeysAsync(CancellationToken cancellationToken = default)
+    {
+        string path = $"user/ssh-keys?pagelen={_options.PageSize.ToString(CultureInfo.InvariantCulture)}";
+        var keys = new List<string>();
+        try
+        {
+            await foreach (BitbucketModels.SshKey key in _api
+                .GetPagesAsync<BitbucketModels.SshKey>(path, allowNotFound: false, cancellationToken)
+                .ConfigureAwait(false))
+            {
+                if (key.Key is { Length: > 0 } text)
+                {
+                    keys.Add(text);
+                }
+            }
+        }
+        catch (IntegrationPermissionException)
+        {
+            return null;
+        }
+
+        return keys;
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The token needs the <c>write:ssh-key:bitbucket</c> scope.
+    /// </remarks>
+    public async Task AddSshKeyAsync(string title, string publicKey, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicKey);
+
+        try
+        {
+            BitbucketModels.User user = await GetUserAsync(cancellationToken).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(user.Uuid))
+            {
+                throw new IntegrationException("Bitbucket didn't say which account the token belongs to.");
+            }
+
+            await _api.PostAsync(
+                $"users/{Uri.EscapeDataString(user.Uuid)}/ssh-keys",
+                new BitbucketModels.NewSshKey(publicKey.Trim(), title.Trim()),
+                cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Added an SSH key to {Integration}.", Id);
+        }
+        catch (IntegrationPermissionException)
+        {
+            throw new IntegrationPermissionException(Id, SshKeyPermissionMessage);
+        }
+        catch (IntegrationException exception) when (exception is not IntegrationAuthenticationException
+            and not IntegrationRateLimitException)
+        {
+            // Bitbucket refuses a key that's already in use, which is fine if it's on this account.
+            if (!await HasSshKeyAsync(publicKey, cancellationToken).ConfigureAwait(false))
+            {
+                throw;
+            }
+
+            _logger.LogDebug(exception, "The SSH key was already on {Integration}.", Id);
+        }
+    }
+
+    private async Task<bool> HasSshKeyAsync(string publicKey, CancellationToken cancellationToken)
+    {
+        static string KeyOnly(string key) =>
+            string.Join(' ', key.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries).Take(2));
+
+        try
+        {
+            IReadOnlyList<string>? keys = await GetSshKeysAsync(cancellationToken).ConfigureAwait(false);
+            string wanted = KeyOnly(publicKey);
+            return keys?.Any(key => KeyOnly(key) == wanted) == true;
+        }
+        catch (IntegrationException)
+        {
+            return false;
+        }
     }
 
     private static (string Workspace, string Repository)? SplitFullName(string? fullName) =>

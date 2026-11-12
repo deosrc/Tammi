@@ -527,10 +527,10 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     - **Remove:** deletes both files, after the user confirms. It can't be undone, and Tammi doesn't remove the key
       from services.
     - **Copy public key** to the clipboard.
-    - **Add to a service:** for each GitHub integration, the key shows whether it's on the account (added, not added,
-      or unknown when the token can't list keys), with an Add button. Tammi adds it through GitHub's API, titled with
-      the computer's and key's names. If the token isn't allowed to, Tammi copies the public key and opens GitHub's
-      page for adding a key, and says why. JIRA has no SSH keys.
+    - **Add to a service:** for each integration that supports SSH keys (GitHub and Bitbucket), the key shows whether
+      it's on the account (added, not added, or unknown when the token can't list keys), with an Add button. Tammi adds
+      it through the service's API, titled with the computer's and key's names. If the token isn't allowed to, Tammi
+      copies the public key and opens the service's page for adding a key, and says why. JIRA has no SSH keys.
     - **Not loaded by SSH:** SSH only tries a key on its own when it has a default file name (`id_ed25519`, `id_rsa`,
       …). A key with any other name that no `IdentityFile` in `~/.ssh/config` names would never be offered to the
       remote (git fails with `Permission denied (publickey)`), so the key shows a warning, including keys that were
@@ -831,6 +831,12 @@ are left to other tools for now.
   credential store), sent as basic authentication. The token needs the scopes
   `read:pullrequest:bitbucket`, `read:repository:bitbucket`, `read:user:bitbucket` and `read:workspace:bitbucket`. App
   passwords aren't supported, because Atlassian is retiring them. When Bitbucket says a scope is missing, Tammi says which scopes it needs.
+- **SSH keys:** to add SSH keys from Settings → Git, the token also needs the scopes `read:ssh-key:bitbucket` and
+  `write:ssh-key:bitbucket`, which are optional so existing tokens keep working. Tammi lists the account's keys
+  (`user/ssh-keys`) and adds one (`users/{uuid}/ssh-keys`, the UUID from `user`), labelled with the computer's and key's
+  names. Without the scopes, the key's status is unknown, and adding it opens Bitbucket's SSH keys settings page with
+  the public key on the clipboard. A key Bitbucket refuses is counted as added if it's already on the user's account.
+  SSH host: `bitbucket.org`.
 - **Repositories** are those the user is a member of (`role=member`: owned, administered or contributed to) in each
   workspace they can access (`user/workspaces`, then `repositories/<workspace>`), because Bitbucket has no single list
   of them. Each has its HTTPS and SSH clone URLs; the user name Bitbucket puts
