@@ -10,11 +10,7 @@ See [docs/CONTEXT.md](docs/CONTEXT.md) for the full product context.
 
 ## Installing
 
-Run the install script for your OS. It needs no admin rights. It checks for [.NET 10](https://dotnet.microsoft.com/download/dotnet/10.0)
-(telling you how to install it if it's missing), downloads the installer from the
-[latest release](https://github.com/deosrc/Tammi/releases/latest) and runs it. The installer checks for `git`, downloads
-the matching Tammi release to its own folder in your user app data folder, and adds Tammi to your application menu (a
-`.desktop` file on Linux, a Start menu shortcut on Windows).
+Run the install script for your OS. It downloads the latest framework-dependent release for your OS and architecture into your per-user versions folder, then runs it. Tammi creates its application menu entry on startup. The .NET 10 runtime must be installed.
 
 ```shell
 # Linux
@@ -26,14 +22,8 @@ curl -fsSL https://github.com/deosrc/Tammi/releases/latest/download/install.sh |
 irm https://github.com/deosrc/Tammi/releases/latest/download/install.ps1 | iex
 ```
 
-Options are passed on to the installer: `--prerelease` installs the newest release even if it's a pre-release, and
-`--tag v0.2.0` installs a particular release (e.g. `curl -fsSL … | sh -s -- --prerelease`; on Windows, download
-`install.ps1` and run `./install.ps1 --prerelease`). The installer is a single build for every OS, so
-`tammi-installer.tar.gz` or `tammi-installer.zip` from the release can also be unpacked and run with
-`dotnet tammi-installer.dll`.
-
 Each version is kept in its own folder: `%LOCALAPPDATA%\Tammi\Versions\<version>` on Windows and
-`~/.local/share/tammi/versions/<version>` on Linux (under `$XDG_DATA_HOME`).
+`~/.local/share/tammi/versions/<version>` on Linux (under `$XDG_DATA_HOME`). Tammi checks for updates and installs them from within the app.
 
 ## Building and running
 
@@ -46,9 +36,8 @@ for each platform:
 | `src/Deosrc.Tammi.UI` | Shared Blazor UI |
 | `src/Deosrc.Tammi.Windows` | Windows host: .NET MAUI Blazor Hybrid (`BlazorWebView`) |
 | `src/Deosrc.Tammi.Linux` | Linux host: Photino.Blazor |
-| `src/Deosrc.Tammi.Installation` | Downloads, installs and cleans up released versions (shared by the installer and the updater) |
-| `src/Deosrc.Tammi.Installer` | The installer app, one portable build for every OS |
-| `scripts/install.sh`, `scripts/install.ps1` | Bootstrap scripts that check for .NET, then download and run the installer |
+| `src/Deosrc.Tammi.Installation` | Release download, installation and cleanup services used by the core app |
+| `scripts/install.sh`, `scripts/install.ps1` | Bootstrap scripts that download and run the latest matching release |
 | `tests/Deosrc.Tammi.Core.Tests` | xUnit tests |
 
 ### Prerequisites

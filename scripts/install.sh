@@ -1,48 +1,62 @@
 #!/bin/sh
-# Installs Tammi for the current user on Linux, without needing admin rights.
-#
-# It checks that .NET 10 is installed, downloads the installer from the latest Tammi release, and runs it. The
-# installer does the rest: it checks for git, downloads Tammi and adds it to the application menu. Options are passed
-# to the installer (e.g. --prerelease, --tag v0.2.0, --help).
-#
+# Downloads the latest Tammi release for this machine into the per-user versions folder and runs it.
 # Usage: curl -fsSL https://github.com/deosrc/Tammi/releases/latest/download/install.sh | sh
-#        curl -fsSL https://github.com/deosrc/Tammi/releases/latest/download/install.sh | sh -s -- --prerelease
-#
-# TAMMI_RELEASE_BASE_URL replaces the address the installer is downloaded from, e.g. to try a local build.
 
 set -eu
 
 base_url="${TAMMI_RELEASE_BASE_URL:-https://github.com/deosrc/Tammi/releases/latest/download}"
-required_major=10
+api_url="${TAMMI_RELEASE_API_URL:-https://api.github.com/repos/deosrc/Tammi/releases/latest}"
 
-fail() {
-  echo "$1" >&2
+case "$(uname -s):$(uname -m)" in
+  Linux:x86_64|Linux:amd64)
+    rid=linux-x64
+    archive=tar.gz
+    executable=Deosrc.Tammi.Linux
+    ;;
+  Linux:aarch64|Linux:arm64)
+    rid=linux-arm64
+    archive=tar.gz
+    executable=Deosrc.Tammi.Linux
+    ;;
+  *)
+    echo "Tammi isn't released for $(uname -s) on $(uname -m)." >&2
+    exit 1
+    ;;
+esac
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo "Install curl and run this script again." >&2
   exit 1
-}
-
-# .NET is needed to run the installer, and Tammi.
-# Future: if a self-contained Tammi build is released, offer to download it here, or send the user to the right
-# .NET download page, instead of only explaining how to install .NET.
-if ! command -v dotnet >/dev/null 2>&1 \
-  || ! dotnet --list-runtimes 2>/dev/null | grep -q "^Microsoft\.NETCore\.App ${required_major}\."; then
-  fail ".NET ${required_major} runtime isn't installed.
-Install it with your package manager (e.g. 'sudo apt install dotnet-runtime-${required_major}.0' on Debian or Ubuntu),
-or download it from https://dotnet.microsoft.com/download/dotnet/${required_major}.0
-Then run this script again."
 fi
 
+release="$(curl -fsSL -H 'Accept: application/vnd.github+json' "$api_url")"
+tag="$(printf '%s' "$release" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+if [ -z "$tag" ]; then
+  echo "Couldn't find the latest Tammi release for Linux $rid." >&2
+  exit 1
+fi
+
+version=${tag#v}
+xdg_data_home="${XDG_DATA_HOME:-}"
+case "$xdg_data_home" in /*) ;; *) xdg_data_home="$HOME/.local/share" ;; esac
+root="$xdg_data_home/tammi/versions"
+destination="$root/$version"
+archive_name="tammi-$tag-fd-$rid.$archive"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-echo "Downloading the installer..."
-if command -v curl >/dev/null 2>&1; then
-  curl -fsSL "$base_url/tammi-installer.tar.gz" -o "$work/installer.tar.gz" || fail "Couldn't download the installer from $base_url."
-elif command -v wget >/dev/null 2>&1; then
-  wget -q "$base_url/tammi-installer.tar.gz" -O "$work/installer.tar.gz" || fail "Couldn't download the installer from $base_url."
-else
-  fail "Neither curl nor wget is installed, so the installer can't be downloaded. Install one of them and run this script again."
+mkdir -p "$root"
+echo "Downloading Tammi $version..."
+if ! curl -fsSL "$base_url/$archive_name" -o "$work/release.$archive"; then
+  echo "Couldn't download the Tammi release for Linux $rid ($archive_name)." >&2
+  exit 1
 fi
 
-mkdir "$work/installer"
-tar -xzf "$work/installer.tar.gz" -C "$work/installer"
-dotnet "$work/installer/tammi-installer.dll" "$@"
+mkdir "$work/unpacked"
+tar -xzf "$work/release.$archive" -C "$work/unpacked"
+mkdir -p "$destination"
+
+cp -R "$work/unpacked/." "$destination/"
+chmod +x "$destination/$executable"
+
+"$destination/$executable"

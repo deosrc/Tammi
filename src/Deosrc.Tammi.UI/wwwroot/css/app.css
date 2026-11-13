@@ -2626,7 +2626,8 @@ label.task-choice {
 
 /* Blazor sets display:block on this element when an unhandled error occurs, so it is the full-window backdrop and the
    dialog is positioned inside it. */
-#blazor-error-ui {
+#blazor-error-ui,
+.error-backdrop {
   display: none;
   position: fixed;
   inset: 0;
@@ -2634,7 +2635,13 @@ label.task-choice {
   z-index: 10000;
 }
 
-#blazor-error-ui .error-dialog {
+/* The same backdrop for a dialog the app shows itself, e.g. when git is missing. */
+.error-backdrop {
+  display: block;
+}
+
+#blazor-error-ui .error-dialog,
+.error-backdrop .error-dialog {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -2650,17 +2657,20 @@ label.task-choice {
   text-align: center;
 }
 
-#blazor-error-ui h2 {
+#blazor-error-ui h2,
+.error-backdrop h2 {
   margin: 0 0 var(--space-2);
   font-size: 1.25rem;
 }
 
-#blazor-error-ui p {
+#blazor-error-ui p,
+.error-backdrop p {
   margin: 0 0 var(--space-4);
   color: var(--color-text-muted);
 }
 
-#blazor-error-ui .reload {
+#blazor-error-ui .reload,
+.error-backdrop .reload {
   padding: var(--space-2) var(--space-6);
   border: 0;
   border-radius: var(--radius);
@@ -2670,7 +2680,8 @@ label.task-choice {
   cursor: pointer;
 }
 
-#blazor-error-ui .reload:focus-visible {
+#blazor-error-ui .reload:focus-visible,
+.error-backdrop .reload:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }

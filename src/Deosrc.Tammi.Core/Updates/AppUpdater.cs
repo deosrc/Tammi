@@ -16,6 +16,7 @@ public sealed class AppUpdater
     private readonly GitHubReleaseClient _releases;
     private readonly AppInstaller _installer;
     private readonly InstallLocation _location;
+    private readonly ReleaseTarget? _target;
     private readonly ISettingsStore _settings;
     private readonly ILogger<AppUpdater> _logger;
     private readonly PackageVersion? _running;
@@ -34,6 +35,7 @@ public sealed class AppUpdater
         string? runningDirectory = null)
     {
         _location = location;
+        _target = target;
         _settings = settings;
         _logger = logger;
         _releases = new GitHubReleaseClient(http);
@@ -97,10 +99,33 @@ public sealed class AppUpdater
         }
 
         _started = true;
+        PointMenuLink();
         await Task.Run(CleanUp);
         if (_settings.Current.Updates.CheckOnStartup)
         {
             await CheckAsync();
+        }
+    }
+
+    private void PointMenuLink()
+    {
+        if (_running is null || _target is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var executable = Path.Combine(_runningDirectory!, _target.ExecutableName);
+            if (File.Exists(executable))
+            {
+                MenuLink.Point(_target, executable);
+                new InstallMetadata(_running.ToString(), _target.RuntimeIdentifier).Save(_runningDirectory!);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            _logger.LogWarning(ex, "Couldn't create or update the application menu link");
         }
     }
 

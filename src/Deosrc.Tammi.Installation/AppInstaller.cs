@@ -4,7 +4,7 @@ namespace Deosrc.Tammi.Installation;
 
 /// <summary>
 /// Installs a release into a versioned folder and points the menu link at it. Initial setup and an update are the
-/// same operation, so the installer app and Tammi's updater both use this.
+/// same operation, so initial setup and Tammi's updater use the same operation.
 /// </summary>
 public sealed class AppInstaller
 {

@@ -940,19 +940,15 @@ are left to other tools for now.
 
 ## Installing and updating
 
-- **Install:** the release has two bootstrap scripts, `install.sh` (Linux) and `install.ps1` (Windows), and one portable
-  installer, `tammi-installer` (`.tar.gz` and `.zip`, run with `dotnet tammi-installer.dll`) that works on every OS. It
-  needs no admin rights. The script checks for the .NET 10 runtime, and says how to install it if it's missing. It
-  then downloads the installer and runs it. The installer checks for `git` (and .NET), and says how to install what's
-  missing. It downloads the release for the OS and architecture (Linux x64 and arm64, Windows x64) to `<version>` in the
-  Versions folder (`%LOCALAPPDATA%\Tammi\Versions` on Windows, `$XDG_DATA_HOME/tammi/versions` on Linux), and points
-  the menu link at it: a `tammi.desktop` file on Linux and a Start menu shortcut on Windows.
-  - Only framework-dependent builds are released at the moment. If self-contained builds are added, the scripts should
-    offer to download one when .NET is missing, or take the user to the .NET download page.
+- **Install:** the release has two bootstrap scripts, `install.sh` (Linux) and `install.ps1` (Windows). Each downloads the
+  latest framework-dependent archive for the OS and architecture into the versioned folder in the user's app data
+  directory, then runs Tammi. Tammi creates or updates its application menu link on startup. The .NET 10 runtime must
+  already be installed.
 - **Update:** when Tammi starts, and the setting is on, it looks for a release newer than the running version. If there
-  is one, a bar under the app bar asks whether to update. If the user agrees, Tammi installs it exactly as the installer
-  does and points the menu link at it. The new
-  version is used the next time Tammi starts. Pre-releases only count if the setting is on.
+  is one, a bar under the app bar asks whether to update. If the user agrees, the core app downloads and installs the
+  release and points the menu link at it. The new version is used the next time Tammi starts. Pre-releases only count if
+  the setting is on.
+
 - **Old versions:** when Tammi starts, it deletes installed versions, keeping the running one, any newer ones and the
   two before the running one.
 - A copy that isn't running from a version folder (e.g. a build from source) doesn't check for updates or delete anything.

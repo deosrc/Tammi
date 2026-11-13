@@ -3,7 +3,8 @@ using System.Diagnostics;
 namespace Deosrc.Tammi.Installation;
 
 /// <summary>
-/// Checks that what Tammi needs to run is installed.
+/// Checks that what the installer needs is installed. Tammi checks for git itself when it starts, as git could be
+/// removed after it's installed.
 /// </summary>
 public static class DependencyChecker
 {
@@ -13,7 +14,7 @@ public static class DependencyChecker
     public const int RequiredDotNetMajorVersion = 10;
 
     /// <summary>
-    /// Finds problems with what's installed.
+    /// Finds problems with what's installed: the .NET runtime.
     /// </summary>
     public static IReadOnlyList<DependencyProblem> Check()
     {
@@ -21,11 +22,6 @@ public static class DependencyChecker
         if (DotNetProblem() is { } dotnet)
         {
             problems.Add(dotnet);
-        }
-
-        if (GitProblem() is { } git)
-        {
-            problems.Add(git);
         }
 
         return problems;
@@ -54,14 +50,6 @@ public static class DependencyChecker
     }
 
     /// <summary>
-    /// Finds a problem with git.
-    /// </summary>
-    public static DependencyProblem? GitProblem() =>
-        Run("git", "--version") is null
-            ? new DependencyProblem("git", "The 'git' command wasn't found.", GitFix())
-            : null;
-
-    /// <summary>
     /// Whether the output of <c>dotnet --list-runtimes</c> lists the shared framework at a major version, e.g.
     /// <c>Microsoft.NETCore.App 10.0.1 [/usr/share/dotnet/shared/Microsoft.NETCore.App]</c>.
     /// </summary>
@@ -77,11 +65,6 @@ public static class DependencyChecker
         ? "Install the .NET 10 runtime: run 'winget install Microsoft.DotNet.Runtime.10', or download it from https://dotnet.microsoft.com/download/dotnet/10.0"
         : "Install the .NET 10 runtime with your package manager (e.g. 'sudo apt install dotnet-runtime-10.0' on Debian or Ubuntu), " +
           "or download it from https://dotnet.microsoft.com/download/dotnet/10.0";
-
-    private static string GitFix() => OperatingSystem.IsWindows()
-        ? "Install git: run 'winget install Git.Git', or download it from https://git-scm.com/downloads"
-        : "Install git with your package manager (e.g. 'sudo apt install git' on Debian or Ubuntu), " +
-          "or see https://git-scm.com/downloads";
 
     /// <returns>The command's output, or <see langword="null"/> if it couldn't be run or failed.</returns>
     private static string? Run(string command, string arguments)

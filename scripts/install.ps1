@@ -1,52 +1,48 @@
 <#
 .SYNOPSIS
-Installs Tammi for the current user on Windows, without needing admin rights.
-
-.DESCRIPTION
-Checks that .NET 10 is installed, downloads the installer from the latest Tammi release, and runs it. The installer
-does the rest: it checks for git, downloads Tammi and adds it to the Start menu. Arguments are passed to the installer
-(e.g. --prerelease, --tag v0.2.0, --help).
-
+Downloads the latest Tammi release for this machine into the per-user versions folder and runs it.
 .EXAMPLE
 irm https://github.com/deosrc/Tammi/releases/latest/download/install.ps1 | iex
-
-.EXAMPLE
-& ([scriptblock]::Create((irm https://github.com/deosrc/Tammi/releases/latest/download/install.ps1))) --prerelease
-
 .NOTES
-$env:TAMMI_RELEASE_BASE_URL replaces the address the installer is downloaded from, e.g. to try a local build.
+Set TAMMI_RELEASE_BASE_URL or TAMMI_RELEASE_API_URL to use another release source.
 #>
 $ErrorActionPreference = 'Stop'
 
 $baseUrl = if ($env:TAMMI_RELEASE_BASE_URL) { $env:TAMMI_RELEASE_BASE_URL } else { 'https://github.com/deosrc/Tammi/releases/latest/download' }
-$requiredMajor = 10
+$apiUrl = if ($env:TAMMI_RELEASE_API_URL) { $env:TAMMI_RELEASE_API_URL } else { 'https://api.github.com/repos/deosrc/Tammi/releases/latest' }
 
-# .NET is needed to run the installer, and Tammi.
-# Future: if a self-contained Tammi build is released, offer to download it here, or send the user to the right
-# .NET download page, instead of only explaining how to install .NET.
-$runtimes = if (Get-Command dotnet -ErrorAction SilentlyContinue) { & dotnet --list-runtimes 2>$null } else { @() }
-if (-not ($runtimes | Where-Object { $_ -match "^Microsoft\.NETCore\.App $requiredMajor\." })) {
-    [Console]::Error.WriteLine(".NET $requiredMajor runtime isn't installed.")
-    [Console]::Error.WriteLine("Install it: run 'winget install Microsoft.DotNet.Runtime.$requiredMajor', or download it from https://dotnet.microsoft.com/download/dotnet/$requiredMajor.0")
-    [Console]::Error.WriteLine('Then run this script again.')
-    exit 1
+if (-not [Environment]::Is64BitOperatingSystem -or $env:PROCESSOR_ARCHITECTURE -notin @('AMD64', 'ARM64')) {
+    throw "Tammi isn't released for Windows architecture '$env:PROCESSOR_ARCHITECTURE'."
 }
 
+$rid = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'win-arm64' } else { 'win-x64' }
+if ($rid -eq 'win-arm64') {
+    throw "Tammi isn't released for Windows ARM64 yet."
+}
+
+$release = Invoke-RestMethod -Uri $apiUrl -Headers @{ Accept = 'application/vnd.github+json' }
+$tag = $release.tag_name
+if (-not $tag) {
+    throw "Couldn't find the latest Tammi release for Windows $rid."
+}
+
+$version = $tag.TrimStart('v')
+$root = Join-Path $env:LOCALAPPDATA 'Tammi\Versions'
+$destination = Join-Path $root $version
 $work = Join-Path ([IO.Path]::GetTempPath()) ("tammi-install-" + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $work | Out-Null
-try {
-    Write-Host 'Downloading the installer...'
-    $zip = Join-Path $work 'installer.zip'
-    try {
-        Invoke-WebRequest -Uri "$baseUrl/tammi-installer.zip" -OutFile $zip -UseBasicParsing
-    } catch {
-        [Console]::Error.WriteLine("Couldn't download the installer from $baseUrl. $($_.Exception.Message)")
-        exit 1
-    }
 
-    Expand-Archive -Path $zip -DestinationPath (Join-Path $work 'installer')
-    & dotnet (Join-Path $work 'installer\tammi-installer.dll') @args
-    exit $LASTEXITCODE
+try {
+    $archive = Join-Path $work 'release.zip'
+    try {
+        Invoke-WebRequest -Uri "$baseUrl/tammi-$tag-fd-$rid.zip" -OutFile $archive
+    } catch {
+        throw "Couldn't download the Tammi release for Windows $rid (tammi-$tag-fd-$rid.zip): $($_.Exception.Message)"
+    }
+    Expand-Archive -Path $archive -DestinationPath (Join-Path $work 'unpacked')
+    New-Item -ItemType Directory -Path $destination -Force | Out-Null
+    Copy-Item -Path (Join-Path $work 'unpacked\*') -Destination $destination -Recurse -Force
+    & (Join-Path $destination 'Deosrc.Tammi.Windows.exe')
 } finally {
     Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
 }

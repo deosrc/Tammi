@@ -27,7 +27,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Deosrc.Tammi.Core\Deosrc.Tammi.Core.csproj" />
     <ProjectReference Include="..\..\src\Deosrc.Tammi.Installation\Deosrc.Tammi.Installation.csproj" />
-    <ProjectReference Include="..\..\src\Deosrc.Tammi.Installer\Deosrc.Tammi.Installer.csproj" />
   </ItemGroup>
 
 </Project>
