@@ -15,6 +15,11 @@ public sealed record AppSettings
     public GeneralSettings General { get; init; } = new();
 
     /// <summary>
+    /// How Tammi updates itself. Shown in the General section.
+    /// </summary>
+    public UpdateSettings Updates { get; init; } = new();
+
+    /// <summary>
     /// The Git section.
     /// </summary>
     public GitSettings Git { get; init; } = new();
@@ -40,6 +45,7 @@ public sealed record AppSettings
     public AppSettings Normalize() => this with
     {
         General = (General ?? new GeneralSettings()).Normalize(),
+        Updates = (Updates ?? new UpdateSettings()).Normalize(),
         Git = (Git ?? new GitSettings()).Normalize(),
         Integrations = (Integrations ?? new IntegrationsSettings()).Normalize(),
         Agents = (Agents ?? new AgentSettings()).Normalize(),

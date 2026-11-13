@@ -513,6 +513,8 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     folder names it suggests
   - Log level: Trace, Debug, Information (the default), Warning or Error. It applies straight away. A button opens the
     folder the log files are in (see [Technical Constraints](#technical-constraints)) in the system file manager.
+  - Updates: whether Tammi checks for a newer release when it starts (on by default), whether pre-releases count
+    (off by default), and a button to check now. See [Installing and updating](#installing-and-updating).
 - **Integrations:** the connected integrations, each with its connection status, in alphabetical order
   - A single Add button opens a menu of the integration types (Bitbucket, GitHub, JIRA), in alphabetical order.
   - The user adds Bitbucket Cloud, GitHub (github.com or a GitHub Enterprise Server) and JIRA sites, authenticates them again with a new
@@ -935,6 +937,22 @@ are left to other tools for now.
 - **Descriptions** are in JIRA wiki markup, as REST API version 2 returns them on every deployment. They aren't
   converted to markdown.
 - **Rate limits** are handled as for GitHub.
+
+## Installing and updating
+
+- **Install:** `tammi-installer` is one self-contained app for every OS (Linux x64 and arm64, Windows x64), attached to
+  each release. It needs no admin rights. It checks for the .NET 10 runtime and `git`, and says how to install what's
+  missing (if .NET is missing and the release has a self-contained build, it installs that instead). It then downloads
+  the release for the OS and architecture to `<version>` in the Versions folder (`%LOCALAPPDATA%\Tammi\Versions` on
+  Windows, `$XDG_DATA_HOME/tammi/versions` on Linux), and points the menu link at it: a `tammi.desktop` file on Linux
+  and a Start menu shortcut on Windows.
+- **Update:** when Tammi starts, and the setting is on, it looks for a release newer than the running version. If there
+  is one, a bar under the app bar asks whether to update. If the user agrees, Tammi installs it exactly as the installer
+  does (the same kind of build, with or without the runtime, as is running) and points the menu link at it. The new
+  version is used the next time Tammi starts. Pre-releases only count if the setting is on.
+- **Old versions:** when Tammi starts, it deletes installed versions, keeping the running one, any newer ones and the
+  two before the running one.
+- A copy that isn't running from a version folder (e.g. a build from source) doesn't check for updates or delete anything.
 
 ## Technical Constraints
 

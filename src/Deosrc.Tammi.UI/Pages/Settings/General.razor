@@ -8,6 +8,8 @@
 @inject IFolderPicker FolderPicker
 @inject IAppPaths AppPaths
 @inject IProcessLauncher ProcessLauncher
+@inject AppUpdater Updater
+@implements IDisposable
 
 <h1>General</h1>
 
@@ -140,6 +142,43 @@
             <p class="error">@_openLogFolderError</p>
         }
     </div>
+
+    <div class="settings-field">
+        <h2 class="settings-field-title">Updates</h2>
+        <p class="settings-help settings-field-intro">
+            You have Tammi @Updater.CurrentVersion. When a newer release is found, Tammi asks whether to install it. It
+            installs into its own folder in your user app data folder, so no admin rights are needed, and the new version
+            is used the next time Tammi starts. Old versions are deleted when Tammi starts, keeping the one running and
+            the two before it.
+        </p>
+        <label class="settings-choice">
+            <input type="checkbox" checked="@Updates.CheckOnStartup"
+                   @onchange="e => UpdateUpdatesAsync(u => u with { CheckOnStartup = e.Value is true })" />
+            Check for updates when Tammi starts
+        </label>
+        <label class="settings-choice">
+            <input type="checkbox" checked="@Updates.IncludePreReleases"
+                   @onchange="e => UpdateUpdatesAsync(u => u with { IncludePreReleases = e.Value is true })" />
+            Include pre-releases
+        </label>
+        @if (!Updater.CanUpdate)
+        {
+            <p class="settings-help">
+                This copy of Tammi wasn't installed by the installer, e.g. it's running from source, so it can't update
+                itself.
+            </p>
+        }
+        else
+        {
+            <div class="settings-field-actions">
+                <button type="button" class="button" disabled="@(Updater.Status is UpdateStatus.Checking or UpdateStatus.Installing)"
+                        @onclick="CheckForUpdatesAsync">
+                    Check for updates
+                </button>
+            </div>
+            <p class="settings-help" role="status">@UpdateStatusText</p>
+        }
+    </div>
 </div>
 
 @if (SaveError is not null)
@@ -149,6 +188,35 @@
 
 @code {
     private string? _openLogFolderError;
+
+    private UpdateSettings Updates => SettingsStore.Current.Updates;
+
+    protected override void OnInitialized() => Updater.Changed += OnUpdaterChanged;
+
+    private void OnUpdaterChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Updater.Changed -= OnUpdaterChanged;
+
+    private bool _checked;
+
+    private async Task CheckForUpdatesAsync()
+    {
+        _checked = true;
+        await Updater.CheckAsync();
+    }
+
+    private string UpdateStatusText => Updater.Status switch
+    {
+        UpdateStatus.Checking => "Checking…",
+        UpdateStatus.Available => $"Tammi {Updater.Available!.Version} is available.",
+        UpdateStatus.Installing => $"Downloading Tammi {Updater.Available!.Version}…",
+        UpdateStatus.Installed => $"Tammi {Updater.Available!.Version} is installed. Restart Tammi to use it.",
+        UpdateStatus.Failed => Updater.Error ?? "",
+        _ => _checked ? "Tammi is up to date." : "",
+    };
+
+    private Task UpdateUpdatesAsync(Func<UpdateSettings, UpdateSettings> update) =>
+        UpdateAsync(settings => settings with { Updates = update(settings.Updates) });
 
     private GeneralSettings Current => SettingsStore.Current.General;
 

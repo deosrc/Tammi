@@ -1,0 +1,50 @@
+@implements IDisposable
+@inject AppUpdater Updater
+
+@if (Updater.ShowPrompt)
+{
+    <div class="update-prompt" role="status">
+        @switch (Updater.Status)
+        {
+            case UpdateStatus.Available:
+                <span>Tammi @Updater.Available!.Version is available (you have @Updater.CurrentVersion).</span>
+                <a href="@Updater.Available.Url" target="_blank" rel="noreferrer">Release notes</a>
+                <span class="update-prompt-actions">
+                    <button type="button" class="button" @onclick="() => Updater.InstallAsync()">Update</button>
+                    <button type="button" class="button" @onclick="Updater.Dismiss">Not now</button>
+                </span>
+                break;
+            case UpdateStatus.Installing:
+                <span>Downloading Tammi @Updater.Available!.Version… @((int)(Updater.Progress * 100))%</span>
+                <progress max="1" value="@Updater.Progress"></progress>
+                break;
+            case UpdateStatus.Installed:
+                <span>Tammi @Updater.Available!.Version is installed. Restart Tammi to use it.</span>
+                break;
+            case UpdateStatus.Failed:
+                <span class="error">@Updater.Error</span>
+                <span class="update-prompt-actions">
+                    <button type="button" class="button" @onclick="() => Updater.InstallAsync()">Try again</button>
+                    <button type="button" class="button" @onclick="Updater.Dismiss">Not now</button>
+                </span>
+                break;
+        }
+    </div>
+}
+
+@code {
+    protected override void OnInitialized() => Updater.Changed += OnChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Once per app run: the updater ignores later calls.
+        if (firstRender)
+        {
+            await Updater.StartAsync();
+        }
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Updater.Changed -= OnChanged;
+}
