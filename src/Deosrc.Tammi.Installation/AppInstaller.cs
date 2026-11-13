@@ -27,19 +27,17 @@ public sealed class AppInstaller
     /// <exception cref="InvalidOperationException">The release has no archive for this OS and architecture.</exception>
     public async Task<string> InstallAsync(
         ReleaseInfo release,
-        ReleaseFlavour flavour,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         var directory = _location.DirectoryFor(release.Version);
         if (!_location.IsInstalled(release.Version))
         {
-            var archive = release.FindArchive(_target, flavour)
+            var archive = release.FindArchive(_target)
                 ?? throw new InvalidOperationException(
-                    $"Release {release.Tag} has no {(flavour == ReleaseFlavour.SelfContained ? "self-contained" : "framework-dependent")} " +
-                    $"download for {_target.RuntimeIdentifier}.");
+                    $"Release {release.Tag} has no download for {_target.RuntimeIdentifier}.");
             await DownloadAndExtractAsync(archive, directory, progress, cancellationToken);
-            new InstallMetadata(release.Version.ToString(), flavour, _target.RuntimeIdentifier).Save(directory);
+            new InstallMetadata(release.Version.ToString(), _target.RuntimeIdentifier).Save(directory);
         }
 
         var executable = Path.Combine(directory, _target.ExecutableName);

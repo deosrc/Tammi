@@ -8,18 +8,17 @@ namespace Deosrc.Tammi.Installation;
 public static class DependencyChecker
 {
     /// <summary>
-    /// The major version of the .NET runtime that framework-dependent releases need.
+    /// The major version of the .NET runtime that releases need.
     /// </summary>
     public const int RequiredDotNetMajorVersion = 10;
 
     /// <summary>
     /// Finds problems with what's installed.
     /// </summary>
-    /// <param name="flavour">The kind of release being installed. A self-contained one doesn't need .NET.</param>
-    public static IReadOnlyList<DependencyProblem> Check(ReleaseFlavour flavour)
+    public static IReadOnlyList<DependencyProblem> Check()
     {
         var problems = new List<DependencyProblem>();
-        if (flavour == ReleaseFlavour.FrameworkDependent && DotNetProblem() is { } dotnet)
+        if (DotNetProblem() is { } dotnet)
         {
             problems.Add(dotnet);
         }

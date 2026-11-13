@@ -158,15 +158,12 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           files: ${{ steps.package.outputs.file }}
 
-  # The installer is one app for every OS, published self-contained as a single file so it runs before .NET is
-  # installed. It's attached to the release as a bare executable, not an archive.
+  # The installer is one framework-dependent build for every OS, run with `dotnet tammi-installer.dll`. The bootstrap
+  # scripts check for .NET, then download it (under these fixed names, so releases/latest/download/ links work) and
+  # run it. Self-contained builds of Tammi aren't published, so there's nothing else to bootstrap.
   installer:
-    name: Publish installer (${{ matrix.rid }})
+    name: Publish installer
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        rid: [linux-x64, linux-arm64, win-x64]
     steps:
       - uses: actions/checkout@v7
 
@@ -178,30 +175,25 @@ jobs:
         id: tag
         env:
           TAG: ${{ github.event.release.tag_name || inputs.tag_name }}
-        run: |
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "label=${TAG:-dev}" >> "$GITHUB_OUTPUT"
+        run: echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Publish
-        env:
-          RID: ${{ matrix.rid }}
-          LABEL: ${{ steps.tag.outputs.label }}
+      - name: Publish and package
         run: |
-          dotnet publish src/Deosrc.Tammi.Installer/Deosrc.Tammi.Installer.csproj -c Release -r "$RID" \
-            --self-contained -p:PublishSingleFile=true -o "publish/installer-$RID"
-          ext=$([[ "$RID" == win-* ]] && echo .exe || echo "")
-          cp "publish/installer-$RID/tammi-installer$ext" "tammi-installer-$LABEL-$RID$ext"
-          echo "FILE=tammi-installer-$LABEL-$RID$ext" >> "$GITHUB_ENV"
+          dotnet publish src/Deosrc.Tammi.Installer/Deosrc.Tammi.Installer.csproj -c Release -o publish/installer
+          mkdir -p installer
+          tar -czf installer/tammi-installer.tar.gz -C publish/installer .
+          (cd publish/installer && zip -qr ../../installer/tammi-installer.zip .)
+          cp scripts/install.sh scripts/install.ps1 installer/
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v7
         with:
-          path: ${{ env.FILE }}
-          archive: false
+          name: installer
+          path: installer/*
 
       - name: Attach to release
         if: steps.tag.outputs.tag != ''
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-          files: ${{ env.FILE }}
+          files: installer/*

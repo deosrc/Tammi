@@ -6,14 +6,12 @@ namespace Deosrc.Tammi.Installation;
 /// What's recorded in a version's folder about how it was installed. Its presence also marks the install as complete.
 /// </summary>
 /// <param name="Version">The installed version.</param>
-/// <param name="Flavour">Whether the install bundles the .NET runtime, so an update gets the same kind.</param>
 /// <param name="RuntimeIdentifier">The OS and architecture the install is for.</param>
-public sealed record InstallMetadata(string Version, ReleaseFlavour Flavour, string RuntimeIdentifier)
+public sealed record InstallMetadata(string Version, string RuntimeIdentifier)
 {
     private static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
-        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
     };
 
     /// <summary>

@@ -33,15 +33,13 @@ public class ReleaseInfoTests
         Assert.Equal([true, false], Releases().Select(release => release.IsPreRelease));
 
     [Theory]
-    [InlineData("linux-x64", ReleaseFlavour.FrameworkDependent, "fd-linux")]
-    [InlineData("linux-x64", ReleaseFlavour.SelfContained, "sc-linux")]
-    [InlineData("win-x64", ReleaseFlavour.FrameworkDependent, "fd-win")]
-    [InlineData("win-x64", ReleaseFlavour.SelfContained, null)]
-    [InlineData("linux-arm64", ReleaseFlavour.FrameworkDependent, null)]
-    public void FindsTheArchiveForTheTarget(string rid, ReleaseFlavour flavour, string? expectedUrlEnd)
+    [InlineData("linux-x64", "fd-linux")]
+    [InlineData("win-x64", "fd-win")]
+    [InlineData("linux-arm64", null)]
+    public void FindsTheArchiveForTheTarget(string rid, string? expectedUrlEnd)
     {
         var release = Releases().Single(r => r.Tag == "v0.2.0");
-        var archive = release.FindArchive(new ReleaseTarget(rid), flavour);
+        var archive = release.FindArchive(new ReleaseTarget(rid));
         Assert.Equal(expectedUrlEnd, archive?.DownloadUrl.AbsolutePath.TrimStart('/'));
     }
 }

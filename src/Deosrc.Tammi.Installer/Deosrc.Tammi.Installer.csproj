@@ -5,8 +5,9 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>tammi-installer</AssemblyName>
     <RootNamespace>Deosrc.Tammi.Installer</RootNamespace>
-    <!-- Published as a self-contained single file for each OS, so it runs before .NET is installed. -->
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Published once, framework-dependent, for every OS: run it with `dotnet tammi-installer.dll`. The bootstrap
+         scripts (scripts/install.sh and scripts/install.ps1) check for .NET, then download and run it. -->
+    <UseAppHost>false</UseAppHost>
   </PropertyGroup>
 
   <ItemGroup>

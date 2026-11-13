@@ -15,13 +15,14 @@ public sealed record ReleaseInfo(string Tag, PackageVersion Version, Uri Url, IR
     public bool IsPreRelease => Version.IsPreRelease;
 
     /// <summary>
-    /// Finds the archive for a target. Archives are named <c>tammi-{tag}-{fd|sc}-{rid}</c> with a <c>.zip</c> (Windows)
-    /// or <c>.tar.gz</c> extension.
+    /// Finds the archive for a target. Archives are named <c>tammi-{tag}-fd-{rid}</c> with a <c>.zip</c> (Windows)
+    /// or <c>.tar.gz</c> extension. <c>fd</c> is for framework-dependent: the .NET runtime must be installed. Releases
+    /// don't have self-contained builds at the moment (<c>sc</c>).
     /// </summary>
-    /// <returns>The archive, or <see langword="null"/> if the release has none for the target and flavour.</returns>
-    public ReleaseAsset? FindArchive(ReleaseTarget target, ReleaseFlavour flavour)
+    /// <returns>The archive, or <see langword="null"/> if the release has none for the target.</returns>
+    public ReleaseAsset? FindArchive(ReleaseTarget target)
     {
-        var prefix = $"tammi-{Tag}-{(flavour == ReleaseFlavour.SelfContained ? "sc" : "fd")}-{target.RuntimeIdentifier}.";
+        var prefix = $"tammi-{Tag}-fd-{target.RuntimeIdentifier}.";
         return Assets.FirstOrDefault(asset =>
             asset.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
             && (asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)

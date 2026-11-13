@@ -1,5 +1,3 @@
-using Deosrc.Tammi.Installation;
-
 namespace Deosrc.Tammi.Installer;
 
 /// <summary>
@@ -15,15 +13,12 @@ internal sealed record InstallerOptions
         Options:
           --prerelease        Install the newest release even if it's a pre-release.
           --tag <tag>         Install a particular release, e.g. v0.2.0.
-          --self-contained    Install the build that bundles the .NET runtime, so .NET needn't be installed.
           --help              Show this help.
         """;
 
     public bool IncludePreReleases { get; init; }
 
     public string? Tag { get; init; }
-
-    public bool SelfContained { get; init; }
 
     public bool ShowHelp { get; init; }
 
@@ -38,9 +33,6 @@ internal sealed record InstallerOptions
             {
                 case "--prerelease":
                     options = options with { IncludePreReleases = true };
-                    break;
-                case "--self-contained":
-                    options = options with { SelfContained = true };
                     break;
                 case "--help" or "-h" or "-?":
                     options = options with { ShowHelp = true };
@@ -62,6 +54,4 @@ internal sealed record InstallerOptions
 
         return options;
     }
-
-    public ReleaseFlavour Flavour => SelfContained ? ReleaseFlavour.SelfContained : ReleaseFlavour.FrameworkDependent;
 }

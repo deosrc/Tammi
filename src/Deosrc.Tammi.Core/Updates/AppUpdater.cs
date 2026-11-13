@@ -178,11 +178,8 @@ public sealed class AppUpdater
             Progress = 0;
             _installFailed = false;
             Set(UpdateStatus.Installing);
-            // Get the same kind of build, with or without the .NET runtime, as is running.
-            var flavour = InstallMetadata.Load(_location.DirectoryFor(_running))?.Flavour ?? ReleaseFlavour.FrameworkDependent;
             await _installer.InstallAsync(
                 release,
-                flavour,
                 new Progress<DownloadProgress>(progress =>
                 {
                     Progress = progress.TotalBytes > 0 ? (double)progress.BytesReceived / progress.TotalBytes : 0;

@@ -940,15 +940,18 @@ are left to other tools for now.
 
 ## Installing and updating
 
-- **Install:** `tammi-installer` is one self-contained app for every OS (Linux x64 and arm64, Windows x64), attached to
-  each release. It needs no admin rights. It checks for the .NET 10 runtime and `git`, and says how to install what's
-  missing (if .NET is missing and the release has a self-contained build, it installs that instead). It then downloads
-  the release for the OS and architecture to `<version>` in the Versions folder (`%LOCALAPPDATA%\Tammi\Versions` on
-  Windows, `$XDG_DATA_HOME/tammi/versions` on Linux), and points the menu link at it: a `tammi.desktop` file on Linux
-  and a Start menu shortcut on Windows.
+- **Install:** the release has two bootstrap scripts, `install.sh` (Linux) and `install.ps1` (Windows), and one portable
+  installer, `tammi-installer` (`.tar.gz` and `.zip`, run with `dotnet tammi-installer.dll`) that works on every OS. It
+  needs no admin rights. The script checks for the .NET 10 runtime, and says how to install it if it's missing. It
+  then downloads the installer and runs it. The installer checks for `git` (and .NET), and says how to install what's
+  missing. It downloads the release for the OS and architecture (Linux x64 and arm64, Windows x64) to `<version>` in the
+  Versions folder (`%LOCALAPPDATA%\Tammi\Versions` on Windows, `$XDG_DATA_HOME/tammi/versions` on Linux), and points
+  the menu link at it: a `tammi.desktop` file on Linux and a Start menu shortcut on Windows.
+  - Only framework-dependent builds are released at the moment. If self-contained builds are added, the scripts should
+    offer to download one when .NET is missing, or take the user to the .NET download page.
 - **Update:** when Tammi starts, and the setting is on, it looks for a release newer than the running version. If there
   is one, a bar under the app bar asks whether to update. If the user agrees, Tammi installs it exactly as the installer
-  does (the same kind of build, with or without the runtime, as is running) and points the menu link at it. The new
+  does and points the menu link at it. The new
   version is used the next time Tammi starts. Pre-releases only count if the setting is on.
 - **Old versions:** when Tammi starts, it deletes installed versions, keeping the running one, any newer ones and the
   two before the running one.

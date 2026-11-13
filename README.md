@@ -10,18 +10,27 @@ See [docs/CONTEXT.md](docs/CONTEXT.md) for the full product context.
 
 ## Installing
 
-Download the installer for your OS and architecture (`tammi-installer-<tag>-<linux-x64|linux-arm64|win-x64>`) from the
-[latest release](https://github.com/deosrc/Tammi/releases/latest) and run it. It needs no admin rights: it checks
-for [.NET 10](https://dotnet.microsoft.com/download/dotnet/10.0) and `git` (telling you how to install what's
-missing), downloads the matching release to its own folder in your user app data folder, and adds Tammi to your
-application menu (a `.desktop` file on Linux, a Start menu shortcut on Windows).
+Run the install script for your OS. It needs no admin rights. It checks for [.NET 10](https://dotnet.microsoft.com/download/dotnet/10.0)
+(telling you how to install it if it's missing), downloads the installer from the
+[latest release](https://github.com/deosrc/Tammi/releases/latest) and runs it. The installer checks for `git`, downloads
+the matching Tammi release to its own folder in your user app data folder, and adds Tammi to your application menu (a
+`.desktop` file on Linux, a Start menu shortcut on Windows).
 
 ```shell
-tammi-installer                  # the latest release
-tammi-installer --prerelease     # the latest release, even if it's a pre-release
-tammi-installer --tag v0.2.0     # a particular release
-tammi-installer --self-contained # the build that bundles .NET, so it needn't be installed
+# Linux
+curl -fsSL https://github.com/deosrc/Tammi/releases/latest/download/install.sh | sh
 ```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/deosrc/Tammi/releases/latest/download/install.ps1 | iex
+```
+
+Options are passed on to the installer: `--prerelease` installs the newest release even if it's a pre-release, and
+`--tag v0.2.0` installs a particular release (e.g. `curl -fsSL … | sh -s -- --prerelease`; on Windows, download
+`install.ps1` and run `./install.ps1 --prerelease`). The installer is a single build for every OS, so
+`tammi-installer.tar.gz` or `tammi-installer.zip` from the release can also be unpacked and run with
+`dotnet tammi-installer.dll`.
 
 Each version is kept in its own folder: `%LOCALAPPDATA%\Tammi\Versions\<version>` on Windows and
 `~/.local/share/tammi/versions/<version>` on Linux (under `$XDG_DATA_HOME`).
@@ -38,7 +47,8 @@ for each platform:
 | `src/Deosrc.Tammi.Windows` | Windows host: .NET MAUI Blazor Hybrid (`BlazorWebView`) |
 | `src/Deosrc.Tammi.Linux` | Linux host: Photino.Blazor |
 | `src/Deosrc.Tammi.Installation` | Downloads, installs and cleans up released versions (shared by the installer and the updater) |
-| `src/Deosrc.Tammi.Installer` | The installer app, one codebase for every OS |
+| `src/Deosrc.Tammi.Installer` | The installer app, one portable build for every OS |
+| `scripts/install.sh`, `scripts/install.ps1` | Bootstrap scripts that check for .NET, then download and run the installer |
 | `tests/Deosrc.Tammi.Core.Tests` | xUnit tests |
 
 ### Prerequisites
