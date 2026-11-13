@@ -1,4 +1,4 @@
-namespace Deosrc.Tammi.Installation;
+namespace Deosrc.Tammi.Core.Installation;
 
 /// <summary>
 /// Where installed versions of Tammi live: a folder for each version, inside the user's own app data folder so that

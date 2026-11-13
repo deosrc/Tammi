@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Deosrc.Tammi.Installation;
+using Deosrc.Tammi.Core.Installation;
 
 namespace Deosrc.Tammi.Core.Tests.Installation;
 

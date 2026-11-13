@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Deosrc.Tammi.Core.Settings;
-using Deosrc.Tammi.Installation;
+using Deosrc.Tammi.Core.Installation;
 
 namespace Deosrc.Tammi.Core.Updates;
 

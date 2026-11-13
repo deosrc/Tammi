@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Deosrc.Tammi.Installation;
+namespace Deosrc.Tammi.Core.Installation;
 
 /// <summary>
 /// What's recorded in a version's folder about how it was installed. Its presence also marks the install as complete.

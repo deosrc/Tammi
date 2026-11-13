@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Deosrc.Tammi.Installation;
+namespace Deosrc.Tammi.Core.Installation;
 
 /// <summary>
 /// Checks that what the installer needs is installed. Tammi checks for git itself when it starts, as git could be

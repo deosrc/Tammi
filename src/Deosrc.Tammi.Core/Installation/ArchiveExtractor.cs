@@ -1,7 +1,7 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 
-namespace Deosrc.Tammi.Installation;
+namespace Deosrc.Tammi.Core.Installation;
 
 /// <summary>
 /// Unpacks release archives: <c>.zip</c> or <c>.tar.gz</c>.

@@ -36,7 +36,6 @@ for each platform:
 | `src/Deosrc.Tammi.UI` | Shared Blazor UI |
 | `src/Deosrc.Tammi.Windows` | Windows host: .NET MAUI Blazor Hybrid (`BlazorWebView`) |
 | `src/Deosrc.Tammi.Linux` | Linux host: Photino.Blazor |
-| `src/Deosrc.Tammi.Installation` | Release download, installation and cleanup services used by the core app |
 | `scripts/install.sh`, `scripts/install.ps1` | Bootstrap scripts that download and run the latest matching release |
 | `tests/Deosrc.Tammi.Core.Tests` | xUnit tests |
 

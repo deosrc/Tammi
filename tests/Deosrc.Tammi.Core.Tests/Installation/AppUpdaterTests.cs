@@ -4,7 +4,7 @@ using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Tests.Settings;
 using Deosrc.Tammi.Core.Tests.Tools;
 using Deosrc.Tammi.Core.Updates;
-using Deosrc.Tammi.Installation;
+using Deosrc.Tammi.Core.Installation;
 
 namespace Deosrc.Tammi.Core.Tests.Installation;
 

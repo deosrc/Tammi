@@ -1,4 +1,4 @@
-namespace Deosrc.Tammi.Installation;
+namespace Deosrc.Tammi.Core.Installation;
 
 /// <summary>
 /// A published Tammi release.

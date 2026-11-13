@@ -1,6 +1,6 @@
 using System.Net.Http.Headers;
 
-namespace Deosrc.Tammi.Installation;
+namespace Deosrc.Tammi.Core.Installation;
 
 /// <summary>
 /// Installs a release into a versioned folder and points the menu link at it. Initial setup and an update are the

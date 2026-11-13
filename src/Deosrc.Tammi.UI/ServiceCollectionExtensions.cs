@@ -15,7 +15,7 @@ using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.Core.Workspaces;
 using Deosrc.Tammi.UI.Components;
 using Deosrc.Tammi.UI.Layout;
-using Deosrc.Tammi.Installation;
+using Deosrc.Tammi.Core.Installation;
 using Deosrc.Tammi.UI.Logging;
 using Deosrc.Tammi.Core.Updates;
 using Deosrc.Tammi.UI.Workspaces;

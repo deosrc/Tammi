@@ -3,7 +3,6 @@
     "path": "Deosrc.Tammi.slnx",
     "projects": [
       "src/Deosrc.Tammi.Core/Deosrc.Tammi.Core.csproj",
-      "src/Deosrc.Tammi.Installation/Deosrc.Tammi.Installation.csproj",
       "src/Deosrc.Tammi.UI/Deosrc.Tammi.UI.csproj",
       "src/Deosrc.Tammi.Windows/Deosrc.Tammi.Windows.csproj",
       "tests/Deosrc.Tammi.Core.Tests/Deosrc.Tammi.Core.Tests.csproj"

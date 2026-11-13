@@ -1,7 +1,7 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 using Deosrc.Tammi.Core.Tests.Tools;
-using Deosrc.Tammi.Installation;
+using Deosrc.Tammi.Core.Installation;
 
 namespace Deosrc.Tammi.Core.Tests.Installation;
 

@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Deosrc.Tammi.Installation;
+namespace Deosrc.Tammi.Core.Installation;
 
 /// <summary>
 /// A semantic version, e.g. <c>1.2.3</c> or <c>1.2.3-beta.1</c>. Build metadata (after <c>+</c>) is dropped.

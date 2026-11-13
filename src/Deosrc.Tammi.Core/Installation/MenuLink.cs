@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Deosrc.Tammi.Installation;
+namespace Deosrc.Tammi.Core.Installation;
 
 /// <summary>
 /// The link that starts Tammi from the desktop's menu: a <c>.desktop</c> file on Linux and a Start menu shortcut on

@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Deosrc.Tammi.Installation;
+namespace Deosrc.Tammi.Core.Installation;
 
 /// <summary>
 /// Builds the freedesktop <c>.desktop</c> file that puts Tammi in a Linux desktop's application menu.

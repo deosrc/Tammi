@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Deosrc.Tammi.Installation;
+namespace Deosrc.Tammi.Core.Installation;
 
 /// <summary>
 /// An operating system and architecture Tammi is released for, named by its .NET runtime identifier (e.g.
