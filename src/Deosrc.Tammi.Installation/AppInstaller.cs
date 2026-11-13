@@ -60,7 +60,7 @@ public sealed class AppInstaller
     {
         Directory.CreateDirectory(_location.VersionsDirectory);
         var work = directory + ".partial";
-        var file = Path.Combine(_location.VersionsDirectory, archive.Name + ".download");
+        var file = Path.Combine(_location.VersionsDirectory, archive.Name);
         try
         {
             if (Directory.Exists(work))
