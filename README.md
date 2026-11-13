@@ -8,6 +8,24 @@ opens everything in your other tools.
 
 See [docs/CONTEXT.md](docs/CONTEXT.md) for the full product context.
 
+## Installing
+
+Download the installer for your OS and architecture (`tammi-installer-<tag>-<linux-x64|linux-arm64|win-x64>`) from the
+[latest release](https://github.com/deosrc/Tammi/releases/latest) and run it. It needs no admin rights: it checks
+for [.NET 10](https://dotnet.microsoft.com/download/dotnet/10.0) and `git` (telling you how to install what's
+missing), downloads the matching release to its own folder in your user app data folder, and adds Tammi to your
+application menu (a `.desktop` file on Linux, a Start menu shortcut on Windows).
+
+```shell
+tammi-installer                  # the latest release
+tammi-installer --prerelease     # the latest release, even if it's a pre-release
+tammi-installer --tag v0.2.0     # a particular release
+tammi-installer --self-contained # the build that bundles .NET, so it needn't be installed
+```
+
+Each version is kept in its own folder: `%LOCALAPPDATA%\Tammi\Versions\<version>` on Windows and
+`~/.local/share/tammi/versions/<version>` on Linux (under `$XDG_DATA_HOME`).
+
 ## Building and running
 
 The UI is a set of Blazor components in a shared Razor class library (`src/Deosrc.Tammi.UI`), shown by a native host
@@ -19,6 +37,8 @@ for each platform:
 | `src/Deosrc.Tammi.UI` | Shared Blazor UI |
 | `src/Deosrc.Tammi.Windows` | Windows host: .NET MAUI Blazor Hybrid (`BlazorWebView`) |
 | `src/Deosrc.Tammi.Linux` | Linux host: Photino.Blazor |
+| `src/Deosrc.Tammi.Installation` | Downloads, installs and cleans up released versions (shared by the installer and the updater) |
+| `src/Deosrc.Tammi.Installer` | The installer app, one codebase for every OS |
 | `tests/Deosrc.Tammi.Core.Tests` | xUnit tests |
 
 ### Prerequisites

@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Deosrc.Tammi.Core/Deosrc.Tammi.Core.csproj" />
+    <Project Path="src/Deosrc.Tammi.Installation/Deosrc.Tammi.Installation.csproj" />
+    <Project Path="src/Deosrc.Tammi.Installer/Deosrc.Tammi.Installer.csproj" />
     <Project Path="src/Deosrc.Tammi.Linux/Deosrc.Tammi.Linux.csproj" />
     <Project Path="src/Deosrc.Tammi.UI/Deosrc.Tammi.UI.csproj" />
     <Project Path="src/Deosrc.Tammi.Windows/Deosrc.Tammi.Windows.csproj" />

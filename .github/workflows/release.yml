@@ -157,3 +157,51 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           files: ${{ steps.package.outputs.file }}
+
+  # The installer is one app for every OS, published self-contained as a single file so it runs before .NET is
+  # installed. It's attached to the release as a bare executable, not an archive.
+  installer:
+    name: Publish installer (${{ matrix.rid }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [linux-x64, linux-arm64, win-x64]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Resolve release tag
+        id: tag
+        env:
+          TAG: ${{ github.event.release.tag_name || inputs.tag_name }}
+        run: |
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "label=${TAG:-dev}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish
+        env:
+          RID: ${{ matrix.rid }}
+          LABEL: ${{ steps.tag.outputs.label }}
+        run: |
+          dotnet publish src/Deosrc.Tammi.Installer/Deosrc.Tammi.Installer.csproj -c Release -r "$RID" \
+            --self-contained -p:PublishSingleFile=true -o "publish/installer-$RID"
+          ext=$([[ "$RID" == win-* ]] && echo .exe || echo "")
+          cp "publish/installer-$RID/tammi-installer$ext" "tammi-installer-$LABEL-$RID$ext"
+          echo "FILE=tammi-installer-$LABEL-$RID$ext" >> "$GITHUB_ENV"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.FILE }}
+          archive: false
+
+      - name: Attach to release
+        if: steps.tag.outputs.tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: ${{ env.FILE }}
