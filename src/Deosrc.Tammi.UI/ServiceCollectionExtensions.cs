@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Deosrc.Tammi.Core;
 using Deosrc.Tammi.Core.Agents;
 using Deosrc.Tammi.Core.Catalogue;
 using Deosrc.Tammi.Core.Credentials;
@@ -14,7 +15,9 @@ using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.Core.Workspaces;
 using Deosrc.Tammi.UI.Components;
 using Deosrc.Tammi.UI.Layout;
+using Deosrc.Tammi.Core.Installation;
 using Deosrc.Tammi.UI.Logging;
+using Deosrc.Tammi.Core.Updates;
 using Deosrc.Tammi.UI.Workspaces;
 using Microsoft.Extensions.Logging;
 
@@ -26,6 +29,24 @@ public static class ServiceCollectionExtensions
     /// How long an integration waits for its service to respond, e.g. while Settings checks a token.
     /// </summary>
     private static readonly TimeSpan IntegrationRequestTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// How long a request to check for or download an update waits. Downloads are large, so it's long.
+    /// </summary>
+    private static readonly TimeSpan UpdateRequestTimeout = TimeSpan.FromMinutes(10);
+
+    /// <returns>The OS and architecture releases are downloaded for, or <see langword="null"/> if there are none.</returns>
+    private static ReleaseTarget? CurrentReleaseTarget()
+    {
+        try
+        {
+            return ReleaseTarget.Current();
+        }
+        catch (PlatformNotSupportedException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// Registers the services used by the shared UI. Each host calls this when it starts.
@@ -65,6 +86,12 @@ public static class ServiceCollectionExtensions
             new HttpClient { Timeout = IntegrationRequestTimeout },
             time: services.GetRequiredService<TimeProvider>()));
         services.AddSingleton<AgentUsageMonitor>();
+        services.AddSingleton(services => new AppUpdater(
+            new HttpClient { Timeout = UpdateRequestTimeout, DefaultRequestHeaders = { UserAgent = { new("Tammi", AppInfo.Version) } } },
+            InstallLocation.Default(),
+            CurrentReleaseTarget(),
+            services.GetRequiredService<ISettingsStore>(),
+            services.GetRequiredService<ILogger<AppUpdater>>()));
         services.AddSingleton<UsageTabState>();
         services.AddSingleton<NewWorkspaceTabState>();
         services.AddSingleton<EditWorkspaceSessions>();
