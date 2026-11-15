@@ -164,7 +164,7 @@
                 <li role="none">
                     <button type="button" class="menu-item" role="menuitem"
                             @onclick="() => RunTagAsync(commitMenu, () => Graph.DeleteTagAsync(tag))">
-                        Delete tag @tag
+                        Delete tag @tag@DeleteSuffix(commitMenu, tag)
                     </button>
                 </li>
             }
@@ -212,7 +212,7 @@
                                 <li role="none">
                                     <button type="button" class="menu-item" role="menuitem"
                                             @onclick="() => RunTagAsync(commitMenu, () => Graph.DeleteTagAsync(tag))">
-                                        @tag
+                                        @tag@DeleteSuffix(commitMenu, tag)
                                     </button>
                                 </li>
                             }
@@ -717,6 +717,14 @@
     // Whether the remote has a tag: null until it's been checked.
     private static bool? PushState(CommitMenu menu, string tag) =>
         menu.RemoteTags.TryGetValue(tag, out var known) ? known : null;
+
+    // Where deleting a tag removes it from. Deleting doesn't wait for the remote check, which it repeats itself.
+    private static string DeleteSuffix(CommitMenu menu, string tag) => PushState(menu, tag) switch
+    {
+        null => " (checking...)",
+        true => $" (local and {menu.Remote})",
+        false => " (local only)",
+    };
 
     private static void ToggleSubmenu(CommitMenu menu, string submenu) =>
         menu.OpenSubmenu = menu.OpenSubmenu == submenu ? null : submenu;
