@@ -1,24 +1,13 @@
 namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
-/// Creates, annotates, pushes and deletes tags with the <c>git</c> CLI.
+/// Creates, pushes and deletes tags with the <c>git</c> CLI.
 /// </summary>
 public sealed class GitTags(IGitCli git) : IGitTags
 {
     /// <inheritdoc />
     public async Task CreateAsync(string path, string name, string sha, CancellationToken cancellationToken = default) =>
         await git.RunAsync(path, ["tag", "--", name, sha], cancellationToken: cancellationToken).ConfigureAwait(false);
-
-    /// <inheritdoc />
-    public async Task AnnotateAsync(string path, string name, string message, CancellationToken cancellationToken = default)
-    {
-        // Tagging the commit, not the tag, so an already annotated tag is replaced rather than nested.
-        await git.RunAsync(
-            path,
-            ["tag", "--force", "--annotate", "-F", "-", "--", name, $"{name}^{{commit}}"],
-            new GitCommandOptions { StandardInput = message },
-            cancellationToken).ConfigureAwait(false);
-    }
 
     /// <inheritdoc />
     public async Task<bool> ExistsOnRemoteAsync(string path, string name, CancellationToken cancellationToken = default)

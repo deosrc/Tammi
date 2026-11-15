@@ -33,20 +33,6 @@ public sealed class GitTagsTests : IDisposable
     }
 
     [Fact]
-    public async Task AnnotateAsync_ReplacesTheTagWithAnAnnotatedOneOnTheSameCommit()
-    {
-        var (_, mine) = await CloneAsync();
-        string head = await GitAsync(mine, "rev-parse", "HEAD");
-        await _tags.CreateAsync(mine, "v1", head, Token);
-
-        await _tags.AnnotateAsync(mine, "v1", "Release one", Token);
-
-        Assert.Equal("tag", await GitAsync(mine, "cat-file", "-t", "v1"));
-        Assert.Equal(head, await GitAsync(mine, "rev-parse", "v1^{commit}"));
-        Assert.Contains("Release one", await GitAsync(mine, "cat-file", "-p", "v1"));
-    }
-
-    [Fact]
     public async Task PushAsync_SendsTheTag_AndExistsOnRemoteSeesIt()
     {
         var (remote, mine) = await CloneAsync();

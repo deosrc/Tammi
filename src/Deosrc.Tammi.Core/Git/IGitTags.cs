@@ -1,7 +1,7 @@
 namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
-/// Creates, annotates, pushes and deletes tags with the <c>git</c> CLI, so the user's git config, credential helpers
+/// Creates, pushes and deletes tags with the <c>git</c> CLI, so the user's git config, credential helpers
 /// and hooks apply. Works in submodules too, by giving the submodule's folder as the path.
 /// </summary>
 public interface IGitTags
@@ -15,16 +15,6 @@ public interface IGitTags
     /// <param name="cancellationToken">Cancelling kills the git process.</param>
     /// <exception cref="GitCommandException">Git failed, e.g. the tag exists or the name isn't valid.</exception>
     Task CreateAsync(string path, string name, string sha, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Annotates a tag with a message, by replacing it with an annotated tag on the same commit.
-    /// </summary>
-    /// <param name="path">The repository's (or submodule's) working directory.</param>
-    /// <param name="name">The tag's name.</param>
-    /// <param name="message">The annotation.</param>
-    /// <param name="cancellationToken">Cancelling kills the git process.</param>
-    /// <exception cref="GitCommandException">Git failed.</exception>
-    Task AnnotateAsync(string path, string name, string message, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds out whether a tag exists on the remote that tags are pushed to.

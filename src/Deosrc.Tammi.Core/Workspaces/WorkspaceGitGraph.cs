@@ -439,25 +439,11 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public string? TagProblem { get; private set; }
 
     /// <summary>
-    /// Creates a lightweight tag on a commit, optionally annotated, then reads the graph again so it shows.
+    /// Creates a lightweight tag on a commit, then reads the graph again so it shows.
     /// </summary>
     /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
-    public Task<bool> CreateTagAsync(string name, string sha, string? annotation = null) =>
-        ChangeTagsAsync(async token =>
-        {
-            await _tags.CreateAsync(Path, name, sha, token).ConfigureAwait(false);
-            if (!string.IsNullOrWhiteSpace(annotation))
-            {
-                await _tags.AnnotateAsync(Path, name, annotation, token).ConfigureAwait(false);
-            }
-        });
-
-    /// <summary>
-    /// Annotates a tag with a message.
-    /// </summary>
-    /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
-    public Task<bool> AnnotateTagAsync(string name, string message) =>
-        ChangeTagsAsync(token => _tags.AnnotateAsync(Path, name, message, token));
+    public Task<bool> CreateTagAsync(string name, string sha) =>
+        ChangeTagsAsync(token => _tags.CreateAsync(Path, name, sha, token));
 
     /// <summary>
     /// Pushes a tag to the remote.

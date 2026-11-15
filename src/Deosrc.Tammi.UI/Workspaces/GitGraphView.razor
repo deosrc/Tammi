@@ -125,33 +125,19 @@
     @if (_tagPrompt is { } prompt)
     {
         <form class="git-graph-tag-prompt" @onsubmit="() => SubmitTagPromptAsync(push: false)" @onsubmit:preventDefault="true">
-            @if (prompt.Existing is null)
-            {
-                <label>
-                    Tag name
-                    <input type="text" class="input" @bind="_tagName" @bind:event="oninput" autofocus
-                           spellcheck="false" />
-                </label>
-            }
-            else
-            {
-                <span>Annotate tag <strong>@prompt.Existing</strong></span>
-            }
             <label>
-                @(prompt.Existing is null ? "Annotation (optional)" : "Annotation")
-                <textarea class="input" rows="2" @bind="_tagMessage" @bind:event="oninput"></textarea>
+                Tag name
+                <input type="text" class="input" @bind="_tagName" @bind:event="oninput" autofocus
+                       spellcheck="false" />
             </label>
             <div class="git-graph-tag-prompt-actions">
                 <button type="submit" class="button" disabled="@(!CanSubmitTagPrompt)">
-                    @(prompt.Existing is null ? "Create tag" : "Annotate")
+                    Create tag
                 </button>
-                @if (prompt.Existing is null)
-                {
-                    <button type="button" class="button" disabled="@(!CanSubmitTagPrompt)"
-                            @onclick="() => SubmitTagPromptAsync(push: true)">
-                        Create and push tag
-                    </button>
-                }
+                <button type="button" class="button" disabled="@(!CanSubmitTagPrompt)"
+                        @onclick="() => SubmitTagPromptAsync(push: true)">
+                    Create and push tag
+                </button>
                 <button type="button" class="button button-secondary" @onclick="() => _tagPrompt = null">Cancel</button>
             </div>
         </form>
@@ -168,18 +154,12 @@
             @foreach (var tag in commitMenu.Tags)
             {
                 <li role="separator" class="menu-separator"></li>
-                var onRemote = commitMenu.RemoteTags.GetValueOrDefault(tag);
+                bool? onRemote = commitMenu.RemoteTags.TryGetValue(tag, out var known) ? known : null;
                 <li role="none">
                     <button type="button" class="menu-item" role="menuitem"
                             disabled="@(onRemote is not false)"
                             @onclick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
-                        Push tag @tag@(onRemote is true ? " (already on remote)" : null)
-                    </button>
-                </li>
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem"
-                            @onclick="() => StartAnnotateTag(commitMenu, tag)">
-                        Annotate tag @tag…
+                        Push tag @tag@(onRemote is null ? " (checking...)" : null)
                     </button>
                 </li>
                 <li role="none">
@@ -640,16 +620,14 @@
         public IReadOnlyDictionary<string, bool> RemoteTags { get; set; } = new Dictionary<string, bool>();
     }
 
-    // Asks for a tag's name and annotation. Existing is the tag being annotated, or null when creating one.
-    private sealed record TagPrompt(string Sha, string? Existing);
+    // Asks for a new tag's name.
+    private sealed record TagPrompt(string Sha);
 
     private CommitMenu? _commitMenu;
     private TagPrompt? _tagPrompt;
     private string _tagName = "";
-    private string _tagMessage = "";
 
-    private bool CanSubmitTagPrompt => _tagPrompt is { Existing: null } ? !string.IsNullOrWhiteSpace(_tagName)
-        : !string.IsNullOrWhiteSpace(_tagMessage);
+    private bool CanSubmitTagPrompt => _tagPrompt is not null && !string.IsNullOrWhiteSpace(_tagName);
 
     private async Task OpenCommitMenuAsync(string sha, MouseEventArgs e)
     {
@@ -682,15 +660,7 @@
     {
         _commitMenu = null;
         _tagName = "";
-        _tagMessage = "";
-        _tagPrompt = new TagPrompt(menu.Sha, null);
-    }
-
-    private void StartAnnotateTag(CommitMenu menu, string tag)
-    {
-        _commitMenu = null;
-        _tagMessage = "";
-        _tagPrompt = new TagPrompt(menu.Sha, tag);
+        _tagPrompt = new TagPrompt(menu.Sha);
     }
 
     private async Task RunTagAsync(CommitMenu menu, Func<Task<bool>> action)
@@ -707,17 +677,10 @@
         }
 
         _tagPrompt = null;
-        if (prompt.Existing is { } existing)
+        var name = _tagName.Trim();
+        if (await Graph.CreateTagAsync(name, prompt.Sha) && push)
         {
-            await Graph.AnnotateTagAsync(existing, _tagMessage.Trim());
-        }
-        else
-        {
-            var name = _tagName.Trim();
-            if (await Graph.CreateTagAsync(name, prompt.Sha, _tagMessage.Trim()) && push)
-            {
-                await Graph.PushTagAsync(name);
-            }
+            await Graph.PushTagAsync(name);
         }
     }
 
