@@ -27,6 +27,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     private readonly IGitRepositoryReader _reader;
     private readonly IGitWorkingTree _workingTree;
     private readonly IGitSync _sync;
+    private readonly IGitTags _tags;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<GitGraphRow> _rows = [];
     private IReadOnlyDictionary<string, IReadOnlyList<GitReference>> _labels =
@@ -44,7 +45,8 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         GitGraphScope scope,
         IGitRepositoryReader reader,
         IGitWorkingTree workingTree,
-        IGitSync sync)
+        IGitSync sync,
+        IGitTags tags)
     {
         WorkspaceId = workspace.Id;
         Repository = repository;
@@ -53,6 +55,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         _reader = reader;
         _workingTree = workingTree;
         _sync = sync;
+        _tags = tags;
         string worktree = workspace.GetWorktreePath(repository);
         Path = submodulePath is null
             ? worktree
@@ -426,6 +429,90 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         }
 
         // The refs, and after a pull or a conflicted one the working changes, have changed even when it failed.
+        await RunAsync(() => Reload(Rows.Count)).ConfigureAwait(false);
+        return worked;
+    }
+
+    /// <summary>
+    /// The last tag action that failed, or <see langword="null"/> if the last one worked (or none has run).
+    /// </summary>
+    public string? TagProblem { get; private set; }
+
+    /// <summary>
+    /// Creates a lightweight tag on a commit, optionally annotated, then reads the graph again so it shows.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
+    public Task<bool> CreateTagAsync(string name, string sha, string? annotation = null) =>
+        ChangeTagsAsync(async token =>
+        {
+            await _tags.CreateAsync(Path, name, sha, token).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(annotation))
+            {
+                await _tags.AnnotateAsync(Path, name, annotation, token).ConfigureAwait(false);
+            }
+        });
+
+    /// <summary>
+    /// Annotates a tag with a message.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
+    public Task<bool> AnnotateTagAsync(string name, string message) =>
+        ChangeTagsAsync(token => _tags.AnnotateAsync(Path, name, message, token));
+
+    /// <summary>
+    /// Pushes a tag to the remote.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
+    public Task<bool> PushTagAsync(string name) => ChangeTagsAsync(token => _tags.PushAsync(Path, name, token));
+
+    /// <summary>
+    /// Deletes a tag locally and, if the remote has it, there too.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
+    public Task<bool> DeleteTagAsync(string name) => ChangeTagsAsync(token => _tags.DeleteAsync(Path, name, token));
+
+    /// <summary>
+    /// Finds out whether the remote has a tag. Contacts the remote, so it can be slow.
+    /// </summary>
+    public async Task<bool> TagExistsOnRemoteAsync(string name)
+    {
+        try
+        {
+            return await _tags.ExistsOnRemoteAsync(Path, name).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Clears <see cref="TagProblem"/>, once the user has seen it.
+    /// </summary>
+    public void DismissTagProblem()
+    {
+        if (TagProblem is not null)
+        {
+            TagProblem = null;
+            Changed?.Invoke();
+        }
+    }
+
+    private async Task<bool> ChangeTagsAsync(Func<CancellationToken, Task> change)
+    {
+        bool worked = false;
+        try
+        {
+            await change(CancellationToken.None).ConfigureAwait(false);
+            TagProblem = null;
+            worked = true;
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            TagProblem = ex.Message;
+        }
+
+        // Tags may have changed even when it failed part way.
         await RunAsync(() => Reload(Rows.Count)).ConfigureAwait(false);
         return worked;
     }

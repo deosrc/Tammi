@@ -107,6 +107,84 @@
         <p class="error git-graph-problem">Couldn't read the git graph. @problem</p>
     }
 
+    @if (Graph.TagProblem is { } tagProblem)
+    {
+        <div class="error git-graph-sync-error" role="alert">
+            <div class="git-graph-sync-error-body">
+                <p>@tagProblem</p>
+            </div>
+            <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
+                    title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissTagProblem">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+            </button>
+        </div>
+    }
+
+    @if (_tagPrompt is { } prompt)
+    {
+        <form class="git-graph-tag-prompt" @onsubmit="SubmitTagPromptAsync" @onsubmit:preventDefault="true">
+            @if (prompt.Existing is null)
+            {
+                <label>
+                    Tag name
+                    <input type="text" class="input" @bind="_tagName" @bind:event="oninput" autofocus
+                           spellcheck="false" />
+                </label>
+            }
+            else
+            {
+                <span>Annotate tag <strong>@prompt.Existing</strong></span>
+            }
+            <label>
+                @(prompt.Existing is null ? "Annotation (optional)" : "Annotation")
+                <textarea class="input" rows="2" @bind="_tagMessage" @bind:event="oninput"></textarea>
+            </label>
+            <div class="git-graph-tag-prompt-actions">
+                <button type="submit" class="button" disabled="@(!CanSubmitTagPrompt)">
+                    @(prompt.Existing is null ? "Create tag" : "Annotate")
+                </button>
+                <button type="button" class="button button-secondary" @onclick="() => _tagPrompt = null">Cancel</button>
+            </div>
+        </form>
+    }
+
+    @if (_commitMenu is { } commitMenu)
+    {
+        <ContextMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
+            <li role="none">
+                <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateTag(commitMenu)">
+                    Create tag…
+                </button>
+            </li>
+            @foreach (var tag in commitMenu.Tags)
+            {
+                <li role="separator" class="menu-separator"></li>
+                var onRemote = commitMenu.RemoteTags.GetValueOrDefault(tag);
+                <li role="none">
+                    <button type="button" class="menu-item" role="menuitem"
+                            disabled="@(onRemote is not false)"
+                            @onclick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
+                        Push tag @tag@(onRemote is true ? " (already on remote)" : null)
+                    </button>
+                </li>
+                <li role="none">
+                    <button type="button" class="menu-item" role="menuitem"
+                            @onclick="() => StartAnnotateTag(commitMenu, tag)">
+                        Annotate tag @tag…
+                    </button>
+                </li>
+                <li role="none">
+                    <button type="button" class="menu-item" role="menuitem"
+                            @onclick="() => RunTagAsync(commitMenu, () => Graph.DeleteTagAsync(tag))">
+                        Delete tag @tag
+                    </button>
+                </li>
+            }
+        </ContextMenu>
+    }
+
     <div class="git-graph-body" @ref="_body">
         @* A diff takes the place of the list only, so the details stay beside it. The list stays in the page, only
            hidden, so it keeps its scroll position and selection. *@
@@ -201,7 +279,9 @@
                         }
                         <div class="git-graph-row @(selected ? "selected" : null)" role="option"
                              aria-selected="@(selected ? "true" : "false")" @key="row.Commit.Sha"
-                             @onclick="() => Graph.SelectAsync(row.Commit.Sha)">
+                             @onclick="() => Graph.SelectAsync(row.Commit.Sha)"
+                             @oncontextmenu="e => OpenCommitMenuAsync(row.Commit.Sha, e)"
+                             @oncontextmenu:preventDefault="true">
                             @foreach (var column in _visibleColumns)
                             {
                                 @switch (column)
@@ -544,6 +624,90 @@
         }
 
         return -1;
+    }
+
+    // Where a commit's right-click menu is open, or null when it's closed. RemoteTags says, for each of the commit's
+    // tags, whether the remote has it, once that's known.
+    private sealed record CommitMenu(double X, double Y, string Sha, IReadOnlyList<string> Tags)
+    {
+        public IReadOnlyDictionary<string, bool> RemoteTags { get; set; } = new Dictionary<string, bool>();
+    }
+
+    // Asks for a tag's name and annotation. Existing is the tag being annotated, or null when creating one.
+    private sealed record TagPrompt(string Sha, string? Existing);
+
+    private CommitMenu? _commitMenu;
+    private TagPrompt? _tagPrompt;
+    private string _tagName = "";
+    private string _tagMessage = "";
+
+    private bool CanSubmitTagPrompt => _tagPrompt is { Existing: null } ? !string.IsNullOrWhiteSpace(_tagName)
+        : !string.IsNullOrWhiteSpace(_tagMessage);
+
+    private async Task OpenCommitMenuAsync(string sha, MouseEventArgs e)
+    {
+        string[] tags = [.. Graph.LabelsFor(sha).Where(reference => reference.Kind == GitReferenceKind.Tag).Select(reference => reference.Name)];
+        var menu = new CommitMenu(e.ClientX, e.ClientY, sha, tags);
+        _commitMenu = menu;
+        if (tags.Length == 0)
+        {
+            return;
+        }
+
+        // Whether the remote has each tag needs a trip to it, so the menu opens first with Push disabled.
+        var found = new Dictionary<string, bool>();
+        foreach (var tag in tags)
+        {
+            found[tag] = await Graph.TagExistsOnRemoteAsync(tag);
+            if (!ReferenceEquals(_commitMenu, menu) || _disposed)
+            {
+                return;
+            }
+
+            menu.RemoteTags = new Dictionary<string, bool>(found);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void CloseCommitMenu() => _commitMenu = null;
+
+    private void StartCreateTag(CommitMenu menu)
+    {
+        _commitMenu = null;
+        _tagName = "";
+        _tagMessage = "";
+        _tagPrompt = new TagPrompt(menu.Sha, null);
+    }
+
+    private void StartAnnotateTag(CommitMenu menu, string tag)
+    {
+        _commitMenu = null;
+        _tagMessage = "";
+        _tagPrompt = new TagPrompt(menu.Sha, tag);
+    }
+
+    private async Task RunTagAsync(CommitMenu menu, Func<Task<bool>> action)
+    {
+        _commitMenu = null;
+        await action();
+    }
+
+    private async Task SubmitTagPromptAsync()
+    {
+        if (_tagPrompt is not { } prompt || !CanSubmitTagPrompt)
+        {
+            return;
+        }
+
+        _tagPrompt = null;
+        if (prompt.Existing is { } existing)
+        {
+            await Graph.AnnotateTagAsync(existing, _tagMessage.Trim());
+        }
+        else
+        {
+            await Graph.CreateTagAsync(_tagName.Trim(), prompt.Sha, _tagMessage.Trim());
+        }
     }
 
     // A commit's labels: HEAD when it's detached here, then the branches and tags the options show. The branch HEAD is

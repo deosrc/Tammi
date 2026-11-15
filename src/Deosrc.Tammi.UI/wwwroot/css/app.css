@@ -4285,3 +4285,22 @@ label.task-choice {
 .dashboard-review-required {
   color: var(--color-warning);
 }
+
+.git-graph-tag-prompt {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border, currentColor);
+}
+
+.git-graph-tag-prompt label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.git-graph-tag-prompt-actions {
+    display: flex;
+    gap: 0.5rem;
+}
