@@ -10,6 +10,10 @@ public sealed class GitTags(IGitCli git) : IGitTags
         await git.RunAsync(path, ["tag", "--", name, sha], cancellationToken: cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public Task<string?> GetRemoteAsync(string path, CancellationToken cancellationToken = default) =>
+        ChooseRemoteAsync(path, cancellationToken);
+
+    /// <inheritdoc />
     public async Task<bool> ExistsOnRemoteAsync(string path, string name, CancellationToken cancellationToken = default)
     {
         string? remote = await ChooseRemoteAsync(path, cancellationToken).ConfigureAwait(false);

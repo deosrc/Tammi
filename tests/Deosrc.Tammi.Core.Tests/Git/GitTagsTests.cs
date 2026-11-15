@@ -68,4 +68,12 @@ public sealed class GitTagsTests : IDisposable
 
         Assert.Equal("", await GitAsync(mine, "tag", "--list"));
     }
+
+    [Fact]
+    public async Task GetRemoteAsync_ReturnsOrigin()
+    {
+        var (_, mine) = await CloneAsync();
+
+        Assert.Equal("origin", await _tags.GetRemoteAsync(mine, Token));
+    }
 }

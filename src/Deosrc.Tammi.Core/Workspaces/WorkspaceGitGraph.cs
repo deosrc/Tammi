@@ -458,6 +458,21 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public Task<bool> DeleteTagAsync(string name) => ChangeTagsAsync(token => _tags.DeleteAsync(Path, name, token));
 
     /// <summary>
+    /// Finds the remote that tags are pushed to, or <see langword="null"/> if there's none.
+    /// </summary>
+    public async Task<string?> TagRemoteAsync()
+    {
+        try
+        {
+            return await _tags.GetRemoteAsync(Path).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Finds out whether the remote has a tag. Contacts the remote, so it can be slow.
     /// </summary>
     public async Task<bool> TagExistsOnRemoteAsync(string name)

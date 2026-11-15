@@ -17,6 +17,14 @@ public interface IGitTags
     Task CreateAsync(string path, string name, string sha, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the remote that tags are pushed to: <c>origin</c>, or the only one.
+    /// </summary>
+    /// <param name="path">The repository's (or submodule's) working directory.</param>
+    /// <param name="cancellationToken">Cancelling kills the git process.</param>
+    /// <returns>The remote's name, or <see langword="null"/> if there's no remote.</returns>
+    Task<string?> GetRemoteAsync(string path, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds out whether a tag exists on the remote that tags are pushed to.
     /// </summary>
     /// <param name="path">The repository's (or submodule's) working directory.</param>
