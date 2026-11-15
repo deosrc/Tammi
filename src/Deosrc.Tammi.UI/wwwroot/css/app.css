@@ -3620,6 +3620,11 @@ label.task-choice {
   position: fixed;
 }
 
+/* Items stay on one line, so a menu opened near the window's edge grows rather than wrapping its text. */
+.menu-context .menu-item {
+  white-space: nowrap;
+}
+
 .menu-context:focus {
   outline: none;
 }
