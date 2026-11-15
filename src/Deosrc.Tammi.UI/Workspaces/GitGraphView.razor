@@ -124,7 +124,7 @@
 
     @if (_tagPrompt is { } prompt)
     {
-        <form class="git-graph-tag-prompt" @onsubmit="SubmitTagPromptAsync" @onsubmit:preventDefault="true">
+        <form class="git-graph-tag-prompt" @onsubmit="() => SubmitTagPromptAsync(push: false)" @onsubmit:preventDefault="true">
             @if (prompt.Existing is null)
             {
                 <label>
@@ -145,6 +145,13 @@
                 <button type="submit" class="button" disabled="@(!CanSubmitTagPrompt)">
                     @(prompt.Existing is null ? "Create tag" : "Annotate")
                 </button>
+                @if (prompt.Existing is null)
+                {
+                    <button type="button" class="button" disabled="@(!CanSubmitTagPrompt)"
+                            @onclick="() => SubmitTagPromptAsync(push: true)">
+                        Create and push tag
+                    </button>
+                }
                 <button type="button" class="button button-secondary" @onclick="() => _tagPrompt = null">Cancel</button>
             </div>
         </form>
@@ -692,7 +699,7 @@
         await action();
     }
 
-    private async Task SubmitTagPromptAsync()
+    private async Task SubmitTagPromptAsync(bool push)
     {
         if (_tagPrompt is not { } prompt || !CanSubmitTagPrompt)
         {
@@ -706,7 +713,11 @@
         }
         else
         {
-            await Graph.CreateTagAsync(_tagName.Trim(), prompt.Sha, _tagMessage.Trim());
+            var name = _tagName.Trim();
+            if (await Graph.CreateTagAsync(name, prompt.Sha, _tagMessage.Trim()) && push)
+            {
+                await Graph.PushTagAsync(name);
+            }
         }
     }
 
