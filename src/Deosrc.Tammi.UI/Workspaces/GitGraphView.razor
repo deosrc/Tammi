@@ -555,17 +555,44 @@
             <span class="git-graph-ref git-graph-ref-detached" title="Detached HEAD">HEAD</span>
         }
 
-        foreach (var reference in Graph.LabelsFor(sha).Where(Options.Shows))
+        foreach (var badge in GitGraphText.CombineBranches(Graph.LabelsFor(sha).Where(Options.Shows)))
         {
+            var reference = badge.Primary;
+            var combined = badge.Remotes.Count > 0;
             var current = reference.Kind == GitReferenceKind.LocalBranch && reference.Name == Graph.Refs.HeadBranch;
+            var title = reference.Kind == GitReferenceKind.Tag ? $"Tag {reference.Name}"
+                : combined ? $"{reference.Name} (local and {string.Join(", ", badge.Remotes.Select(remote => remote.Name))})"
+                : reference.Kind == GitReferenceKind.RemoteBranch ? $"{reference.Name} (remote)"
+                : $"{reference.Name} (local)";
+            if (current)
+            {
+                title += " (HEAD)";
+            }
+
             <span class="git-graph-ref @GitGraphText.ReferenceClass(reference.Kind) @(current ? "git-graph-ref-head" : null)"
-                  title="@(current ? $"{reference.Name} (HEAD)" : reference.Kind == GitReferenceKind.Tag ? $"Tag {reference.Name}" : reference.Name)">
+                  title="@title">
                 @if (reference.Kind == GitReferenceKind.Tag)
                 {
                     <svg class="git-graph-ref-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9Z" />
                         <circle cx="8" cy="8" r="1.5" />
                     </svg>
+                }
+                else
+                {
+                    if (reference.Kind == GitReferenceKind.LocalBranch)
+                    {
+                        <svg class="git-graph-ref-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <rect x="3" y="4" width="18" height="12" rx="1.5" />
+                            <path d="M8 20h8M12 16v4" />
+                        </svg>
+                    }
+                    if (reference.Kind == GitReferenceKind.RemoteBranch || combined)
+                    {
+                        <svg class="git-graph-ref-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5 4.75 4.75 0 0 1 17 18Z" />
+                        </svg>
+                    }
                 }
                 <span class="git-graph-ref-name">@reference.Name</span>
             </span>
