@@ -3638,6 +3638,11 @@ label.task-choice {
   position: fixed;
 }
 
+/* Items stay on one line, so a menu opened near the window's edge grows rather than wrapping its text. */
+.menu-context .menu-item {
+  white-space: nowrap;
+}
+
 .menu-context:focus {
   outline: none;
 }
@@ -4302,4 +4307,23 @@ label.task-choice {
 
 .dashboard-review-required {
   color: var(--color-warning);
+}
+
+.git-graph-tag-prompt {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border, currentColor);
+}
+
+.git-graph-tag-prompt label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.git-graph-tag-prompt-actions {
+    display: flex;
+    gap: 0.5rem;
 }

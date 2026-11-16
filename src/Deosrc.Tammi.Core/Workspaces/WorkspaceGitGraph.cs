@@ -27,6 +27,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     private readonly IGitRepositoryReader _reader;
     private readonly IGitWorkingTree _workingTree;
     private readonly IGitSync _sync;
+    private readonly IGitTags _tags;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<GitGraphRow> _rows = [];
     private IReadOnlyDictionary<string, IReadOnlyList<GitReference>> _labels =
@@ -44,7 +45,8 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         GitGraphScope scope,
         IGitRepositoryReader reader,
         IGitWorkingTree workingTree,
-        IGitSync sync)
+        IGitSync sync,
+        IGitTags tags)
     {
         WorkspaceId = workspace.Id;
         Repository = repository;
@@ -53,6 +55,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         _reader = reader;
         _workingTree = workingTree;
         _sync = sync;
+        _tags = tags;
         string worktree = workspace.GetWorktreePath(repository);
         Path = submodulePath is null
             ? worktree
@@ -103,6 +106,11 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     /// The repository's HEAD, branches and tags, as last read.
     /// </summary>
     public GitRefs Refs { get; private set; } = GitRefs.Empty;
+
+    /// <summary>
+    /// The names of the tags the remote has, as last read. Empty until it's been read, or if there's no remote.
+    /// </summary>
+    public IReadOnlySet<string> RemoteTags { get; private set; } = new HashSet<string>();
 
     /// <summary>
     /// The most lanes any row read so far uses.
@@ -431,6 +439,106 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     }
 
     /// <summary>
+    /// The last tag action that failed, or <see langword="null"/> if the last one worked (or none has run).
+    /// </summary>
+    public string? TagProblem { get; private set; }
+
+    /// <summary>
+    /// Creates a lightweight tag on a commit, then reads the graph again so it shows.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
+    public Task<bool> CreateTagAsync(string name, string sha) =>
+        ChangeTagsAsync(token => _tags.CreateAsync(Path, name, sha, token));
+
+    /// <summary>
+    /// Pushes a tag to the remote.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
+    public Task<bool> PushTagAsync(string name) => ChangeTagsAsync(token => _tags.PushAsync(Path, name, token));
+
+    /// <summary>
+    /// Deletes a tag locally and, if the remote has it, there too.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
+    public Task<bool> DeleteTagAsync(string name) => ChangeTagsAsync(token => _tags.DeleteAsync(Path, name, token));
+
+    /// <summary>
+    /// Finds the remote that tags are pushed to, or <see langword="null"/> if there's none.
+    /// </summary>
+    public async Task<string?> TagRemoteAsync()
+    {
+        try
+        {
+            return await _tags.GetRemoteAsync(Path).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Finds out whether the remote has a tag. Contacts the remote, so it can be slow.
+    /// </summary>
+    public async Task<bool> TagExistsOnRemoteAsync(string name)
+    {
+        try
+        {
+            return await _tags.ExistsOnRemoteAsync(Path, name).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Clears <see cref="TagProblem"/>, once the user has seen it.
+    /// </summary>
+    public void DismissTagProblem()
+    {
+        if (TagProblem is not null)
+        {
+            TagProblem = null;
+            Changed?.Invoke();
+        }
+    }
+
+    // Asks the remote which tags it has, without holding up the graph, then redraws so their badges show it.
+    private async Task RefreshRemoteTagsAsync()
+    {
+        try
+        {
+            IReadOnlySet<string> found = await _tags.ListRemoteAsync(Path).ConfigureAwait(false);
+            RemoteTags = found;
+            Changed?.Invoke();
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            // The badges just don't show the remote icon.
+        }
+    }
+
+    private async Task<bool> ChangeTagsAsync(Func<CancellationToken, Task> change)
+    {
+        bool worked = false;
+        try
+        {
+            await change(CancellationToken.None).ConfigureAwait(false);
+            TagProblem = null;
+            worked = true;
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            TagProblem = ex.Message;
+        }
+
+        // Tags may have changed even when it failed part way.
+        await RunAsync(() => Reload(Rows.Count)).ConfigureAwait(false);
+        return worked;
+    }
+
+    /// <summary>
     /// Clears <see cref="SyncProblem"/>, once the user has seen it.
     /// </summary>
     public void DismissSyncProblem()
@@ -574,6 +682,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
                 .ToDictionary(group => group.Key, group => (IReadOnlyList<GitReference>)group.ToArray());
             _cursor = _reader.OpenHistory(Path, OptionsFor(Scope));
             Problem = null;
+            if (Refs.References.Any(reference => reference.Kind == GitReferenceKind.Tag))
+            {
+                _ = RefreshRemoteTagsAsync();
+            }
         }
         catch (Exception ex) when (IsReadError(ex))
         {
