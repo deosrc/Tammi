@@ -31,6 +31,39 @@ public sealed class GitTags(IGitCli git) : IGitTags
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlySet<string>> ListRemoteAsync(string path, CancellationToken cancellationToken = default)
+    {
+        string? remote = await ChooseRemoteAsync(path, cancellationToken).ConfigureAwait(false);
+        if (remote is null)
+        {
+            return new HashSet<string>();
+        }
+
+        GitCommandResult result = await git.RunAsync(
+            path,
+            ["ls-remote", "--tags", remote],
+            new GitCommandOptions { ThrowOnError = false },
+            cancellationToken).ConfigureAwait(false);
+        const string prefix = "refs/tags/";
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        if (result.Succeeded)
+        {
+            foreach (string line in result.OutputLines)
+            {
+                int tab = line.IndexOf('\t');
+                string reference = tab < 0 ? "" : line[(tab + 1)..].Trim();
+                if (reference.StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    // Annotated tags also list their peeled commit as "name^{}".
+                    names.Add(reference.EndsWith("^{}", StringComparison.Ordinal) ? reference[prefix.Length..^3] : reference[prefix.Length..]);
+                }
+            }
+        }
+
+        return names;
+    }
+
+    /// <inheritdoc />
     public async Task PushAsync(string path, string name, CancellationToken cancellationToken = default)
     {
         string remote = await ChooseRemoteAsync(path, cancellationToken).ConfigureAwait(false)

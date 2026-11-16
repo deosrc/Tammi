@@ -108,6 +108,11 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public GitRefs Refs { get; private set; } = GitRefs.Empty;
 
     /// <summary>
+    /// The names of the tags the remote has, as last read. Empty until it's been read, or if there's no remote.
+    /// </summary>
+    public IReadOnlySet<string> RemoteTags { get; private set; } = new HashSet<string>();
+
+    /// <summary>
     /// The most lanes any row read so far uses.
     /// </summary>
     public int LaneCount { get; private set; }
@@ -499,6 +504,21 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         }
     }
 
+    // Asks the remote which tags it has, without holding up the graph, then redraws so their badges show it.
+    private async Task RefreshRemoteTagsAsync()
+    {
+        try
+        {
+            IReadOnlySet<string> found = await _tags.ListRemoteAsync(Path).ConfigureAwait(false);
+            RemoteTags = found;
+            Changed?.Invoke();
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            // The badges just don't show the remote icon.
+        }
+    }
+
     private async Task<bool> ChangeTagsAsync(Func<CancellationToken, Task> change)
     {
         bool worked = false;
@@ -662,6 +682,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
                 .ToDictionary(group => group.Key, group => (IReadOnlyList<GitReference>)group.ToArray());
             _cursor = _reader.OpenHistory(Path, OptionsFor(Scope));
             Problem = null;
+            if (Refs.References.Any(reference => reference.Kind == GitReferenceKind.Tag))
+            {
+                _ = RefreshRemoteTagsAsync();
+            }
         }
         catch (Exception ex) when (IsReadError(ex))
         {

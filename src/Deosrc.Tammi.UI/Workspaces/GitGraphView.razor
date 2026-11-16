@@ -773,7 +773,8 @@
             var reference = badge.Primary;
             var combined = badge.Remotes.Count > 0;
             var current = reference.Kind == GitReferenceKind.LocalBranch && reference.Name == Graph.Refs.HeadBranch;
-            var title = reference.Kind == GitReferenceKind.Tag ? $"Tag {reference.Name}"
+            var tagOnRemote = reference.Kind == GitReferenceKind.Tag && Graph.RemoteTags.Contains(reference.Name);
+            var title = reference.Kind == GitReferenceKind.Tag ? (tagOnRemote ? $"Tag {reference.Name} (local and remote)" : $"Tag {reference.Name}")
                 : combined ? $"{reference.Name} (local and {string.Join(", ", badge.Remotes.Select(remote => remote.Name))})"
                 : reference.Kind == GitReferenceKind.RemoteBranch ? $"{reference.Name} (remote)"
                 : $"{reference.Name} (local)";
@@ -790,6 +791,12 @@
                         <path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9Z" />
                         <circle cx="8" cy="8" r="1.5" />
                     </svg>
+                    if (tagOnRemote)
+                    {
+                        <svg class="git-graph-ref-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5 4.75 4.75 0 0 1 17 18Z" />
+                        </svg>
+                    }
                 }
                 else
                 {

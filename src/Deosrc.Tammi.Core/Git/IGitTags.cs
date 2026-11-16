@@ -36,6 +36,14 @@ public interface IGitTags
     Task<bool> ExistsOnRemoteAsync(string path, string name, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the tags on the remote that tags are pushed to, with a single request.
+    /// </summary>
+    /// <param name="path">The repository's (or submodule's) working directory.</param>
+    /// <param name="cancellationToken">Cancelling kills the git process.</param>
+    /// <returns>The tags' names. Empty if there's no remote or it can't be reached.</returns>
+    Task<IReadOnlySet<string>> ListRemoteAsync(string path, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Pushes a tag to a remote (<c>origin</c>, or the only one).
     /// </summary>
     /// <param name="path">The repository's (or submodule's) working directory.</param>
