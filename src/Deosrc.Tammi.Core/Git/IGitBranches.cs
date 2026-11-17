@@ -27,6 +27,20 @@ public interface IGitBranches
     Task CheckoutAsync(string path, string name, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Merges a branch into the checked out branch. Git fast-forwards when it can, and otherwise makes a merge commit.
+    /// A conflicted merge is left in the working directory to resolve.
+    /// </summary>
+    /// <exception cref="GitCommandException">Git failed, e.g. there are conflicts or local changes in the way.</exception>
+    Task MergeAsync(string path, string name, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Rebases the checked out branch onto a branch. A conflicted rebase is left in progress in the working directory
+    /// to resolve.
+    /// </summary>
+    /// <exception cref="GitCommandException">Git failed, e.g. there are conflicts or local changes in the way.</exception>
+    Task RebaseAsync(string path, string name, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Renames a local branch. Its remote branch isn't renamed.
     /// </summary>
     /// <exception cref="GitCommandException">Git failed, e.g. the new name is taken or isn't valid.</exception>

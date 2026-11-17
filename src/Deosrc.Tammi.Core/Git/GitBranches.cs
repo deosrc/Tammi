@@ -26,6 +26,16 @@ public sealed class GitBranches(IGitCli git) : IGitBranches
     }
 
     /// <inheritdoc />
+    public async Task MergeAsync(string path, string name, CancellationToken cancellationToken = default) =>
+        await git.RunAsync(path, ["merge", "--no-edit", "--", name], cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task RebaseAsync(string path, string name, CancellationToken cancellationToken = default) =>
+        await git.RunAsync(path, ["rebase", name, "--"], cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task RenameAsync(string path, string name, string newName, CancellationToken cancellationToken = default) =>
         await git.RunAsync(path, ["branch", "--move", "--", name, newName], cancellationToken: cancellationToken)
             .ConfigureAwait(false);

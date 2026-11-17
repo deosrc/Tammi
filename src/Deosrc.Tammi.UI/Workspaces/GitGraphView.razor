@@ -283,21 +283,34 @@
     @if (_commitMenu is { } commitMenu)
     {
         <ContextMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
+            @if (Graph.Refs.HeadBranch is not null && commitMenu.Sha != Graph.Refs.HeadSha)
+            {
+                var mergeable = commitMenu.Branches.Where(b => b != Graph.Refs.HeadBranch).Concat(commitMenu.RemoteBranches).ToList();
+                @foreach (var branch in mergeable)
+                {
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem"
+                                @onclick="() => RunBranchAsync(() => Graph.MergeBranchAsync(branch))">
+                            Merge @branch
+                        </button>
+                    </li>
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem"
+                                @onclick="() => RunBranchAsync(() => Graph.RebaseBranchAsync(branch))">
+                            Rebase onto @branch
+                        </button>
+                    </li>
+                }
+                @if (mergeable.Count > 0)
+                {
+                    <li role="separator" class="menu-separator"></li>
+                }
+            }
             <li role="none">
                 <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateBranch(commitMenu)">
                     Create branch…
                 </button>
             </li>
-            @foreach (var mode in new[] { GitResetMode.Soft, GitResetMode.Mixed, GitResetMode.Hard })
-            {
-                <li role="none">
-                    <button type="button" class="menu-item @(mode == GitResetMode.Hard ? "menu-item-danger" : null)"
-                            role="menuitem" disabled="@(Graph.Refs.HeadBranch is null)"
-                            title="@ResetText(mode)" @onclick="() => StartReset(commitMenu, mode)">
-                        @ResetTitle(mode)…
-                    </button>
-                </li>
-            }
             @foreach (var branch in commitMenu.Branches)
             {
                 var isCurrent = branch == Graph.Refs.HeadBranch;
@@ -443,6 +456,17 @@
                             }
                         </ul>
                     }
+                </li>
+            }
+            <li role="separator" class="menu-separator"></li>
+            @foreach (var mode in new[] { GitResetMode.Soft, GitResetMode.Mixed, GitResetMode.Hard })
+            {
+                <li role="none">
+                    <button type="button" class="menu-item @(mode == GitResetMode.Hard ? "menu-item-danger" : null)"
+                            role="menuitem" disabled="@(Graph.Refs.HeadBranch is null)"
+                            title="@ResetText(mode)" @onclick="() => StartReset(commitMenu, mode)">
+                        @ResetTitle(mode)…
+                    </button>
                 </li>
             }
         </ContextMenu>
