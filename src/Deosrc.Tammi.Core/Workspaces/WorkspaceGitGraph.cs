@@ -30,6 +30,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     private readonly IGitTags _tags;
     private readonly IGitBranches _branches;
     private readonly IGitStash _stash;
+    private readonly IGitDiffs _diffs;
+    private readonly ISettingsStore _settings;
+    private (GitDiffSource Source, string File, string? OldPath, string? Sha)? _diffRequest;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<GitGraphRow> _rows = [];
     private IReadOnlyDictionary<string, IReadOnlyList<GitReference>> _labels =
@@ -51,7 +54,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         IGitSync sync,
         IGitTags tags,
         IGitBranches branches,
-        IGitStash stash)
+        IGitStash stash,
+        IGitDiffs diffs,
+        ISettingsStore settings)
     {
         WorkspaceId = workspace.Id;
         Repository = repository;
@@ -63,6 +68,8 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         _tags = tags;
         _branches = branches;
         _stash = stash;
+        _diffs = diffs;
+        _settings = settings;
         string worktree = workspace.GetWorktreePath(repository);
         Path = submodulePath is null
             ? worktree
@@ -364,6 +371,125 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         ChangeIndexAsync(token => _workingTree.UnstageAsync(Path, PathsOf(files), token));
 
     /// <summary>
+    /// Discards the unstaged changes to files: restores them from the index, and deletes the untracked ones. The
+    /// changes can't be brought back.
+    /// </summary>
+    public Task DiscardAsync(IReadOnlyCollection<FileChange> files) =>
+        ChangeIndexAsync(token => _workingTree.DiscardAsync(
+            Path,
+            PathsOf(files.Where(file => !file.IsUntracked)),
+            PathsOf(files.Where(file => file.IsUntracked)),
+            token));
+
+    /// <summary>
+    /// Discards every unstaged change in the working directory. Staged changes are kept.
+    /// </summary>
+    public Task DiscardAllAsync() => ChangeIndexAsync(token => _workingTree.DiscardAllAsync(Path, token));
+
+    /// <summary>
+    /// What the user has asked to discard, and has yet to confirm, or <see langword="null"/>.
+    /// </summary>
+    public DiscardRequest? PendingDiscard { get; private set; }
+
+    /// <summary>
+    /// Asks the user to confirm discarding unstaged changes, which can't be undone.
+    /// </summary>
+    /// <param name="files">The files to discard, or <see langword="null"/> for every unstaged change.</param>
+    public void RequestDiscard(IReadOnlyCollection<FileChange>? files)
+    {
+        PendingDiscard = new DiscardRequest(files is null ? null : [.. files]);
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Discards what was asked for, once the user has confirmed.
+    /// </summary>
+    public async Task ConfirmDiscardAsync()
+    {
+        DiscardRequest? request = PendingDiscard;
+        PendingDiscard = null;
+        if (request is null)
+        {
+            return;
+        }
+
+        await (request.Files is null ? DiscardAllAsync() : DiscardAsync(request.Files)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Forgets the request to discard changes.
+    /// </summary>
+    public void CancelDiscard()
+    {
+        if (PendingDiscard is not null)
+        {
+            PendingDiscard = null;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// What the user has asked to reset the current branch to, and has yet to confirm, or <see langword="null"/>.
+    /// </summary>
+    public ResetRequest? PendingReset { get; private set; }
+
+    /// <summary>
+    /// Asks the user to confirm resetting the current branch to a commit.
+    /// </summary>
+    public void RequestReset(string sha, GitResetMode mode)
+    {
+        PendingReset = new ResetRequest(sha, mode);
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Resets the current branch as was asked for, once the user has confirmed.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="WorkingChangesProblem"/> says why.</returns>
+    public async Task<bool> ConfirmResetAsync()
+    {
+        ResetRequest? request = PendingReset;
+        PendingReset = null;
+        return request is not null && await ResetAsync(request.Sha, request.Mode).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Forgets the request to reset.
+    /// </summary>
+    public void CancelReset()
+    {
+        if (PendingReset is not null)
+        {
+            PendingReset = null;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Moves the current branch to a commit, and resets the index and working directory as the mode says. Then reads
+    /// the graph again.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="WorkingChangesProblem"/> says why.</returns>
+    public async Task<bool> ResetAsync(string sha, GitResetMode mode)
+    {
+        bool worked = false;
+        try
+        {
+            await _workingTree.ResetAsync(Path, sha, mode).ConfigureAwait(false);
+            WorkingChangesProblem = null;
+            worked = true;
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            WorkingChangesProblem = ex.Message;
+        }
+
+        // The branch, index and files may have changed even when it failed part way.
+        await RunAsync(() => Reload(Rows.Count)).ConfigureAwait(false);
+        return worked;
+    }
+
+    /// <summary>
     /// Saves the draft of the next commit's message.
     /// </summary>
     public async Task SaveMessageAsync(string message)
@@ -583,6 +709,18 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public Task<bool> CheckoutBranchAsync(string name) => ChangeBranchesAsync(token => _branches.CheckoutAsync(Path, name, token));
 
     /// <summary>
+    /// Merges a local or remote-tracking branch (such as <c>origin/feature</c>) into the checked out branch.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> MergeBranchAsync(string name) => ChangeBranchesAsync(token => _branches.MergeAsync(Path, name, token));
+
+    /// <summary>
+    /// Rebases the checked out branch onto a local or remote-tracking branch.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> RebaseBranchAsync(string name) => ChangeBranchesAsync(token => _branches.RebaseAsync(Path, name, token));
+
+    /// <summary>
     /// Renames a local branch. Its remote branch isn't renamed.
     /// </summary>
     /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
@@ -785,18 +923,44 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public Task OpenDiffAsync(GitDiffSource source, string file, string? oldPath = null, string? sha = null) => RunAsync(() =>
     {
         DiffTarget = (file, source);
+        _diffRequest = (source, file, oldPath, sha);
         ActiveDiff = null;
         DiffProblem = null;
         Changed?.Invoke();
+        ReadActiveDiff();
+    });
+
+    /// <summary>
+    /// Reads the shown diff again, e.g. after the whitespace or context settings changed. Does nothing if no diff is
+    /// shown. The old diff stays until the new one is read.
+    /// </summary>
+    public Task ReloadDiffAsync() => RunAsync(() =>
+    {
+        if (_diffRequest is not null)
+        {
+            ReadActiveDiff();
+        }
+    });
+
+    private void ReadActiveDiff()
+    {
+        if (_diffRequest is not { } request)
+        {
+            return;
+        }
+
         try
         {
-            ActiveDiff = _reader.ReadDiff(Path, source, file, oldPath, sha);
+            GitDiffOptions options = _settings.Current.Git.DiffOptions;
+            ActiveDiff = _diffs.ReadAsync(Path, request.Source, request.File, options, request.OldPath, request.Sha)
+                .GetAwaiter().GetResult();
+            DiffProblem = null;
         }
-        catch (Exception ex) when (IsReadError(ex))
+        catch (Exception ex) when (IsReadError(ex) || ex is GitCommandException or GitNotInstalledException)
         {
             DiffProblem = ex.Message;
         }
-    });
+    }
 
     /// <summary>
     /// Shows the graph again.
@@ -809,6 +973,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
 
     private void ClearDiff()
     {
+        _diffRequest = null;
         DiffTarget = null;
         ActiveDiff = null;
         DiffProblem = null;

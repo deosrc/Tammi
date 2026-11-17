@@ -4050,6 +4050,137 @@ label.task-choice {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  container-type: inline-size;
+  /* Swiping sideways at the edge mustn't go back or forward in the web view's history. */
+  overscroll-behavior-x: none;
+}
+
+.git-diff-settings {
+  position: relative;
+}
+
+/* Catches a click anywhere else, to close the popover. */
+.git-diff-settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.git-diff-settings-popover {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 20rem;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+}
+
+.git-diff-settings-popover label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.git-diff-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* A number with a minus button before it and a plus button after it, instead of the browser's up and down arrows. */
+.git-diff-stepper {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+
+.git-diff-stepper input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.git-diff-stepper input::-webkit-inner-spin-button,
+.git-diff-stepper input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.git-diff-settings-popover .git-diff-settings-check {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Two columns need room: below this width a side by side diff shows as unified. */
+.git-diff-narrow {
+  display: none;
+}
+
+/* At least as tall as the body, so the panes reach its bottom and a sideways scroll anywhere on them scrolls. */
+.git-diff-sbs {
+  display: flex;
+  min-height: 100%;
+}
+
+.git-diff-pane {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: none;
+}
+
+.git-diff-pane + .git-diff-pane {
+  border-left: 1px solid var(--color-border);
+}
+
+@container (max-width: 700px) {
+  .git-diff-sbs {
+    display: none;
+  }
+
+  .git-diff-narrow {
+    display: table;
+  }
+}
+
+.git-diff-number + .git-diff-number {
+  left: 4em;
+}
+
+.git-diff-added > .git-diff-number,
+.git-diff-side-added > .git-diff-number {
+  background: var(--color-success-bg);
+}
+
+.git-diff-removed > .git-diff-number,
+.git-diff-side-removed > .git-diff-number {
+  background: var(--color-error-bg);
+}
+
+.git-diff-side-blank > .git-diff-number {
+  background: var(--color-chrome);
+}
+
+.git-diff-side-added {
+  background: var(--color-success-bg);
+}
+
+.git-diff-side-removed {
+  background: var(--color-error-bg);
+}
+
+.git-diff-side-blank {
+  background: var(--color-chrome);
 }
 
 .git-diff-table {
@@ -4059,9 +4190,15 @@ label.task-choice {
   font-size: 0.85rem;
 }
 
+/* The line numbers stay put when the diff scrolls sideways. They need a background of their own, so the text that
+   scrolls under them doesn't show through. */
 .git-diff-number {
-  width: 1%;
-  min-width: 3.5em;
+  position: sticky;
+  left: 0;
+  box-sizing: border-box;
+  width: 4em;
+  min-width: 4em;
+  background: var(--color-surface);
   padding: 0 var(--space-2);
   color: var(--color-text-muted);
   text-align: right;

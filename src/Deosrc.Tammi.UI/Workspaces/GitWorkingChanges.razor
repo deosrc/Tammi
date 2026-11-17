@@ -2,6 +2,7 @@
 @using Deosrc.Tammi.Core.Git
 @using Deosrc.Tammi.Core.Settings
 @using Deosrc.Tammi.Core.Windowing
+@using Deosrc.Tammi.Core.Workspaces
 @inject IJSRuntime JS
 @inject LayoutStateStore LayoutStore
 @inject GitGraphViewOptions Options
@@ -47,10 +48,24 @@
                         @onclick="() => StageAsync(SelectedIn(staged: false))">Stage</button>
                 <button type="button" class="button button-secondary" disabled="@(Graph.UnstagedChanges.Count == 0)"
                         @onclick="() => StageAsync(Graph.UnstagedChanges)">Stage all</button>
-                <button type="button" class="button button-secondary" title="Stash the selected files"
-                        disabled="@(SelectedIn(staged: false).Count == 0 || _stashing)"
-                        @onclick="() => StashAsync(SelectedIn(staged: false))">Stash</button>
+                <button type="button" class="button button-danger" title="Discard every unstaged change"
+                        disabled="@(Graph.UnstagedChanges.Count == 0)"
+                        @onclick="() => RequestDiscard(null)">Discard all</button>
             </div>
+            @if (Graph.PendingDiscard is { } discard)
+            {
+                <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-discard-title">
+                    <h3 id="confirm-discard-title" class="alert-title">Discard @DiscardSubject(discard)?</h3>
+                    <p>
+                        The changes are lost, and Tammi can't bring them back. Untracked files are deleted.
+                        Staged changes are kept.
+                    </p>
+                    <div class="settings-field-row">
+                        <button type="button" class="button button-danger" @onclick="Graph.ConfirmDiscardAsync">Discard</button>
+                        <button type="button" class="button button-secondary" @onclick="Graph.CancelDiscard">Cancel</button>
+                    </div>
+                </div>
+            }
             @FileList(Graph.UnstagedChanges, staged: false)
         </section>
 
@@ -61,12 +76,27 @@
                         @onclick="() => UnstageAsync(SelectedIn(staged: true))">Unstage</button>
                 <button type="button" class="button button-secondary" disabled="@(Graph.StagedChanges.Count == 0)"
                         @onclick="() => UnstageAsync(Graph.StagedChanges)">Unstage all</button>
-                <button type="button" class="button button-secondary" title="Stash the selected files"
-                        disabled="@(SelectedIn(staged: true).Count == 0 || _stashing)"
-                        @onclick="() => StashAsync(SelectedIn(staged: true))">Stash</button>
             </div>
             @FileList(Graph.StagedChanges, staged: true)
         </section>
+
+        @if (_menu is { } menu)
+        {
+            <ContextMenu @key="menu" X="menu.X" Y="menu.Y" Label="@(menu.Staged ? "Staged changes" : "Unstaged changes")"
+                         OnClose="() => _menu = null">
+                <li role="none">
+                    <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
+                            @onclick="() => StashFromMenu(menu)">@menu.Describe("Stash")</button>
+                </li>
+                @if (!menu.Staged)
+                {
+                    <li role="none">
+                        <button type="button" class="menu-item menu-item-danger" role="menuitem"
+                                @onclick="() => DiscardFromMenu(menu)">@menu.Describe("Discard")…</button>
+                    </li>
+                }
+            </ContextMenu>
+        }
     }
 
     @* Resizes the message's body: drag it up to make the body taller, or focus it and use Up and Down. *@
@@ -268,6 +298,7 @@
             aria-selected="@(isSelected ? "true" : "false")" @key="key" style="--git-commit-tree-depth: @depth"
             title="@(change.OldPath is { } old ? $"{old} → {change.Path}" : change.Path)"
             @onclick="e => ToggleAsync(key, e.CtrlKey || e.MetaKey)"
+            @oncontextmenu="e => OpenFileMenu(e, change, staged)" @oncontextmenu:preventDefault
             @ondblclick="() => MoveAsync(change, staged)">
             <span class="git-commit-file-kind git-graph-file-@kind.ToString().ToLowerInvariant()"
                   title="@(change.IsSubmodule ? "Submodule commit changed" : GitGraphText.Label(kind))">@(change.IsSubmodule ? "S" : GitGraphText.Letter(kind))</span>
@@ -295,7 +326,9 @@
                 var open = !_collapsed.Contains(folderKey);
                 var folderFiles = CommitFileTree.FilesIn(node).ToList();
                 <li role="treeitem" aria-expanded="@(open ? "true" : "false")" @key="folderKey">
-                    <div class="git-working-folder">
+                    <div class="git-working-folder"
+                         @oncontextmenu="e => OpenFolderMenu(e, node.Path, folderFiles.Select(change => byPath[change.Path]).ToList(), staged)"
+                         @oncontextmenu:preventDefault>
                     <button type="button" class="git-commit-file git-commit-folder" title="@node.Path"
                             style="--git-commit-tree-depth: @depth" @onclick="() => ToggleFolder(folderKey)">
                         <svg class="icon icon-small git-commit-folder-chevron @(open ? "open" : null)" viewBox="0 0 24 24"
@@ -384,6 +417,62 @@
 
         return Graph.OpenDiffAsync(staged ? GitDiffSource.Staged : GitDiffSource.Unstaged, change.Path, change.OldPath);
     }
+
+    // The right-click menu of a file or folder: Stash, and Discard on the unstaged list. `Folder` is set when it's
+    // opened on a folder.
+    private sealed record FileMenu(double X, double Y, bool Staged, IReadOnlyList<FileChange> Files, string? Folder)
+    {
+        public string Describe(string verb) =>
+            Folder is not null ? $"{verb} changes in {Folder}"
+            : Files.Count == 1 ? $"{verb} changes"
+            : $"{verb} changes to {Files.Count} files";
+    }
+
+    private FileMenu? _menu;
+
+    // On a selected file the menu is for every selected file in its list. Otherwise it's for the file clicked, which
+    // becomes the selection.
+    private void OpenFileMenu(MouseEventArgs e, FileChange change, bool staged)
+    {
+        string key = Key(change, staged);
+        if (!_selected.Contains(key))
+        {
+            _selected.Clear();
+            _selected.Add(key);
+        }
+
+        _menu = new FileMenu(e.ClientX, e.ClientY, staged, SelectedIn(staged), null);
+    }
+
+    private void OpenFolderMenu(MouseEventArgs e, string folder, IReadOnlyList<FileChange> files, bool staged) =>
+        _menu = new FileMenu(e.ClientX, e.ClientY, staged, files, folder);
+
+    private void DiscardFromMenu(FileMenu menu)
+    {
+        _menu = null;
+        RequestDiscard(menu.Files);
+    }
+
+    private Task StashFromMenu(FileMenu menu)
+    {
+        _menu = null;
+        return StashAsync(menu.Files);
+    }
+
+    private void RequestDiscard(IReadOnlyCollection<FileChange>? files)
+    {
+        _selected.Clear();
+        _active = null;
+        Graph.CloseDiff();
+        Graph.RequestDiscard(files);
+    }
+
+    private static string DiscardSubject(DiscardRequest request) => request.Files switch
+    {
+        null => "all unstaged changes",
+        { Count: 1 } files => $"the changes to {files[0].Path}",
+        var files => $"the changes to {files.Count} files",
+    };
 
     private Task MoveFolderAsync(IReadOnlyCollection<FileChange> files, bool staged) =>
         staged ? UnstageAsync(files) : StageAsync(files);
