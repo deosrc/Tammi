@@ -35,6 +35,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Remote-only Repository** | A catalogue repository known only through an integration, with no clone on disk yet. It must be cloned, which makes it a Local Repository, before it can be added to a workspace. |
 | **Workspace Worktree** | A `git worktree` of a Local Repository, created inside the Workspace Folder. This is how a repository is included in a workspace. |
 | **Git Graph** | A repository's (or submodule's) commits drawn as lanes, with their branches and tags, shown as a main area tab in the Workspace View. |
+| **Repositories Tab** | The fixed tab next to Home. It lists the Repository Catalogue with each Local Repository's git state (branch, changes, ahead, behind and workspace count) and opens its Git Graph in a tab without a workspace. That graph always shows everything, so it has no workspace branch toggle. |
 | **Pull Request** | A request, on the service hosting a repository (e.g. a GitHub pull request), to merge a branch into another. It's a draft, open, merged or closed (declined), and its checks (e.g. CI builds) passed, are in progress or failed. Tammi shows those from each workspace branch. |
 | **Integration** | A connection to an external service (Bitbucket, GitHub, JIRA, …). It can provide tasks, repositories or both. |
 | **Agent** | An AI coding agent session that runs in the context of a workspace. It can be started, interacted with and stopped. |

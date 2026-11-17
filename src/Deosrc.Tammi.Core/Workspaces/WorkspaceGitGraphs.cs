@@ -61,6 +61,62 @@ public sealed class WorkspaceGitGraphs(IGitRepositoryReader reader, IGitWorkingT
     }
 
     /// <summary>
+    /// The graphs of the repositories open in their own primary tabs outside any workspace, one for each tab, in the
+    /// order they were opened. A tab's other graphs (of its submodules and worktrees) are found with
+    /// <see cref="For"/> and <see cref="StandaloneRepository.IdFor"/>.
+    /// </summary>
+    public IReadOnlyList<WorkspaceGitGraph> StandaloneGraphs()
+    {
+        lock (_lock)
+        {
+            return _graphs.Where(graph => graph.IsPrimary).ToArray();
+        }
+    }
+
+    /// <summary>
+    /// The graph of a repository open in its own primary tab, if there is one.
+    /// </summary>
+    public WorkspaceGitGraph? ForRepository(string repositoryPath)
+    {
+        var id = StandaloneRepository.IdFor(repositoryPath);
+        lock (_lock)
+        {
+            return _graphs.Find(graph => graph.IsPrimary && graph.WorkspaceId == id);
+        }
+    }
+
+    /// <summary>
+    /// Opens a Local Repository's graph in its own primary tab outside any workspace, showing everything. If it's
+    /// already open, returns that graph instead.
+    /// </summary>
+    /// <param name="repositoryPath">The repository whose primary tab it is.</param>
+    /// <param name="path">
+    /// The working directory to show in that tab: a submodule or another worktree of the repository, or
+    /// <see langword="null"/> for the repository itself.
+    /// </param>
+    public WorkspaceGitGraph OpenRepository(string repositoryPath, string? path = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+
+        var id = StandaloneRepository.IdFor(repositoryPath);
+        var graphPath = StandaloneRepository.Normalize(path ?? repositoryPath);
+        WorkspaceGitGraph graph;
+        lock (_lock)
+        {
+            if (_graphs.Find(open => open.IsStandalone && open.WorkspaceId == id && open.Path == graphPath) is { } existing)
+            {
+                return existing;
+            }
+
+            graph = new WorkspaceGitGraph(repositoryPath, graphPath, reader, workingTree, sync, tags, branches, stash, diffs, settings);
+            _graphs.Add(graph);
+        }
+
+        Changed?.Invoke(graph.WorkspaceId);
+        return graph;
+    }
+
+    /// <summary>
     /// Closes a graph. Closing one that's already closed does nothing.
     /// </summary>
     public void Close(WorkspaceGitGraph graph)

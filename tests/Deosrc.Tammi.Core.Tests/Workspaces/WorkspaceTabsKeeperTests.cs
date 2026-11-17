@@ -1,3 +1,5 @@
+using Deosrc.Tammi.Core.Git;
+using Deosrc.Tammi.Core.Tests.Settings;
 using Deosrc.Tammi.Core.Workspaces;
 
 namespace Deosrc.Tammi.Core.Tests.Workspaces;
@@ -67,6 +69,80 @@ public sealed class WorkspaceTabsKeeperTests : IDisposable
 
         Assert.Equal(["a"], saved.WorkspaceIds);
         Assert.Equal("a", saved.ActiveWorkspaceId);
+    }
+
+    private static WorkspaceGitGraphs NewGraphs() => new(
+        new GitRepositoryReader(), new GitWorkingTree(new GitCli()), new GitSync(new GitCli()), new GitTags(new GitCli()),
+        new GitBranches(new GitCli()), new GitStash(new GitCli()), new GitDiffs(new GitRepositoryReader(), new GitCli()),
+        new InMemorySettingsStore());
+
+    [Fact]
+    public async Task RestoreAsync_OpensSavedRepositoryGraphs_SkippingMissingFolders()
+    {
+        var existing = Path.Combine(_directory, "repo");
+        Directory.CreateDirectory(existing);
+        var store = new OpenWorkspaceTabsStore(_directory);
+        await store.SaveAsync(
+            new OpenWorkspaceTabs([]) { RepositoryPaths = [existing, Path.Combine(_directory, "gone")] },
+            CancellationToken);
+        using var graphs = NewGraphs();
+        using var keeper = new WorkspaceTabsKeeper(new WorkspaceTabs(), new FakeStore(), store, graphs);
+
+        await keeper.RestoreAsync(CancellationToken);
+
+        Assert.Equal([existing], graphs.StandaloneGraphs().Select(graph => graph.Path));
+    }
+
+    [Fact]
+    public async Task ShownRepositoryGraph_IsSavedAndRestored()
+    {
+        var repo = Path.Combine(_directory, "repo");
+        Directory.CreateDirectory(repo);
+        var store = new OpenWorkspaceTabsStore(_directory);
+        using (var graphs = NewGraphs())
+        using (var keeper = new WorkspaceTabsKeeper(new WorkspaceTabs(), new FakeStore(), store, graphs))
+        {
+            await keeper.RestoreAsync(CancellationToken);
+            graphs.OpenRepository(repo);
+            keeper.SetActive(null, repo);
+
+            OpenWorkspaceTabs saved = OpenWorkspaceTabs.None;
+            for (var i = 0; i < 100 && saved.ActiveRepositoryPath != repo; i++)
+            {
+                await Task.Delay(20, CancellationToken);
+                saved = await store.LoadAsync(CancellationToken);
+            }
+
+            Assert.Equal(repo, saved.ActiveRepositoryPath);
+        }
+
+        using var restoredGraphs = NewGraphs();
+        using var restoredKeeper = new WorkspaceTabsKeeper(new WorkspaceTabs(), new FakeStore(), store, restoredGraphs);
+
+        Assert.Null(await restoredKeeper.RestoreAsync(CancellationToken));
+        Assert.Equal(repo, restoredKeeper.RestoredRepositoryPath);
+    }
+
+    [Fact]
+    public async Task RepositoryGraphs_AfterRestore_AreSaved()
+    {
+        var store = new OpenWorkspaceTabsStore(_directory);
+        using var graphs = NewGraphs();
+        using var keeper = new WorkspaceTabsKeeper(new WorkspaceTabs(), new FakeStore(), store, graphs);
+        await keeper.RestoreAsync(CancellationToken);
+
+        graphs.OpenRepository("/repos/a");
+        graphs.OpenRepository("/repos/b");
+        graphs.Close(graphs.ForRepository("/repos/a")!);
+
+        OpenWorkspaceTabs saved = OpenWorkspaceTabs.None;
+        for (var i = 0; i < 100 && !saved.RepositoryPaths.SequenceEqual(["/repos/b"]); i++)
+        {
+            await Task.Delay(20, CancellationToken);
+            saved = await store.LoadAsync(CancellationToken);
+        }
+
+        Assert.Equal(["/repos/b"], saved.RepositoryPaths);
     }
 
     [Fact]

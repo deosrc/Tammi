@@ -453,6 +453,11 @@ a {
   text-decoration: none;
 }
 
+/* Only the text gives way when a tab is too narrow, not its icon. */
+.tab-label > .icon {
+  flex: none;
+}
+
 /* The ellipsis needs an inline box: it isn't drawn on a flex container's own text. */
 .tab-label-text {
   overflow: hidden;
@@ -1019,6 +1024,11 @@ label.task-choice {
   height: 100%;
 }
 
+.repository-git {
+  display: flex;
+  height: 100%;
+}
+
 .side-panel {
   display: flex;
   flex: none;
@@ -1501,6 +1511,10 @@ label.task-choice {
   flex: none;
   gap: var(--space-1);
   margin-left: auto;
+}
+
+.git-status-sync-inline {
+  margin-left: 0;
 }
 
 .git-status-sync-chip {
@@ -2192,6 +2206,40 @@ label.task-choice {
   padding: 0;
   background: var(--color-surface);
   font-weight: 600;
+}
+
+/* The Repositories page's table: six columns, where an unreadable repository's problem spans the five status ones. */
+.data-table-repositories {
+  grid-template-columns: repeat(6, minmax(0, max-content));
+}
+
+/* A row that opens something when clicked. The rows are display: contents, so the cursor is inherited by the cells. */
+.data-table-row-action {
+  cursor: pointer;
+}
+
+.data-table-row-action:hover > td {
+  background: var(--color-surface-hover);
+}
+
+.data-table-row-action:focus-visible > td {
+  background: var(--color-surface-hover);
+}
+
+.data-table-repositories {
+  font-size: var(--font-size);
+}
+
+.settings-help.repositories-help {
+  font-size: var(--font-size);
+}
+
+.data-table-repositories th {
+  padding: var(--space-1) var(--space-2);
+}
+
+.data-table-repositories .data-table-span {
+  grid-column: span 5;
 }
 
 .data-table-text {
@@ -4663,4 +4711,26 @@ label.task-choice {
 .git-graph-tag-prompt-actions {
     display: flex;
     gap: 0.5rem;
+}
+
+/* A bar standing in for a value that's still being read. */
+.placeholder-bar {
+  display: block;
+  width: 3em;
+  height: 0.9em;
+  border-radius: var(--radius);
+  background: var(--color-border);
+  animation: placeholder-bar-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes placeholder-bar-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .placeholder-bar {
+    animation: none;
+  }
 }

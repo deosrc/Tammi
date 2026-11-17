@@ -77,6 +77,23 @@ public sealed class WorkspaceTools
     }
 
     /// <summary>
+    /// What a Local Repository outside any workspace can be opened in: the Terminal tool's entry, then the entries of
+    /// each enabled tool whose executable is found and that is offered for a repository, in the order of
+    /// <see cref="ToolSettings.Tools"/>.
+    /// </summary>
+    /// <param name="repositoryPath">The full path of the repository's working directory.</param>
+    /// <param name="settings">The Tools settings.</param>
+    /// <remarks>It reads the repository's folders to find files.</remarks>
+    public IReadOnlyList<ToolEntry> GetEntriesForRepository(string repositoryPath, ToolSettings settings)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var workspace = StandaloneRepository.WorkspaceOf(repositoryPath);
+        return GetEntries(workspace, workspace.Repositories[0], settings);
+    }
+
+    /// <summary>
     /// Groups the entries of the Workspace Folder and its repositories by tool, so each tool is listed once with the
     /// levels it can be launched at.
     /// </summary>

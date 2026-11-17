@@ -1,0 +1,50 @@
+@* The ahead and behind counts of a branch (or the sum over a workspace's repositories) as filled chips with an arrow
+   and the count. Nothing is shown for a count of 0. *@
+@if (Ahead > 0 || Behind > 0)
+{
+    <span class="git-status-sync @(Inline ? "git-status-sync-inline" : null)">
+        @if (Ahead > 0)
+        {
+            <span class="git-status-sync-chip git-status-ahead" title="@TitleFor(Ahead, "ahead of")">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 19V5M5 12l7-7 7 7" />
+                </svg>
+                @Ahead
+            </span>
+        }
+        @if (Behind > 0)
+        {
+            <span class="git-status-sync-chip git-status-behind" title="@TitleFor(Behind, "behind")">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 5v14M19 12l-7 7-7-7" />
+                </svg>
+                @Behind
+            </span>
+        }
+    </span>
+}
+
+@code {
+    [Parameter]
+    public int Ahead { get; set; }
+
+    [Parameter]
+    public int Behind { get; set; }
+
+    /// <summary>
+    /// The upstream the counts are relative to, for the tooltips, if there's a single one.
+    /// </summary>
+    [Parameter]
+    public string? Upstream { get; set; }
+
+    /// <summary>
+    /// Whether the chips sit in a row or table cell, instead of being pushed to the end of a card's heading.
+    /// </summary>
+    [Parameter]
+    public bool Inline { get; set; }
+
+    private string TitleFor(int count, string relation) =>
+        Upstream is null
+            ? $"{count} {(count == 1 ? "commit" : "commits")} {relation.Replace(" of", "")} the upstream"
+            : GitStatusText.AheadBehindTitle(count, relation, Upstream);
+}
