@@ -1,0 +1,405 @@
+@implements IDisposable
+@using Deosrc.Tammi.Core.Agents
+@using Deosrc.Tammi.Core.Git
+@using Deosrc.Tammi.Core.Settings
+@using Deosrc.Tammi.Core.Tools
+@inject WorkspaceTools Tools
+@inject ToolImages ToolImages
+@inject ISettingsStore SettingsStore
+@inject IWorkspaceStore WorkspaceStore
+@inject WorkspaceTabs WorkspaceTabs
+@inject IGitRepositoryReader Reader
+@inject IGitCli Git
+@inject NavigationManager Navigation
+
+@* The side panel of a git tab opened outside any workspace, laid out like the Workspace View's: the workspaces that use
+   the repository, its other worktrees and submodules, and what it can be opened in. *@
+<aside class="side-panel">
+    <div class="side-panel-sections">
+        <SidePanelSection Title="Agents">
+            <HeaderContent>
+                <WorkspaceAgentCounts WorkspaceId="@StandaloneRepository.IdFor(RepositoryPath)" />
+            </HeaderContent>
+            <Actions>
+                <button type="button" class="side-panel-section-action" title="Start a new agent"
+                        aria-label="New agent" aria-haspopup="menu" disabled="@(AgentDefinitions.Count == 0)"
+                        @onclick="OpenNewAgentMenu">
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                </button>
+            </Actions>
+            <ChildContent>
+                <WorkspaceAgentsSection Workspace="StandaloneRepository.WorkspaceOf(RepositoryPath)" Shown="Shown"
+                                        OnShow="agent => OnShowAgent.InvokeAsync(agent)" />
+            </ChildContent>
+        </SidePanelSection>
+        <SidePanelSection Title="Workspaces">
+            @if (!_related.IsLoaded)
+            {
+                <p class="placeholder">Reading…</p>
+            }
+            else if (_related.Workspaces.Count == 0)
+            {
+                <p class="placeholder">No workspaces use this repository</p>
+            }
+            else
+            {
+                <ul class="tool-list">
+                    @foreach (var workspace in _related.Workspaces)
+                    {
+                        <li @key="workspace.Id">
+                            <button type="button" class="tool-item" title="@workspace.Folder"
+                                    @onclick="() => OpenWorkspace(workspace)">
+                                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
+                                </svg>
+                                <span class="tab-label-text">@workspace.Name</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        </SidePanelSection>
+        <SidePanelSection Title="Other Worktrees">
+            @if (!_related.IsLoaded)
+            {
+                <p class="placeholder">Reading…</p>
+            }
+            else if (_related.Worktrees.Count == 0)
+            {
+                <p class="placeholder">No other worktrees</p>
+            }
+            else
+            {
+                <ul class="tool-list">
+                    @foreach (var worktree in _related.Worktrees)
+                    {
+                        <li @key="worktree.Path">
+                            <button type="button" class="tool-item" title="@worktree.Path"
+                                    @onclick="() => OnOpenGit.InvokeAsync(worktree.Path)">
+                                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <circle cx="6" cy="5" r="2" />
+                                    <circle cx="6" cy="19" r="2" />
+                                    <circle cx="18" cy="9" r="2" />
+                                    <path d="M6 7v10M18 11c0 4-12 2-12 6" />
+                                </svg>
+                                <span class="tab-label-text">@(worktree.Branch ?? System.IO.Path.GetFileName(worktree.Path))</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        </SidePanelSection>
+        <SidePanelSection Title="Submodules">
+            @if (!_related.IsLoaded)
+            {
+                <p class="placeholder">Reading…</p>
+            }
+            else if (_related.Submodules.Count == 0)
+            {
+                <p class="placeholder">No submodules</p>
+            }
+            else
+            {
+                <ul class="tool-list">
+                    @foreach (var submodule in _related.Submodules)
+                    {
+                        <li @key="submodule.Path">
+                            <button type="button" class="tool-item" disabled="@(!submodule.IsInitialized)"
+                                    title="@(submodule.IsInitialized ? submodule.Path : "Not checked out")"
+                                    @onclick="() => OnOpenGit.InvokeAsync(submodule.Path)">
+                                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M21 8 12 3 3 8v8l9 5 9-5Z" />
+                                    <path d="m3 8 9 5 9-5M12 13v8" />
+                                </svg>
+                                <span class="tab-label-text">@submodule.Name</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        </SidePanelSection>
+        <SidePanelSection Title="Tools">
+            @if (!_toolsLoaded)
+            {
+                <p class="placeholder">Finding tools…</p>
+            }
+            else if (_entries.Count == 0)
+            {
+                <p class="placeholder">
+                    No tools to open the repository in. Add or enable them in
+                    <a href="@AppRoutes.SettingsTools">Settings</a>.
+                </p>
+            }
+            else
+            {
+                <ul class="tool-list">
+                    @foreach (var entry in _entries)
+                    {
+                        <li @key="@($"{entry.Tool.Name}\0{entry.Path}")">
+                            <button type="button" class="tool-item" title="@entry.Path" @onclick="() => OpenTool(entry)">
+                                <ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" />
+                                <span class="tab-label-text">@entry.Label</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+            @if (_error is not null)
+            {
+                <p class="error">@_error</p>
+            }
+        </SidePanelSection>
+    </div>
+</aside>
+@if (_agentMenu is { } agentMenu)
+{
+    @* A context menu, as the side panel scrolls and would clip a drop-down. *@
+    <ContextMenu @key="agentMenu" X="agentMenu.X" Y="agentMenu.Y" Label="New agent" OnClose="() => _agentMenu = null">
+        @for (var i = 0; i < AgentDefinitions.Count; i++)
+        {
+            var definition = AgentDefinitions[i];
+            var name = string.IsNullOrWhiteSpace(definition.Name) ? WorkspaceAgents.DefaultName : definition.Name;
+            <li role="none" @key="i">
+                <button type="button" class="menu-item" role="menuitem" @onclick="() => StartAgentAsync(definition)">
+                    <AgentIcon Definition="definition" />
+                    @name
+                </button>
+            </li>
+        }
+    </ContextMenu>
+}
+
+@code {
+    private sealed record WorkspaceLink(string Id, string Name, string Folder);
+
+    private sealed record SubmoduleLink(string Name, string Path, bool IsInitialized);
+
+    private sealed record Related(
+        bool IsLoaded,
+        IReadOnlyList<WorkspaceLink> Workspaces,
+        IReadOnlyList<GitWorktreeEntry> Worktrees,
+        IReadOnlyList<SubmoduleLink> Submodules)
+    {
+        public static Related Loading { get; } = new(false, [], [], []);
+    }
+
+    private sealed record AgentMenu(double X, double Y);
+
+    private AgentMenu? _agentMenu;
+    private IReadOnlyList<AgentDefinition> AgentDefinitions => SettingsStore.Current.Agents.Definitions;
+    private Related _related = Related.Loading;
+    private IReadOnlyList<ToolEntry> _entries = [];
+    private string? _error;
+    private string? _loadedPath;
+    private bool _toolsLoaded;
+    private int _toolUpdates;
+    private int _relatedUpdates;
+    private bool _disposed;
+
+    /// <summary>
+    /// The full path of the repository.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string RepositoryPath { get; set; } = "";
+
+    /// <summary>
+    /// The terminal, agent or git graph the repository's tab is showing.
+    /// </summary>
+    [Parameter]
+    public IMainAreaTab? Shown { get; set; }
+
+    /// <summary>
+    /// Shows an agent's secondary tab.
+    /// </summary>
+    [Parameter]
+    public EventCallback<WorkspaceAgent> OnShowAgent { get; set; }
+
+    /// <summary>
+    /// Starts an agent in the repository as a secondary tab.
+    /// </summary>
+    [Parameter]
+    public EventCallback<AgentDefinition> OnStartAgent { get; set; }
+
+    /// <summary>
+    /// Opens the git graph of a submodule or another worktree, by its full path, as a secondary tab.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnOpenGit { get; set; }
+
+    /// <summary>
+    /// Opens a terminal in the repository as a secondary tab.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnOpenTerminal { get; set; }
+
+    protected override void OnInitialized()
+    {
+        SettingsStore.Changed += OnSettingsChanged;
+        WorkspaceStore.Changed += OnWorkspacesChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedPath != RepositoryPath)
+        {
+            _loadedPath = RepositoryPath;
+            _related = Related.Loading;
+            await Task.WhenAll(UpdateRelatedAsync(), UpdateToolsAsync());
+        }
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        SettingsStore.Changed -= OnSettingsChanged;
+        WorkspaceStore.Changed -= OnWorkspacesChanged;
+    }
+
+    private void OnSettingsChanged() => _ = InvokeAsync(UpdateToolsAsync);
+
+    private void OnWorkspacesChanged() => _ = InvokeAsync(UpdateRelatedAsync);
+
+    private static StringComparison PathComparison =>
+        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+    private static string Normalize(string path) => System.IO.Path.TrimEndingDirectorySeparator(path);
+
+    // The workspaces that use the repository, and its other worktrees and submodules. Reads git, so it's done in the
+    // background.
+    private async Task UpdateRelatedAsync()
+    {
+        var update = ++_relatedUpdates;
+        var path = RepositoryPath;
+        var listings = await WorkspaceStore.ListAsync();
+        var related = await Task.Run(async () =>
+        {
+            var workspaces = new List<WorkspaceLink>();
+            var workspaceWorktrees = new List<string>();
+            foreach (var listing in listings)
+            {
+                if (listing.Workspace is not { } workspace)
+                {
+                    continue;
+                }
+
+                var used = workspace.Repositories
+                    .Where(repository => string.Equals(Normalize(repository.LocalRepositoryPath), Normalize(path), PathComparison))
+                    .ToList();
+                if (used.Count > 0)
+                {
+                    workspaces.Add(new WorkspaceLink(workspace.Id, workspace.Name, workspace.Folder));
+                    workspaceWorktrees.AddRange(used.Select(workspace.GetWorktreePath));
+                }
+            }
+
+            IReadOnlyList<GitWorktreeEntry> worktrees = [];
+            try
+            {
+                var result = await Git.RunAsync(path, ["worktree", "list", "--porcelain"], new GitCommandOptions { ThrowOnError = false });
+                if (result.Succeeded)
+                {
+                    // Worktrees that belong to a workspace are listed under it, and the main working tree is this one.
+                    worktrees =
+                    [
+                        .. GitWorktreeList.Parse(result.OutputLines)
+                            .Where(entry => !entry.IsMain
+                                && !workspaceWorktrees.Any(worktree => string.Equals(Normalize(worktree), Normalize(entry.Path), PathComparison))),
+                    ];
+                }
+            }
+            catch (GitException)
+            {
+            }
+
+            IReadOnlyList<SubmoduleLink> submodules = [];
+            try
+            {
+                submodules =
+                [
+                    .. Reader.ReadStatus(path).Submodules.Select(submodule => new SubmoduleLink(
+                        submodule.Name,
+                        System.IO.Path.Combine(path, submodule.Path.Replace('/', System.IO.Path.DirectorySeparatorChar)),
+                        submodule.IsInitialized)),
+                ];
+            }
+            catch (Exception ex) when (ex is GitException or IOException)
+            {
+            }
+
+            return new Related(true, workspaces.OrderBy(workspace => workspace.Name, StringComparer.CurrentCultureIgnoreCase).ToList(), worktrees, submodules);
+        });
+
+        if (update == _relatedUpdates && !_disposed)
+        {
+            _related = related;
+            StateHasChanged();
+        }
+    }
+
+    // Reads the repository's folders for the files file tools open, so it's done in the background.
+    private async Task UpdateToolsAsync()
+    {
+        var update = ++_toolUpdates;
+        var path = RepositoryPath;
+        var settings = SettingsStore.Current.Tools;
+        var entries = await Task.Run(() => Tools.GetEntriesForRepository(path, settings));
+        if (update != _toolUpdates || _disposed)
+        {
+            return;
+        }
+
+        _entries = entries;
+        _toolsLoaded = true;
+        StateHasChanged();
+
+        // The icons are shown once they're found. Until then, each tool shows its generic icon.
+        var withImages = new List<ToolEntry>(entries.Count);
+        foreach (var entry in entries)
+        {
+            withImages.Add(entry with { Image = await ToolImages.GetAsync(entry.Tool, entry.Request?.FileName) });
+        }
+
+        if (update == _toolUpdates && !_disposed)
+        {
+            _entries = withImages;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenNewAgentMenu(MouseEventArgs e) => _agentMenu = new AgentMenu(e.ClientX, e.ClientY);
+
+    private async Task StartAgentAsync(AgentDefinition definition)
+    {
+        _agentMenu = null;
+        await OnStartAgent.InvokeAsync(definition);
+    }
+
+    private void OpenWorkspace(WorkspaceLink workspace)
+    {
+        WorkspaceTabs.Open(workspace.Id, workspace.Name);
+        Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id));
+    }
+
+    private async Task OpenTool(ToolEntry entry)
+    {
+        _error = null;
+        if (entry.OpensTerminal)
+        {
+            // Terminals open as a secondary tab of the repository's tab.
+            await OnOpenTerminal.InvokeAsync();
+            return;
+        }
+
+        try
+        {
+            Tools.Open(entry);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException
+            or System.ComponentModel.Win32Exception)
+        {
+            _error = $"Couldn't open {entry.Label}. {ex.Message}";
+        }
+    }
+}

@@ -32,6 +32,26 @@ public sealed class WorkspaceGitGraphsTests : IDisposable
     }
 
     [Fact]
+    public void OpenRepository_WithAPath_OpensASecondaryGraphInTheRepositorysTab()
+    {
+        var primary = _graphs.OpenRepository("/repos/api");
+        var submodule = _graphs.OpenRepository("/repos/api", "/repos/api/libs/core");
+
+        Assert.True(primary.IsPrimary);
+        Assert.False(submodule.IsPrimary);
+        Assert.Equal(primary.WorkspaceId, submodule.WorkspaceId);
+        Assert.Equal("Git: core", submodule.Name);
+        Assert.Same(submodule, _graphs.OpenRepository("/repos/api", "/repos/api/libs/core"));
+        Assert.Equal([primary], _graphs.StandaloneGraphs());
+        Assert.Equal([primary, submodule], _graphs.For(primary.WorkspaceId));
+
+        _graphs.CloseAll(primary.WorkspaceId);
+
+        Assert.Empty(_graphs.For(primary.WorkspaceId));
+        Assert.Null(_graphs.ForRepository("/repos/api"));
+    }
+
+    [Fact]
     public void Open_AlreadyOpen_ReturnsTheSameGraph()
     {
         Workspace workspace = WorkspaceWith("one");

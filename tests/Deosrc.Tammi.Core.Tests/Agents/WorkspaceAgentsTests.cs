@@ -74,6 +74,38 @@ public sealed class WorkspaceAgentsTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task StartAsync_InAStandaloneRepository_RecordsItsSessionInTheDataFolder_AndGivesNoInitialPrompt()
+    {
+        var data = Path.Combine(_root.FullName, "data");
+        var repository = Path.Combine(_root.FullName, "repos", "api");
+        Directory.CreateDirectory(repository);
+        await using var agents = new WorkspaceAgents(new AgentLauncher(_pty), _settings, _time, appPaths: new TestAppPaths(data));
+        var workspace = StandaloneRepository.WorkspaceOf(repository);
+
+        var agent = await agents.StartAsync(workspace, Prompted, workspace.Repositories[0]);
+
+        var request = Assert.Single(_pty.Requests).Request;
+        Assert.Equal(repository, request.WorkingDirectory);
+        Assert.DoesNotContain("--prompt", request.Arguments);
+        Assert.Equal(workspace.Id, agent.WorkspaceId);
+        Assert.Single(await agents.SessionsOf(workspace).ListAsync(TestContext.Current.CancellationToken));
+        Assert.True(Directory.Exists(Path.Combine(data, "repository-agent-sessions")));
+        // Nothing is added beside the repository.
+        Assert.False(Directory.Exists(workspace.MetadataFolder));
+    }
+
+    private sealed class TestAppPaths(string dataDirectory) : Deosrc.Tammi.Core.Platform.IAppPaths
+    {
+        public string ConfigDirectory => throw new NotSupportedException();
+
+        public string DataDirectory => dataDirectory;
+
+        public string CacheDirectory => throw new NotSupportedException();
+
+        public string LogDirectory => throw new NotSupportedException();
+    }
+
+    [Fact]
     public async Task StartAsync_InRepository_StartsInItsWorktreeAndIsNamedAfterIt()
     {
         var repository = _workspace.Repositories[0];

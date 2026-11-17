@@ -10,6 +10,30 @@ public static class AppRoutes
     public const string Settings = "settings";
 
     /// <summary>
+    /// The Repositories page: the Repository Catalogue with each repository's git state.
+    /// </summary>
+    public const string Repositories = "repositories";
+
+    private const string RepositoryGitPrefix = Repositories + "/git/";
+
+    /// <summary>
+    /// The path of the tab with the git graph of a Local Repository, opened outside any workspace.
+    /// </summary>
+    public static string RepositoryGit(string repositoryPath) => RepositoryGitPrefix + Uri.EscapeDataString(repositoryPath);
+
+    /// <summary>
+    /// Gets the repository whose git tab a path is, or <see langword="null"/> if it isn't one.
+    /// </summary>
+    /// <param name="path">A path relative to the base URI, without its query or fragment.</param>
+    public static string? RepositoryGitPathOf(string path)
+    {
+        var trimmed = path.TrimEnd('/');
+        return trimmed.StartsWith(RepositoryGitPrefix, StringComparison.Ordinal) && trimmed.Length > RepositoryGitPrefix.Length
+            ? Uri.UnescapeDataString(trimmed[RepositoryGitPrefix.Length..])
+            : null;
+    }
+
+    /// <summary>
     /// The AI usage page.
     /// </summary>
     public const string Usage = "usage";

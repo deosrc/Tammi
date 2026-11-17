@@ -25,14 +25,21 @@
     {
         Navigation.LocationChanged += OnLocationChanged;
         OpenRequests.Requested += OnOpenRequested;
-        TabsKeeper.SetActive(ActiveWorkspaceId());
+        SetActiveTab();
 
         // Opens the tabs from last time, once per app run. The app starts on Home, so the tab that was shown
         // is shown again, unless the app was started on another page.
         var shown = await TabsKeeper.RestoreAsync();
-        if (shown is not null && Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/') == AppRoutes.Home)
+        if (Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/') == AppRoutes.Home)
         {
-            Navigation.NavigateTo(AppRoutes.Workspace(shown));
+            if (shown is not null)
+            {
+                Navigation.NavigateTo(AppRoutes.Workspace(shown));
+            }
+            else if (TabsKeeper.RestoredRepositoryPath is { } repository)
+            {
+                Navigation.NavigateTo(AppRoutes.RepositoryGit(repository));
+            }
         }
     }
 
@@ -53,12 +60,13 @@
     });
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) =>
-        TabsKeeper.SetActive(ActiveWorkspaceId());
+        SetActiveTab();
 
-    private string? ActiveWorkspaceId()
+    private void SetActiveTab()
     {
         var path = Navigation.ToBaseRelativePath(Navigation.Uri);
         var end = path.IndexOfAny(['?', '#']);
-        return AppRoutes.WorkspaceIdOf(end < 0 ? path : path[..end]);
+        path = end < 0 ? path : path[..end];
+        TabsKeeper.SetActive(AppRoutes.WorkspaceIdOf(path), AppRoutes.RepositoryGitPathOf(path));
     }
 }

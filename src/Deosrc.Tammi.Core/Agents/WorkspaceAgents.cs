@@ -14,13 +14,17 @@ namespace Deosrc.Tammi.Core.Agents;
 /// </summary>
 /// <remarks>
 /// Each agent's Agent Sessions are recorded in its workspace's <c>.tammi/agent-sessions.json</c> (see
-/// <see cref="SessionsOf"/>) as soon as they're known, so they can be resumed after a restart.
+/// <see cref="SessionsOf"/>) as soon as they're known, so they can be resumed after a restart. A repository open in its
+/// own tab outside any workspace (see <see cref="StandaloneRepository"/>) has agents too, but it has no <c>.tammi</c>
+/// folder, and Tammi never adds files to a repository or its parent folder, so its sessions are recorded in the app's
+/// data folder instead and its agents aren't given an initial prompt, which is about a workspace's tasks.
 /// </remarks>
 public sealed class WorkspaceAgents(
     AgentLauncher launcher,
     ISettingsStore settingsStore,
     TimeProvider timeProvider,
-    ILogger<WorkspaceAgents>? logger = null) : IAsyncDisposable
+    ILogger<WorkspaceAgents>? logger = null,
+    IAppPaths? appPaths = null) : IAsyncDisposable
 {
     /// <summary>
     /// The name of an agent whose definition has no name.
@@ -78,15 +82,27 @@ public sealed class WorkspaceAgents(
     }
 
     /// <summary>
-    /// The store of a workspace's recorded Agent Sessions, in its <c>.tammi/</c> folder.
+    /// The store of a workspace's recorded Agent Sessions, in its <c>.tammi/</c> folder, or for a standalone
+    /// repository, in the app's data folder.
     /// </summary>
     public IAgentSessionStore SessionsOf(Workspace workspace)
     {
         ArgumentNullException.ThrowIfNull(workspace);
-        var path = Path.Combine(workspace.MetadataFolder, AgentSessionFileStore.DefaultFileName);
+        var path = StandaloneRepository.IsStandaloneId(workspace.Id)
+            ? StandaloneSessionsFile(workspace)
+            : Path.Combine(workspace.MetadataFolder, AgentSessionFileStore.DefaultFileName);
         return _sessionStores.GetOrAdd(
             FileSystemPaths.Normalize(path),
             file => new AgentSessionFileStore(file, _logger));
+    }
+
+    private string StandaloneSessionsFile(Workspace workspace)
+    {
+        var directory = (appPaths ?? throw new InvalidOperationException(
+            "A repository's agent sessions are kept in the app's data folder, which isn't known.")).DataDirectory;
+        var name = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(FileSystemPaths.Normalize(workspace.Id))))[..16];
+        return Path.Combine(directory, "repository-agent-sessions", name + ".json");
     }
 
     /// <summary>
@@ -122,7 +138,7 @@ public sealed class WorkspaceAgents(
         ArgumentNullException.ThrowIfNull(definition);
 
         var folder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
-        var initialPrompt = definition.AcceptsInitialPrompt
+        var initialPrompt = definition.AcceptsInitialPrompt && !StandaloneRepository.IsStandaloneId(workspace.Id)
             ? await CreateInitialPromptAsync(workspace).ConfigureAwait(false)
             : null;
 

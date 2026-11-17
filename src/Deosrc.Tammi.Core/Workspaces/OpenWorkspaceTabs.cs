@@ -8,6 +8,17 @@ namespace Deosrc.Tammi.Core.Workspaces;
 public sealed record OpenWorkspaceTabs(IReadOnlyList<string> WorkspaceIds, string? ActiveWorkspaceId = null)
 {
     /// <summary>
+    /// The paths of the Local Repositories whose git graphs were open in tabs outside any workspace, in tab order.
+    /// </summary>
+    public IReadOnlyList<string> RepositoryPaths { get; init; } = [];
+
+    /// <summary>
+    /// The repository whose git graph tab was shown, or <c>null</c> if another page was. It is one of
+    /// <see cref="RepositoryPaths"/>.
+    /// </summary>
+    public string? ActiveRepositoryPath { get; init; }
+
+    /// <summary>
     /// No tabs.
     /// </summary>
     public static OpenWorkspaceTabs None { get; } = new([]);
