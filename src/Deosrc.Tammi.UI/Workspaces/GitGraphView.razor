@@ -140,13 +140,11 @@
     @if (_branchPrompt is { } branchPrompt)
     {
         <form class="git-graph-tag-prompt" @onsubmit="SubmitBranchPromptAsync" @onsubmit:preventDefault="true">
-            {
-                <label>
-                    @(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")
-                    <input type="text" class="input" @bind="_branchName" @bind:event="oninput" autofocus
-                           spellcheck="false" />
-                </label>
-            }
+            <label>
+                @(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")
+                <input type="text" class="input" @bind="_branchName" @bind:event="oninput" autofocus
+                       spellcheck="false" />
+            </label>
             <div class="git-graph-tag-prompt-actions">
                 <button type="submit" class="button" disabled="@(!CanSubmitBranchPrompt)">
                     @(branchPrompt.Kind == BranchPromptKind.Create ? "Create and switch" : "Rename branch")
