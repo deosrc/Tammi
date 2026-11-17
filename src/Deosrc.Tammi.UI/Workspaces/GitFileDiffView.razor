@@ -1,7 +1,8 @@
 @using Deosrc.Tammi.Core.Git
 @using Deosrc.Tammi.Core.Settings
-@implements IDisposable
+@implements IAsyncDisposable
 @inject ISettingsStore Settings
+@inject IJSRuntime JS
 @inject GitGraphViewOptions Options
 @* A file's diff, shown in place of the git graph: the file's path and a close button that goes back to the graph,
    then the changed lines, unified or side by side as the settings say. Side by side falls back to unified when the
@@ -34,7 +35,7 @@
         </button>
     </header>
 
-    <div class="git-diff-body">
+    <div class="git-diff-body" @ref="_body">
         @if (Graph.DiffProblem is { } problem)
         {
             <p class="error">Couldn't read the diff. @problem</p>
@@ -55,31 +56,38 @@
         {
             @if (Current.DiffLayout == GitDiffLayout.SideBySide && !IsSubmodule(diff))
             {
-                <table class="git-diff-table git-diff-sbs" style="@TabStyle">
-                    <colgroup><col class="git-diff-col-number" /><col /><col class="git-diff-col-number" /><col /></colgroup>
-                    <tbody>
-                        @foreach (var hunk in diff.Hunks)
-                        {
-                            <tr class="git-diff-hunk"><td colspan="4">@hunk.Header</td></tr>
-                            @foreach (var row in SideBySideAligner.Align(hunk))
-                            {
-                                @if (row.IsNote)
-                                {
-                                    <tr class="git-diff-line git-diff-note"><td colspan="4" class="git-diff-text">@((row.Left ?? row.Right)!.Text)</td></tr>
-                                }
-                                else
-                                {
-                                    <tr class="git-diff-line">
-                                        <td class="git-diff-number git-diff-side-@Side(row.Left)">@row.Left?.OldNumber</td>
-                                        <td class="git-diff-text git-diff-half git-diff-side-@Side(row.Left)">@row.Left?.Text</td>
-                                        <td class="git-diff-number git-diff-side-@Side(row.Right)">@row.Right?.NewNumber</td>
-                                        <td class="git-diff-text git-diff-half git-diff-side-@Side(row.Right)">@row.Right?.Text</td>
-                                    </tr>
-                                }
-                            }
-                        }
-                    </tbody>
-                </table>
+                @* Two panes, each half the width and each scrolling sideways by itself when its lines are too long. The
+                   script keeps their scroll positions the same. Each row is one line high, so the panes stay aligned. *@
+                <div class="git-diff-sbs" style="@TabStyle">
+                    @foreach (var side in new[] { true, false })
+                    {
+                        <div class="git-diff-pane" aria-label="@(side ? "Old version" : "New version")">
+                            <table class="git-diff-table">
+                                <tbody>
+                                    @foreach (var hunk in diff.Hunks)
+                                    {
+                                        <tr class="git-diff-hunk"><td colspan="2">@(side ? hunk.Header : "")&nbsp;</td></tr>
+                                        @foreach (var row in SideBySideAligner.Align(hunk))
+                                        {
+                                            var line = side ? row.Left : row.Right;
+                                            @if (row.IsNote)
+                                            {
+                                                <tr class="git-diff-line git-diff-note"><td class="git-diff-number"></td><td class="git-diff-text">@(side ? row.Left?.Text : "")&nbsp;</td></tr>
+                                            }
+                                            else
+                                            {
+                                                <tr class="git-diff-line git-diff-side-@Side(line)">
+                                                    <td class="git-diff-number">@(side ? line?.OldNumber : line?.NewNumber)</td>
+                                                    <td class="git-diff-text">@line?.Text&nbsp;</td>
+                                                </tr>
+                                            }
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
             }
             @* Always there for a unified diff, and for a side by side one it's what shows when the space is too narrow. *@
             <table class="@(Current.DiffLayout == GitDiffLayout.SideBySide ? "git-diff-table git-diff-narrow" : "git-diff-table")" style="@TabStyle">
@@ -122,7 +130,43 @@
         Settings.Changed += OnSettingsChanged;
     }
 
-    public void Dispose() => Settings.Changed -= OnSettingsChanged;
+    private ElementReference _body;
+    private IJSObjectReference? _module;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/Deosrc.Tammi.UI/Workspaces/GitFileDiffView.razor.js");
+            await _module.InvokeVoidAsync("attach", _body);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The web view has gone.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Settings.Changed -= OnSettingsChanged;
+        try
+        {
+            if (_module is not null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The web view has gone.
+        }
+    }
 
     // The layout and tab width are only drawn differently. The whitespace and context lines need the diff read again.
     private void OnSettingsChanged() => _ = InvokeAsync(async () =>
