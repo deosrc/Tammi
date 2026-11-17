@@ -49,18 +49,28 @@
                                @onchange="e => Options.SetDiffIgnoreBlankLinesAsync(e.Value is true)" />
                         Ignore blank lines
                     </label>
-                    <label>
-                        Tab width (columns)
-                        <input @key="_numberRevision" type="number" class="settings-number"
-                               min="@GitSettings.MinDiffTabWidth" max="@GitSettings.MaxDiffTabWidth" step="1"
-                               value="@Current.DiffTabWidth" @onchange="OnTabWidthChanged" />
-                    </label>
-                    <label>
-                        Context lines
-                        <input @key="_numberRevision" type="number" class="settings-number"
-                               min="0" max="@GitDiffOptions.MaxContextLines" step="1"
-                               value="@Current.DiffContextLines" @onchange="OnContextLinesChanged" />
-                    </label>
+                    <div class="git-diff-settings-field">
+                        <label for="git-diff-tab-width">Tab width (columns)</label>
+                        <div class="git-diff-stepper">
+                            <button type="button" class="button button-secondary" aria-label="Decrease"
+                                    disabled="@(Current.DiffTabWidth <= GitSettings.MinDiffTabWidth)" @onclick="() => Options.SetDiffTabWidthAsync(Current.DiffTabWidth - 1)">−</button>
+                            <input @key="_numberRevision" id="git-diff-tab-width" type="number" class="settings-number"
+                                   min="GitSettings.MinDiffTabWidth" max="GitSettings.MaxDiffTabWidth" step="1" value="@Current.DiffTabWidth" @onchange="OnTabWidthChanged" />
+                            <button type="button" class="button button-secondary" aria-label="Increase"
+                                    disabled="@(Current.DiffTabWidth >= GitSettings.MaxDiffTabWidth)" @onclick="() => Options.SetDiffTabWidthAsync(Current.DiffTabWidth + 1)">+</button>
+                        </div>
+                    </div>
+                    <div class="git-diff-settings-field">
+                        <label for="git-diff-context">Context lines</label>
+                        <div class="git-diff-stepper">
+                            <button type="button" class="button button-secondary" aria-label="Decrease"
+                                    disabled="@(Current.DiffContextLines <= 0)" @onclick="() => Options.SetDiffContextLinesAsync(Current.DiffContextLines - 1)">−</button>
+                            <input @key="_numberRevision" id="git-diff-context" type="number" class="settings-number"
+                                   min="0" max="GitDiffOptions.MaxContextLines" step="1" value="@Current.DiffContextLines" @onchange="OnContextLinesChanged" />
+                            <button type="button" class="button button-secondary" aria-label="Increase"
+                                    disabled="@(Current.DiffContextLines >= GitDiffOptions.MaxContextLines)" @onclick="() => Options.SetDiffContextLinesAsync(Current.DiffContextLines + 1)">+</button>
+                        </div>
+                    </div>
                     <p class="settings-help">Only changes what the diff shows, never the files. Kept for the next diff.</p>
                 </div>
             }

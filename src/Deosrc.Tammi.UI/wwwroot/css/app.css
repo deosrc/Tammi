@@ -4070,6 +4070,33 @@ label.task-choice {
   gap: var(--space-1);
 }
 
+.git-diff-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* A number with a minus button before it and a plus button after it, instead of the browser's up and down arrows. */
+.git-diff-stepper {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+
+.git-diff-stepper input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.git-diff-stepper input::-webkit-inner-spin-button,
+.git-diff-stepper input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
 .git-diff-settings-popover .git-diff-settings-check {
   flex-direction: row;
   align-items: center;
