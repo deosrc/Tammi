@@ -51,7 +51,8 @@ public static class MauiProgram
 
             // Closing the window warns first if any agents are running.
             var agents = services.GetRequiredService<WorkspaceAgents>();
-            CloseConfirmation.Attach(window, agents);
+            var updater = services.GetRequiredService<Deosrc.Tammi.Core.Updates.AppUpdater>();
+            CloseConfirmation.Attach(window, agents, updater.CancelRestart);
 
             // All terminals and agents end when the app closes. They're ended off the UI thread, which is waiting for
             // them.
@@ -61,6 +62,10 @@ public static class MauiProgram
                 Task.Run(() => Task.WhenAll(
                     terminals.DisposeAsync().AsTask(),
                     agents.DisposeAsync().AsTask())).GetAwaiter().GetResult();
+
+                // Let go of the instance lock before starting the new version, or it would see this copy still running.
+                _instanceLock.Dispose();
+                updater.StartInstalledVersionIfRequested();
                 services.StopTammiLogging();
             };
         })));

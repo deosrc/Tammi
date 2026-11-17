@@ -1,0 +1,36 @@
+@* Shown instead of the app when git can't be found. It looks like the UI crash screen (see #blazor-error-ui). *@
+<div class="error-backdrop" role="alertdialog" aria-modal="true" aria-labelledby="git-missing-title">
+    <div class="error-dialog">
+        <h2 id="git-missing-title">Git isn't installed</h2>
+        <p>
+            @AppInfo.Name needs git, and it can't be found. Install it, then check again.
+        </p>
+        <p>
+            On Windows, run <code>winget install Git.Git</code>. On Linux, use your package manager, e.g.
+            <code>sudo apt install git</code>. Or download it from
+            <a href="https://git-scm.com/downloads" target="_blank" rel="noreferrer">git-scm.com/downloads</a>.
+            If git was installed while Tammi was open, restart Tammi.
+        </p>
+        <button type="button" class="reload" disabled="@_checking" @onclick="CheckAgainAsync">Check again</button>
+    </div>
+</div>
+
+@code {
+    private bool _checking;
+
+    [Parameter, EditorRequired]
+    public EventCallback OnCheckAgain { get; set; }
+
+    private async Task CheckAgainAsync()
+    {
+        _checking = true;
+        try
+        {
+            await OnCheckAgain.InvokeAsync();
+        }
+        finally
+        {
+            _checking = false;
+        }
+    }
+}

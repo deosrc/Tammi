@@ -8,6 +8,23 @@ opens everything in your other tools.
 
 See [docs/CONTEXT.md](docs/CONTEXT.md) for the full product context.
 
+## Installing
+
+Run the install script for your OS. It downloads the latest framework-dependent release for your OS and architecture into your per-user versions folder, then runs it. Tammi creates its application menu entry on startup. The .NET 10 runtime must be installed.
+
+```shell
+# Linux
+curl -fsSL https://github.com/deosrc/Tammi/releases/latest/download/install.sh | sh
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://github.com/deosrc/Tammi/releases/latest/download/install.ps1 | iex
+```
+
+Each version is kept in its own folder: `%LOCALAPPDATA%\Tammi\Versions\<version>` on Windows and
+`~/.local/share/tammi/versions/<version>` on Linux (under `$XDG_DATA_HOME`). Tammi checks for updates and installs them from within the app.
+
 ## Building and running
 
 The UI is a set of Blazor components in a shared Razor class library (`src/Deosrc.Tammi.UI`), shown by a native host
@@ -19,6 +36,7 @@ for each platform:
 | `src/Deosrc.Tammi.UI` | Shared Blazor UI |
 | `src/Deosrc.Tammi.Windows` | Windows host: .NET MAUI Blazor Hybrid (`BlazorWebView`) |
 | `src/Deosrc.Tammi.Linux` | Linux host: Photino.Blazor |
+| `scripts/install.sh`, `scripts/install.ps1` | Bootstrap scripts that download and run the latest matching release |
 | `tests/Deosrc.Tammi.Core.Tests` | xUnit tests |
 
 ### Prerequisites

@@ -25,6 +25,7 @@ public static class AppRoutes
         new("Repositories", SettingsRepositories),
         new("Agents", Settings + "/agents"),
         new("Tools", SettingsTools),
+        new("Updates", SettingsUpdates),
         new("About", About),
     ];
 
@@ -35,6 +36,8 @@ public static class AppRoutes
     public const string SettingsRepositories = Settings + "/repositories";
 
     public const string SettingsTools = Settings + "/tools";
+
+    public const string SettingsUpdates = Settings + "/updates";
 
     public const string About = Settings + "/about";
 
