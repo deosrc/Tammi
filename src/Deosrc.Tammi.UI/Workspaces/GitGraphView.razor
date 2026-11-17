@@ -195,7 +195,7 @@
         <form class="git-graph-tag-prompt" @onsubmit="SubmitBranchPromptAsync" @onsubmit:preventDefault="true">
             <label>
                 @(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")
-                <input type="text" class="input" @bind="_branchName" @bind:event="oninput" autofocus
+                <input type="text" class="input" @bind="_branchName" @bind:event="oninput" @ref="_branchInput"
                        spellcheck="false" />
             </label>
             <div class="git-graph-tag-prompt-actions">
@@ -220,7 +220,7 @@
               @onsubmit="ConfirmAsync" @onsubmit:preventDefault="true">
             <p>@confirm.Message</p>
             <div class="git-graph-tag-prompt-actions">
-                <button type="submit" class="button button-danger" autofocus>Delete</button>
+                <button type="submit" class="button button-danger" @ref="_confirmButton">Delete</button>
                 <button type="button" class="button button-secondary" @onclick="() => _confirm = null">Cancel</button>
             </div>
         </form>
@@ -595,6 +595,12 @@
     private ElementReference _header;
     private ElementReference _body;
     private ElementReference _splitter;
+    private ElementReference _branchInput;
+    private ElementReference _confirmButton;
+
+    // Set when the branch prompt or the delete confirmation opens, so the next render moves focus into it.
+    private bool _focusBranchInput;
+    private bool _focusConfirm;
     private IJSObjectReference? _splitterScript;
     private DotNetObjectReference<GitGraphView>? _self;
     private Virtualize<GitGraphItem>? _virtualize;
@@ -708,6 +714,17 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_focusBranchInput && _branchPrompt is not null)
+        {
+            _focusBranchInput = false;
+            await _branchInput.FocusAsync();
+        }
+        else if (_focusConfirm && _confirm is not null)
+        {
+            _focusConfirm = false;
+            await _confirmButton.FocusAsync();
+        }
+
         if (!firstRender)
         {
             return;
@@ -1011,6 +1028,7 @@
     {
         _commitMenu = null;
         _confirm = new Confirmation(message, action);
+        _focusConfirm = true;
     }
 
     private void ConfirmDeleteBranch(string branch, bool deleteLocal, bool deleteRemote, GitUpstream? upstream)
@@ -1047,6 +1065,7 @@
         _commitMenu = null;
         _branchName = "";
         _branchPrompt = new BranchPrompt(BranchPromptKind.Create, menu.Sha);
+        _focusBranchInput = true;
     }
 
     private void StartRenameBranch(string branch)
@@ -1054,6 +1073,7 @@
         _commitMenu = null;
         _branchName = branch;
         _branchPrompt = new BranchPrompt(BranchPromptKind.Rename, branch);
+        _focusBranchInput = true;
     }
 
     private async Task RunBranchAsync(Func<Task<bool>> action)
