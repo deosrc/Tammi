@@ -60,6 +60,8 @@ public sealed partial class GitCli(GitCliOptions? options = null, ILogger<GitCli
         GitCommandOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         options ??= new GitCommandOptions();
         string[] args = [.. arguments];
 

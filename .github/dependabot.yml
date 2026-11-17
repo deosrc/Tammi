@@ -11,12 +11,18 @@ updates:
   - package-ecosystem: nuget
     directory: /
     patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     multi-ecosystem-group: all-dependencies
 
   # The SDK version pinned in global.json.
   - package-ecosystem: dotnet-sdk
     directory: /
     patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     multi-ecosystem-group: all-dependencies
 
   # Actions used by the workflows in .github/workflows.
