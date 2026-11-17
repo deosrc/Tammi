@@ -469,6 +469,11 @@ a {
   color: var(--color-text);
 }
 
+/* The new release notice, at the right end of the footer. */
+.update-footer {
+  margin-left: auto;
+}
+
 .usage-footer-title {
   font-size: 0.625rem;
   letter-spacing: 0.08em;

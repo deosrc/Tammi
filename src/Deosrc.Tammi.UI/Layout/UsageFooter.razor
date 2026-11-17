@@ -1,11 +1,15 @@
 @implements IDisposable
+@using Deosrc.Tammi.Core.Platform
 @using Deosrc.Tammi.Core.Usage
 @using Deosrc.Tammi.UI.Components
 @inject AgentUsageMonitor Monitor
 @inject UsageTabState TabState
 @inject NavigationManager Navigation
+@inject AppUpdater Updater
+@inject IAppCloser AppCloser
 
-@* The chosen agent's limits as small progress bars, shown throughout the app. Clicking opens the usage tab. *@
+@* The chosen agent's limits as small progress bars, shown throughout the app. Clicking opens the usage tab. On the right,
+   a newer release of Tammi, if there is one: clicking opens the Updates settings, or once it's installed, closes Tammi. *@
 <footer class="app-footer">
     <button type="button" class="usage-footer" title="@Title" aria-label="@Title" @onclick="OpenUsage">
         <span class="usage-footer-title">USAGE</span>
@@ -28,6 +32,23 @@
             </span>
         }
     </button>
+    @if (Updater.CanUpdate && Updater.Available is { } release)
+    {
+        @if (Updater.Status == UpdateStatus.Installed)
+        {
+            <button type="button" class="usage-footer update-footer" title="Close Tammi, to use the new version after it's started again"
+                    @onclick="AppCloser.Close">
+                Restart to update
+            </button>
+        }
+        else if (Updater.Status is UpdateStatus.Available or UpdateStatus.Installing or UpdateStatus.Failed)
+        {
+            <button type="button" class="usage-footer update-footer" title="Open the update settings"
+                    @onclick="OpenUpdates">
+                @release.Version is available!
+            </button>
+        }
+    }
 </footer>
 
 @code {
@@ -49,12 +70,14 @@
     protected override void OnInitialized()
     {
         Monitor.Changed += OnChanged;
+        Updater.Changed += OnChanged;
         _ = PollAsync(_cts!.Token);
     }
 
     public void Dispose()
     {
         Monitor.Changed -= OnChanged;
+        Updater.Changed -= OnChanged;
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
@@ -65,6 +88,8 @@
         TabState.Open();
         Navigation.NavigateTo(AppRoutes.Usage);
     }
+
+    private void OpenUpdates() => Navigation.NavigateTo(AppRoutes.SettingsUpdates);
 
     private async Task PollAsync(CancellationToken cancellationToken)
     {
