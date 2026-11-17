@@ -406,9 +406,10 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - **Branches:** right-clicking a commit opens a menu that can create a branch on it (named in a prompt, and
     switched to or not). For each local branch on the commit, the menu can switch to it, rename it (its remote
     branch isn't renamed) and delete it; the checked out branch can't be deleted, and the workspace branch can't
-    be renamed or deleted. Deleting a branch asks whether to delete the local branch, the remote branch it tracks,
-    or both (the remote choices need an upstream). A remote-tracking branch on the commit can be switched to, which
-    creates a local branch that tracks it, or deleted from its remote. A failure (e.g. local changes in the way, or a
+    be renamed or deleted. "Delete branch" is a submenu offering the local branch, the remote branch it tracks or both
+    (the remote choices need an upstream). A remote-tracking branch on the commit can be switched to, which creates a
+    local branch that tracks it, or deleted from its remote. Every delete, including a tag's, asks for confirmation
+    first, naming what will be deleted. A failure (e.g. local changes in the way, or a
     branch checked out in another worktree) is shown above the graph, and the graph is read again either way.
   - Large histories stay fast: only the rows in view are drawn, and commits are read 500 at a time as the list
     scrolls. The repository stays open while the tab is, so later pages don't walk the history again.
