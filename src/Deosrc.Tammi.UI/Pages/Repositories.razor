@@ -33,13 +33,16 @@
                     <th scope="col">Ahead</th>
                     <th scope="col">Behind</th>
                     <th scope="col">Workspaces</th>
-                    <th scope="col"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var row in State.Rows)
                 {
-                    <tr @key="row.Repository.Path">
+                    var canOpen = row.IsLoaded && row.Problem is null;
+                    <tr @key="row.Repository.Path" class="@(canOpen ? "data-table-row-action" : null)"
+                        tabindex="@(canOpen ? "0" : null)" title="@(canOpen ? "Open the git graph" : null)"
+                        @onclick="() => OpenGit(row.Repository, canOpen)"
+                        @onkeydown="e => OnRowKeyDown(e, row.Repository, canOpen)">
                         <td title="@row.Repository.Path">@row.Repository.Name</td>
                         @if (!row.IsLoaded)
                         {
@@ -69,12 +72,6 @@
                             </td>
                             <td>@row.WorkspaceCount</td>
                         }
-                        <td>
-                            <button type="button" class="button button-secondary" disabled="@(!row.IsLoaded || row.Problem is not null)"
-                                    @onclick="() => OpenGit(row.Repository)">
-                                Git…
-                            </button>
-                        </td>
                     </tr>
                 }
             </tbody>
@@ -93,8 +90,21 @@
 
     private void OnStateChanged() => _ = InvokeAsync(StateHasChanged);
 
-    private void OpenGit(CatalogueRepository repository)
+    private void OnRowKeyDown(KeyboardEventArgs e, CatalogueRepository repository, bool canOpen)
     {
+        if (e.Key is "Enter" or " ")
+        {
+            OpenGit(repository, canOpen);
+        }
+    }
+
+    private void OpenGit(CatalogueRepository repository, bool canOpen)
+    {
+        if (!canOpen)
+        {
+            return;
+        }
+
         GitGraphs.OpenRepository(repository.Path);
         Navigation.NavigateTo(AppRoutes.RepositoryGit(repository.Path));
     }
