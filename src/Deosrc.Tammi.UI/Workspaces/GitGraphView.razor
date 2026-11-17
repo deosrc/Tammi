@@ -69,6 +69,28 @@
                 Push
             </button>
         </div>
+        <div class="git-graph-sync" role="group" aria-label="Stash">
+            <button type="button" class="button button-secondary button-icon"
+                    title="Stash every change, including new files"
+                    disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
+                    @onclick="() => RunStashAsync(Graph.StashAsync())">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 3v11M8 10l4 4 4-4" />
+                    <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
+                </svg>
+                Stash
+            </button>
+            <button type="button" class="button button-secondary button-icon"
+                    title="Apply the newest stash and drop it"
+                    disabled="@(Graph.Stashes.Count == 0 || _stashing)"
+                    @onclick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 14V3M8 7l4-4 4 4" />
+                    <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
+                </svg>
+                Pop
+            </button>
+        </div>
         <button type="button" class="button button-secondary button-icon git-graph-refresh" title="Read the graph again"
                 aria-label="Refresh" disabled="@Graph.IsLoading" @onclick="Graph.RefreshAsync">
             <svg class="icon icon-small @(Graph.IsLoading ? "icon-spin" : null)" viewBox="0 0 24 24" aria-hidden="true"
@@ -122,6 +144,37 @@
         </div>
     }
 
+    @if (Graph.DropRequest is { } dropRequest)
+    {
+        <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-drop-stash-title">
+            <h3 id="confirm-drop-stash-title" class="alert-title">Drop @dropRequest.Name?</h3>
+            <p>
+                "@dropRequest.Message" is deleted without being applied, and Tammi can't bring it back.
+            </p>
+            <div class="settings-field-row">
+                <button type="button" class="button button-danger" disabled="@_stashing"
+                        @onclick="() => RunStashAsync(Graph.ConfirmDropStashAsync())">Drop stash</button>
+                <button type="button" class="button button-secondary" disabled="@_stashing"
+                        @onclick="Graph.CancelDropStash">Cancel</button>
+            </div>
+        </div>
+    }
+
+    @if (Graph.StashProblem is { } stashProblem)
+    {
+        <div class="error git-graph-sync-error" role="alert">
+            <div class="git-graph-sync-error-body">
+                <p>@stashProblem</p>
+            </div>
+            <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
+                    title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissStashProblem">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+            </button>
+        </div>
+    }
+
     @if (_tagPrompt is { } prompt)
     {
         <form class="git-graph-tag-prompt" @onsubmit="() => SubmitTagPromptAsync(push: false)" @onsubmit:preventDefault="true">
@@ -141,6 +194,24 @@
                 <button type="button" class="button button-secondary" @onclick="() => _tagPrompt = null">Cancel</button>
             </div>
         </form>
+    }
+
+    @if (_stashMenu is { } stashMenu)
+    {
+        <ContextMenu @key="stashMenu" X="stashMenu.X" Y="stashMenu.Y" Label="Stash" OnClose="() => _stashMenu = null">
+            <li role="none">
+                <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
+                        @onclick="() => RunStashMenuAsync(Graph.PopStashAsync(stashMenu.Stash))">Pop stash</button>
+            </li>
+            <li role="none">
+                <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
+                        @onclick="() => RunStashMenuAsync(Graph.ApplyStashAsync(stashMenu.Stash))">Apply stash</button>
+            </li>
+            <li role="none">
+                <button type="button" class="menu-item menu-item-danger" role="menuitem" disabled="@_stashing"
+                        @onclick="() => ConfirmDrop(stashMenu.Stash)">Drop stash</button>
+            </li>
+        </ContextMenu>
     }
 
     @if (_commitMenu is { } commitMenu)
@@ -308,10 +379,17 @@
                 </div>
             }
             <div role="listbox" aria-label="Commits">
-                <Virtualize @ref="_virtualize" TItem="GitGraphRow" ItemsProvider="ProvideRowsAsync"
+                <Virtualize @ref="_virtualize" TItem="GitGraphItem" ItemsProvider="ProvideRowsAsync"
                             ItemSize="GitGraphRowView.RowHeight" OverscanCount="30">
-                    <ItemContent Context="row">
+                    <ItemContent Context="item">
+                        @if (item.Stash is { } stash)
+                        {
+                            @StashRow(item, stash)
+                            return;
+                        }
+
                         @{
+                            var row = item.Row!;
                             var selected = row.Commit.Sha == Graph.Selected?.Commit.Sha;
                             var isHead = row.Commit.Sha == Graph.Refs.HeadSha;
                         }
@@ -326,7 +404,7 @@
                                 {
                                     case GitGraphColumn.Graph:
                                         <span class="git-graph-lane-cell">
-                                            <GitGraphRowView Row="row" Width="GraphWidth" IsHead="isHead" />
+                                            <GitGraphRowView Row="row" Width="GraphWidth" IsHead="isHead" PassLanes="item.PassLanes" EndLines="item.EndLines" />
                                         </span>
                                         break;
                                     case GitGraphColumn.Description:
@@ -390,19 +468,53 @@
     private ElementReference _splitter;
     private IJSObjectReference? _splitterScript;
     private DotNetObjectReference<GitGraphView>? _self;
-    private Virtualize<GitGraphRow>? _virtualize;
+    private Virtualize<GitGraphItem>? _virtualize;
     private IJSObjectReference? _module;
     private IJSObjectReference? _listScript;
     private IReadOnlyList<GitGraphRow> _shownRows = [];
+    private IReadOnlyList<GitStashEntry> _shownStashes = [];
+    private IReadOnlyList<GitGraphItem> _items = [];
     private GitGraphScope _shownScope;
     private DateTimeOffset _now = DateTimeOffset.Now;
     private WorkspaceGitStatusMonitor? _monitor;
     private bool _disposed;
+    private bool _stashing;
 
     [Parameter, EditorRequired]
     public WorkspaceGitGraph Graph { get; set; } = null!;
 
-    private int GraphWidth => Math.Clamp(Graph.LaneCount, 1, MaxLanes) * GitGraphRowView.LaneWidth;
+    // Where a stash's right-click menu is open, or null when it's closed.
+    private sealed record StashMenu(double X, double Y, GitStashEntry Stash);
+
+    private StashMenu? _stashMenu;
+
+    private void ConfirmDrop(GitStashEntry stash)
+    {
+        _stashMenu = null;
+        Graph.RequestDropStash(stash);
+    }
+
+    private Task RunStashMenuAsync(Task<bool> action)
+    {
+        _stashMenu = null;
+        return RunStashAsync(action);
+    }
+
+    private async Task RunStashAsync(Task<bool> action)
+    {
+        _stashing = true;
+        try
+        {
+            await action;
+        }
+        finally
+        {
+            _stashing = false;
+        }
+    }
+
+    // A stash that isn't above the end of a branch has a lane to the right of the others.
+    private int GraphWidth => Math.Clamp(Graph.LaneCount + (_items.Any(item => item.IsSide) ? 1 : 0), 1, MaxLanes) * GitGraphRowView.LaneWidth;
 
     // The working changes' dot is in HEAD's lane, with a dashed line down to HEAD's row.
     private int WorkingLane => Graph.Rows.FirstOrDefault(row => row.Commit.Sha == Graph.HeadSha)?.Lane is { } lane
@@ -549,20 +661,85 @@
 
     // Gives the list the rows it asks for, reading more of the history when it scrolls past what's been read. Until
     // every commit is read, the list is a page longer than what's been read, so it can scroll on.
-    private async ValueTask<ItemsProviderResult<GitGraphRow>> ProvideRowsAsync(ItemsProviderRequest request)
+    private async ValueTask<ItemsProviderResult<GitGraphItem>> ProvideRowsAsync(ItemsProviderRequest request)
     {
-        if (request.StartIndex + request.Count > Graph.Rows.Count && !Graph.IsComplete)
+        // The stashes are among the commits, so they count too.
+        if (request.StartIndex + request.Count > _items.Count && !Graph.IsComplete)
         {
             await Graph.LoadMoreAsync();
         }
 
-        var rows = Graph.Rows;
-        _shownRows = rows;
-        var start = Math.Min(request.StartIndex, rows.Count);
-        var count = Math.Min(request.Count, rows.Count - start);
-        var total = Graph.IsComplete ? rows.Count : rows.Count + WorkspaceGitGraph.PageSize;
-        return new ItemsProviderResult<GitGraphRow>(rows.Skip(start).Take(count), total);
+        _shownRows = Graph.Rows;
+        _shownStashes = Graph.Stashes;
+        _items = GitGraphItem.Build(
+            _shownRows,
+            _shownStashes,
+            Graph.IsComplete,
+            Graph.LaneCount,
+            MaxLanes - 1,
+            Graph.WorkingChanges is { Count: > 0 } ? Graph.HeadSha : null);
+        var start = Math.Min(request.StartIndex, _items.Count);
+        var count = Math.Min(request.Count, _items.Count - start);
+        var total = Graph.IsComplete ? _items.Count : _items.Count + WorkspaceGitGraph.PageSize;
+        return new ItemsProviderResult<GitGraphItem>(_items.Skip(start).Take(count), total);
     }
+
+    // A stash's row among the commits: its square in the lane of the commit it was made on, with a dotted line down to
+    // that commit, which also runs through the rows between.
+    private RenderFragment StashRow(GitGraphItem item, GitStashEntry stash) => __builder =>
+    {
+        <div class="git-graph-row git-graph-stash @(Graph.SelectedStash?.Sha == stash.Sha ? "selected" : null)" role="option"
+             aria-selected="@(Graph.SelectedStash?.Sha == stash.Sha ? "true" : "false")" @key="@($"stash-{stash.Sha}")"
+             title="@stash.Name, @GitGraphText.FullDate(stash.CreatedAt)" @onclick="() => Graph.SelectStashAsync(stash)"
+             @oncontextmenu="e => _stashMenu = new StashMenu(e.ClientX, e.ClientY, stash)"
+             @oncontextmenu:preventDefault="true">
+            @foreach (var column in _visibleColumns)
+            {
+                @switch (column)
+                {
+                    case GitGraphColumn.Graph:
+                        <span class="git-graph-lane-cell">
+                            <svg class="git-graph-lanes" width="@GraphWidth" height="@GitGraphRowView.RowHeight"
+                                 viewBox="0 0 @GraphWidth @GitGraphRowView.RowHeight" aria-hidden="true" focusable="false">
+                                @foreach (var (lane, colour) in item.CommitLanes)
+                                {
+                                    <path d="@StashLine(lane, 0, GitGraphRowView.RowHeight)"
+                                          style="stroke: var(--color-graph-@(colour % GitGraphRowView.ColourCount))" />
+                                }
+                                @foreach (var lane in item.PassLanes)
+                                {
+                                    <path class="git-graph-stash-line" d="@StashLine(lane, 0, GitGraphRowView.RowHeight)" />
+                                }
+                                @if (item.HasLine)
+                                {
+                                    <path class="git-graph-stash-line"
+                                          d="@StashLine(item.Lane, GitGraphRowView.RowHeight / 2.0, GitGraphRowView.RowHeight)" />
+                                }
+                                <rect class="git-graph-stash-dot" x="@(LaneX(item.Lane) - 4)"
+                                      y="@(GitGraphRowView.RowHeight / 2.0 - 4)" width="8" height="8" />
+                            </svg>
+                        </span>
+                        break;
+                    case GitGraphColumn.Description:
+                        <span class="git-graph-summary">
+                            <span class="git-graph-subject git-graph-working-label">@stash.Message</span>
+                        </span>
+                        break;
+                    case GitGraphColumn.Date:
+                        <span class="git-graph-date" title="@GitGraphText.FullDate(stash.CreatedAt)">@GitGraphText.When(stash.CreatedAt, _now)</span>
+                        break;
+                    default:
+                        <span></span>
+                        break;
+                }
+            }
+        </div>
+    };
+
+    private static double LaneX(int lane) => lane * GitGraphRowView.LaneWidth + GitGraphRowView.LaneWidth / 2.0;
+
+    private static string StashLine(int lane, double top, double bottom) =>
+        FormattableString.Invariant($"M{LaneX(lane)} {top}V{bottom}");
 
     private void OnGraphChanged() => _ = InvokeAsync(async () =>
     {
@@ -577,9 +754,10 @@
 
         // Rows read while scrolling are already shown. Otherwise the graph was read again (e.g. after a commit), and
         // the list shows it from the start. Other commits start at the top.
-        if (!ReferenceEquals(_shownRows, Graph.Rows) && _virtualize is not null)
+        if ((!ReferenceEquals(_shownRows, Graph.Rows) || !ReferenceEquals(_shownStashes, Graph.Stashes)) && _virtualize is not null)
         {
             _shownRows = Graph.Rows;
+            _shownStashes = Graph.Stashes;
             if (scopeChanged)
             {
                 await ScrollToTopAsync();
@@ -617,6 +795,13 @@
         if (index < 0)
         {
             return;
+        }
+
+        // The list's rows include the stashes among the commits.
+        var itemIndex = _items.ToList().FindIndex(item => item.Row?.Commit.Sha == sha);
+        if (itemIndex >= 0)
+        {
+            index = itemIndex;
         }
 
         await Graph.SelectAsync(sha);
