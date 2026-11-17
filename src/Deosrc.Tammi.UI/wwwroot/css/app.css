@@ -3697,6 +3697,16 @@ label.task-choice {
   min-height: 5em;
 }
 
+/* The stashes take only the room they need, up to a third of it. */
+.git-working-section.git-working-stashes {
+  flex: 0 1 auto;
+  max-height: 33%;
+}
+
+.git-working-stashes .git-working-file {
+  gap: var(--space-2);
+}
+
 .git-working-titlebar {
   display: flex;
   align-items: center;

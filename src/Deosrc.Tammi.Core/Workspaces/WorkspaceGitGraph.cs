@@ -28,6 +28,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     private readonly IGitWorkingTree _workingTree;
     private readonly IGitSync _sync;
     private readonly IGitTags _tags;
+    private readonly IGitStash _stash;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<GitGraphRow> _rows = [];
     private IReadOnlyDictionary<string, IReadOnlyList<GitReference>> _labels =
@@ -46,7 +47,8 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         IGitRepositoryReader reader,
         IGitWorkingTree workingTree,
         IGitSync sync,
-        IGitTags tags)
+        IGitTags tags,
+        IGitStash stash)
     {
         WorkspaceId = workspace.Id;
         Repository = repository;
@@ -56,6 +58,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         _workingTree = workingTree;
         _sync = sync;
         _tags = tags;
+        _stash = stash;
         string worktree = workspace.GetWorktreePath(repository);
         Path = submodulePath is null
             ? worktree
@@ -539,6 +542,76 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     }
 
     /// <summary>
+    /// The stashes, newest first, as last read.
+    /// </summary>
+    public IReadOnlyList<GitStashEntry> Stashes { get; private set; } = [];
+
+    /// <summary>
+    /// Why the last stash, apply, pop or drop failed, or <see langword="null"/> if the last one worked (or none has run).
+    /// </summary>
+    public string? StashProblem { get; private set; }
+
+    /// <summary>
+    /// Stashes changes, including new files.
+    /// </summary>
+    /// <param name="files">The files to stash, or <see langword="null"/> to stash every change.</param>
+    /// <param name="message">What to call the stash, or <see langword="null"/> for git's own.</param>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> StashAsync(IReadOnlyCollection<FileChange>? files = null, string? message = null) =>
+        ChangeStashAsync(token => _stash.PushAsync(Path, files is null ? null : PathsOf(files), message, token));
+
+    /// <summary>
+    /// Applies a stash to the working directory and keeps it.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> ApplyStashAsync(GitStashEntry stash) =>
+        ChangeStashAsync(async token => { await _stash.ApplyAsync(Path, stash.Index, token).ConfigureAwait(false); return true; });
+
+    /// <summary>
+    /// Applies a stash to the working directory and drops it. A stash that conflicts is kept.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> PopStashAsync(GitStashEntry stash) =>
+        ChangeStashAsync(async token => { await _stash.PopAsync(Path, stash.Index, token).ConfigureAwait(false); return true; });
+
+    /// <summary>
+    /// Deletes a stash without applying it.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> DropStashAsync(GitStashEntry stash) =>
+        ChangeStashAsync(async token => { await _stash.DropAsync(Path, stash.Index, token).ConfigureAwait(false); return true; });
+
+    /// <summary>
+    /// Clears <see cref="StashProblem"/>, once the user has seen it.
+    /// </summary>
+    public void DismissStashProblem()
+    {
+        if (StashProblem is not null)
+        {
+            StashProblem = null;
+            Changed?.Invoke();
+        }
+    }
+
+    private async Task<bool> ChangeStashAsync(Func<CancellationToken, Task<bool>> change)
+    {
+        bool worked = false;
+        try
+        {
+            worked = await change(CancellationToken.None).ConfigureAwait(false);
+            StashProblem = worked ? null : "There was nothing to stash.";
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            StashProblem = ex.Message;
+        }
+
+        // A conflicted apply or pop changes the working directory even though it failed.
+        await RunAsync(() => ReadWorkingChanges(readMessage: false)).ConfigureAwait(false);
+        return worked;
+    }
+
+    /// <summary>
     /// Clears <see cref="SyncProblem"/>, once the user has seen it.
     /// </summary>
     public void DismissSyncProblem()
@@ -639,6 +712,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
                     .OrderBy(change => change.Path, StringComparer.Ordinal),
             ];
             HeadSha = status.HeadSha;
+            Stashes = _stash.ListAsync(Path).GetAwaiter().GetResult();
             if (IsWorkingChangesSelected && WorkingChanges.Count == 0)
             {
                 // The row is gone (e.g. after a commit), so show HEAD's commit instead.

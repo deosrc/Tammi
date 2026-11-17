@@ -12,7 +12,7 @@ public sealed class WorkspaceGitGraphTests : IDisposable
     private readonly WorkspaceGitGraphs _graphs;
 
     public WorkspaceGitGraphTests() =>
-        _graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new GitWorkingTree(_repos.Git), new GitSync(_repos.Git), new GitTags(_repos.Git), new InMemorySettingsStore());
+        _graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new GitWorkingTree(_repos.Git), new GitSync(_repos.Git), new GitTags(_repos.Git), new GitStash(_repos.Git), new InMemorySettingsStore());
 
     public void Dispose()
     {
@@ -174,6 +174,40 @@ public sealed class WorkspaceGitGraphTests : IDisposable
         await graph.LoadMoreAsync();
 
         Assert.Empty(graph.Rows);
+    }
+
+    [Fact]
+    public async Task StashAsync_SelectedFiles_ThenPopStash_MovesThemOutAndBack()
+    {
+        (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();
+        string clone = workspace.GetWorktreePath(repository);
+        TempRepositories.WriteFile(clone, "a.txt", "a");
+        TempRepositories.WriteFile(clone, "b.txt", "b");
+        WorkspaceGitGraph graph = _graphs.Open(workspace, repository);
+        await graph.LoadAsync();
+
+        bool stashed = await graph.StashAsync([graph.UnstagedChanges.Single(change => change.Path == "a.txt")]);
+
+        Assert.True(stashed);
+        Assert.Equal("b.txt", Assert.Single(graph.UnstagedChanges).Path);
+        GitStashEntry stash = Assert.Single(graph.Stashes);
+
+        Assert.True(await graph.PopStashAsync(stash));
+
+        Assert.Empty(graph.Stashes);
+        Assert.Equal(["a.txt", "b.txt"], graph.UnstagedChanges.Select(change => change.Path));
+    }
+
+    [Fact]
+    public async Task StashAsync_NothingToStash_ReportsTheProblem()
+    {
+        (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();
+        WorkspaceGitGraph graph = _graphs.Open(workspace, repository);
+        await graph.LoadAsync();
+
+        Assert.False(await graph.StashAsync());
+
+        Assert.NotNull(graph.StashProblem);
     }
 
     [Fact]
