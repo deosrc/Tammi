@@ -702,13 +702,13 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public Task<bool> CheckoutBranchAsync(string name) => ChangeBranchesAsync(token => _branches.CheckoutAsync(Path, name, token));
 
     /// <summary>
-    /// Merges a local branch into the checked out branch.
+    /// Merges a local or remote-tracking branch (such as <c>origin/feature</c>) into the checked out branch.
     /// </summary>
     /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
     public Task<bool> MergeBranchAsync(string name) => ChangeBranchesAsync(token => _branches.MergeAsync(Path, name, token));
 
     /// <summary>
-    /// Rebases the checked out branch onto a local branch.
+    /// Rebases the checked out branch onto a local or remote-tracking branch.
     /// </summary>
     /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
     public Task<bool> RebaseBranchAsync(string name) => ChangeBranchesAsync(token => _branches.RebaseAsync(Path, name, token));

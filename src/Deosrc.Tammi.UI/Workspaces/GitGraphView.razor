@@ -285,7 +285,7 @@
         <ContextMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
             @if (Graph.Refs.HeadBranch is not null)
             {
-                var mergeable = commitMenu.Branches.Where(b => b != Graph.Refs.HeadBranch).ToList();
+                var mergeable = commitMenu.Branches.Where(b => b != Graph.Refs.HeadBranch).Concat(commitMenu.RemoteBranches).ToList();
                 @foreach (var branch in mergeable)
                 {
                     <li role="none">
