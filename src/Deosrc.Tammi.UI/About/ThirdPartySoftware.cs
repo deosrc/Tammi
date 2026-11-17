@@ -25,6 +25,8 @@ public static class ThirdPartySoftware
             "https://github.com/libgit2/libgit2", LicenseFile: "libgit2.txt"),
         new("LibGit2Sharp", "In-process git reads", ThirdPartyPlatforms.All, "MIT",
             "https://github.com/libgit2/libgit2sharp", LicenseFile: "libgit2sharp.txt"),
+        new("Markdig", "Shows release notes on the Updates page", ThirdPartyPlatforms.All, "BSD-2-Clause",
+            "https://github.com/xoofx/markdig", LicenseFile: "markdig.txt"),
         new("Photino", "Photino.Blazor, Photino.NET and Photino.Native: the Linux host window",
             ThirdPartyPlatforms.Linux, "Apache-2.0",
             "https://github.com/tryphotino", LicenseFile: "photino.txt"),

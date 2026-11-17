@@ -25,6 +25,8 @@ internal static class PlatformServiceCollectionExtensions
         services.AddSingleton<IApplicationIconProvider, DesktopEntryIconProvider>();
         services.AddSingleton<IFolderPicker>(provider =>
             new PhotinoFolderPicker(provider.GetRequiredService<PhotinoBlazorApp>().MainWindow));
+        services.AddSingleton<IAppCloser>(provider =>
+            new PhotinoAppCloser(provider.GetRequiredService<PhotinoBlazorApp>().MainWindow));
         services.AddSingleton<IFilePicker>(provider =>
             new PhotinoFilePicker(provider.GetRequiredService<PhotinoBlazorApp>().MainWindow));
         services.AddSingleton<IVisualiserWindow>(provider => new PhotinoVisualiserWindow(

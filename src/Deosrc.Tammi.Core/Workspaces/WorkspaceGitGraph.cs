@@ -28,10 +28,13 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     private readonly IGitWorkingTree _workingTree;
     private readonly IGitSync _sync;
     private readonly IGitTags _tags;
+    private readonly IGitBranches _branches;
+    private readonly IGitStash _stash;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<GitGraphRow> _rows = [];
     private IReadOnlyDictionary<string, IReadOnlyList<GitReference>> _labels =
         new Dictionary<string, IReadOnlyList<GitReference>>();
+    private readonly Dictionary<string, string?> _anchors = [];
     private IGitHistoryCursor? _cursor;
     private GitGraphLayout _layout = new();
     private bool _loaded;
@@ -46,7 +49,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         IGitRepositoryReader reader,
         IGitWorkingTree workingTree,
         IGitSync sync,
-        IGitTags tags)
+        IGitTags tags,
+        IGitBranches branches,
+        IGitStash stash)
     {
         WorkspaceId = workspace.Id;
         Repository = repository;
@@ -56,6 +61,8 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         _workingTree = workingTree;
         _sync = sync;
         _tags = tags;
+        _branches = branches;
+        _stash = stash;
         string worktree = workspace.GetWorktreePath(repository);
         Path = submodulePath is null
             ? worktree
@@ -146,6 +153,12 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     /// Why the selected commit's changed files couldn't be read, or <see langword="null"/>.
     /// </summary>
     public string? SelectedChangesProblem { get; private set; }
+
+    /// <summary>
+    /// The selected stash, or <see langword="null"/> if none is. Its changed files are in <see cref="SelectedChanges"/>,
+    /// and the details panel is then for the stash.
+    /// </summary>
+    public GitStashEntry? SelectedStash { get; private set; }
 
     /// <summary>
     /// Whether the working changes are selected, instead of a commit. The details panel is then for making a commit.
@@ -298,7 +311,19 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     {
         ClearDiff();
         IsWorkingChangesSelected = false;
+        SelectedStash = null;
         Select(sha);
+    });
+
+    /// <summary>
+    /// Selects a stash, and reads the files it changed.
+    /// </summary>
+    public Task SelectStashAsync(GitStashEntry stash) => RunAsync(() =>
+    {
+        ClearDiff();
+        IsWorkingChangesSelected = false;
+        Selected = null;
+        SelectStash(stash);
     });
 
     /// <summary>
@@ -308,6 +333,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     {
         ClearDiff();
         Selected = null;
+        SelectedStash = null;
         SelectedChanges = null;
         SelectedChangesProblem = null;
         IsWorkingChangesSelected = true;
@@ -539,6 +565,205 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     }
 
     /// <summary>
+    /// The last branch action that failed, or <see langword="null"/> if the last one worked (or none has run).
+    /// </summary>
+    public string? BranchProblem { get; private set; }
+
+    /// <summary>
+    /// Creates a local branch on a commit, and optionally checks it out.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> CreateBranchAsync(string name, string sha, bool checkout) =>
+        ChangeBranchesAsync(token => _branches.CreateAsync(Path, name, sha, checkout, token));
+
+    /// <summary>
+    /// Checks out a local branch, or a local branch that tracks a remote-tracking branch.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> CheckoutBranchAsync(string name) => ChangeBranchesAsync(token => _branches.CheckoutAsync(Path, name, token));
+
+    /// <summary>
+    /// Renames a local branch. Its remote branch isn't renamed.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> RenameBranchAsync(string name, string newName) =>
+        ChangeBranchesAsync(token => _branches.RenameAsync(Path, name, newName, token));
+
+    /// <summary>
+    /// Deletes a local branch, the remote branch it tracks, or both.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> DeleteBranchAsync(string name, bool deleteLocal, bool deleteRemote) =>
+        ChangeBranchesAsync(token => _branches.DeleteAsync(Path, name, deleteLocal, deleteRemote, token));
+
+    /// <summary>
+    /// Deletes a remote branch, given as a remote-tracking name such as <c>origin/feature</c>.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> DeleteRemoteBranchAsync(string remoteBranch) =>
+        ChangeBranchesAsync(token => _branches.DeleteRemoteAsync(Path, remoteBranch, token));
+
+    /// <summary>
+    /// Finds the remote branch a local branch tracks, or <see langword="null"/> if it has none.
+    /// </summary>
+    public async Task<GitUpstream?> BranchUpstreamAsync(string name)
+    {
+        try
+        {
+            return await _branches.GetUpstreamAsync(Path, name).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Whether a local branch is the workspace's branch, which can't be renamed or deleted from here.
+    /// </summary>
+    public bool IsWorkspaceBranch(string name) => SubmodulePath is null && name == Repository.Branch;
+
+    /// <summary>
+    /// Clears <see cref="BranchProblem"/>, once the user has seen it.
+    /// </summary>
+    public void DismissBranchProblem()
+    {
+        if (BranchProblem is not null)
+        {
+            BranchProblem = null;
+            Changed?.Invoke();
+        }
+    }
+
+    /// The stashes, newest first, as last read.
+    /// </summary>
+    public IReadOnlyList<GitStashEntry> Stashes { get; private set; } = [];
+
+    /// <summary>
+    /// Why the last stash, apply, pop or drop failed, or <see langword="null"/> if the last one worked (or none has run).
+    /// </summary>
+    public string? StashProblem { get; private set; }
+
+    /// <summary>
+    /// Stashes changes, including new files.
+    /// </summary>
+    /// <param name="files">The files to stash, or <see langword="null"/> to stash every change.</param>
+    /// <param name="message">What to call the stash, or <see langword="null"/> for git's own.</param>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> StashAsync(IReadOnlyCollection<FileChange>? files = null, string? message = null) =>
+        ChangeStashAsync(token => _stash.PushAsync(Path, files is null ? null : PathsOf(files), message, token));
+
+    /// <summary>
+    /// Applies a stash to the working directory and keeps it.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> ApplyStashAsync(GitStashEntry stash) =>
+        ChangeStashAsync(async token => { await _stash.ApplyAsync(Path, stash.Index, token).ConfigureAwait(false); return true; });
+
+    /// <summary>
+    /// Applies a stash to the working directory and drops it. A stash that conflicts is kept.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> PopStashAsync(GitStashEntry stash) =>
+        ChangeStashAsync(async token => { await _stash.PopAsync(Path, stash.Index, token).ConfigureAwait(false); return true; });
+
+    /// <summary>
+    /// Deletes a stash without applying it.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> DropStashAsync(GitStashEntry stash) =>
+        ChangeStashAsync(async token => { await _stash.DropAsync(Path, stash.Index, token).ConfigureAwait(false); return true; });
+
+    /// <summary>
+    /// The stash the user has asked to drop, and has yet to confirm, or <see langword="null"/>.
+    /// </summary>
+    public GitStashEntry? DropRequest { get; private set; }
+
+    /// <summary>
+    /// Asks the user to confirm dropping a stash, which can't be undone.
+    /// </summary>
+    public void RequestDropStash(GitStashEntry stash)
+    {
+        DropRequest = stash;
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Drops the stash that was asked for, once the user has confirmed.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public async Task<bool> ConfirmDropStashAsync()
+    {
+        GitStashEntry? stash = DropRequest;
+        DropRequest = null;
+        return stash is not null && await DropStashAsync(stash).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Forgets the request to drop a stash.
+    /// </summary>
+    public void CancelDropStash()
+    {
+        if (DropRequest is not null)
+        {
+            DropRequest = null;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Clears <see cref="StashProblem"/>, once the user has seen it.
+    /// </summary>
+    public void DismissStashProblem()
+    {
+        if (StashProblem is not null)
+        {
+            StashProblem = null;
+            Changed?.Invoke();
+        }
+    }
+
+    private async Task<bool> ChangeBranchesAsync(Func<CancellationToken, Task> change)
+    {
+        bool worked = false;
+        try
+        {
+            await change(CancellationToken.None).ConfigureAwait(false);
+            BranchProblem = null;
+            worked = true;
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            BranchProblem = ex.Message;
+        }
+
+        // Branches (and, after a checkout, the working files) may have changed even when it failed part way.
+        await RunAsync(() =>
+        {
+            Reload(Rows.Count);
+        }).ConfigureAwait(false);
+        return worked;
+    }
+
+    private async Task<bool> ChangeStashAsync(Func<CancellationToken, Task<bool>> change)
+    {
+        bool worked = false;
+        try
+        {
+            worked = await change(CancellationToken.None).ConfigureAwait(false);
+            StashProblem = worked ? null : "There was nothing to stash.";
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            StashProblem = ex.Message;
+        }
+
+        // A conflicted apply or pop changes the working directory even though it failed.
+        await RunAsync(() => ReadWorkingChanges(readMessage: false)).ConfigureAwait(false);
+        return worked;
+    }
+
+    /// <summary>
     /// Clears <see cref="SyncProblem"/>, once the user has seen it.
     /// </summary>
     public void DismissSyncProblem()
@@ -639,6 +864,30 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
                     .OrderBy(change => change.Path, StringComparer.Ordinal),
             ];
             HeadSha = status.HeadSha;
+            IReadOnlyList<GitStashEntry> stashes = AnchorStashes(_stash.ListAsync(Path).GetAwaiter().GetResult());
+            if (!stashes.SequenceEqual(Stashes))
+            {
+                // Only replaced when they've changed, so the view can tell by reference.
+                Stashes = stashes;
+            }
+
+            if (SelectedStash is { } selectedStash)
+            {
+                // Follow the selected stash as the others come and go and its index changes, or let go of it when it's gone.
+                GitStashEntry? current = Stashes.FirstOrDefault(stash => stash.Sha == selectedStash.Sha);
+                if (current is null)
+                {
+                    ClearDiff();
+                    SelectedStash = null;
+                    SelectedChanges = null;
+                    SelectedChangesProblem = null;
+                }
+                else
+                {
+                    SelectedStash = current;
+                }
+            }
+
             if (IsWorkingChangesSelected && WorkingChanges.Count == 0)
             {
                 // The row is gone (e.g. after a commit), so show HEAD's commit instead.
@@ -660,12 +909,38 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         Changed?.Invoke();
     }
 
+    // Stashes made on a commit the graph doesn't show are drawn on the nearest commit it does: where that commit's
+    // branch joins HEAD's history.
+    private IReadOnlyList<GitStashEntry> AnchorStashes(IReadOnlyList<GitStashEntry> stashes)
+    {
+        var shown = _rows.Select(row => row.Commit.Sha).ToHashSet();
+        var anchored = new List<GitStashEntry>();
+        foreach (GitStashEntry stash in stashes)
+        {
+            string? anchor = stash.BaseSha;
+            if (stash.BaseSha.Length > 0 && !shown.Contains(stash.BaseSha))
+            {
+                if (!_anchors.TryGetValue(stash.BaseSha, out anchor))
+                {
+                    anchor = _stash.FindMergeBaseWithHeadAsync(Path, stash.BaseSha).GetAwaiter().GetResult();
+                    _anchors[stash.BaseSha] = anchor;
+                }
+            }
+
+            anchored.Add(stash with { AnchorSha = anchor });
+        }
+
+        return anchored;
+    }
+
     // Opens the history again with the current scope and reads at least `count` commits.
     private void Reload(int count)
     {
         string? selected = Selected?.Commit.Sha;
+        string? selectedStash = SelectedStash?.Sha;
         CloseCursor();
         _rows.Clear();
+        _anchors.Clear();
         _layout = new GitGraphLayout();
         LaneCount = 0;
         IsComplete = false;
@@ -703,6 +978,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         {
             Select(selected);
         }
+        else if (Stashes.FirstOrDefault(stash => stash.Sha == selectedStash) is { } stillThere)
+        {
+            SelectStash(stillThere);
+        }
     }
 
     private void ReadPage(int count)
@@ -727,8 +1006,25 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         Publish();
     }
 
+    private void SelectStash(GitStashEntry stash)
+    {
+        SelectedStash = stash;
+        SelectedChanges = null;
+        SelectedChangesProblem = null;
+        Changed?.Invoke();
+        try
+        {
+            SelectedChanges = _reader.ReadCommitChanges(Path, stash.Sha);
+        }
+        catch (Exception ex) when (IsReadError(ex))
+        {
+            SelectedChangesProblem = ex.Message;
+        }
+    }
+
     private void Select(string? sha)
     {
+        SelectedStash = null;
         Selected = sha is null ? null : _rows.Find(row => row.Commit.Sha == sha);
         SelectedChanges = null;
         SelectedChangesProblem = null;

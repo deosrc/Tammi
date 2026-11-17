@@ -26,6 +26,7 @@ public static class AppRoutes
         new("Agents", Settings + "/agents"),
         new("Tools", SettingsTools),
         new("Visualiser", SettingsVisualiser),
+        new("Updates", SettingsUpdates),
         new("About", About),
     ];
 
@@ -38,6 +39,7 @@ public static class AppRoutes
     public const string SettingsTools = Settings + "/tools";
 
     public const string SettingsVisualiser = Settings + "/visualiser";
+    public const string SettingsUpdates = Settings + "/updates";
 
     public const string About = Settings + "/about";
 

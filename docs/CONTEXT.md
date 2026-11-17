@@ -405,6 +405,14 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - A toggle chooses which commits it shows: **Workspace branch** (HEAD, the workspace branch, its upstream and its
     merge target; HEAD and its branch's upstream for a submodule) or **Everything** (every local and remote-tracking
     branch and tag). It starts as Settings → Git says, which defaults to the workspace branch.
+  - **Branches:** right-clicking a commit opens a menu that can create a branch on it (named in a prompt, and
+    checked out or not). For each local branch on the commit, the menu can check it out, rename it (its remote
+    branch isn't renamed) and delete it; the checked out branch can't be deleted, and the workspace branch can't
+    be renamed or deleted. "Delete branch" is a submenu offering the local branch, the remote branch it tracks or both
+    (the remote choices need an upstream). A remote-tracking branch on the commit can be checked out, which creates a
+    local branch that tracks it, or deleted from its remote. Every delete, including a tag's, asks for confirmation
+    first, naming what will be deleted. A failure (e.g. local changes in the way, or a
+    branch checked out in another worktree) is shown above the graph, and the graph is read again either way.
   - Large histories stay fast: only the rows in view are drawn, and commits are read 500 at a time as the list
     scrolls. The repository stays open while the tab is, so later pages don't walk the history again.
   - Selecting a commit (by clicking it, or with Up, Down and Home) shows its details beside the list, top to bottom:
@@ -564,6 +572,8 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     folder names it suggests
   - Log level: Trace, Debug, Information (the default), Warning or Error. It applies straight away. A button opens the
     folder the log files are in (see [Technical Constraints](#technical-constraints)) in the system file manager.
+  - Updates: whether Tammi checks for a newer release when it starts (on by default), whether pre-releases count
+    (off by default), and a button to check now. See [Installing and updating](#installing-and-updating).
 - **Integrations:** the connected integrations, each with its connection status, in alphabetical order
   - A single Add button opens a menu of the integration types (Bitbucket, GitHub, JIRA), in alphabetical order.
   - The user adds Bitbucket Cloud, GitHub (github.com or a GitHub Enterprise Server) and JIRA sites, authenticates them again with a new
@@ -994,6 +1004,21 @@ are left to other tools for now.
 - **Descriptions** are in JIRA wiki markup, as REST API version 2 returns them on every deployment. They aren't
   converted to markdown.
 - **Rate limits** are handled as for GitHub.
+
+## Installing and updating
+
+- **Install:** the release has two bootstrap scripts, `install.sh` (Linux) and `install.ps1` (Windows). Each downloads the
+  latest framework-dependent archive for the OS and architecture into the versioned folder in the user's app data
+  directory, then runs Tammi. Tammi creates or updates its application menu link on startup. The .NET 10 runtime must
+  already be installed.
+- **Update:** when Tammi starts, and the setting is on, it looks for a release newer than the running version. If there
+  is one, a bar under the app bar asks whether to update. If the user agrees, the core app downloads and installs the
+  release and points the menu link at it. The new version is used the next time Tammi starts. Pre-releases only count if
+  the setting is on.
+
+- **Old versions:** when Tammi starts, it deletes installed versions, keeping the running one, any newer ones and the
+  two before the running one.
+- A copy that isn't running from a version folder (e.g. a build from source) doesn't check for updates or delete anything.
 
 ## Technical Constraints
 

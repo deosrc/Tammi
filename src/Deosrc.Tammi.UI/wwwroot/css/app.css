@@ -251,6 +251,11 @@ a {
   background: var(--color-error);
 }
 
+/* A secondary button for an action that deletes something, with red text. */
+.button-secondary.button-danger-text {
+  color: var(--color-error);
+}
+
 /* A button that confirms a change with side effects, e.g. in a warning alert. */
 .button-warning {
   background: var(--color-warning);
@@ -274,6 +279,95 @@ a {
   height: var(--app-bar-height);
   background: var(--color-chrome);
   border-bottom: 1px solid var(--color-border);
+}
+
+/* The bar under the app bar that offers an update. */
+.update-prompt {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-chrome);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.update-prompt-actions {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* The release offered on the Updates page: its title, notes and the Update button. */
+.release-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 720px;
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.release-card-title {
+  margin: 0;
+  font-size: var(--font-size-large, 1.1em);
+  text-transform: none;
+}
+
+.release-card-notes {
+  max-height: 320px;
+  overflow: auto;
+  font-size: var(--font-size-small);
+}
+
+/* The notes are rendered markdown, so their headings, lists and code get the card's compact sizes. */
+.release-card-notes > :first-child {
+  margin-top: 0;
+}
+
+.release-card-notes > :last-child {
+  margin-bottom: 0;
+}
+
+.release-card-notes :is(h1, h2, h3, h4, h5, h6) {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.release-card-notes p,
+.release-card-notes ul,
+.release-card-notes ol {
+  margin: var(--space-2) 0;
+}
+
+.release-card-notes ul,
+.release-card-notes ol {
+  padding-left: var(--space-5, 1.5rem);
+}
+
+.release-card-notes pre {
+  overflow: auto;
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+.release-card-notes code {
+  font-family: var(--font-mono, monospace);
+}
+
+.release-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
 }
 
 .app-name {
@@ -434,6 +528,11 @@ a {
 .visualiser-toggle:hover {
   background: var(--color-surface-hover);
   color: var(--color-text);
+}
+
+/* The new release notice, at the right end of the footer, after the visualiser toggle. */
+.update-footer {
+  margin-left: 0;
 }
 
 .usage-footer-title {
@@ -2627,7 +2726,8 @@ label.task-choice {
 
 /* Blazor sets display:block on this element when an unhandled error occurs, so it is the full-window backdrop and the
    dialog is positioned inside it. */
-#blazor-error-ui {
+#blazor-error-ui,
+.error-backdrop {
   display: none;
   position: fixed;
   inset: 0;
@@ -2635,7 +2735,13 @@ label.task-choice {
   z-index: 10000;
 }
 
-#blazor-error-ui .error-dialog {
+/* The same backdrop for a dialog the app shows itself, e.g. when git is missing. */
+.error-backdrop {
+  display: block;
+}
+
+#blazor-error-ui .error-dialog,
+.error-backdrop .error-dialog {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -2651,17 +2757,20 @@ label.task-choice {
   text-align: center;
 }
 
-#blazor-error-ui h2 {
+#blazor-error-ui h2,
+.error-backdrop h2 {
   margin: 0 0 var(--space-2);
   font-size: 1.25rem;
 }
 
-#blazor-error-ui p {
+#blazor-error-ui p,
+.error-backdrop p {
   margin: 0 0 var(--space-4);
   color: var(--color-text-muted);
 }
 
-#blazor-error-ui .reload {
+#blazor-error-ui .reload,
+.error-backdrop .reload {
   padding: var(--space-2) var(--space-6);
   border: 0;
   border-radius: var(--radius);
@@ -2671,7 +2780,8 @@ label.task-choice {
   cursor: pointer;
 }
 
-#blazor-error-ui .reload:focus-visible {
+#blazor-error-ui .reload:focus-visible,
+.error-backdrop .reload:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
@@ -2725,6 +2835,11 @@ label.task-choice {
 }
 
 /* Less space above than below, so the message sits close to the toolbar and clear of the graph. */
+.git-graph-drop-confirm {
+  flex: none;
+  margin: var(--space-2) var(--space-3);
+}
+
 .git-graph-sync-error {
   display: flex;
   align-items: flex-start;
@@ -3171,6 +3286,34 @@ label.task-choice {
 
 .git-commit-section {
   padding: 0 var(--space-4);
+}
+
+.git-commit-stash-bar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.git-commit-stash-date {
+  color: var(--color-text-muted);
+}
+
+/* The stash's buttons, right-aligned under the summary, also when they wrap onto a row of their own. */
+.git-commit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.git-commit-actions-problem {
+  flex: none;
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3);
 }
 
 /* A divider between the sections. */
@@ -3670,6 +3813,19 @@ label.task-choice {
 }
 
 .git-graph-working-dot {
+  fill: var(--color-surface);
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+}
+
+.git-graph-lanes path.git-graph-stash-line {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+.git-graph-stash-dot {
   fill: var(--color-surface);
   stroke: var(--color-text-muted);
   stroke-width: 2;

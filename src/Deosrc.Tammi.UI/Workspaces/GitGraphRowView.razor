@@ -8,6 +8,15 @@
     {
         <path d="@PathFor(line)" style="stroke: @ColourVariable(line.Colour)" />
     }
+    @* Dotted lines to the stashes made on commits further down: through the row, or ending at this commit. *@
+    @foreach (var lane in PassLanes)
+    {
+        <path class="git-graph-stash-line" d="@StashPath(lane, 0, RowHeight)" />
+    }
+    @foreach (var (from, to) in EndLines)
+    {
+        <path class="git-graph-stash-line" d="@StashEndPath(from, to)" />
+    }
     @if (IsHead)
     {
         <circle class="git-graph-head" cx="@X(Row.Lane)" cy="@Middle" r="5.5" style="stroke: @ColourVariable(Row.Colour)" />
@@ -50,6 +59,31 @@
     /// </summary>
     [Parameter]
     public bool IsHead { get; set; }
+
+    /// <summary>
+    /// The lanes of the stash lines that run through the whole row.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<int> PassLanes { get; set; } = [];
+
+    /// <summary>
+    /// The stash lines that end at the commit, drawn down to its dot: straight, or bending in from the lane they're in.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<(int From, int To)> EndLines { get; set; } = [];
+
+    private static string StashPath(int lane, double top, double bottom) =>
+        FormattableString.Invariant($"M{X(lane)} {top}V{bottom}");
+
+    private static string StashEndPath(int from, int to)
+    {
+        if (from == to)
+        {
+            return StashPath(from, 0, Middle);
+        }
+
+        return FormattableString.Invariant($"M{X(from)} 0C{X(from)} {Middle / 2} {X(to)} {Middle / 2} {X(to)} {Middle}");
+    }
 
     private static double X(int lane) => lane * LaneWidth + LaneWidth / 2.0;
 

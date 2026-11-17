@@ -26,6 +26,7 @@ public sealed class SingleInstanceLock : IDisposable
     private readonly string _pipeName;
     private readonly CancellationTokenSource _stopping = new();
     private Task? _listening;
+    private int _disposed;
 
     private SingleInstanceLock(FileStream stream, string pipeName)
     {
@@ -98,6 +99,11 @@ public sealed class SingleInstanceLock : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+        {
+            return;
+        }
+
         _stopping.Cancel();
         _stream.Dispose();
         _stopping.Dispose();

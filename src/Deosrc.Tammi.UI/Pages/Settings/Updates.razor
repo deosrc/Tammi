@@ -1,0 +1,118 @@
+@page "/settings/updates"
+@layout SettingsLayout
+@inherits SettingsSectionBase
+@using Deosrc.Tammi.Core.Settings
+@inject AppUpdater Updater
+@implements IDisposable
+
+<h1>Updates</h1>
+
+@if (Updater.IsDevelopmentBuild)
+{
+    <p class="warning" role="alert">New version detection is disabled as this is a development build of Tammi</p>
+}
+else if (!Updater.CanUpdate)
+{
+    <p class="warning" role="alert">
+        New version detection is disabled as the version of this copy of Tammi can't be read.
+    </p>
+}
+
+<p class="settings-help settings-intro">Tammi will automatically check for new releases on startup and ask to install it.</p>
+
+<dl class="settings-values">
+    <dt>Current version</dt>
+    <dd>@Updater.CurrentVersion</dd>
+    <dt>Latest version</dt>
+    <dd>@LatestVersionText</dd>
+</dl>
+
+<div class="settings-form">
+    <div class="settings-field">
+        <label class="settings-choice">
+            <Switch Id="update-check-on-startup" Checked="Current.CheckOnStartup" Label="Check for updates when Tammi starts"
+                    CheckedChanged="enabled => UpdateUpdatesAsync(u => u with { CheckOnStartup = enabled })" />
+            Check for updates when Tammi starts
+        </label>
+        <label class="settings-choice">
+            <Switch Id="update-include-pre-releases" Checked="Current.IncludePreReleases" Label="Include pre-releases"
+                    CheckedChanged="enabled => UpdateUpdatesAsync(u => u with { IncludePreReleases = enabled })" />
+            Include pre-releases
+        </label>
+    </div>
+
+    @if (Updater.CanUpdate)
+    {
+        <div class="settings-field-actions">
+            <button type="button" class="button button-secondary" disabled="@(Updater.Status is UpdateStatus.Checking or UpdateStatus.Installing)"
+                    @onclick="CheckForUpdatesAsync">
+                Check for updates
+            </button>
+        </div>
+        <p class="settings-help" role="status">@UpdateStatusText</p>
+    }
+</div>
+
+@if (Updater.CanUpdate && Updater.Available is { } release && Updater.Status is not UpdateStatus.Checking)
+{
+    <section class="release-card" aria-label="Available release">
+        <h2 class="release-card-title">@release.Title</h2>
+        @if (release.Notes is not null)
+        {
+            <div class="release-card-notes">@((MarkupString)ReleaseNotesHtml.ToHtml(release.Notes))</div>
+        }
+        else
+        {
+            <p class="settings-help">This release has no release notes.</p>
+        }
+        <div class="release-card-actions">
+            @if (Updater.Status == UpdateStatus.Installed)
+            {
+                <span>Installed. Restart Tammi to use it.</span>
+            }
+            else if (Updater.Status == UpdateStatus.Installing)
+            {
+                <span>Downloading… @((int)(Updater.Progress * 100))%</span>
+                <progress max="1" value="@Updater.Progress"></progress>
+            }
+            else
+            {
+                <button type="button" class="button" @onclick="() => Updater.InstallAsync()">Update</button>
+            }
+        </div>
+    </section>
+}
+
+@if (SaveError is not null)
+{
+    <p class="error">@SaveError</p>
+}
+
+@code {
+    private UpdateSettings Current => SettingsStore.Current.Updates;
+
+    protected override void OnInitialized() => Updater.Changed += OnUpdaterChanged;
+
+    private void OnUpdaterChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Updater.Changed -= OnUpdaterChanged;
+
+    private Task CheckForUpdatesAsync() => Updater.CheckAsync();
+
+    private string LatestVersionText =>
+        Updater.Latest is { } latest ? latest.Version.ToString()
+        : Updater.Status == UpdateStatus.Checking ? "Checking…"
+        : Updater.HasChecked ? "No releases found"
+        : "Not checked yet";
+
+    private string UpdateStatusText => Updater.Status switch
+    {
+        UpdateStatus.Checking => "Checking…",
+        UpdateStatus.Failed => Updater.Error ?? "",
+        UpdateStatus.Idle => Updater.HasChecked ? "Tammi is up to date." : "",
+        _ => "",
+    };
+
+    private Task UpdateUpdatesAsync(Func<UpdateSettings, UpdateSettings> update) =>
+        UpdateAsync(settings => settings with { Updates = update(settings.Updates) });
+}

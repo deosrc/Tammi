@@ -1,0 +1,321 @@
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using Deosrc.Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Installation;
+
+namespace Deosrc.Tammi.Core.Updates;
+
+/// <summary>
+/// Checks for a newer release, installs it when the user agrees, and deletes old versions when Tammi starts.
+/// </summary>
+/// <remarks>
+/// Updating only works for a copy that was installed into a version folder (see <see cref="InstallLocation"/>), by the
+/// installer or by an earlier update. A build run from source can't update, as there's nothing to replace.
+/// </remarks>
+public sealed class AppUpdater
+{
+    private readonly GitHubReleaseClient _releases;
+    private readonly AppInstaller _installer;
+    private readonly InstallLocation _location;
+    private readonly ReleaseTarget? _target;
+    private readonly ISettingsStore _settings;
+    private readonly ILogger<AppUpdater> _logger;
+    private readonly PackageVersion? _running;
+    private readonly string? _runningDirectory;
+    private readonly SemaphoreSlim _busy = new(1, 1);
+    private bool _started;
+    private bool _installFailed;
+    private PackageVersion? _dismissed;
+
+    public AppUpdater(
+        HttpClient http,
+        InstallLocation location,
+        ReleaseTarget? target,
+        ISettingsStore settings,
+        ILogger<AppUpdater> logger,
+        string? runningDirectory = null,
+        string? version = null)
+    {
+        CurrentVersion = version ?? AppInfo.Version;
+        IsDevelopmentBuild = PackageVersion.TryParse(CurrentVersion, out var current) && current.IsDevelopment;
+        _location = location;
+        _target = target;
+        _settings = settings;
+        _logger = logger;
+        _releases = new GitHubReleaseClient(http);
+        _installer = new AppInstaller(http, location, target ?? new ReleaseTarget("linux-x64"));
+        _runningDirectory = runningDirectory ?? AppContext.BaseDirectory;
+        _running = target is null || IsDevelopmentBuild || !PackageVersion.TryParse(CurrentVersion, out var running)
+            ? null
+            : running;
+    }
+
+    /// <summary>
+    /// Raised when <see cref="Status"/>, <see cref="Progress"/> or <see cref="Available"/> changes, on any thread.
+    /// </summary>
+    public event Action? Changed;
+
+    /// <summary>
+    /// Whether this copy of Tammi can update itself. It can't if it's a development build, or its version can't be read.
+    /// </summary>
+    public bool CanUpdate => _running is not null;
+
+    /// <summary>
+    /// The version that's running.
+    /// </summary>
+    public string CurrentVersion { get; }
+
+    /// <summary>
+    /// Whether a check for updates has finished since Tammi started, whatever it found.
+    /// </summary>
+    public bool HasChecked { get; private set; }
+
+    /// <summary>
+    /// The newest release the last successful check found, whether or not it's newer than the running one, or
+    /// <see langword="null"/> if there hasn't been one yet or there are no releases.
+    /// </summary>
+    public ReleaseInfo? Latest { get; private set; }
+
+    /// <summary>
+    /// Whether this is a development build, going by its version: it has the pre-release tag <c>dev</c>, e.g. <c>0.0.0-dev</c>.
+    /// </summary>
+    public bool IsDevelopmentBuild { get; }
+
+    public UpdateStatus Status { get; private set; }
+
+    /// <summary>
+    /// The newer release, once one has been found.
+    /// </summary>
+    public ReleaseInfo? Available { get; private set; }
+
+    /// <summary>
+    /// How much of the download has arrived, from 0 to 1.
+    /// </summary>
+    public double Progress { get; private set; }
+
+    /// <summary>
+    /// What went wrong when <see cref="Status"/> is <see cref="UpdateStatus.Failed"/>.
+    /// </summary>
+    public string? Error { get; private set; }
+
+    /// <summary>
+    /// Whether the prompt should be shown: a newer release is waiting for an answer, is being installed, was
+    /// installed, or couldn't be installed.
+    /// </summary>
+    public bool ShowPrompt => Status switch
+    {
+        UpdateStatus.Available => Available?.Version != _dismissed,
+        UpdateStatus.Installing or UpdateStatus.Installed => true,
+        UpdateStatus.Failed => _installFailed,
+        _ => false,
+    };
+
+    /// <summary>
+    /// Runs the work done when Tammi starts, once: deletes old versions, then looks for an update if the settings say to.
+    /// </summary>
+    public async Task StartAsync()
+    {
+        if (_started || !CanUpdate)
+        {
+            return;
+        }
+
+        _started = true;
+        PointMenuLink();
+        await Task.Run(CleanUp);
+        if (_settings.Current.Updates.CheckOnStartup)
+        {
+            await CheckAsync();
+        }
+    }
+
+    private void PointMenuLink()
+    {
+        // Only a copy in its version folder is the installed one: a copy run from elsewhere mustn't take over the menu link.
+        if (_running is null || _target is null || _location.VersionRunningFrom(_runningDirectory!) is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var executable = Path.Combine(_runningDirectory!, _target.ExecutableName);
+            if (File.Exists(executable))
+            {
+                MenuLink.Point(_target, executable);
+                new InstallMetadata(_running.ToString(), _target.RuntimeIdentifier).Save(_runningDirectory!);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            _logger.LogWarning(ex, "Couldn't create or update the application menu link");
+        }
+    }
+
+    private void CleanUp()
+    {
+        try
+        {
+            var deleted = VersionCleaner.Clean(_location, _running);
+            if (deleted.Count > 0)
+            {
+                _logger.LogInformation("Deleted old versions: {Versions}", string.Join(", ", deleted));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Couldn't delete old versions");
+        }
+    }
+
+    /// <summary>
+    /// Looks for a release newer than the running one.
+    /// </summary>
+    public async Task CheckAsync(CancellationToken cancellationToken = default)
+    {
+        if (_running is null || !await _busy.WaitAsync(0, cancellationToken))
+        {
+            return;
+        }
+
+        try
+        {
+            if (Status is UpdateStatus.Installing or UpdateStatus.Installed)
+            {
+                return;
+            }
+
+            _installFailed = false;
+            Set(UpdateStatus.Checking);
+            var latest = await _releases.GetLatestAsync(_settings.Current.Updates.IncludePreReleases, cancellationToken);
+            Latest = latest;
+            HasChecked = true;
+            if (latest is not null && latest.Version > _running)
+            {
+                _logger.LogInformation("Tammi {Version} is available (running {Running})", latest.Version, _running);
+                Available = latest;
+                Set(UpdateStatus.Available);
+            }
+            else
+            {
+                Available = null;
+                Set(UpdateStatus.Idle);
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            _logger.LogWarning(ex, "Couldn't check for updates");
+            Fail($"Couldn't check for updates. {ex.Message}");
+        }
+        finally
+        {
+            _busy.Release();
+        }
+    }
+
+    /// <summary>
+    /// Downloads and installs the newer release, and points the menu link at it.
+    /// </summary>
+    public async Task InstallAsync(CancellationToken cancellationToken = default)
+    {
+        if (_running is null || Available is not { } release || !await _busy.WaitAsync(0, cancellationToken))
+        {
+            return;
+        }
+
+        try
+        {
+            Progress = 0;
+            _installFailed = false;
+            Set(UpdateStatus.Installing);
+            await _installer.InstallAsync(
+                release,
+                new Progress<DownloadProgress>(progress =>
+                {
+                    Progress = progress.TotalBytes > 0 ? (double)progress.BytesReceived / progress.TotalBytes : 0;
+                    Changed?.Invoke();
+                }),
+                cancellationToken);
+            _logger.LogInformation("Installed Tammi {Version}", release.Version);
+            Set(UpdateStatus.Installed);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException
+            or UnauthorizedAccessException or TaskCanceledException)
+        {
+            _logger.LogWarning(ex, "Couldn't install Tammi {Version}", release.Version);
+            _installFailed = true;
+            Fail($"Couldn't install {release.Version}. {ex.Message}");
+        }
+        finally
+        {
+            _busy.Release();
+        }
+    }
+
+    /// <summary>
+    /// Whether Tammi should start the installed version when it closes: the user asked to restart to update.
+    /// </summary>
+    public bool RestartRequested { get; private set; }
+
+    /// <summary>
+    /// Asks for the installed version to be started when Tammi closes. Call <see cref="CancelRestart"/> if closing is
+    /// cancelled.
+    /// </summary>
+    public void RequestRestart() => RestartRequested = Status == UpdateStatus.Installed;
+
+    /// <summary>
+    /// Withdraws <see cref="RequestRestart"/>, e.g. because the user chose not to close Tammi after all.
+    /// </summary>
+    public void CancelRestart() => RestartRequested = false;
+
+    /// <summary>
+    /// Starts the version that was installed, if a restart was requested. Call it once Tammi has closed, and has let go
+    /// of <see cref="SingleInstanceLock"/>, or the new copy would take it for a second copy and stop.
+    /// </summary>
+    public void StartInstalledVersionIfRequested()
+    {
+        if (!RestartRequested || _target is null || Available is not { } release)
+        {
+            return;
+        }
+
+        RestartRequested = false;
+        try
+        {
+            var directory = _location.DirectoryFor(release.Version);
+            Process.Start(new ProcessStartInfo(Path.Combine(directory, _target.ExecutableName))
+            {
+                WorkingDirectory = directory,
+                UseShellExecute = false,
+            })?.Dispose();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+            or System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            _logger.LogWarning(ex, "Couldn't start Tammi {Version}", release.Version);
+        }
+    }
+
+    /// <summary>
+    /// Stops asking about the available release until a newer one is found.
+    /// </summary>
+    public void Dismiss()
+    {
+        _dismissed = Available?.Version;
+        Changed?.Invoke();
+    }
+
+    private void Set(UpdateStatus status)
+    {
+        Status = status;
+        Error = null;
+        Changed?.Invoke();
+    }
+
+    private void Fail(string error)
+    {
+        Status = UpdateStatus.Failed;
+        Error = error;
+        Changed?.Invoke();
+    }
+}
