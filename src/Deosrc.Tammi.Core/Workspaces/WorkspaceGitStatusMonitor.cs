@@ -257,7 +257,9 @@ public sealed class WorkspaceGitStatusMonitor : IDisposable
         }
     }
 
-    // Call with the slot's watch lock held.
+    /// <summary>
+    /// Call with the slot's watch lock held.
+    /// </summary>
     private void SetFallbackScan(RepositorySlot slot, bool enabled)
     {
         if (enabled && slot.FallbackTimer is null && !_disposed)

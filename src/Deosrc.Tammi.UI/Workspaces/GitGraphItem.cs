@@ -144,7 +144,9 @@ public sealed record GitGraphItem(
         return items;
     }
 
-    // Whether nothing is above the commit on its lane: no line comes down into its dot, and no other changes are on it.
+    /// <summary>
+    /// Whether nothing is above the commit on its lane: no line comes down into its dot, and no other changes are on it.
+    /// </summary>
     private static bool IsTip(GitGraphRow row, string? busySha) =>
         row.Commit.Sha != busySha
         && !row.Lines.Any(line => line.Half == GitGraphLineHalf.Top && line.ToLane == row.Lane);

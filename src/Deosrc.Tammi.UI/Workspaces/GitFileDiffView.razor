@@ -282,7 +282,10 @@
 
     private static string Side(DiffLine? line) => line is null ? "blank" : line.Kind.ToString().ToLowerInvariant();
 
-    private string Title => Graph.DiffTarget?.Path ?? "";
+    // A renamed file's old path too, as in the lists of changed files.
+    private string Title => Graph.DiffTarget?.Path is { } path
+        ? Graph.DiffOldPath is { } oldPath && oldPath != path ? $"{oldPath} → {path}" : path
+        : "";
 
     private string SourceText => Graph.DiffTarget?.Source switch
     {

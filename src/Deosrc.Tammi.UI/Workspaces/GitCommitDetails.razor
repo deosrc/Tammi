@@ -151,8 +151,12 @@
                             <li class="git-commit-file git-commit-file-openable @(IsShown(change) ? "selected" : null)"
                                 @key="change.Path" title="@FileTitle(change)" @onclick="() => ToggleDiff(change)">
                                 @Kind(change.Kind)
-                                <span class="git-commit-file-name">@CommitFileTree.NameOf(change.Path)</span>
-                                @if (folder.Length > 0)
+                                <span class="git-commit-file-name">@CommitFileTree.DisplayName(change.Path, change.OldPath)</span>
+                                @if (CommitFileTree.MovedFrom(change.Path, change.OldPath) is { } movedFrom)
+                                {
+                                    <span class="git-commit-file-folder">@folder ← @movedFrom</span>
+                                }
+                                else if (folder.Length > 0)
                                 {
                                     <span class="git-commit-file-folder">@folder</span>
                                 }
@@ -395,7 +399,11 @@
                     role="treeitem" aria-selected="@(IsShown(node.Change!) ? "true" : "false")" style="@indent"
                     title="@FileTitle(node.Change!)" @key="node.Path" @onclick="() => ToggleDiff(node.Change!)">
                     @Kind(node.Change!.Kind)
-                    <span class="git-commit-file-name">@node.Name</span>
+                    <span class="git-commit-file-name">@CommitFileTree.DisplayName(node.Change!.Path, node.Change.OldPath)</span>
+                    @if (CommitFileTree.MovedFrom(node.Change.Path, node.Change.OldPath) is { } movedFrom)
+                    {
+                        <span class="git-commit-file-folder">from @movedFrom</span>
+                    }
                 </li>
             }
         }

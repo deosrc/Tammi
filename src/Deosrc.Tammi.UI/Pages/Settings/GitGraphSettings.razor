@@ -1,22 +1,7 @@
 @inherits SettingsSectionBase
 @using Deosrc.Tammi.Core.Settings
 
-@* The Git section's options for the git graph: which commits a graph shows when it opens. *@
-<div class="settings-field">
-    <label for="git-graph-scope">Git graph shows</label>
-    <div class="settings-field-row">
-        <select id="git-graph-scope" value="@SettingsStore.Current.Git.GraphScope" @onchange="OnGraphScopeChanged">
-            <option value="@GitGraphScope.WorkspaceBranch">The workspace branch</option>
-            <option value="@GitGraphScope.Everything">Everything</option>
-        </select>
-    </div>
-    <p class="settings-help">
-        Which commits a repository's git graph shows when it opens: the workspace branch with its upstream and base
-        branch, or every branch and tag. Each graph can switch while it's open.
-    </p>
-</div>
-
-@* The commit panel's counter for the subject line. *@
+@* The Git section's options for the git graph: the commit panel's counter for the subject line. *@
 <div class="settings-field">
     <label for="git-subject-limit">Commit subject limit</label>
     <div class="settings-field-row">
@@ -57,9 +42,4 @@
 
         _subjectLimitRevision++;
     }
-
-    private Task OnGraphScopeChanged(ChangeEventArgs e) =>
-        Enum.TryParse(e.Value?.ToString(), out GitGraphScope scope)
-            ? UpdateAsync(settings => settings with { Git = settings.Git with { GraphScope = scope } })
-            : Task.CompletedTask;
 }

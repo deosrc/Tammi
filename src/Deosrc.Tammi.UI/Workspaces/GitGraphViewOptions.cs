@@ -184,7 +184,9 @@ public sealed class GitGraphViewOptions : IDisposable
     /// </summary>
     public void Dispose() => _settings.Changed -= OnSettingsChanged;
 
-    // The settings changed, e.g. by another graph's choice being saved. Only a different choice changes the graphs.
+    /// <summary>
+    /// The settings changed, e.g. by another graph's choice being saved. Only a different choice changes the graphs.
+    /// </summary>
     private void OnSettingsChanged()
     {
         var view = _settings.Current.Git.GraphFileView;

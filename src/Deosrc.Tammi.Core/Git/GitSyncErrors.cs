@@ -86,7 +86,9 @@ internal static class GitSyncErrors
     private static bool Contains(string text, params string[] needles) =>
         needles.Any(needle => text.Contains(needle, StringComparison.Ordinal));
 
-    // Without progress lines ("Receiving objects: 40% …"), which end in a percentage or "done." and bury the error.
+    /// <summary>
+    /// Without progress lines ("Receiving objects: 40% …"), which end in a percentage or "done." and bury the error.
+    /// </summary>
     private static string Details(GitCommandResult result)
     {
         // A conflicted merge reports on standard output, most other failures on standard error.

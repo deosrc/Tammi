@@ -365,11 +365,15 @@ public sealed partial class GitHubIntegration
     /// </summary>
     private const int MaxShorthandRepositories = 5;
 
-    // A repository's name, #, and the issue's number.
+    /// <summary>
+    /// A repository's name, #, and the issue's number.
+    /// </summary>
     [GeneratedRegex(@"^(?<repo>[A-Za-z0-9_.-]+)#(?<number>[1-9][0-9]{0,8})$")]
     private static partial Regex ShorthandNumberPattern();
 
-    // A repository's name, then the words to look for in its issues.
+    /// <summary>
+    /// A repository's name, then the words to look for in its issues.
+    /// </summary>
     [GeneratedRegex(@"^(?<repo>[A-Za-z0-9_.-]+)\s+(?<words>\S.*)$")]
     private static partial Regex ShorthandWordsPattern();
 

@@ -148,6 +148,13 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
                 break;
         }
 
+        if (source == GitDiffSource.Unstaged
+            && oldPath is not null
+            && ReadUnstagedRenameDiff(repository, file, oldPath, options) is { } renameDiff)
+        {
+            return renameDiff;
+        }
+
         PatchEntryChanges? entry = patch.FirstOrDefault(change => change.Path == file) ?? patch.FirstOrDefault();
         if (entry is null)
         {
@@ -255,10 +262,10 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
         }).Count();
     }
 
-    // The diff of a submodule is the change to the commit recorded for it, as git shows it, or null if the path isn't
-    // a submodule in the states compared.
-    // The tree of the new files in a stash, or null for any other commit. Git writes them as a commit that's the stash's
-    // third parent, with a message that starts "untracked files on".
+    /// <summary>
+    /// The tree of the new files in a stash, or null for any other commit. Git writes them as a commit that's the stash's
+    /// third parent, with a message that starts "untracked files on".
+    /// </summary>
     private static Tree? UntrackedTreeOf(Commit commit)
     {
         Commit? third = commit.Parents.Skip(2).FirstOrDefault();
@@ -267,6 +274,36 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
             : null;
     }
 
+    /// <summary>
+    /// The diff of a file renamed in the working directory: git sees the old file as deleted and the new one as new, so
+    /// the changes are found by comparing the old file, as it is in the index, with the new one. Null if either isn't
+    /// there.
+    /// </summary>
+    private static FileDiff? ReadUnstagedRenameDiff(Repository repository, string file, string oldPath, CompareOptions options)
+    {
+        string fullPath = System.IO.Path.Combine(repository.Info.WorkingDirectory, file);
+        if (repository.Index[oldPath] is not { Mode: not Mode.GitLink } indexed
+            || repository.Lookup<Blob>(indexed.Id) is not { } oldBlob
+            || !File.Exists(fullPath))
+        {
+            return null;
+        }
+
+        Blob newBlob = repository.ObjectDatabase.CreateBlob(fullPath);
+        ContentChanges changes = repository.Diff.Compare(oldBlob, newBlob, options);
+        if (changes.IsBinaryComparison)
+        {
+            return new FileDiff(file, oldPath, [], IsBinary: true);
+        }
+
+        (IReadOnlyList<DiffHunk> hunks, bool truncated) = FileDiffParser.Parse(changes.Patch);
+        return new FileDiff(file, oldPath, hunks, IsTruncated: truncated);
+    }
+
+    /// <summary>
+    /// The diff of a submodule is the change to the commit recorded for it, as git shows it, or null if the path isn't
+    /// a submodule in the states compared.
+    /// </summary>
     private static FileDiff? ReadSubmoduleDiff(Repository repository, GitDiffSource source, string file, string? sha)
     {
         static string? CommitOf(TreeEntry? entry) =>
@@ -320,7 +357,7 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
             IncludeIgnored = false,
             ExcludeSubmodules = true,
             DetectRenamesInIndex = true,
-            DetectRenamesInWorkDir = false,
+            DetectRenamesInWorkDir = true,
         });
 
         return status
@@ -329,7 +366,7 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
                 entry.FilePath,
                 StagedChange(entry.State),
                 UnstagedChange(entry.State),
-                entry.HeadToIndexRenameDetails?.OldFilePath))
+                entry.HeadToIndexRenameDetails?.OldFilePath ?? entry.IndexToWorkDirRenameDetails?.OldFilePath))
             .OrderBy(change => change.Path, StringComparer.Ordinal)
             .ToArray();
     }
@@ -458,7 +495,9 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
         }
     }
 
-    // The local branch a starting point names: HEAD's branch (unless it's detached), or a local branch by name.
+    /// <summary>
+    /// The local branch a starting point names: HEAD's branch (unless it's detached), or a local branch by name.
+    /// </summary>
     private static Branch? FindLocalBranch(Repository repository, string name)
     {
         if (name == "HEAD")

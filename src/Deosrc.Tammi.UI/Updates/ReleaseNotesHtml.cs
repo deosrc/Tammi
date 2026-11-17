@@ -31,8 +31,10 @@ public static class ReleaseNotesHtml
         return document.ToHtml(Pipeline);
     }
 
-    // The notes' raw HTML isn't passed on, so a release can't put markup in the app. Comments, which release notes often
-    // have (e.g. left in from a template), are dropped, and any other HTML is shown as text.
+    /// <summary>
+    /// The notes' raw HTML isn't passed on, so a release can't put markup in the app. Comments, which release notes often
+    /// have (e.g. left in from a template), are dropped, and any other HTML is shown as text.
+    /// </summary>
     private static void TameHtml(MarkdownDocument document)
     {
         foreach (var block in document.Descendants<HtmlBlock>().ToList())

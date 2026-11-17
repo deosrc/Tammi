@@ -56,7 +56,9 @@ internal static partial class JiraIssueKey
         return TryParse(selected, out key);
     }
 
-    // A project key (a letter, then letters, digits or underscores) and the issue's number.
+    /// <summary>
+    /// A project key (a letter, then letters, digits or underscores) and the issue's number.
+    /// </summary>
     [GeneratedRegex("^[A-Za-z][A-Za-z0-9_]*-[1-9][0-9]*$")]
     private static partial Regex KeyPattern();
 }

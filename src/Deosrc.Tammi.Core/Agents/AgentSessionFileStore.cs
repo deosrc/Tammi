@@ -126,7 +126,9 @@ public sealed class AgentSessionFileStore : IAgentSessionStore
         }
     }
 
-    // Returns the sessions, and whether the file could be read. A missing file holds no sessions.
+    /// <summary>
+    /// Returns the sessions, and whether the file could be read. A missing file holds no sessions.
+    /// </summary>
     private async Task<(IReadOnlyList<AgentSession> Sessions, bool Readable)> ReadAsync(
         CancellationToken cancellationToken)
     {
@@ -162,7 +164,9 @@ public sealed class AgentSessionFileStore : IAgentSessionStore
         }
     }
 
-    // A session missing a value (e.g. in a file written by hand) can't be resumed.
+    /// <summary>
+    /// A session missing a value (e.g. in a file written by hand) can't be resumed.
+    /// </summary>
     private static bool IsComplete(AgentSession? session) =>
         session is not null
         && !string.IsNullOrWhiteSpace(session.Id)

@@ -322,6 +322,44 @@ public sealed class WorkspaceGitGraphTests : IDisposable
     }
 
     [Fact]
+    public async Task UnstagedRename_ShowsBothPathsAndCanBeStaged()
+    {
+        (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();
+        string clone = workspace.GetWorktreePath(repository);
+        File.Move(Path.Combine(clone, "README.md"), Path.Combine(clone, "OVERVIEW.md"));
+        WorkspaceGitGraph graph = _graphs.Open(workspace, repository);
+        await graph.LoadAsync();
+
+        FileChange change = Assert.Single(graph.UnstagedChanges);
+        Assert.Equal(("OVERVIEW.md", "README.md"), (change.Path, change.OldPath));
+
+        await graph.OpenDiffAsync(GitDiffSource.Unstaged, change.Path, change.OldPath);
+        Assert.Equal("README.md", graph.ActiveDiff?.OldPath);
+
+        await graph.StageAsync([change]);
+
+        Assert.Empty(graph.UnstagedChanges);
+        FileChange staged = Assert.Single(graph.StagedChanges);
+        Assert.Equal(("OVERVIEW.md", "README.md"), (staged.Path, staged.OldPath));
+    }
+
+    [Fact]
+    public async Task UnstagedRename_CanBeDiscarded()
+    {
+        (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();
+        string clone = workspace.GetWorktreePath(repository);
+        File.Move(Path.Combine(clone, "README.md"), Path.Combine(clone, "OVERVIEW.md"));
+        WorkspaceGitGraph graph = _graphs.Open(workspace, repository);
+        await graph.LoadAsync();
+
+        await graph.DiscardAsync(graph.UnstagedChanges);
+
+        Assert.Empty(graph.WorkingChanges ?? []);
+        Assert.True(File.Exists(Path.Combine(clone, "README.md")));
+        Assert.False(File.Exists(Path.Combine(clone, "OVERVIEW.md")));
+    }
+
+    [Fact]
     public async Task SubmoduleOnANewCommit_CanBeStagedUnstagedAndCommitted()
     {
         (WorkspaceGitGraph graph, _) = await OpenParentOfMovedSubmoduleAsync();

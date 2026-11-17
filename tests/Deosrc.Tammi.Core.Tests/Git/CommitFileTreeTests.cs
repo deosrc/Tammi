@@ -4,6 +4,21 @@ namespace Deosrc.Tammi.Core.Tests.Git;
 
 public sealed class CommitFileTreeTests
 {
+    [Theory]
+    [InlineData("src/new.cs", null, "new.cs")]
+    [InlineData("src/new.cs", "src/old.cs", "old.cs → new.cs")]
+    [InlineData("lib/same.cs", "src/same.cs", "same.cs")]
+    public void DisplayName_ShowsTheOldNameOfARenamedFile(string path, string? oldPath, string expected) =>
+        Assert.Equal(expected, CommitFileTree.DisplayName(path, oldPath));
+
+    [Theory]
+    [InlineData("src/new.cs", null, null)]
+    [InlineData("src/new.cs", "src/old.cs", null)]
+    [InlineData("lib/new.cs", "src/old.cs", "src")]
+    [InlineData("lib/new.cs", "old.cs", "/")]
+    public void MovedFrom_IsTheOldFolderOfAFileMovedToAnother(string path, string? oldPath, string? expected) =>
+        Assert.Equal(expected, CommitFileTree.MovedFrom(path, oldPath));
+
     [Fact]
     public void Build_PutsFoldersFirstThenFiles_EachInNameOrder()
     {

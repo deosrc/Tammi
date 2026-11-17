@@ -82,8 +82,10 @@ public sealed class GitStash(IGitCli git) : IGitStash
 
     private static string Name(int index) => $"stash@{{{index}}}";
 
-    // The newest stash's sha, or "" if there are none. "git stash push" succeeds without making a stash when there's
-    // nothing to stash, so a changed sha is how to tell.
+    /// <summary>
+    /// The newest stash's sha, or "" if there are none. "git stash push" succeeds without making a stash when there's
+    /// nothing to stash, so a changed sha is how to tell.
+    /// </summary>
     private async Task<string> TopAsync(string path, CancellationToken cancellationToken)
     {
         GitCommandResult result = await git.RunAsync(
