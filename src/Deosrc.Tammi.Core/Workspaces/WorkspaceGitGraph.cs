@@ -570,17 +570,17 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public string? BranchProblem { get; private set; }
 
     /// <summary>
-    /// Creates a local branch on a commit, and optionally switches to it.
+    /// Creates a local branch on a commit, and optionally checks it out.
     /// </summary>
     /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
-    public Task<bool> CreateBranchAsync(string name, string sha, bool switchTo) =>
-        ChangeBranchesAsync(token => _branches.CreateAsync(Path, name, sha, switchTo, token));
+    public Task<bool> CreateBranchAsync(string name, string sha, bool checkout) =>
+        ChangeBranchesAsync(token => _branches.CreateAsync(Path, name, sha, checkout, token));
 
     /// <summary>
-    /// Switches to a local branch, or to a local branch that tracks a remote-tracking branch.
+    /// Checks out a local branch, or a local branch that tracks a remote-tracking branch.
     /// </summary>
     /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
-    public Task<bool> SwitchBranchAsync(string name) => ChangeBranchesAsync(token => _branches.SwitchAsync(Path, name, token));
+    public Task<bool> CheckoutBranchAsync(string name) => ChangeBranchesAsync(token => _branches.CheckoutAsync(Path, name, token));
 
     /// <summary>
     /// Renames a local branch. Its remote branch isn't renamed.
@@ -737,7 +737,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
             BranchProblem = ex.Message;
         }
 
-        // Branches (and, after a switch, the working files) may have changed even when it failed part way.
+        // Branches (and, after a checkout, the working files) may have changed even when it failed part way.
         await RunAsync(() =>
         {
             Reload(Rows.Count);

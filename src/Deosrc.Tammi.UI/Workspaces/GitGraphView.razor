@@ -200,12 +200,12 @@
             </label>
             <div class="git-graph-tag-prompt-actions">
                 <button type="submit" class="button" disabled="@(!CanSubmitBranchPrompt)">
-                    @(branchPrompt.Kind == BranchPromptKind.Create ? "Create and switch" : "Rename branch")
+                    @(branchPrompt.Kind == BranchPromptKind.Create ? "Create and checkout" : "Rename branch")
                 </button>
                 @if (branchPrompt.Kind == BranchPromptKind.Create)
                 {
                     <button type="button" class="button button-secondary" disabled="@(!CanSubmitBranchPrompt)"
-                            @onclick="() => SubmitBranchPromptAsync(switchTo: false)">
+                            @onclick="() => SubmitBranchPromptAsync(checkout: false)">
                         Create branch
                     </button>
                 }
@@ -279,8 +279,8 @@
                 var isWorkspace = Graph.IsWorkspaceBranch(branch);
                 <li role="none">
                     <button type="button" class="menu-item" role="menuitem" disabled="@isCurrent"
-                            @onclick="() => RunBranchAsync(() => Graph.SwitchBranchAsync(branch))">
-                        Switch to @branch@(isCurrent ? " (current)" : null)
+                            @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
+                        Checkout @branch@(isCurrent ? " (current)" : null)
                     </button>
                 </li>
                 <li role="none">
@@ -334,8 +334,8 @@
                 <li role="separator" class="menu-separator"></li>
                 <li role="none">
                     <button type="button" class="menu-item" role="menuitem"
-                            @onclick="() => RunBranchAsync(() => Graph.SwitchBranchAsync(branch))">
-                        Switch to @branch
+                            @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
+                        Checkout @branch
                     </button>
                 </li>
                 <li role="none">
@@ -1082,9 +1082,9 @@
         await action();
     }
 
-    private Task SubmitBranchPromptAsync() => SubmitBranchPromptAsync(switchTo: true);
+    private Task SubmitBranchPromptAsync() => SubmitBranchPromptAsync(checkout: true);
 
-    private async Task SubmitBranchPromptAsync(bool switchTo)
+    private async Task SubmitBranchPromptAsync(bool checkout)
     {
         if (_branchPrompt is not { } prompt || !CanSubmitBranchPrompt)
         {
@@ -1096,7 +1096,7 @@
         switch (prompt.Kind)
         {
             case BranchPromptKind.Create:
-                await Graph.CreateBranchAsync(name, prompt.Name, switchTo);
+                await Graph.CreateBranchAsync(name, prompt.Name, checkout);
                 break;
             default:
                 if (name != prompt.Name)

@@ -1,21 +1,21 @@
 namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
-/// Creates, switches, renames and deletes branches with the <c>git</c> CLI.
+/// Creates, checks out, renames and deletes branches with the <c>git</c> CLI.
 /// </summary>
 public sealed class GitBranches(IGitCli git) : IGitBranches
 {
     /// <inheritdoc />
-    public async Task CreateAsync(string path, string name, string startPoint, bool switchTo, CancellationToken cancellationToken = default)
+    public async Task CreateAsync(string path, string name, string startPoint, bool checkout, CancellationToken cancellationToken = default)
     {
-        string[] arguments = switchTo
+        string[] arguments = checkout
             ? ["switch", "--create", name, "--no-track", startPoint]
             : ["branch", "--no-track", "--", name, startPoint];
         await git.RunAsync(path, arguments, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public async Task SwitchAsync(string path, string name, CancellationToken cancellationToken = default)
+    public async Task CheckoutAsync(string path, string name, CancellationToken cancellationToken = default)
     {
         // "git switch" creates a tracking branch when the name matches one remote's branch, but not for "origin/x".
         string? remoteBranch = await FindRemoteBranchAsync(path, name, cancellationToken).ConfigureAwait(false);

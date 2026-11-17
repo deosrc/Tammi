@@ -27,7 +27,7 @@ public sealed class GitBranchesTests : IDisposable
     {
         var (_, mine) = await CloneAsync();
 
-        await _branches.CreateAsync(mine, "feature", "HEAD", switchTo: false, Token);
+        await _branches.CreateAsync(mine, "feature", "HEAD", checkout: false, Token);
 
         Assert.Equal("feature", await GitAsync(mine, "branch", "--list", "--format=%(refname:short)", "feature"));
         Assert.Equal("main", await GitAsync(mine, "branch", "--show-current"));
@@ -38,7 +38,7 @@ public sealed class GitBranchesTests : IDisposable
     {
         var (_, mine) = await CloneAsync();
 
-        await _branches.CreateAsync(mine, "feature", "HEAD", switchTo: true, Token);
+        await _branches.CreateAsync(mine, "feature", "HEAD", checkout: true, Token);
 
         Assert.Equal("feature", await GitAsync(mine, "branch", "--show-current"));
     }
@@ -57,7 +57,7 @@ public sealed class GitBranchesTests : IDisposable
         var (_, mine) = await CloneAsync();
         await _branches.CreateAsync(mine, "feature", "HEAD", false, Token);
 
-        await _branches.SwitchAsync(mine, "feature", Token);
+        await _branches.CheckoutAsync(mine, "feature", Token);
 
         Assert.Equal("feature", await GitAsync(mine, "branch", "--show-current"));
     }
@@ -69,7 +69,7 @@ public sealed class GitBranchesTests : IDisposable
         await GitAsync(remote, "branch", "feature");
         await GitAsync(mine, "fetch", "origin");
 
-        await _branches.SwitchAsync(mine, "origin/feature", Token);
+        await _branches.CheckoutAsync(mine, "origin/feature", Token);
 
         Assert.Equal("feature", await GitAsync(mine, "branch", "--show-current"));
         Assert.Equal(new GitUpstream("origin", "feature"), await _branches.GetUpstreamAsync(mine, "feature", Token));

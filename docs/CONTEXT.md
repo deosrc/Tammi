@@ -404,10 +404,10 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     merge target; HEAD and its branch's upstream for a submodule) or **Everything** (every local and remote-tracking
     branch and tag). It starts as Settings → Git says, which defaults to the workspace branch.
   - **Branches:** right-clicking a commit opens a menu that can create a branch on it (named in a prompt, and
-    switched to or not). For each local branch on the commit, the menu can switch to it, rename it (its remote
+    checked out or not). For each local branch on the commit, the menu can check it out, rename it (its remote
     branch isn't renamed) and delete it; the checked out branch can't be deleted, and the workspace branch can't
     be renamed or deleted. "Delete branch" is a submenu offering the local branch, the remote branch it tracks or both
-    (the remote choices need an upstream). A remote-tracking branch on the commit can be switched to, which creates a
+    (the remote choices need an upstream). A remote-tracking branch on the commit can be checked out, which creates a
     local branch that tracks it, or deleted from its remote. Every delete, including a tag's, asks for confirmation
     first, naming what will be deleted. A failure (e.g. local changes in the way, or a
     branch checked out in another worktree) is shown above the graph, and the graph is read again either way.
