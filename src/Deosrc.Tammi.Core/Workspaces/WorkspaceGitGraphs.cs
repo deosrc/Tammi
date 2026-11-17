@@ -61,6 +61,52 @@ public sealed class WorkspaceGitGraphs(IGitRepositoryReader reader, IGitWorkingT
     }
 
     /// <summary>
+    /// The graphs open on Local Repositories outside any workspace, in the order they were opened.
+    /// </summary>
+    public IReadOnlyList<WorkspaceGitGraph> StandaloneGraphs()
+    {
+        lock (_lock)
+        {
+            return _graphs.Where(graph => graph.IsStandalone).ToArray();
+        }
+    }
+
+    /// <summary>
+    /// The graph open on a Local Repository outside any workspace, if there is one.
+    /// </summary>
+    public WorkspaceGitGraph? ForRepository(string repositoryPath)
+    {
+        lock (_lock)
+        {
+            return _graphs.Find(graph => graph.WorkspaceId == WorkspaceGitGraph.StandaloneIdPrefix + repositoryPath);
+        }
+    }
+
+    /// <summary>
+    /// Opens the graph of a Local Repository outside any workspace, showing everything. If it's already open,
+    /// returns that graph instead.
+    /// </summary>
+    public WorkspaceGitGraph OpenRepository(string repositoryPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+
+        WorkspaceGitGraph graph;
+        lock (_lock)
+        {
+            if (ForRepository(repositoryPath) is { } existing)
+            {
+                return existing;
+            }
+
+            graph = new WorkspaceGitGraph(repositoryPath, reader, workingTree, sync, tags, branches, stash, diffs, settings);
+            _graphs.Add(graph);
+        }
+
+        Changed?.Invoke(graph.WorkspaceId);
+        return graph;
+    }
+
+    /// <summary>
     /// Closes a graph. Closing one that's already closed does nothing.
     /// </summary>
     public void Close(WorkspaceGitGraph graph)

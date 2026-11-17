@@ -2194,6 +2194,19 @@ label.task-choice {
   font-weight: 600;
 }
 
+/* The Repositories page's table: eight columns, where an unreadable repository's problem spans the six status ones. */
+.data-table-repositories {
+  grid-template-columns: repeat(8, minmax(0, max-content));
+}
+
+.data-table-repositories th {
+  padding: var(--space-1) var(--space-2);
+}
+
+.data-table-repositories .data-table-span {
+  grid-column: span 6;
+}
+
 .data-table-text {
   display: block;
   overflow: hidden;

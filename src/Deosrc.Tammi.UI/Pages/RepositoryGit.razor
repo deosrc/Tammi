@@ -1,0 +1,18 @@
+@page "/repositories/git/{EncodedPath}"
+@inject WorkspaceGitGraphs GitGraphs
+
+@* The git graph of a Local Repository, opened from the Repositories page without a workspace. *@
+@if (_graph is not null)
+{
+    <GitGraphView @key="_graph" Graph="_graph" />
+}
+
+@code {
+    private WorkspaceGitGraph? _graph;
+
+    [Parameter]
+    public string EncodedPath { get; set; } = "";
+
+    protected override void OnParametersSet() =>
+        _graph = GitGraphs.OpenRepository(Uri.UnescapeDataString(EncodedPath));
+}

@@ -78,6 +78,45 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         StartOrder = MainAreaTabOrder.Next();
     }
 
+    /// <summary>
+    /// The prefix of the <see cref="WorkspaceId"/> of a graph of a repository outside any workspace.
+    /// </summary>
+    public const string StandaloneIdPrefix = "repository:";
+
+    internal WorkspaceGitGraph(
+        string repositoryPath,
+        IGitRepositoryReader reader,
+        IGitWorkingTree workingTree,
+        IGitSync sync,
+        IGitTags tags,
+        IGitBranches branches,
+        IGitStash stash,
+        IGitDiffs diffs,
+        ISettingsStore settings)
+    {
+        WorkspaceId = StandaloneIdPrefix + repositoryPath;
+        Repository = new WorkspaceRepository(System.IO.Path.GetFileName(repositoryPath), repositoryPath, "HEAD", "HEAD");
+        IsStandalone = true;
+        Scope = GitGraphScope.Everything;
+        _reader = reader;
+        _workingTree = workingTree;
+        _sync = sync;
+        _tags = tags;
+        _branches = branches;
+        _stash = stash;
+        _diffs = diffs;
+        _settings = settings;
+        Path = repositoryPath;
+        Name = "Git: " + Repository.FolderName;
+        StartOrder = MainAreaTabOrder.Next();
+    }
+
+    /// <summary>
+    /// Whether the graph is of a Local Repository opened outside any workspace. It always shows everything, and has
+    /// no workspace branch or merge target.
+    /// </summary>
+    public bool IsStandalone { get; }
+
     /// <inheritdoc />
     public string WorkspaceId { get; }
 
@@ -791,7 +830,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     /// <summary>
     /// Whether a local branch is the workspace's branch, which can't be renamed or deleted from here.
     /// </summary>
-    public bool IsWorkspaceBranch(string name) => SubmodulePath is null && name == Repository.Branch;
+    public bool IsWorkspaceBranch(string name) => !IsStandalone && SubmodulePath is null && name == Repository.Branch;
 
     /// <summary>
     /// Clears <see cref="BranchProblem"/>, once the user has seen it.

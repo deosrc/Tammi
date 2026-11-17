@@ -13,30 +13,33 @@
 <div class="git-graph" @ref="_body">
     <div class="git-graph-main @(Graph.DiffTarget is not null ? "git-graph-main-diff" : null)">
         <div class="git-graph-toolbar">
-            <div class="segmented" role="group" aria-label="Commits shown">
-                @* Icons, with the text as the tooltip. *@
-                <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.WorkspaceBranch)"
-                        aria-label="Workspace branch"
-                        title="Workspace branch: HEAD, the workspace branch, its upstream and its merge target"
-                        @onclick="() => Graph.SetScopeAsync(GitGraphScope.WorkspaceBranch)">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <circle cx="12" cy="5" r="2" />
-                        <circle cx="12" cy="12" r="2" />
-                        <circle cx="12" cy="19" r="2" />
-                        <path d="M12 7v3M12 14v3" />
-                    </svg>
-                </button>
-                <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.Everything)"
-                        aria-label="Everything" title="Everything: every branch and tag"
-                        @onclick="() => Graph.SetScopeAsync(GitGraphScope.Everything)">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <circle cx="6" cy="5" r="2" />
-                        <circle cx="6" cy="19" r="2" />
-                        <circle cx="18" cy="9" r="2" />
-                        <path d="M6 7v10M18 11c0 4-12 2-12 6" />
-                    </svg>
-                </button>
-            </div>
+            @if (!Graph.IsStandalone)
+            {
+                <div class="segmented" role="group" aria-label="Commits shown">
+                    @* Icons, with the text as the tooltip. *@
+                    <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.WorkspaceBranch)"
+                            aria-label="Workspace branch"
+                            title="Workspace branch: HEAD, the workspace branch, its upstream and its merge target"
+                            @onclick="() => Graph.SetScopeAsync(GitGraphScope.WorkspaceBranch)">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <circle cx="12" cy="5" r="2" />
+                            <circle cx="12" cy="12" r="2" />
+                            <circle cx="12" cy="19" r="2" />
+                            <path d="M12 7v3M12 14v3" />
+                        </svg>
+                    </button>
+                    <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.Everything)"
+                            aria-label="Everything" title="Everything: every branch and tag"
+                            @onclick="() => Graph.SetScopeAsync(GitGraphScope.Everything)">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <circle cx="6" cy="5" r="2" />
+                            <circle cx="6" cy="19" r="2" />
+                            <circle cx="18" cy="9" r="2" />
+                            <path d="M6 7v10M18 11c0 4-12 2-12 6" />
+                        </svg>
+                    </button>
+                </div>
+            }
             <div class="git-graph-actions">
                 <div class="git-graph-sync" role="group" aria-label="Sync with the remote">
                     <button type="button" class="button button-secondary git-graph-action" title="Download new commits from the remotes"

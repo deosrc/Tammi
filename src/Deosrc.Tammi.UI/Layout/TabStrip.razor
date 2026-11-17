@@ -5,6 +5,7 @@
 @inject UsageTabState UsageTabState
 @inject Deosrc.Tammi.UI.Workspaces.EditWorkspaceSessions EditSessions
 @inject NewWorkspaceTabState NewWorkspaceTabState
+@inject WorkspaceGitGraphs GitGraphs
 @inject NavigationManager Navigation
 
 <nav class="tab-strip" aria-label="Main">
@@ -15,6 +16,30 @@
             <path d="M5 9v11a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9" />
         </svg>
     </a>
+
+    <a class="tab home-tab @ActiveClass(AppRoutes.Repositories)" href="@AppRoutes.Repositories" title="Repositories"
+       aria-label="Repositories" aria-current="@AriaCurrent(AppRoutes.Repositories)">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="6" cy="5" r="2" />
+            <circle cx="6" cy="19" r="2" />
+            <circle cx="18" cy="9" r="2" />
+            <path d="M6 7v10M18 11c0 4-12 2-12 6" />
+        </svg>
+    </a>
+
+    @foreach (var graph in RepositoryGraphs)
+    {
+        var graphRoute = AppRoutes.RepositoryGit(graph.Path);
+        <div class="tab workspace-tab @ActiveClass(graphRoute)" @key="graph.Path">
+            <a class="tab-label" href="@graphRoute" title="@graph.Path" aria-current="@AriaCurrent(graphRoute)">
+                <span class="tab-label-text">@graph.Name</span>
+            </a>
+            <button type="button" class="tab-close" title="Close @graph.Name" aria-label="Close @graph.Name"
+                    @onclick="() => CloseRepositoryGraph(graph)">
+                &times;
+            </button>
+        </div>
+    }
 
     @foreach (var tab in WorkspaceTabs.Tabs)
     {
@@ -87,6 +112,7 @@
         UsageTabState.Changed += OnTabsChanged;
         NewWorkspaceTabState.Changed += OnTabsChanged;
         EditSessions.Changed += OnTabsChanged;
+        GitGraphs.Changed += OnGraphsChanged;
         Navigation.LocationChanged += OnLocationChanged;
     }
 
@@ -97,6 +123,7 @@
         UsageTabState.Changed -= OnTabsChanged;
         NewWorkspaceTabState.Changed -= OnTabsChanged;
         EditSessions.Changed -= OnTabsChanged;
+        GitGraphs.Changed -= OnGraphsChanged;
         Navigation.LocationChanged -= OnLocationChanged;
     }
 
@@ -107,6 +134,18 @@
         if (wasShown)
         {
             Navigation.NavigateTo(next is null ? AppRoutes.Home : AppRoutes.Workspace(next.WorkspaceId));
+        }
+    }
+
+    private IEnumerable<WorkspaceGitGraph> RepositoryGraphs => GitGraphs.StandaloneGraphs();
+
+    private void CloseRepositoryGraph(WorkspaceGitGraph graph)
+    {
+        var wasShown = IsCurrent(AppRoutes.RepositoryGit(graph.Path));
+        GitGraphs.Close(graph);
+        if (wasShown)
+        {
+            Navigation.NavigateTo(AppRoutes.Repositories);
         }
     }
 
@@ -148,6 +187,8 @@
         var end = path.IndexOfAny(['?', '#']);
         return (end < 0 ? path : path[..end]).TrimEnd('/');
     }
+
+    private void OnGraphsChanged(string id) => InvokeAsync(StateHasChanged);
 
     private void OnTabsChanged() => InvokeAsync(StateHasChanged);
 
