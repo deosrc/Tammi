@@ -77,9 +77,9 @@ public sealed class WorkspaceTools
     }
 
     /// <summary>
-    /// What a Local Repository outside any workspace can be opened in: the entries of each enabled tool whose
-    /// executable is found and that is offered for a repository, in the order of <see cref="ToolSettings.Tools"/>.
-    /// The Terminal tool isn't included, since terminals open in a workspace's tabs.
+    /// What a Local Repository outside any workspace can be opened in: the Terminal tool's entry, then the entries of
+    /// each enabled tool whose executable is found and that is offered for a repository, in the order of
+    /// <see cref="ToolSettings.Tools"/>.
     /// </summary>
     /// <param name="repositoryPath">The full path of the repository's working directory.</param>
     /// <param name="settings">The Tools settings.</param>
@@ -89,19 +89,8 @@ public sealed class WorkspaceTools
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
         ArgumentNullException.ThrowIfNull(settings);
 
-        // The repository stands in for a workspace of one: its parent folder is the Workspace Folder, so its worktree
-        // path is the repository itself.
-        var trimmed = Path.TrimEndingDirectorySeparator(repositoryPath);
-        var name = Path.GetFileName(trimmed);
-        var repository = new WorkspaceRepository(name, trimmed, "HEAD", "HEAD");
-        var workspace = new Workspace
-        {
-            Id = WorkspaceGitGraph.StandaloneIdPrefix + trimmed,
-            Name = name,
-            Folder = Path.GetDirectoryName(trimmed) ?? trimmed,
-            Repositories = [repository],
-        };
-        return [.. GetEntries(workspace, repository, settings).Where(entry => !entry.OpensTerminal)];
+        var workspace = StandaloneRepository.WorkspaceOf(repositoryPath);
+        return GetEntries(workspace, workspace.Repositories[0], settings);
     }
 
     /// <summary>

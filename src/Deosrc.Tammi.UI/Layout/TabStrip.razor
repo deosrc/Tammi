@@ -6,6 +6,7 @@
 @inject Deosrc.Tammi.UI.Workspaces.EditWorkspaceSessions EditSessions
 @inject NewWorkspaceTabState NewWorkspaceTabState
 @inject WorkspaceGitGraphs GitGraphs
+@inject Deosrc.Tammi.Core.Terminals.WorkspaceTerminals Terminals
 @inject NavigationManager Navigation
 
 <nav class="tab-strip" aria-label="Main">
@@ -172,7 +173,9 @@
     private void CloseRepositoryGraph(WorkspaceGitGraph graph)
     {
         var wasShown = IsCurrent(AppRoutes.RepositoryGit(graph.Path));
-        GitGraphs.Close(graph);
+        // Closes everything in the tab: its graphs, and the terminals, which end their shells.
+        GitGraphs.CloseAll(graph.WorkspaceId);
+        _ = Terminals.CloseAllAsync(graph.WorkspaceId);
         if (wasShown)
         {
             Navigation.NavigateTo(AppRoutes.Repositories);

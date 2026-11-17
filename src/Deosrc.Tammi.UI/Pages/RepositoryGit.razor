@@ -1,22 +1,194 @@
 @page "/repositories/git/{EncodedPath}"
+@implements IDisposable
+@using Deosrc.Tammi.Core.Terminals
 @inject WorkspaceGitGraphs GitGraphs
+@inject WorkspaceTerminals Terminals
+@inject WorkspaceViewState ViewState
 
-@* The git graph of a Local Repository, opened from the Repositories page without a workspace. *@
-@if (_graph is not null)
-{
-    @* A flex container that fills the page, like the Workspace View, so the graph reaches the bottom. *@
-    <div class="repository-git">
-        <RepositoryToolsPanel RepositoryPath="@_graph.Path" />
-        <GitGraphView @key="_graph" Graph="_graph" />
+@* A Local Repository's primary tab, opened from the Repositories page without a workspace. Like a workspace's, it has
+   secondary tabs: the repository's own git graph, which is always there and can't be closed, then the graphs of its
+   submodules and other worktrees and its terminals, which are opened from the side panel or the + button. *@
+<div class="repository-git">
+    <RepositoryToolsPanel RepositoryPath="@_path" OnOpenGit="OpenGit" OnOpenTerminal="StartTerminal" />
+    <div class="workspace-main">
+        <div class="session-tabs">
+            <div class="session-tab-list" role="tablist" aria-label="Repository">
+                @foreach (var tab in _tabs)
+                {
+                    var shown = ReferenceEquals(tab, _shown);
+                    var primary = tab is WorkspaceGitGraph { IsPrimary: true };
+                    <div class="session-tab @(shown ? "active" : null)" @key="tab">
+                        <button type="button" class="session-tab-label" role="tab"
+                                aria-selected="@(shown ? "true" : "false")"
+                                title="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })"
+                                @onclick="() => ShowTab(tab)">
+                            @if (tab is WorkspaceTerminal)
+                            {
+                                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                                    <polyline points="7 9 10 12 7 15" />
+                                    <path d="M12 15h5" />
+                                </svg>
+                            }
+                            else if (tab is WorkspaceGitGraph)
+                            {
+                                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <circle cx="6" cy="5" r="2" />
+                                    <circle cx="6" cy="19" r="2" />
+                                    <circle cx="18" cy="9" r="2" />
+                                    <path d="M6 7v10" />
+                                    <path d="M18 11c0 4-6 4-10.5 6.5" />
+                                </svg>
+                            }
+                            <span class="tab-label-text">@tab.Name</span>
+                            @if (tab is IWorkspaceProcess { HasExited: true })
+                            {
+                                <span class="session-tab-status">Exited</span>
+                            }
+                        </button>
+                        @if (!primary)
+                        {
+                            <button type="button" class="tab-close" title="Close @tab.Name"
+                                    aria-label="Close @tab.Name" @onclick="() => CloseTabAsync(tab)">
+                                &times;
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="menu-anchor session-tab-new">
+                <button type="button" class="session-tab-label session-tab-icon" title="New terminal"
+                        aria-label="New terminal" @onclick="StartTerminal">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        @if (_startError is not null)
+        {
+            <p class="error workspace-main-error">@_startError</p>
+        }
+        @if (_shown is IWorkspaceProcess shownProcess)
+        {
+            <Terminal @key="shownProcess" Session="shownProcess.Session" Class="workspace-terminal" />
+        }
+        else if (_shown is WorkspaceGitGraph shownGraph)
+        {
+            <GitGraphView @key="shownGraph" Graph="shownGraph" />
+        }
     </div>
-}
+</div>
 
 @code {
-    private WorkspaceGitGraph? _graph;
+    private string _path = "";
+    private string _id = "";
+    private IReadOnlyList<IMainAreaTab> _tabs = [];
+    private IMainAreaTab? _shown;
+    private string? _startError;
 
     [Parameter]
     public string EncodedPath { get; set; } = "";
 
-    protected override void OnParametersSet() =>
-        _graph = GitGraphs.OpenRepository(Uri.UnescapeDataString(EncodedPath));
+    protected override void OnInitialized()
+    {
+        GitGraphs.Changed += OnTabsChanged;
+        Terminals.Changed += OnTabsChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        var path = Uri.UnescapeDataString(EncodedPath);
+        if (path != _path)
+        {
+            _startError = null;
+        }
+
+        _path = path;
+        _id = StandaloneRepository.IdFor(path);
+
+        // Opens the repository's own graph, which is always the first tab.
+        GitGraphs.OpenRepository(path);
+        UpdateTabs();
+    }
+
+    public void Dispose()
+    {
+        GitGraphs.Changed -= OnTabsChanged;
+        Terminals.Changed -= OnTabsChanged;
+    }
+
+    private void OnTabsChanged(string id) => _ = InvokeAsync(() =>
+    {
+        if (id == _id)
+        {
+            UpdateTabs();
+            StateHasChanged();
+        }
+    });
+
+    private void UpdateTabs()
+    {
+        // The repository's graph first, then the rest in the order they were opened.
+        _tabs =
+        [
+            .. GitGraphs.For(_id).Where(graph => graph.IsPrimary),
+            .. Terminals.For(_id).Concat<IMainAreaTab>(GitGraphs.For(_id).Where(graph => !graph.IsPrimary))
+                .OrderBy(tab => tab.StartOrder),
+        ];
+
+        // The tab the view was showing, or the repository's graph if it wasn't showing one or it has been closed.
+        _shown = ViewState.GetShown(_id) is { } shown && _tabs.Contains(shown) ? shown : _tabs.FirstOrDefault();
+    }
+
+    private void ShowTab(IMainAreaTab tab)
+    {
+        ViewState.SetShown(_id, tab is WorkspaceGitGraph { IsPrimary: true } ? null : tab);
+        UpdateTabs();
+    }
+
+    // Opens a submodule's or another worktree's graph as a new secondary tab.
+    private void OpenGit(string path)
+    {
+        ShowTab(GitGraphs.OpenRepository(_path, path));
+    }
+
+    private void StartTerminal()
+    {
+        _startError = null;
+        try
+        {
+            var workspace = StandaloneRepository.WorkspaceOf(_path);
+            ShowTab(Terminals.Start(workspace, workspace.Repositories[0]));
+        }
+        catch (Exception ex) when (ex is IOException or System.Runtime.InteropServices.ExternalException)
+        {
+            _startError = $"Couldn't start a terminal. {ex.Message}";
+        }
+    }
+
+    private async Task CloseTabAsync(IMainAreaTab tab)
+    {
+        if (ReferenceEquals(tab, _shown))
+        {
+            // Show the next tab, or the previous one if it was the last.
+            var index = _tabs.ToList().IndexOf(tab);
+            ViewState.SetShown(_id, index + 1 < _tabs.Count ? _tabs[index + 1] : _tabs[index - 1]);
+        }
+
+        var closing = tab switch
+        {
+            WorkspaceTerminal terminal => Terminals.CloseAsync(terminal),
+            WorkspaceGitGraph graph => CloseGraph(graph),
+            _ => Task.CompletedTask,
+        };
+        UpdateTabs();
+        await closing;
+    }
+
+    private Task CloseGraph(WorkspaceGitGraph graph)
+    {
+        GitGraphs.Close(graph);
+        return Task.CompletedTask;
+    }
 }

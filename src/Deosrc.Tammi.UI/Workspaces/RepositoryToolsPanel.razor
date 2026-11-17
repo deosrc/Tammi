@@ -7,7 +7,6 @@
 @inject ISettingsStore SettingsStore
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceTabs WorkspaceTabs
-@inject WorkspaceGitGraphs GitGraphs
 @inject IGitRepositoryReader Reader
 @inject IGitCli Git
 @inject NavigationManager Navigation
@@ -59,7 +58,7 @@
                     {
                         <li @key="worktree.Path">
                             <button type="button" class="tool-item" title="@worktree.Path"
-                                    @onclick="() => OpenGit(worktree.Path)">
+                                    @onclick="() => OnOpenGit.InvokeAsync(worktree.Path)">
                                 <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                     <circle cx="6" cy="5" r="2" />
                                     <circle cx="6" cy="19" r="2" />
@@ -90,7 +89,7 @@
                         <li @key="submodule.Path">
                             <button type="button" class="tool-item" disabled="@(!submodule.IsInitialized)"
                                     title="@(submodule.IsInitialized ? submodule.Path : "Not checked out")"
-                                    @onclick="() => OpenGit(submodule.Path)">
+                                    @onclick="() => OnOpenGit.InvokeAsync(submodule.Path)">
                                 <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                     <path d="M21 8 12 3 3 8v8l9 5 9-5Z" />
                                     <path d="m3 8 9 5 9-5M12 13v8" />
@@ -164,6 +163,18 @@
     /// </summary>
     [Parameter, EditorRequired]
     public string RepositoryPath { get; set; } = "";
+
+    /// <summary>
+    /// Opens the git graph of a submodule or another worktree, by its full path, as a secondary tab.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnOpenGit { get; set; }
+
+    /// <summary>
+    /// Opens a terminal in the repository as a secondary tab.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnOpenTerminal { get; set; }
 
     protected override void OnInitialized()
     {
@@ -305,15 +316,16 @@
         Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id));
     }
 
-    private void OpenGit(string path)
-    {
-        GitGraphs.OpenRepository(path);
-        Navigation.NavigateTo(AppRoutes.RepositoryGit(path));
-    }
-
-    private void OpenTool(ToolEntry entry)
+    private async Task OpenTool(ToolEntry entry)
     {
         _error = null;
+        if (entry.OpensTerminal)
+        {
+            // Terminals open as a secondary tab of the repository's tab.
+            await OnOpenTerminal.InvokeAsync();
+            return;
+        }
+
         try
         {
             Tools.Open(entry);

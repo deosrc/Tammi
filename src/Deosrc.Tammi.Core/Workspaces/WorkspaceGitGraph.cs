@@ -78,13 +78,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         StartOrder = MainAreaTabOrder.Next();
     }
 
-    /// <summary>
-    /// The prefix of the <see cref="WorkspaceId"/> of a graph of a repository outside any workspace.
-    /// </summary>
-    public const string StandaloneIdPrefix = "repository:";
-
     internal WorkspaceGitGraph(
-        string repositoryPath,
+        string ownerPath,
+        string path,
         IGitRepositoryReader reader,
         IGitWorkingTree workingTree,
         IGitSync sync,
@@ -94,9 +90,11 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         IGitDiffs diffs,
         ISettingsStore settings)
     {
-        WorkspaceId = StandaloneIdPrefix + repositoryPath;
-        Repository = new WorkspaceRepository(System.IO.Path.GetFileName(repositoryPath), repositoryPath, "HEAD", "HEAD");
+        WorkspaceId = StandaloneRepository.IdFor(ownerPath);
+        path = StandaloneRepository.Normalize(path);
+        Repository = StandaloneRepository.RepositoryOf(path);
         IsStandalone = true;
+        IsPrimary = path == StandaloneRepository.Normalize(ownerPath);
         Scope = GitGraphScope.Everything;
         _reader = reader;
         _workingTree = workingTree;
@@ -106,7 +104,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         _stash = stash;
         _diffs = diffs;
         _settings = settings;
-        Path = repositoryPath;
+        Path = path;
         Name = "Git: " + Repository.FolderName;
         StartOrder = MainAreaTabOrder.Next();
     }
@@ -116,6 +114,12 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     /// no workspace branch or merge target.
     /// </summary>
     public bool IsStandalone { get; }
+
+    /// <summary>
+    /// Whether the graph is of the repository whose primary tab it is in, as opposed to one of its submodules or
+    /// other worktrees. It's always shown, and isn't closed on its own.
+    /// </summary>
+    public bool IsPrimary { get; }
 
     /// <inheritdoc />
     public string WorkspaceId { get; }

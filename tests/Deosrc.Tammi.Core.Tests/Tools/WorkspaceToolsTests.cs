@@ -76,7 +76,7 @@ public sealed class WorkspaceToolsTests : IDisposable
     }
 
     [Fact]
-    public void GetEntriesForRepository_OpensTheRepository_WithoutTheTerminal()
+    public void GetEntriesForRepository_OpensTheRepository_AndOffersTheTerminal()
     {
         var tool = Editor with { Arguments = ["{LaunchFolder}", "{RepositoryFolder}"] };
 
@@ -85,7 +85,7 @@ public sealed class WorkspaceToolsTests : IDisposable
         var entry = Assert.Single(entries, candidate => candidate.Tool == tool);
         Assert.Equal(ApiFolder, entry.Path);
         Assert.Equal([ApiFolder, ApiFolder], entry.Request!.Arguments);
-        Assert.DoesNotContain(entries, entry => entry.OpensTerminal);
+        Assert.Equal(ApiFolder, Assert.Single(entries, candidate => candidate.OpensTerminal).Path);
     }
 
     [Fact]

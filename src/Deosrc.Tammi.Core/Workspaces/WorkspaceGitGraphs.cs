@@ -61,44 +61,54 @@ public sealed class WorkspaceGitGraphs(IGitRepositoryReader reader, IGitWorkingT
     }
 
     /// <summary>
-    /// The graphs open on Local Repositories outside any workspace, in the order they were opened.
+    /// The graphs of the repositories open in their own primary tabs outside any workspace, one for each tab, in the
+    /// order they were opened. A tab's other graphs (of its submodules and worktrees) are found with
+    /// <see cref="For"/> and <see cref="StandaloneRepository.IdFor"/>.
     /// </summary>
     public IReadOnlyList<WorkspaceGitGraph> StandaloneGraphs()
     {
         lock (_lock)
         {
-            return _graphs.Where(graph => graph.IsStandalone).ToArray();
+            return _graphs.Where(graph => graph.IsPrimary).ToArray();
         }
     }
 
     /// <summary>
-    /// The graph open on a Local Repository outside any workspace, if there is one.
+    /// The graph of a repository open in its own primary tab, if there is one.
     /// </summary>
     public WorkspaceGitGraph? ForRepository(string repositoryPath)
     {
+        var id = StandaloneRepository.IdFor(repositoryPath);
         lock (_lock)
         {
-            return _graphs.Find(graph => graph.WorkspaceId == WorkspaceGitGraph.StandaloneIdPrefix + repositoryPath);
+            return _graphs.Find(graph => graph.IsPrimary && graph.WorkspaceId == id);
         }
     }
 
     /// <summary>
-    /// Opens the graph of a Local Repository outside any workspace, showing everything. If it's already open,
-    /// returns that graph instead.
+    /// Opens a Local Repository's graph in its own primary tab outside any workspace, showing everything. If it's
+    /// already open, returns that graph instead.
     /// </summary>
-    public WorkspaceGitGraph OpenRepository(string repositoryPath)
+    /// <param name="repositoryPath">The repository whose primary tab it is.</param>
+    /// <param name="path">
+    /// The working directory to show in that tab: a submodule or another worktree of the repository, or
+    /// <see langword="null"/> for the repository itself.
+    /// </param>
+    public WorkspaceGitGraph OpenRepository(string repositoryPath, string? path = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
 
+        var id = StandaloneRepository.IdFor(repositoryPath);
+        var graphPath = StandaloneRepository.Normalize(path ?? repositoryPath);
         WorkspaceGitGraph graph;
         lock (_lock)
         {
-            if (ForRepository(repositoryPath) is { } existing)
+            if (_graphs.Find(open => open.IsStandalone && open.WorkspaceId == id && open.Path == graphPath) is { } existing)
             {
                 return existing;
             }
 
-            graph = new WorkspaceGitGraph(repositoryPath, reader, workingTree, sync, tags, branches, stash, diffs, settings);
+            graph = new WorkspaceGitGraph(repositoryPath, graphPath, reader, workingTree, sync, tags, branches, stash, diffs, settings);
             _graphs.Add(graph);
         }
 
