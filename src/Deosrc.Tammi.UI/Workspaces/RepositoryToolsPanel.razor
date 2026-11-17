@@ -1,4 +1,5 @@
 @implements IDisposable
+@using Deosrc.Tammi.Core.Agents
 @using Deosrc.Tammi.Core.Git
 @using Deosrc.Tammi.Core.Settings
 @using Deosrc.Tammi.Core.Tools
@@ -15,6 +16,24 @@
    the repository, its other worktrees and submodules, and what it can be opened in. *@
 <aside class="side-panel">
     <div class="side-panel-sections">
+        <SidePanelSection Title="Agents">
+            <HeaderContent>
+                <WorkspaceAgentCounts WorkspaceId="@StandaloneRepository.IdFor(RepositoryPath)" />
+            </HeaderContent>
+            <Actions>
+                <button type="button" class="side-panel-section-action" title="Start a new agent"
+                        aria-label="New agent" aria-haspopup="menu" disabled="@(AgentDefinitions.Count == 0)"
+                        @onclick="OpenNewAgentMenu">
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                </button>
+            </Actions>
+            <ChildContent>
+                <WorkspaceAgentsSection Workspace="StandaloneRepository.WorkspaceOf(RepositoryPath)" Shown="Shown"
+                                        OnShow="agent => OnShowAgent.InvokeAsync(agent)" />
+            </ChildContent>
+        </SidePanelSection>
         <SidePanelSection Title="Workspaces">
             @if (!_related.IsLoaded)
             {
@@ -134,6 +153,23 @@
         </SidePanelSection>
     </div>
 </aside>
+@if (_agentMenu is { } agentMenu)
+{
+    @* A context menu, as the side panel scrolls and would clip a drop-down. *@
+    <ContextMenu @key="agentMenu" X="agentMenu.X" Y="agentMenu.Y" Label="New agent" OnClose="() => _agentMenu = null">
+        @for (var i = 0; i < AgentDefinitions.Count; i++)
+        {
+            var definition = AgentDefinitions[i];
+            var name = string.IsNullOrWhiteSpace(definition.Name) ? WorkspaceAgents.DefaultName : definition.Name;
+            <li role="none" @key="i">
+                <button type="button" class="menu-item" role="menuitem" @onclick="() => StartAgentAsync(definition)">
+                    <AgentIcon Definition="definition" />
+                    @name
+                </button>
+            </li>
+        }
+    </ContextMenu>
+}
 
 @code {
     private sealed record WorkspaceLink(string Id, string Name, string Folder);
@@ -149,6 +185,10 @@
         public static Related Loading { get; } = new(false, [], [], []);
     }
 
+    private sealed record AgentMenu(double X, double Y);
+
+    private AgentMenu? _agentMenu;
+    private IReadOnlyList<AgentDefinition> AgentDefinitions => SettingsStore.Current.Agents.Definitions;
     private Related _related = Related.Loading;
     private IReadOnlyList<ToolEntry> _entries = [];
     private string? _error;
@@ -163,6 +203,24 @@
     /// </summary>
     [Parameter, EditorRequired]
     public string RepositoryPath { get; set; } = "";
+
+    /// <summary>
+    /// The terminal, agent or git graph the repository's tab is showing.
+    /// </summary>
+    [Parameter]
+    public IMainAreaTab? Shown { get; set; }
+
+    /// <summary>
+    /// Shows an agent's secondary tab.
+    /// </summary>
+    [Parameter]
+    public EventCallback<WorkspaceAgent> OnShowAgent { get; set; }
+
+    /// <summary>
+    /// Starts an agent in the repository as a secondary tab.
+    /// </summary>
+    [Parameter]
+    public EventCallback<AgentDefinition> OnStartAgent { get; set; }
 
     /// <summary>
     /// Opens the git graph of a submodule or another worktree, by its full path, as a secondary tab.
@@ -308,6 +366,14 @@
             _entries = withImages;
             StateHasChanged();
         }
+    }
+
+    private void OpenNewAgentMenu(MouseEventArgs e) => _agentMenu = new AgentMenu(e.ClientX, e.ClientY);
+
+    private async Task StartAgentAsync(AgentDefinition definition)
+    {
+        _agentMenu = null;
+        await OnStartAgent.InvokeAsync(definition);
     }
 
     private void OpenWorkspace(WorkspaceLink workspace)

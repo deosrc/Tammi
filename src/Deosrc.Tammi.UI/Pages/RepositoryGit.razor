@@ -1,15 +1,20 @@
 @page "/repositories/git/{EncodedPath}"
 @implements IDisposable
+@using Deosrc.Tammi.Core.Agents
+@using Deosrc.Tammi.Core.Settings
 @using Deosrc.Tammi.Core.Terminals
 @inject WorkspaceGitGraphs GitGraphs
 @inject WorkspaceTerminals Terminals
+@inject WorkspaceAgents Agents
+@inject ISettingsStore SettingsStore
 @inject WorkspaceViewState ViewState
 
 @* A Local Repository's primary tab, opened from the Repositories page without a workspace. Like a workspace's, it has
    secondary tabs: the repository's own git graph, which is always there and can't be closed, then the graphs of its
-   submodules and other worktrees and its terminals, which are opened from the side panel or the + button. *@
+   submodules and other worktrees, its terminals and its agents, which are opened from the side panel or the + menu. *@
 <div class="repository-git">
-    <RepositoryToolsPanel RepositoryPath="@_path" OnOpenGit="OpenGit" OnOpenTerminal="StartTerminal" />
+    <RepositoryToolsPanel RepositoryPath="@_path" Shown="_shown" OnShowAgent="ShowTab" OnStartAgent="StartAgentAsync" OnOpenGit="OpenGit"
+                          OnOpenTerminal="StartTerminal" />
     <div class="workspace-main">
         <div class="session-tabs">
             <div class="session-tab-list" role="tablist" aria-label="Repository">
@@ -30,6 +35,10 @@
                                     <path d="M12 15h5" />
                                 </svg>
                             }
+                            else if (tab is WorkspaceAgent iconAgent)
+                            {
+                                <AgentIcon Definition="iconAgent.Agent.Definition" />
+                            }
                             else if (tab is WorkspaceGitGraph)
                             {
                                 <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -43,7 +52,14 @@
                             <span class="tab-label-text">@tab.Name</span>
                             @if (tab is IWorkspaceProcess { HasExited: true })
                             {
-                                <span class="session-tab-status">Exited</span>
+                                <span class="session-tab-status">
+                                    @(tab is WorkspaceAgent { State: AgentState.Error } ? "Error" : "Exited")
+                                </span>
+                            }
+                            @if (tab is WorkspaceAgent agent)
+                            {
+                                @* Agents' tabs show their state at the end, next to the close button. *@
+                                <AgentStateIndicator State="agent.State" />
                             }
                         </button>
                         @if (!primary)
@@ -56,13 +72,48 @@
                     </div>
                 }
             </div>
-            <div class="menu-anchor session-tab-new">
-                <button type="button" class="session-tab-label session-tab-icon" title="New terminal"
-                        aria-label="New terminal" @onclick="StartTerminal">
+            @* Outside the tab list, which scrolls and would clip the menu. Closes on Escape, or on a click anywhere
+               outside the menu. *@
+            <div class="menu-anchor session-tab-new" @onkeydown="OnNewMenuKeyDown">
+                <button type="button" class="session-tab-label session-tab-icon" title="New…" aria-label="New…"
+                        aria-haspopup="menu" aria-expanded="@(_newMenuOpen ? "true" : "false")"
+                        @onclick="() => _newMenuOpen = !_newMenuOpen">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M12 5v14M5 12h14" />
                     </svg>
                 </button>
+                @if (_newMenuOpen)
+                {
+                    <div class="menu-backdrop" @onclick="() => _newMenuOpen = false"></div>
+                    <ul class="menu" role="menu" aria-label="New">
+                        <li role="none">
+                            <button type="button" class="menu-item" role="menuitem" @onclick="StartTerminal">
+                                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                                    <polyline points="7 9 10 12 7 15" />
+                                    <path d="M12 15h5" />
+                                </svg>
+                                Terminal
+                            </button>
+                        </li>
+                        @if (AgentDefinitions.Count > 0)
+                        {
+                            <li role="separator" class="menu-separator"></li>
+                        }
+                        @for (var i = 0; i < AgentDefinitions.Count; i++)
+                        {
+                            var definition = AgentDefinitions[i];
+                            var name = string.IsNullOrWhiteSpace(definition.Name) ? WorkspaceAgents.DefaultName : definition.Name;
+                            <li role="none" @key="i">
+                                <button type="button" class="menu-item" role="menuitem"
+                                        @onclick="() => StartAgentAsync(definition)">
+                                    <AgentIcon Definition="definition" />
+                                    @name
+                                </button>
+                            </li>
+                        }
+                    </ul>
+                }
             </div>
         </div>
         @if (_startError is not null)
@@ -86,6 +137,9 @@
     private IReadOnlyList<IMainAreaTab> _tabs = [];
     private IMainAreaTab? _shown;
     private string? _startError;
+    private bool _newMenuOpen;
+
+    private IReadOnlyList<AgentDefinition> AgentDefinitions => SettingsStore.Current.Agents.Definitions;
 
     [Parameter]
     public string EncodedPath { get; set; } = "";
@@ -94,6 +148,7 @@
     {
         GitGraphs.Changed += OnTabsChanged;
         Terminals.Changed += OnTabsChanged;
+        Agents.Changed += OnTabsChanged;
     }
 
     protected override void OnParametersSet()
@@ -116,6 +171,7 @@
     {
         GitGraphs.Changed -= OnTabsChanged;
         Terminals.Changed -= OnTabsChanged;
+        Agents.Changed -= OnTabsChanged;
     }
 
     private void OnTabsChanged(string id) => _ = InvokeAsync(() =>
@@ -133,7 +189,8 @@
         _tabs =
         [
             .. GitGraphs.For(_id).Where(graph => graph.IsPrimary),
-            .. Terminals.For(_id).Concat<IMainAreaTab>(GitGraphs.For(_id).Where(graph => !graph.IsPrimary))
+            .. Terminals.For(_id).Concat<IMainAreaTab>(Agents.For(_id))
+                .Concat(GitGraphs.For(_id).Where(graph => !graph.IsPrimary))
                 .OrderBy(tab => tab.StartOrder),
         ];
 
@@ -155,6 +212,7 @@
 
     private void StartTerminal()
     {
+        _newMenuOpen = false;
         _startError = null;
         try
         {
@@ -164,6 +222,30 @@
         catch (Exception ex) when (ex is IOException or System.Runtime.InteropServices.ExternalException)
         {
             _startError = $"Couldn't start a terminal. {ex.Message}";
+        }
+    }
+
+    private async Task StartAgentAsync(AgentDefinition definition)
+    {
+        _newMenuOpen = false;
+        _startError = null;
+        try
+        {
+            var workspace = StandaloneRepository.WorkspaceOf(_path);
+            ShowTab(await Agents.StartAsync(workspace, definition, workspace.Repositories[0]));
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException
+            or System.Runtime.InteropServices.ExternalException)
+        {
+            _startError = $"Couldn't start {definition.Name}. {ex.Message}";
+        }
+    }
+
+    private void OnNewMenuKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _newMenuOpen = false;
         }
     }
 
@@ -178,6 +260,7 @@
 
         var closing = tab switch
         {
+            WorkspaceAgent agent => Agents.CloseAsync(agent),
             WorkspaceTerminal terminal => Terminals.CloseAsync(terminal),
             WorkspaceGitGraph graph => CloseGraph(graph),
             _ => Task.CompletedTask,

@@ -70,6 +70,11 @@
                         <path d="M6 7v10M18 11c0 4-12 2-12 6" />
                     </svg>
                     <span class="tab-label-text">@graph.Name</span>
+                    @* The state of the agents in the tab that most needs the user, if it has any. *@
+                    @if (AgentStates.Summarise(Agents.For(graph.WorkspaceId).Select(agent => agent.State)) is { } graphAgentState)
+                    {
+                        <AgentStateIndicator State="graphAgentState" />
+                    }
                 </a>
                 <button type="button" class="tab-close" title="Close @graph.Name" aria-label="Close @graph.Name"
                         @onclick="() => CloseRepositoryGraph(graph)">
@@ -176,6 +181,7 @@
         // Closes everything in the tab: its graphs, and the terminals, which end their shells.
         GitGraphs.CloseAll(graph.WorkspaceId);
         _ = Terminals.CloseAllAsync(graph.WorkspaceId);
+        _ = Agents.CloseAllAsync(graph.WorkspaceId);
         if (wasShown)
         {
             Navigation.NavigateTo(AppRoutes.Repositories);

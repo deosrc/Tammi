@@ -18,6 +18,11 @@ public static class StandaloneRepository
     public static string IdFor(string repositoryPath) => IdPrefix + Normalize(repositoryPath);
 
     /// <summary>
+    /// Whether an ID is a standalone repository's, not a workspace's.
+    /// </summary>
+    public static bool IsStandaloneId(string id) => id.StartsWith(IdPrefix, StringComparison.Ordinal);
+
+    /// <summary>
     /// The repository without a trailing folder separator.
     /// </summary>
     public static string Normalize(string repositoryPath)
