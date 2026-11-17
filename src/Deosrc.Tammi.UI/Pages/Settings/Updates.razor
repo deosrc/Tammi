@@ -7,9 +7,15 @@
 
 <h1>Updates</h1>
 
-@if (!Updater.CanUpdate)
+@if (Updater.IsDevelopmentBuild)
 {
     <p class="warning" role="alert">New version detection is disabled as this is a development build of Tammi</p>
+}
+else if (!Updater.CanUpdate)
+{
+    <p class="warning" role="alert">
+        New version detection is disabled as this copy of Tammi wasn't installed by the installer.
+    </p>
 }
 
 <p class="settings-help settings-intro">Tammi will automatically check for new releases on startup and ask to install it.</p>

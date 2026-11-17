@@ -26,6 +26,12 @@ public sealed class PackageVersion : IComparable<PackageVersion>, IEquatable<Pac
     public bool IsPreRelease => _preRelease.Length > 0;
 
     /// <summary>
+    /// Whether this is a development build: its pre-release tag is <c>dev</c>, e.g. <c>0.0.0-dev</c> or <c>1.2.3-dev.4</c>.
+    /// </summary>
+    public bool IsDevelopment =>
+        _preRelease.Length > 0 && string.Equals(_preRelease[0], "dev", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Reads a version, with or without a leading <c>v</c>.
     /// </summary>
     /// <returns>Whether <paramref name="text"/> was a valid version.</returns>

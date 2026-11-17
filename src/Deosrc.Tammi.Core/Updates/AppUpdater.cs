@@ -32,8 +32,11 @@ public sealed class AppUpdater
         ReleaseTarget? target,
         ISettingsStore settings,
         ILogger<AppUpdater> logger,
-        string? runningDirectory = null)
+        string? runningDirectory = null,
+        string? version = null)
     {
+        CurrentVersion = version ?? AppInfo.Version;
+        IsDevelopmentBuild = PackageVersion.TryParse(CurrentVersion, out var current) && current.IsDevelopment;
         _location = location;
         _target = target;
         _settings = settings;
@@ -41,7 +44,7 @@ public sealed class AppUpdater
         _releases = new GitHubReleaseClient(http);
         _installer = new AppInstaller(http, location, target ?? new ReleaseTarget("linux-x64"));
         _runningDirectory = runningDirectory ?? AppContext.BaseDirectory;
-        _running = target is null ? null : location.VersionRunningFrom(_runningDirectory);
+        _running = target is null || IsDevelopmentBuild ? null : location.VersionRunningFrom(_runningDirectory);
     }
 
     /// <summary>
@@ -50,14 +53,19 @@ public sealed class AppUpdater
     public event Action? Changed;
 
     /// <summary>
-    /// Whether this copy of Tammi can update itself. It can't if it isn't running from a version folder.
+    /// Whether this copy of Tammi can update itself. It can't if it's a development build, or isn't running from a version folder.
     /// </summary>
     public bool CanUpdate => _running is not null;
 
     /// <summary>
     /// The version that's running.
     /// </summary>
-    public string CurrentVersion => AppInfo.Version;
+    public string CurrentVersion { get; }
+
+    /// <summary>
+    /// Whether this is a development build, going by its version: it has the pre-release tag <c>dev</c>, e.g. <c>0.0.0-dev</c>.
+    /// </summary>
+    public bool IsDevelopmentBuild { get; }
 
     public UpdateStatus Status { get; private set; }
 

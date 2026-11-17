@@ -40,7 +40,8 @@ public class AppUpdaterTests
             new ReleaseTarget("linux-x64"),
             store,
             NullLogger<AppUpdater>.Instance,
-            runningFolder ?? Path.Combine(folder.Path, running));
+            runningFolder ?? Path.Combine(folder.Path, running),
+            running);
         return (updater, handler);
     }
 
@@ -101,6 +102,20 @@ public class AppUpdaterTests
         await updater.CheckAsync(TestContext.Current.CancellationToken);
         await updater.StartAsync();
 
+        Assert.False(updater.CanUpdate);
+        Assert.Equal(0, handler.Requests);
+    }
+
+    [Fact]
+    public async Task CannotUpdateADevelopmentBuild()
+    {
+        using var folder = new TempFolder();
+        var (updater, handler) = Create(folder, "0.0.0-dev");
+
+        await updater.CheckAsync(TestContext.Current.CancellationToken);
+        await updater.StartAsync();
+
+        Assert.True(updater.IsDevelopmentBuild);
         Assert.False(updater.CanUpdate);
         Assert.Equal(0, handler.Requests);
     }

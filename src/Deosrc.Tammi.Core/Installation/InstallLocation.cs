@@ -79,7 +79,7 @@ public sealed class InstallLocation
     /// <summary>
     /// Finds which installed version a folder belongs to, e.g. the folder the running app is in.
     /// </summary>
-    /// <returns>The version, or <see langword="null"/> if the folder isn't in a version's folder (e.g. a development build).</returns>
+    /// <returns>The version, or <see langword="null"/> if the folder isn't in a version's folder.</returns>
     public PackageVersion? VersionRunningFrom(string directory)
     {
         var relative = Path.GetRelativePath(VersionsDirectory, Path.GetFullPath(directory));
