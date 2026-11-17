@@ -453,6 +453,11 @@ a {
   text-decoration: none;
 }
 
+/* Only the text gives way when a tab is too narrow, not its icon. */
+.tab-label > .icon {
+  flex: none;
+}
+
 /* The ellipsis needs an inline box: it isn't drawn on a flex container's own text. */
 .tab-label-text {
   overflow: hidden;
