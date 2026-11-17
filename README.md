@@ -1,5 +1,7 @@
 # Tammi
 
+![Tammi](assets/brand/tammi-social-preview.png)
+
 A task-first software development workspace management tool.
 
 Pick the tasks you're working on (from GitHub or JIRA), and Tammi sets up a workspace around them.
