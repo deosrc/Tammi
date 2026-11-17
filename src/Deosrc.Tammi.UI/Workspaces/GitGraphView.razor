@@ -24,81 +24,76 @@
                     Everything
                 </button>
             </div>
-            <div class="git-graph-sync" role="group" aria-label="Sync with the remote">
-                <button type="button" class="button button-secondary button-icon" title="Download new commits from the remotes"
-                        disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Fetch)">
-                    @if (Graph.Syncing == GitSyncOperation.Fetch)
-                    {
-                        <span class="spinner" role="progressbar" aria-label="Fetching"></span>
-                    }
-                    else
-                    {
-                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+            <div class="git-graph-actions">
+                <div class="git-graph-sync" role="group" aria-label="Sync with the remote">
+                    <button type="button" class="button button-secondary git-graph-action" title="Download new commits from the remotes"
+                            disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Fetch)">
+                        @if (Graph.Syncing == GitSyncOperation.Fetch)
+                        {
+                            <span class="spinner git-graph-action-spinner" role="progressbar" aria-label="Fetching"></span>
+                        }
+                        else
+                        {
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+                            </svg>
+                        }
+                        <span class="git-graph-action-label">Fetch</span>
+                    </button>
+                    <button type="button" class="button button-secondary git-graph-action"
+                            title="Fetch the upstream branch and bring this branch up to date with it"
+                            disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Pull)">
+                        @if (Graph.Syncing == GitSyncOperation.Pull)
+                        {
+                            <span class="spinner git-graph-action-spinner" role="progressbar" aria-label="Pulling"></span>
+                        }
+                        else
+                        {
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M12 5v14M19 12l-7 7-7-7" />
+                            </svg>
+                        }
+                        <span class="git-graph-action-label">Pull</span>
+                    </button>
+                    <button type="button" class="button button-secondary git-graph-action" title="Upload this branch's commits to the remote"
+                            disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Push)">
+                        @if (Graph.Syncing == GitSyncOperation.Push)
+                        {
+                            <span class="spinner git-graph-action-spinner" role="progressbar" aria-label="Pushing"></span>
+                        }
+                        else
+                        {
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M12 19V5M5 12l7-7 7 7" />
+                            </svg>
+                        }
+                        <span class="git-graph-action-label">Push</span>
+                    </button>
+                </div>
+                <span class="git-graph-divider" role="separator" aria-orientation="vertical"></span>
+                <div class="git-graph-sync" role="group" aria-label="Stash">
+                    <button type="button" class="button button-secondary git-graph-action"
+                            title="Stash every change, including new files"
+                            disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
+                            @onclick="() => RunStashAsync(Graph.StashAsync())">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M12 3v11M8 10l4 4 4-4" />
+                            <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
                         </svg>
-                    }
-                    Fetch
-                </button>
-                <button type="button" class="button button-secondary button-icon"
-                        title="Fetch the upstream branch and bring this branch up to date with it"
-                        disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Pull)">
-                    @if (Graph.Syncing == GitSyncOperation.Pull)
-                    {
-                        <span class="spinner" role="progressbar" aria-label="Pulling"></span>
-                    }
-                    else
-                    {
-                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M12 5v14M19 12l-7 7-7-7" />
+                        <span class="git-graph-action-label">Stash</span>
+                    </button>
+                    <button type="button" class="button button-secondary git-graph-action"
+                            title="Apply the newest stash and drop it"
+                            disabled="@(Graph.Stashes.Count == 0 || _stashing)"
+                            @onclick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M12 14V3M8 7l4-4 4 4" />
+                            <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
                         </svg>
-                    }
-                    Pull
-                </button>
-                <button type="button" class="button button-secondary button-icon" title="Upload this branch's commits to the remote"
-                        disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Push)">
-                    @if (Graph.Syncing == GitSyncOperation.Push)
-                    {
-                        <span class="spinner" role="progressbar" aria-label="Pushing"></span>
-                    }
-                    else
-                    {
-                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M12 19V5M5 12l7-7 7 7" />
-                        </svg>
-                    }
-                    Push
-                </button>
+                        <span class="git-graph-action-label">Pop</span>
+                    </button>
+                </div>
             </div>
-            <div class="git-graph-sync" role="group" aria-label="Stash">
-                <button type="button" class="button button-secondary button-icon"
-                        title="Stash every change, including new files"
-                        disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
-                        @onclick="() => RunStashAsync(Graph.StashAsync())">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M12 3v11M8 10l4 4 4-4" />
-                        <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
-                    </svg>
-                    Stash
-                </button>
-                <button type="button" class="button button-secondary button-icon"
-                        title="Apply the newest stash and drop it"
-                        disabled="@(Graph.Stashes.Count == 0 || _stashing)"
-                        @onclick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M12 14V3M8 7l4-4 4 4" />
-                        <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
-                    </svg>
-                    Pop
-                </button>
-            </div>
-            <button type="button" class="button button-secondary button-icon git-graph-refresh" title="Read the graph again"
-                    aria-label="Refresh" disabled="@Graph.IsLoading" @onclick="Graph.RefreshAsync">
-                <svg class="icon icon-small @(Graph.IsLoading ? "icon-spin" : null)" viewBox="0 0 24 24" aria-hidden="true"
-                     focusable="false">
-                    <path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" />
-                    <path d="M21 3v5h-5" />
-                </svg>
-            </button>
         </div>
 
         @* Only a failed fetch, pull or push is shown: the buttons' spinner says one is running. *@
