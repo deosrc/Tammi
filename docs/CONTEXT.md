@@ -404,7 +404,9 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     merge target; HEAD and its branch's upstream for a submodule) or **Everything** (every local and remote-tracking
     branch and tag). It starts as Settings → Git says, which defaults to the workspace branch.
   - **Branches:** right-clicking a commit opens a menu that can create a branch on it (named in a prompt, and
-    checked out or not). For each local branch on the commit, the menu can check it out, rename it (its remote
+    checked out or not). For each local branch on the commit, the menu can check it out, merge it into the
+    checked out branch ("Merge"), rebase the checked out branch onto it ("Rebase", both only for a branch that isn't
+    checked out, also offered for remote-tracking branches, and not on a detached HEAD; conflicts are left in the working directory), rename it (its remote
     branch isn't renamed) and delete it; the checked out branch can't be deleted, and the workspace branch can't
     be renamed or deleted. "Delete branch" is a submenu offering the local branch, the remote branch it tracks or both
     (the remote choices need an upstream). A remote-tracking branch on the commit can be checked out, which creates a
@@ -642,7 +644,18 @@ Operations available in the Workspace View:
 - Status and the git graph
 - Fetch, pull and push
 - Stage, unstage and commit
+- Discard and reset
 - View diffs
+
+**Discard and reset** both lose work, so they ask for confirmation first.
+- **Discard** is in the right-click menu of the working changes' unstaged files (for the selected files, or the file
+  clicked) and folders (for the files in the folder). It restores tracked files from the index and deletes untracked
+  files (not ignored ones). Staged changes are kept. The *Discard all* button in the list's heading does this for every
+  unstaged change.
+- **Stash** is in the same menu, on staged and unstaged files and folders, and stashes those files.
+- **Reset** is in a commit's context menu, as *Soft reset…*, *Mixed reset…* and *Hard reset…*. It moves the current
+  branch to that commit. Soft keeps the changes since then staged, mixed (git's default) keeps them as unstaged
+  changes, and hard discards them. It isn't offered when HEAD is detached.
 
 **Fetch, pull and push** are buttons in each git graph tab, so they apply to the repository or submodule the tab is
 for. They run the `git` CLI, so the user's git config and credential helpers apply, and Tammi never prompts for

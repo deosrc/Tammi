@@ -39,6 +39,45 @@ public sealed class GitWorkingTree(IGitCli git) : IGitWorkingTree
     }
 
     /// <inheritdoc />
+    public async Task DiscardAsync(
+        string path,
+        IReadOnlyCollection<string> tracked,
+        IReadOnlyCollection<string> untracked,
+        CancellationToken cancellationToken = default)
+    {
+        if (tracked.Count > 0)
+        {
+            await git.RunAsync(path, ["restore", "--", .. tracked], cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        if (untracked.Count > 0)
+        {
+            await git.RunAsync(path, ["clean", "-f", "-d", "--quiet", "--", .. untracked], cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task DiscardAllAsync(string path, CancellationToken cancellationToken = default)
+    {
+        await git.RunAsync(path, ["restore", "--", "."], cancellationToken: cancellationToken).ConfigureAwait(false);
+        await git.RunAsync(path, ["clean", "-f", "-d", "--quiet"], cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task ResetAsync(string path, string target, GitResetMode mode, CancellationToken cancellationToken = default)
+    {
+        string option = mode switch
+        {
+            GitResetMode.Soft => "--soft",
+            GitResetMode.Hard => "--hard",
+            _ => "--mixed",
+        };
+        await git.RunAsync(path, ["reset", option, "--quiet", target, "--"], cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task CommitAsync(string path, string message, CancellationToken cancellationToken = default)
     {
         await git.RunAsync(

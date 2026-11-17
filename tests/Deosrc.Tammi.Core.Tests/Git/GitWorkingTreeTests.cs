@@ -98,6 +98,56 @@ public sealed class GitWorkingTreeTests : IDisposable
         Assert.NotEqual(SubmoduleCommitChange.None, Assert.Single(_reader.ReadStatus(app).Submodules).CommitChange);
     }
 
+    [Fact]
+    public async Task DiscardAsync_RestoresTrackedFilesAndDeletesUntrackedOnes_KeepingStagedChanges()
+    {
+        string clone = await CloneAsync();
+        TempRepositories.WriteFile(clone, "README.md", "changed");
+        TempRepositories.WriteFile(clone, "new.txt", "new");
+        TempRepositories.WriteFile(clone, "staged.txt", "staged");
+        await _tree.StageAsync(clone, ["staged.txt"], TestContext.Current.CancellationToken);
+
+        await _tree.DiscardAsync(clone, ["README.md"], ["new.txt"], TestContext.Current.CancellationToken);
+
+        Assert.NotEqual("changed", File.ReadAllText(Path.Combine(clone, "README.md")));
+        Assert.False(File.Exists(Path.Combine(clone, "new.txt")));
+        FileChange left = Assert.Single(_reader.ReadStatus(clone).Changes);
+        Assert.Equal("staged.txt", left.Path);
+        Assert.Equal(FileChangeKind.Added, left.Staged);
+    }
+
+    [Fact]
+    public async Task DiscardAllAsync_RemovesEveryUnstagedChange()
+    {
+        string clone = await CloneAsync();
+        TempRepositories.WriteFile(clone, "README.md", "changed");
+        TempRepositories.WriteFile(clone, "sub/new.txt", "new");
+
+        await _tree.DiscardAllAsync(clone, TestContext.Current.CancellationToken);
+
+        Assert.Empty(_reader.ReadStatus(clone).Changes);
+        Assert.False(Directory.Exists(Path.Combine(clone, "sub")));
+    }
+
+    [Theory]
+    [InlineData(GitResetMode.Soft, true, true)]
+    [InlineData(GitResetMode.Mixed, false, true)]
+    [InlineData(GitResetMode.Hard, false, false)]
+    public async Task ResetAsync_MovesTheBranchAndResetsAsTheModeSays(GitResetMode mode, bool staged, bool fileKept)
+    {
+        string clone = await CloneAsync();
+        string first = _reader.ReadHistory(clone, new HistoryOptions { MaxCount = 1 })[0].Sha;
+        await _repos.CommitFileAsync(clone, "later.txt", "later", "Later");
+
+        await _tree.ResetAsync(clone, first, mode, TestContext.Current.CancellationToken);
+
+        Assert.Equal(first, _reader.ReadHistory(clone, new HistoryOptions { MaxCount = 1 })[0].Sha);
+        Assert.Equal(fileKept, File.Exists(Path.Combine(clone, "later.txt")));
+        FileChange[] changes = [.. _reader.ReadStatus(clone).Changes];
+        Assert.Equal(staged, changes.Any(change => change.IsStaged));
+        Assert.Equal(fileKept, changes.Length == 1);
+    }
+
     private async Task<string> CloneAsync()
     {
         string remote = await _repos.CreateRemoteAsync("repo");

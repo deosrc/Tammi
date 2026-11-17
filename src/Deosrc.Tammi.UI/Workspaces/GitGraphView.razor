@@ -175,6 +175,21 @@
         </div>
     }
 
+    @if (Graph.PendingReset is { } reset)
+    {
+        <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-reset-title">
+            <h3 id="confirm-reset-title" class="alert-title">
+                @ResetTitle(reset.Mode) @(Graph.Refs.HeadBranch ?? "HEAD") to @reset.Sha[..Math.Min(7, reset.Sha.Length)]?
+            </h3>
+            <p>@ResetText(reset.Mode)</p>
+            <div class="settings-field-row">
+                <button type="button" class="button @(reset.Mode == GitResetMode.Hard ? "button-danger" : null)"
+                        @onclick="Graph.ConfirmResetAsync">@ResetTitle(reset.Mode)</button>
+                <button type="button" class="button button-secondary" @onclick="Graph.CancelReset">Cancel</button>
+            </div>
+        </div>
+    }
+
     @if (Graph.StashProblem is { } stashProblem)
     {
         <div class="error git-graph-sync-error" role="alert">
@@ -268,6 +283,29 @@
     @if (_commitMenu is { } commitMenu)
     {
         <ContextMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
+            @if (Graph.Refs.HeadBranch is not null && commitMenu.Sha != Graph.Refs.HeadSha)
+            {
+                var mergeable = commitMenu.Branches.Where(b => b != Graph.Refs.HeadBranch).Concat(commitMenu.RemoteBranches).ToList();
+                @foreach (var branch in mergeable)
+                {
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem"
+                                @onclick="() => RunBranchAsync(() => Graph.MergeBranchAsync(branch))">
+                            Merge @branch
+                        </button>
+                    </li>
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem"
+                                @onclick="() => RunBranchAsync(() => Graph.RebaseBranchAsync(branch))">
+                            Rebase onto @branch
+                        </button>
+                    </li>
+                }
+                @if (mergeable.Count > 0)
+                {
+                    <li role="separator" class="menu-separator"></li>
+                }
+            }
             <li role="none">
                 <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateBranch(commitMenu)">
                     Create branch…
@@ -418,6 +456,17 @@
                             }
                         </ul>
                     }
+                </li>
+            }
+            <li role="separator" class="menu-separator"></li>
+            @foreach (var mode in new[] { GitResetMode.Soft, GitResetMode.Mixed, GitResetMode.Hard })
+            {
+                <li role="none">
+                    <button type="button" class="menu-item @(mode == GitResetMode.Hard ? "menu-item-danger" : null)"
+                            role="menuitem" disabled="@(Graph.Refs.HeadBranch is null)"
+                            title="@ResetText(mode)" @onclick="() => StartReset(commitMenu, mode)">
+                        @ResetTitle(mode)…
+                    </button>
                 </li>
             }
         </ContextMenu>
@@ -1048,6 +1097,27 @@
 
     private void ConfirmDeleteTag(CommitMenu menu, string tag) =>
         ConfirmDelete($"Delete the tag {tag}{DeleteTargets(menu, tag)}?", () => Graph.DeleteTagAsync(tag));
+
+    private void StartReset(CommitMenu menu, GitResetMode mode)
+    {
+        _commitMenu = null;
+        Graph.RequestReset(menu.Sha, mode);
+    }
+
+    private static string ResetTitle(GitResetMode mode) => mode switch
+    {
+        GitResetMode.Soft => "Soft reset",
+        GitResetMode.Hard => "Hard reset",
+        _ => "Mixed reset",
+    };
+
+    private static string ResetText(GitResetMode mode) => mode switch
+    {
+        GitResetMode.Soft => "Moves the branch here. The changes since this commit stay staged.",
+        GitResetMode.Hard =>
+            "Moves the branch here and discards every change since this commit, staged or not. Tammi can't bring them back.",
+        _ => "Moves the branch here. The changes since this commit stay in the working directory, unstaged.",
+    };
 
     private async Task ConfirmAsync()
     {
