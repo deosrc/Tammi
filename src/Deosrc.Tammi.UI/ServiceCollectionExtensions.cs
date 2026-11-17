@@ -69,6 +69,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGitSync>(services => new GitSync(services.GetRequiredService<IGitCli>()));
         services.AddSingleton<IGitWorkingTree>(services => new GitWorkingTree(services.GetRequiredService<IGitCli>()));
         services.AddSingleton<IGitStash>(services => new GitStash(services.GetRequiredService<IGitCli>()));
+        services.AddSingleton<IGitDiffs>(services => new GitDiffs(services.GetRequiredService<IGitRepositoryReader>(), services.GetRequiredService<IGitCli>()));
         services.AddSingleton<IGitTags>(services => new GitTags(services.GetRequiredService<IGitCli>()));
         services.AddSingleton<IGitBranches>(services => new GitBranches(services.GetRequiredService<IGitCli>()));
         services.AddSingleton<IGitWorktreeService, GitWorktreeService>();

@@ -30,6 +30,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     private readonly IGitTags _tags;
     private readonly IGitBranches _branches;
     private readonly IGitStash _stash;
+    private readonly IGitDiffs _diffs;
+    private readonly ISettingsStore _settings;
+    private (GitDiffSource Source, string File, string? OldPath, string? Sha)? _diffRequest;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<GitGraphRow> _rows = [];
     private IReadOnlyDictionary<string, IReadOnlyList<GitReference>> _labels =
@@ -51,7 +54,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         IGitSync sync,
         IGitTags tags,
         IGitBranches branches,
-        IGitStash stash)
+        IGitStash stash,
+        IGitDiffs diffs,
+        ISettingsStore settings)
     {
         WorkspaceId = workspace.Id;
         Repository = repository;
@@ -63,6 +68,8 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         _tags = tags;
         _branches = branches;
         _stash = stash;
+        _diffs = diffs;
+        _settings = settings;
         string worktree = workspace.GetWorktreePath(repository);
         Path = submodulePath is null
             ? worktree
@@ -916,18 +923,44 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public Task OpenDiffAsync(GitDiffSource source, string file, string? oldPath = null, string? sha = null) => RunAsync(() =>
     {
         DiffTarget = (file, source);
+        _diffRequest = (source, file, oldPath, sha);
         ActiveDiff = null;
         DiffProblem = null;
         Changed?.Invoke();
+        ReadActiveDiff();
+    });
+
+    /// <summary>
+    /// Reads the shown diff again, e.g. after the whitespace or context settings changed. Does nothing if no diff is
+    /// shown. The old diff stays until the new one is read.
+    /// </summary>
+    public Task ReloadDiffAsync() => RunAsync(() =>
+    {
+        if (_diffRequest is not null)
+        {
+            ReadActiveDiff();
+        }
+    });
+
+    private void ReadActiveDiff()
+    {
+        if (_diffRequest is not { } request)
+        {
+            return;
+        }
+
         try
         {
-            ActiveDiff = _reader.ReadDiff(Path, source, file, oldPath, sha);
+            GitDiffOptions options = _settings.Current.Git.DiffOptions;
+            ActiveDiff = _diffs.ReadAsync(Path, request.Source, request.File, options, request.OldPath, request.Sha)
+                .GetAwaiter().GetResult();
+            DiffProblem = null;
         }
-        catch (Exception ex) when (IsReadError(ex))
+        catch (Exception ex) when (IsReadError(ex) || ex is GitCommandException or GitNotInstalledException)
         {
             DiffProblem = ex.Message;
         }
-    });
+    }
 
     /// <summary>
     /// Shows the graph again.
@@ -940,6 +973,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
 
     private void ClearDiff()
     {
+        _diffRequest = null;
         DiffTarget = null;
         ActiveDiff = null;
         DiffProblem = null;

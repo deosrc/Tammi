@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Deosrc.Tammi.Core.Catalogue;
+using Deosrc.Tammi.Core.Git;
 using Deosrc.Tammi.Core.Platform;
 
 namespace Deosrc.Tammi.Core.Settings;
@@ -42,6 +43,21 @@ public sealed record GitSettings
     public const int DefaultSubjectLimit = 72;
 
     /// <summary>
+    /// The fewest columns <see cref="DiffTabWidth"/> can be.
+    /// </summary>
+    public const int MinDiffTabWidth = 1;
+
+    /// <summary>
+    /// The most columns <see cref="DiffTabWidth"/> can be.
+    /// </summary>
+    public const int MaxDiffTabWidth = 16;
+
+    /// <summary>
+    /// The <see cref="DiffTabWidth"/> used until the user changes it: 6, a compromise between the usual 4 and 8.
+    /// </summary>
+    public const int DefaultDiffTabWidth = 6;
+
+    /// <summary>
     /// The Monitored Folders: local folders scanned for git repositories to add to the Repository Catalogue (see
     /// <see cref="RepositoryScanner"/>).
     /// </summary>
@@ -71,6 +87,33 @@ public sealed record GitSettings
     public GitGraphFileView GraphFileView { get; init; } = GitGraphFileView.List;
 
     /// <summary>
+    /// How file diffs treat whitespace changes, as the user last chose in one.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<GitDiffWhitespace>))]
+    public GitDiffWhitespace DiffWhitespace { get; init; } = GitDiffWhitespace.Show;
+
+    /// <summary>
+    /// Whether file diffs ignore changes whose lines are all blank.
+    /// </summary>
+    public bool DiffIgnoreBlankLines { get; init; }
+
+    /// <summary>
+    /// How many columns a tab is drawn as in file diffs.
+    /// </summary>
+    public int DiffTabWidth { get; init; } = DefaultDiffTabWidth;
+
+    /// <summary>
+    /// How file diffs are laid out, as the user last chose in one.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<GitDiffLayout>))]
+    public GitDiffLayout DiffLayout { get; init; } = GitDiffLayout.Unified;
+
+    /// <summary>
+    /// How many unchanged lines file diffs show around each change.
+    /// </summary>
+    public int DiffContextLines { get; init; } = GitDiffOptions.DefaultContextLines;
+
+    /// <summary>
     /// How many characters a commit message's subject should have at most. It's a soft limit: the commit panel counts
     /// the characters left, and still commits a longer subject.
     /// </summary>
@@ -92,7 +135,18 @@ public sealed record GitSettings
         GraphScope = Enum.IsDefined(GraphScope) ? GraphScope : GitGraphScope.WorkspaceBranch,
         GraphFileView = Enum.IsDefined(GraphFileView) ? GraphFileView : GitGraphFileView.List,
         SubjectLimit = SubjectLimit is >= MinSubjectLimit and <= MaxSubjectLimit ? SubjectLimit : DefaultSubjectLimit,
+        DiffWhitespace = Enum.IsDefined(DiffWhitespace) ? DiffWhitespace : GitDiffWhitespace.Show,
+        DiffTabWidth = DiffTabWidth is >= MinDiffTabWidth and <= MaxDiffTabWidth ? DiffTabWidth : DefaultDiffTabWidth,
+        DiffLayout = Enum.IsDefined(DiffLayout) ? DiffLayout : GitDiffLayout.Unified,
+        DiffContextLines = DiffContextLines is >= 0 and <= GitDiffOptions.MaxContextLines
+            ? DiffContextLines
+            : GitDiffOptions.DefaultContextLines,
     };
+
+    /// <summary>
+    /// What file diffs are computed with, as these settings say.
+    /// </summary>
+    public GitDiffOptions DiffOptions => new(DiffWhitespace, DiffIgnoreBlankLines, DiffContextLines);
 
     /// <summary>
     /// Whether <paramref name="other"/> holds the same settings, comparing the folder lists item by item.
@@ -104,10 +158,16 @@ public sealed record GitSettings
         && StatusRefreshInterval == other.StatusRefreshInterval
         && GraphScope == other.GraphScope
         && GraphFileView == other.GraphFileView
-        && SubjectLimit == other.SubjectLimit;
+        && SubjectLimit == other.SubjectLimit
+        && DiffWhitespace == other.DiffWhitespace
+        && DiffIgnoreBlankLines == other.DiffIgnoreBlankLines
+        && DiffTabWidth == other.DiffTabWidth
+        && DiffLayout == other.DiffLayout
+        && DiffContextLines == other.DiffContextLines;
 
     /// <inheritdoc />
     public override int GetHashCode() =>
         HashCode.Combine(
-            MonitoredFolders.Count, LocalRepositories.Count, StatusRefreshInterval, GraphScope, GraphFileView, SubjectLimit);
+            MonitoredFolders.Count, LocalRepositories.Count, StatusRefreshInterval, GraphScope, GraphFileView, SubjectLimit)
+        ^ HashCode.Combine(DiffWhitespace, DiffIgnoreBlankLines, DiffTabWidth, DiffLayout, DiffContextLines);
 }

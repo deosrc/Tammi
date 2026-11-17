@@ -7,7 +7,7 @@ namespace Deosrc.Tammi.Core.Workspaces;
 /// The git graphs open in every workspace. Like terminals, they stay open when a workspace's tab closes, so it shows
 /// them again when it reopens.
 /// </summary>
-public sealed class WorkspaceGitGraphs(IGitRepositoryReader reader, IGitWorkingTree workingTree, IGitSync sync, IGitTags tags, IGitBranches branches, IGitStash stash, ISettingsStore settings) : IDisposable
+public sealed class WorkspaceGitGraphs(IGitRepositoryReader reader, IGitWorkingTree workingTree, IGitSync sync, IGitTags tags, IGitBranches branches, IGitStash stash, IGitDiffs diffs, ISettingsStore settings) : IDisposable
 {
     private readonly Lock _lock = new();
     private readonly List<WorkspaceGitGraph> _graphs = [];
@@ -52,7 +52,7 @@ public sealed class WorkspaceGitGraphs(IGitRepositoryReader reader, IGitWorkingT
                 return existing;
             }
 
-            graph = new WorkspaceGitGraph(workspace, repository, submodulePath, settings.Current.Git.GraphScope, reader, workingTree, sync, tags, branches, stash);
+            graph = new WorkspaceGitGraph(workspace, repository, submodulePath, settings.Current.Git.GraphScope, reader, workingTree, sync, tags, branches, stash, diffs, settings);
             _graphs.Add(graph);
         }
 

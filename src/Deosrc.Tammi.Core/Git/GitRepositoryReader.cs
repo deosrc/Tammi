@@ -115,7 +115,7 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
     }
 
     /// <inheritdoc />
-    public FileDiff ReadDiff(string path, GitDiffSource source, string file, string? oldPath = null, string? sha = null)
+    public FileDiff ReadDiff(string path, GitDiffSource source, string file, string? oldPath = null, string? sha = null, int contextLines = GitDiffOptions.DefaultContextLines)
     {
         using Repository repository = Open(path);
         if (ReadSubmoduleDiff(repository, source, file, sha) is { } submoduleDiff)
@@ -124,7 +124,7 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
         }
 
         string[] paths = oldPath is null ? [file] : [file, oldPath];
-        var options = new CompareOptions { Similarity = SimilarityOptions.Renames, ContextLines = 3 };
+        var options = new CompareOptions { Similarity = SimilarityOptions.Renames, ContextLines = Math.Clamp(contextLines, 0, GitDiffOptions.MaxContextLines) };
 
         Patch patch;
         switch (source)

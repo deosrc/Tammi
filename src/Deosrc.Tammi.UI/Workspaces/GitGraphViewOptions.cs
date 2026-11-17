@@ -127,6 +127,59 @@ public sealed class GitGraphViewOptions : IDisposable
     }
 
     /// <summary>
+    /// Lays diffs out in one column or two, and keeps the choice in the settings, which every open diff follows. The diff
+    /// options are chosen in a diff's header, and kept for the next time one is opened.
+    /// </summary>
+    public Task SetDiffLayoutAsync(GitDiffLayout layout) =>
+        SaveAsync(settings => settings.Git.DiffLayout == layout
+            ? settings
+            : settings with { Git = settings.Git with { DiffLayout = layout } });
+
+    /// <summary>
+    /// Chooses how diffs treat whitespace changes, and keeps the choice in the settings, which every open diff follows.
+    /// </summary>
+    public Task SetDiffWhitespaceAsync(GitDiffWhitespace whitespace) =>
+        SaveAsync(settings => settings.Git.DiffWhitespace == whitespace
+            ? settings
+            : settings with { Git = settings.Git with { DiffWhitespace = whitespace } });
+
+    /// <summary>
+    /// Chooses whether diffs ignore changes to blank lines, and keeps the choice in the settings.
+    /// </summary>
+    public Task SetDiffIgnoreBlankLinesAsync(bool ignore) =>
+        SaveAsync(settings => settings with { Git = settings.Git with { DiffIgnoreBlankLines = ignore } });
+
+    /// <summary>
+    /// Chooses how many columns a tab is drawn as in diffs, and keeps the choice in the settings. A value out of range
+    /// is ignored.
+    /// </summary>
+    public Task SetDiffTabWidthAsync(int width) =>
+        width is >= GitSettings.MinDiffTabWidth and <= GitSettings.MaxDiffTabWidth
+            ? SaveAsync(settings => settings with { Git = settings.Git with { DiffTabWidth = width } })
+            : Task.CompletedTask;
+
+    /// <summary>
+    /// Chooses how many unchanged lines diffs show around each change, and keeps the choice in the settings. A value
+    /// out of range is ignored.
+    /// </summary>
+    public Task SetDiffContextLinesAsync(int lines) =>
+        lines is >= 0 and <= GitDiffOptions.MaxContextLines
+            ? SaveAsync(settings => settings with { Git = settings.Git with { DiffContextLines = lines } })
+            : Task.CompletedTask;
+
+    private async Task SaveAsync(Func<AppSettings, AppSettings> change)
+    {
+        try
+        {
+            await _settings.UpdateAsync(change);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Not kept for next time.
+        }
+    }
+
+    /// <summary>
     /// Stops following the settings.
     /// </summary>
     public void Dispose() => _settings.Changed -= OnSettingsChanged;
