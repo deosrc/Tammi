@@ -288,6 +288,7 @@ a {
 }
 
 .update-prompt-actions {
+  align-items: center;
   display: flex;
   gap: var(--space-2);
   margin-left: auto;
@@ -322,6 +323,7 @@ a {
 .release-card-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-3);
 }
 

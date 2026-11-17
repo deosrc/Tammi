@@ -11,7 +11,9 @@
                 <a href="@AppRoutes.SettingsUpdates">Release notes</a>
                 <span class="update-prompt-actions">
                     <button type="button" class="button" @onclick="() => Updater.InstallAsync()">Update</button>
-                    <button type="button" class="button button-secondary" @onclick="Updater.Dismiss">Not now</button>
+                    <button type="button" class="tab-close" title="Not now" aria-label="Not now" @onclick="Updater.Dismiss">
+                        &times;
+                    </button>
                 </span>
                 break;
             case UpdateStatus.Installing:
@@ -25,7 +27,9 @@
                 <span class="error">@Updater.Error</span>
                 <span class="update-prompt-actions">
                     <button type="button" class="button" @onclick="() => Updater.InstallAsync()">Try again</button>
-                    <button type="button" class="button button-secondary" @onclick="Updater.Dismiss">Not now</button>
+                    <button type="button" class="tab-close" title="Not now" aria-label="Not now" @onclick="Updater.Dismiss">
+                        &times;
+                    </button>
                 </span>
                 break;
         }
