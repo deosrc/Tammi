@@ -4779,10 +4779,31 @@ label.task-choice {
   }
 }
 
-/* The app icon at the top of the About page. */
-.about-icon {
+/* The wordmark at the top of the About page: the version for the theme's background, chosen the way the theme
+   variables are (see the data-theme rules above). */
+.about-logo img {
     display: block;
-    width: 128px;
-    height: 128px;
     margin-bottom: 1rem;
+}
+
+.about-logo-on-dark {
+    display: none !important;
+}
+
+:root[data-theme="dark"] .about-logo-on-light {
+    display: none !important;
+}
+
+:root[data-theme="dark"] .about-logo-on-dark {
+    display: block !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .about-logo-on-light {
+        display: none !important;
+    }
+
+    :root:not([data-theme]) .about-logo-on-dark {
+        display: block !important;
+    }
 }
