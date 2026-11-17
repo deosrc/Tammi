@@ -48,6 +48,9 @@
                         @onclick="() => StageAsync(SelectedIn(staged: false))">Stage</button>
                 <button type="button" class="button button-secondary" disabled="@(Graph.UnstagedChanges.Count == 0)"
                         @onclick="() => StageAsync(Graph.UnstagedChanges)">Stage all</button>
+                <button type="button" class="button button-danger" title="Discard every unstaged change"
+                        disabled="@(Graph.UnstagedChanges.Count == 0)"
+                        @onclick="() => RequestDiscard(null)">Discard all</button>
             </div>
             @if (Graph.PendingDiscard is { } discard)
             {
