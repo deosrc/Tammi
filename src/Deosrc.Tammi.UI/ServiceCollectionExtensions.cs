@@ -108,6 +108,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<WorkspaceHistoryTabs>();
         services.AddSingleton<WorkspaceTabRestorer>();
         services.AddSingleton<WorkspaceViewState>();
+        services.AddSingleton<RepositoryListState>();
         services.AddSingleton<GitGraphViewOptions>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();

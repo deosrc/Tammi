@@ -1,11 +1,7 @@
 @page "/repositories"
 @implements IDisposable
 @using Deosrc.Tammi.Core.Catalogue
-@using Deosrc.Tammi.Core.Git
-@inject IRepositoryCatalogue Catalogue
-@inject IGitRepositoryReader Reader
-@inject IGitCli Git
-@inject IWorkspaceStore WorkspaceStore
+@inject RepositoryListState State
 @inject WorkspaceGitGraphs GitGraphs
 @inject NavigationManager Navigation
 
@@ -13,13 +9,13 @@
 <div class="page">
     <h1>Repositories</h1>
     <div class="usage-toolbar">
-        <button type="button" class="button" @onclick="LoadAsync" disabled="@_loading">
-            @(_loading ? "Reading…" : "Refresh")
+        <button type="button" class="button" @onclick="State.RefreshAsync" disabled="@State.IsLoading">
+            @(State.IsLoading ? "Reading…" : "Refresh")
         </button>
         <a href="@AppRoutes.SettingsRepositories">Repository settings</a>
     </div>
 
-    @if (_rows.Count == 0 && !_loading)
+    @if (State.Rows.Count == 0 && !State.IsLoading)
     {
         <p class="placeholder">
             No repositories yet. Add monitored folders or repositories in
@@ -42,11 +38,18 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var row in _rows)
+                @foreach (var row in State.Rows)
                 {
                     <tr @key="row.Repository.Path">
                         <td title="@row.Repository.Path">@row.Repository.Name</td>
-                        @if (row.Problem is { } problem)
+                        @if (!row.IsLoaded)
+                        {
+                            @for (var i = 0; i < 6; i++)
+                            {
+                                <td><span class="placeholder-bar" aria-hidden="true"></span></td>
+                            }
+                        }
+                        else if (row.Problem is { } problem)
                         {
                             <td class="error data-table-span">@problem</td>
                         }
@@ -69,7 +72,7 @@
                             <td>@row.WorkspaceCount</td>
                         }
                         <td>
-                            <button type="button" class="button button-secondary" disabled="@(row.Problem is not null)"
+                            <button type="button" class="button button-secondary" disabled="@(!row.IsLoaded || row.Problem is not null)"
                                     @onclick="() => OpenGit(row.Repository)">
                                 Git…
                             </button>
@@ -82,98 +85,15 @@
 </div>
 
 @code {
-    private sealed record Row(
-        CatalogueRepository Repository,
-        RepositoryStatus? Status,
-        int WorktreeCount,
-        int WorkspaceCount,
-        string? Problem);
-
-    private List<Row> _rows = [];
-    private bool _loading;
-    private bool _disposed;
-
     protected override async Task OnInitializedAsync()
     {
-        Catalogue.Changed += OnCatalogueChanged;
-        await LoadAsync();
+        State.Changed += OnStateChanged;
+        await State.EnsureLoadedAsync();
     }
 
-    public void Dispose()
-    {
-        _disposed = true;
-        Catalogue.Changed -= OnCatalogueChanged;
-    }
+    public void Dispose() => State.Changed -= OnStateChanged;
 
-    private void OnCatalogueChanged()
-    {
-        if (!Catalogue.IsScanning)
-        {
-            _ = InvokeAsync(LoadAsync);
-        }
-    }
-
-    private async Task LoadAsync()
-    {
-        if (_loading)
-        {
-            return;
-        }
-
-        _loading = true;
-        StateHasChanged();
-        try
-        {
-            var snapshot = await Catalogue.GetAsync();
-            var listings = await WorkspaceStore.ListAsync();
-            var rows = await Task.Run(() => snapshot.Repositories
-                .Select(repository => ReadRow(repository, listings))
-                .OrderBy(row => row.Repository.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList());
-            if (!_disposed)
-            {
-                _rows = rows;
-            }
-        }
-        finally
-        {
-            _loading = false;
-            if (!_disposed)
-            {
-                StateHasChanged();
-            }
-        }
-    }
-
-    private Row ReadRow(CatalogueRepository repository, IReadOnlyList<WorkspaceListing> listings)
-    {
-        var workspaces = listings.Count(listing => listing.Workspace?.Repositories.Any(
-            used => string.Equals(used.LocalRepositoryPath, repository.Path, StringComparison.Ordinal)) == true);
-        try
-        {
-            var status = Reader.ReadStatus(repository.Path);
-            return new Row(repository, status, CountWorktrees(repository.Path), workspaces, null);
-        }
-        catch (Exception ex) when (ex is GitException or IOException)
-        {
-            return new Row(repository, null, 0, workspaces, ex.Message);
-        }
-    }
-
-    private int CountWorktrees(string path)
-    {
-        try
-        {
-            var result = Git.RunAsync(path, ["worktree", "list", "--porcelain"], new GitCommandOptions { ThrowOnError = false })
-                .GetAwaiter().GetResult();
-            // The repository itself is listed too; the count is of its linked worktrees.
-            return result.Succeeded ? Math.Max(0, result.OutputLines.Count(line => line.StartsWith("worktree ", StringComparison.Ordinal)) - 1) : 0;
-        }
-        catch (GitException)
-        {
-            return 0;
-        }
-    }
+    private void OnStateChanged() => _ = InvokeAsync(StateHasChanged);
 
     private void OpenGit(CatalogueRepository repository)
     {

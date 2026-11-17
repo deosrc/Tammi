@@ -4686,3 +4686,25 @@ label.task-choice {
     display: flex;
     gap: 0.5rem;
 }
+
+/* A bar standing in for a value that's still being read. */
+.placeholder-bar {
+  display: block;
+  width: 3em;
+  height: 0.9em;
+  border-radius: var(--radius);
+  background: var(--color-border);
+  animation: placeholder-bar-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes placeholder-bar-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .placeholder-bar {
+    animation: none;
+  }
+}
