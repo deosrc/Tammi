@@ -54,6 +54,7 @@ internal static class Program
         app.MainWindow
             .SetLogVerbosity(0)
             .SetTitle(AppInfo.Name)
+            .SetIconFile(Path.Combine(AppContext.BaseDirectory, "tammi.png"))
             .SetMinSize(800, 600)
             // On Linux, Photino sends the maximum size along with the minimum size. Left unset it's -1, which
             // stops the window from being resized or maximised, so set a maximum no screen will reach.

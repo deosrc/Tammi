@@ -24,6 +24,8 @@ public static class DesktopEntry
         builder.Append("Comment=Task-first software development workspace manager\n");
         builder.Append("Exec=").Append(QuoteExec(executablePath)).Append('\n');
         builder.Append("Path=").Append(Path.GetDirectoryName(executablePath)).Append('\n');
+        // An absolute path, so the icon needs no installing into the icon theme. It ships beside the executable.
+        builder.Append("Icon=").Append(Path.Combine(Path.GetDirectoryName(executablePath)!, "tammi.png")).Append('\n');
         builder.Append("Terminal=false\n");
         builder.Append("Categories=Development;\n");
         return builder.ToString();

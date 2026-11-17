@@ -1,0 +1,13 @@
+@* The Tammi wordmark: the version for the theme's background, which the CSS chooses. *@
+<span class="brand-wordmark @Class" role="img" aria-label="@AppInfo.Name">
+    <img class="brand-wordmark-on-light" src="_content/Deosrc.Tammi.UI/images/tammi-wordmark-on-light.svg" alt="" aria-hidden="true" />
+    <img class="brand-wordmark-on-dark" src="_content/Deosrc.Tammi.UI/images/tammi-wordmark-on-dark.svg" alt="" aria-hidden="true" />
+</span>
+
+@code {
+    /// <summary>
+    /// Extra CSS classes, e.g. to set the size.
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+}
