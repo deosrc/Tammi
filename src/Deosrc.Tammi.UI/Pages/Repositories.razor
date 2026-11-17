@@ -53,9 +53,18 @@
                         else
                         {
                             <td>@(row.Status?.Branch ?? "(detached)")</td>
-                            <td>@(row.Status?.Changes.Count ?? 0)</td>
-                            <td>@(row.Status?.AheadBy?.ToString() ?? "–")</td>
-                            <td>@(row.Status?.BehindBy?.ToString() ?? "–")</td>
+                            <td>
+                                @if (row.Status is { } status && GitStatusText.UncommittedChangeCount(status) > 0)
+                                {
+                                    <span class="workspace-badge workspace-badge-warning">Local changes</span>
+                                }
+                            </td>
+                            <td>
+                                <GitSyncChips Ahead="row.Status?.AheadBy ?? 0" Behind="0" Upstream="@row.Status?.Upstream" Inline="true" />
+                            </td>
+                            <td>
+                                <GitSyncChips Ahead="0" Behind="row.Status?.BehindBy ?? 0" Upstream="@row.Status?.Upstream" Inline="true" />
+                            </td>
                             <td>@row.WorktreeCount</td>
                             <td>@row.WorkspaceCount</td>
                         }

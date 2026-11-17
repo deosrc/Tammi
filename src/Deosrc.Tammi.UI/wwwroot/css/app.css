@@ -1508,6 +1508,10 @@ label.task-choice {
   margin-left: auto;
 }
 
+.git-status-sync-inline {
+  margin-left: 0;
+}
+
 .git-status-sync-chip {
   display: inline-flex;
   align-items: center;
