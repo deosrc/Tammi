@@ -4033,6 +4033,8 @@ label.task-choice {
   min-height: 0;
   overflow: auto;
   container-type: inline-size;
+  /* Swiping sideways at the edge mustn't go back or forward in the web view's history. */
+  overscroll-behavior-x: none;
 }
 
 .git-diff-whitespace {
@@ -4052,6 +4054,7 @@ label.task-choice {
   flex: 1 1 0;
   min-width: 0;
   overflow-x: auto;
+  overscroll-behavior-x: none;
 }
 
 .git-diff-pane + .git-diff-pane {
