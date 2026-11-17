@@ -283,6 +283,29 @@
     @if (_commitMenu is { } commitMenu)
     {
         <ContextMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
+            @if (Graph.Refs.HeadBranch is not null)
+            {
+                var mergeable = commitMenu.Branches.Where(b => b != Graph.Refs.HeadBranch).ToList();
+                @foreach (var branch in mergeable)
+                {
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem"
+                                @onclick="() => RunBranchAsync(() => Graph.MergeBranchAsync(branch))">
+                            Merge @branch
+                        </button>
+                    </li>
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem"
+                                @onclick="() => RunBranchAsync(() => Graph.RebaseBranchAsync(branch))">
+                            Rebase onto @branch
+                        </button>
+                    </li>
+                }
+                @if (mergeable.Count > 0)
+                {
+                    <li role="separator" class="menu-separator"></li>
+                }
+            }
             <li role="none">
                 <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateBranch(commitMenu)">
                     Create branch…
@@ -308,21 +331,6 @@
                         Checkout @branch@(isCurrent ? " (current)" : null)
                     </button>
                 </li>
-                @if (!isCurrent && Graph.Refs.HeadBranch is not null)
-                {
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem"
-                                @onclick="() => RunBranchAsync(() => Graph.MergeBranchAsync(branch))">
-                            Merge @branch
-                        </button>
-                    </li>
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem"
-                                @onclick="() => RunBranchAsync(() => Graph.RebaseBranchAsync(branch))">
-                            Rebase onto @branch
-                        </button>
-                    </li>
-                }
                 <li role="none">
                     <button type="button" class="menu-item" role="menuitem" disabled="@isWorkspace"
                             title="@(isWorkspace ? "The workspace branch can't be renamed here" : null)"
