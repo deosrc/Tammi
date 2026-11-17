@@ -53,9 +53,9 @@ public sealed record GitSettings
     public const int MaxDiffTabWidth = 16;
 
     /// <summary>
-    /// The <see cref="DiffTabWidth"/> used until the user changes it: the browser's own, as diffs were always drawn.
+    /// The <see cref="DiffTabWidth"/> used until the user changes it: 6, a compromise between the usual 4 and 8.
     /// </summary>
-    public const int DefaultDiffTabWidth = 8;
+    public const int DefaultDiffTabWidth = 6;
 
     /// <summary>
     /// The Monitored Folders: local folders scanned for git repositories to add to the Repository Catalogue (see

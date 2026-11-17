@@ -463,8 +463,8 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
       ignore blank lines (`--ignore-blank-lines`). The mode is passed to the git CLI, so the hunks and line numbers are
       what git reports. It only changes what is shown, never the files. Any future staging by hunk or line must use the
       real, unfiltered diff.
-    - **Context lines:** unchanged lines around each change (git's `-U<n>`), 3 by default.
-    - **Tab width:** how many columns a tab is drawn as, 1 to 16, 8 by default (how diffs were always drawn).
+    - **Context lines:** unchanged lines around each change (git's `-U<n>`), 5 by default.
+    - **Tab width:** how many columns a tab is drawn as, 1 to 16, 6 by default.
     - **Side by side:** the old version on the left and the new on the right. Context lines are on both sides, and each
       run of removed lines sits beside the run of added lines that follows it, with blanks where a side has none. When
       the space for the diff is narrower than 700 pixels (the details panel can be wide) it shows as unified instead.

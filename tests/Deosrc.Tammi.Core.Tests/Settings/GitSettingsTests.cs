@@ -42,7 +42,7 @@ public sealed class GitSettingsTests
         var settings = new GitSettings { DiffTabWidth = 0, DiffContextLines = -1, DiffLayout = (GitDiffLayout)9, DiffWhitespace = (Deosrc.Tammi.Core.Git.GitDiffWhitespace)9 }.Normalize();
 
         Assert.Equal(GitSettings.DefaultDiffTabWidth, settings.DiffTabWidth);
-        Assert.Equal(3, settings.DiffContextLines);
+        Assert.Equal(5, settings.DiffContextLines);
         Assert.Equal(GitDiffLayout.Unified, settings.DiffLayout);
         Assert.Equal(Deosrc.Tammi.Core.Git.GitDiffWhitespace.Show, settings.DiffWhitespace);
     }

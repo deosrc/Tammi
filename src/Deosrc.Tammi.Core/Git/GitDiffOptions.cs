@@ -12,7 +12,7 @@ public sealed record GitDiffOptions(
     int ContextLines = GitDiffOptions.DefaultContextLines)
 {
     /// <summary>The <see cref="ContextLines"/> git uses unless told otherwise.</summary>
-    public const int DefaultContextLines = 3;
+    public const int DefaultContextLines = 5;
 
     /// <summary>The most <see cref="ContextLines"/> allowed.</summary>
     public const int MaxContextLines = 100;

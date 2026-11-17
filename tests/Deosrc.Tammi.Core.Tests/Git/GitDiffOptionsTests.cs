@@ -5,12 +5,12 @@ namespace Deosrc.Tammi.Core.Tests.Git;
 public sealed class GitDiffOptionsTests
 {
     [Theory]
-    [InlineData(GitDiffWhitespace.Show, false, new[] { "-U3" })]
-    [InlineData(GitDiffWhitespace.IgnoreAmount, false, new[] { "-U3", "-b" })]
-    [InlineData(GitDiffWhitespace.IgnoreAll, false, new[] { "-U3", "-w" })]
-    [InlineData(GitDiffWhitespace.IgnoreAtEol, false, new[] { "-U3", "--ignore-space-at-eol" })]
-    [InlineData(GitDiffWhitespace.IgnoreAll, true, new[] { "-U3", "-w", "--ignore-blank-lines" })]
-    [InlineData(GitDiffWhitespace.Show, true, new[] { "-U3", "--ignore-blank-lines" })]
+    [InlineData(GitDiffWhitespace.Show, false, new[] { "-U5" })]
+    [InlineData(GitDiffWhitespace.IgnoreAmount, false, new[] { "-U5", "-b" })]
+    [InlineData(GitDiffWhitespace.IgnoreAll, false, new[] { "-U5", "-w" })]
+    [InlineData(GitDiffWhitespace.IgnoreAtEol, false, new[] { "-U5", "--ignore-space-at-eol" })]
+    [InlineData(GitDiffWhitespace.IgnoreAll, true, new[] { "-U5", "-w", "--ignore-blank-lines" })]
+    [InlineData(GitDiffWhitespace.Show, true, new[] { "-U5", "--ignore-blank-lines" })]
     public void ToArguments_PassesTheWhitespaceModeToGit(GitDiffWhitespace whitespace, bool blank, string[] expected) =>
         Assert.Equal(expected, new GitDiffOptions(whitespace, blank).ToArguments());
 
