@@ -43,7 +43,7 @@
                     Stashed @GitGraphText.When(stash.CreatedAt, DateTimeOffset.Now).ToLowerInvariant()
                 </span>
                 <div class="git-commit-actions">
-                    <button type="button" class="button button-secondary" disabled="@_busy" @onclick="() => RunAsync(Graph.DropStashAsync(stash))">Drop stash</button>
+                    <button type="button" class="button button-secondary button-danger-text" disabled="@_busy" @onclick="() => Graph.RequestDropStash(stash)">Drop stash</button>
                     <button type="button" class="button button-secondary" disabled="@_busy" @onclick="() => RunAsync(Graph.ApplyStashAsync(stash))">Apply stash</button>
                     <button type="button" class="button" disabled="@_busy" @onclick="() => RunAsync(Graph.PopStashAsync(stash))">Pop stash</button>
                 </div>

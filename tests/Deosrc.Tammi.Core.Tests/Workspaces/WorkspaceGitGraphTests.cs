@@ -224,6 +224,29 @@ public sealed class WorkspaceGitGraphTests : IDisposable
     }
 
     [Fact]
+    public async Task DropRequest_ConfirmDropsTheStash_AndCancelKeepsIt()
+    {
+        (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();
+        TempRepositories.WriteFile(workspace.GetWorktreePath(repository), "a.txt", "a");
+        WorkspaceGitGraph graph = _graphs.Open(workspace, repository);
+        await graph.LoadAsync();
+        await graph.StashAsync();
+        GitStashEntry stash = Assert.Single(graph.Stashes);
+
+        graph.RequestDropStash(stash);
+        Assert.Equal(stash, graph.DropRequest);
+        graph.CancelDropStash();
+        Assert.Null(graph.DropRequest);
+        Assert.Single(graph.Stashes);
+
+        graph.RequestDropStash(stash);
+        Assert.True(await graph.ConfirmDropStashAsync());
+
+        Assert.Null(graph.DropRequest);
+        Assert.Empty(graph.Stashes);
+    }
+
+    [Fact]
     public async Task StashAsync_NothingToStash_ReportsTheProblem()
     {
         (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();

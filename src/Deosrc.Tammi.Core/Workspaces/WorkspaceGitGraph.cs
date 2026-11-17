@@ -602,6 +602,43 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         ChangeStashAsync(async token => { await _stash.DropAsync(Path, stash.Index, token).ConfigureAwait(false); return true; });
 
     /// <summary>
+    /// The stash the user has asked to drop, and has yet to confirm, or <see langword="null"/>.
+    /// </summary>
+    public GitStashEntry? DropRequest { get; private set; }
+
+    /// <summary>
+    /// Asks the user to confirm dropping a stash, which can't be undone.
+    /// </summary>
+    public void RequestDropStash(GitStashEntry stash)
+    {
+        DropRequest = stash;
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Drops the stash that was asked for, once the user has confirmed.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public async Task<bool> ConfirmDropStashAsync()
+    {
+        GitStashEntry? stash = DropRequest;
+        DropRequest = null;
+        return stash is not null && await DropStashAsync(stash).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Forgets the request to drop a stash.
+    /// </summary>
+    public void CancelDropStash()
+    {
+        if (DropRequest is not null)
+        {
+            DropRequest = null;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
     /// Clears <see cref="StashProblem"/>, once the user has seen it.
     /// </summary>
     public void DismissStashProblem()

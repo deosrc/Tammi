@@ -144,6 +144,22 @@
         </div>
     }
 
+    @if (Graph.DropRequest is { } dropRequest)
+    {
+        <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-drop-stash-title">
+            <h3 id="confirm-drop-stash-title" class="alert-title">Drop @dropRequest.Name?</h3>
+            <p>
+                "@dropRequest.Message" is deleted without being applied, and Tammi can't bring it back.
+            </p>
+            <div class="settings-field-row">
+                <button type="button" class="button button-danger" disabled="@_stashing"
+                        @onclick="() => RunStashAsync(Graph.ConfirmDropStashAsync())">Drop stash</button>
+                <button type="button" class="button button-secondary" disabled="@_stashing"
+                        @onclick="Graph.CancelDropStash">Cancel</button>
+            </div>
+        </div>
+    }
+
     @if (Graph.StashProblem is { } stashProblem)
     {
         <div class="error git-graph-sync-error" role="alert">
@@ -192,8 +208,8 @@
                         @onclick="() => RunStashMenuAsync(Graph.ApplyStashAsync(stashMenu.Stash))">Apply stash</button>
             </li>
             <li role="none">
-                <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
-                        @onclick="() => RunStashMenuAsync(Graph.DropStashAsync(stashMenu.Stash))">Drop stash</button>
+                <button type="button" class="menu-item menu-item-danger" role="menuitem" disabled="@_stashing"
+                        @onclick="() => ConfirmDrop(stashMenu.Stash)">Drop stash</button>
             </li>
         </ContextMenu>
     }
@@ -471,6 +487,12 @@
     private sealed record StashMenu(double X, double Y, GitStashEntry Stash);
 
     private StashMenu? _stashMenu;
+
+    private void ConfirmDrop(GitStashEntry stash)
+    {
+        _stashMenu = null;
+        Graph.RequestDropStash(stash);
+    }
 
     private Task RunStashMenuAsync(Task<bool> action)
     {
