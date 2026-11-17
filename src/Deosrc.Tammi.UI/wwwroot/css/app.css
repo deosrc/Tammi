@@ -317,7 +317,45 @@ a {
   max-height: 320px;
   overflow: auto;
   font-size: var(--font-size-small);
-  white-space: pre-wrap;
+}
+
+/* The notes are rendered markdown, so their headings, lists and code get the card's compact sizes. */
+.release-card-notes > :first-child {
+  margin-top: 0;
+}
+
+.release-card-notes > :last-child {
+  margin-bottom: 0;
+}
+
+.release-card-notes :is(h1, h2, h3, h4, h5, h6) {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.release-card-notes p,
+.release-card-notes ul,
+.release-card-notes ol {
+  margin: var(--space-2) 0;
+}
+
+.release-card-notes ul,
+.release-card-notes ol {
+  padding-left: var(--space-5, 1.5rem);
+}
+
+.release-card-notes pre {
+  overflow: auto;
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+.release-card-notes code {
+  font-family: var(--font-mono, monospace);
 }
 
 .release-card-actions {

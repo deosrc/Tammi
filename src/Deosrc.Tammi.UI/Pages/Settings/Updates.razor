@@ -59,7 +59,7 @@ else if (!Updater.CanUpdate)
         <h2 class="release-card-title">@release.Title</h2>
         @if (release.Notes is not null)
         {
-            <div class="release-card-notes">@release.Notes</div>
+            <div class="release-card-notes">@((MarkupString)ReleaseNotesHtml.ToHtml(release.Notes))</div>
         }
         else
         {
