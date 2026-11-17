@@ -414,12 +414,11 @@ a {
   gap: var(--space-3);
 }
 
+/* The wordmark at the left of the app bar. */
 .app-name {
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-4);
-  font-weight: 700;
-  color: var(--color-accent);
+  align-self: center;
+  height: 24px;
+  margin: 0 var(--space-4);
 }
 
 .app-content {
@@ -4779,31 +4778,41 @@ label.task-choice {
   }
 }
 
-/* The wordmark at the top of the About page: the version for the theme's background, chosen the way the theme
-   variables are (see the data-theme rules above). */
-.about-logo img {
-    display: block;
-    margin-bottom: 1rem;
+/* The wordmark: the version for the theme's background, chosen the way the theme variables are (see the data-theme
+   rules above). Its size comes from where it's used. */
+.brand-wordmark {
+  display: block;
 }
 
-.about-logo-on-dark {
-    display: none !important;
+.brand-wordmark img {
+  display: block;
+  height: 100%;
 }
 
-:root[data-theme="dark"] .about-logo-on-light {
-    display: none !important;
+.brand-wordmark-on-dark {
+  display: none !important;
 }
 
-:root[data-theme="dark"] .about-logo-on-dark {
-    display: block !important;
+:root[data-theme="dark"] .brand-wordmark-on-light {
+  display: none !important;
+}
+
+:root[data-theme="dark"] .brand-wordmark-on-dark {
+  display: block !important;
 }
 
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .about-logo-on-light {
-        display: none !important;
-    }
+  :root:not([data-theme]) .brand-wordmark-on-light {
+    display: none !important;
+  }
 
-    :root:not([data-theme]) .about-logo-on-dark {
-        display: block !important;
-    }
+  :root:not([data-theme]) .brand-wordmark-on-dark {
+    display: block !important;
+  }
+}
+
+/* The wordmark at the top of the About page. */
+.about-logo {
+  height: 64px;
+  margin-bottom: 1rem;
 }
