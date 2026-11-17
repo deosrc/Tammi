@@ -251,6 +251,11 @@ a {
   background: var(--color-error);
 }
 
+/* A secondary button for an action that deletes something, with red text. */
+.button-secondary.button-danger-text {
+  color: var(--color-error);
+}
+
 /* A button that confirms a change with side effects, e.g. in a warning alert. */
 .button-warning {
   background: var(--color-warning);
@@ -2707,6 +2712,11 @@ label.task-choice {
 }
 
 /* Less space above than below, so the message sits close to the toolbar and clear of the graph. */
+.git-graph-drop-confirm {
+  flex: none;
+  margin: var(--space-2) var(--space-3);
+}
+
 .git-graph-sync-error {
   display: flex;
   align-items: flex-start;
@@ -3153,6 +3163,34 @@ label.task-choice {
 
 .git-commit-section {
   padding: 0 var(--space-4);
+}
+
+.git-commit-stash-bar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.git-commit-stash-date {
+  color: var(--color-text-muted);
+}
+
+/* The stash's buttons, right-aligned under the summary, also when they wrap onto a row of their own. */
+.git-commit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.git-commit-actions-problem {
+  flex: none;
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3);
 }
 
 /* A divider between the sections. */
@@ -3652,6 +3690,19 @@ label.task-choice {
 }
 
 .git-graph-working-dot {
+  fill: var(--color-surface);
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+}
+
+.git-graph-lanes path.git-graph-stash-line {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+.git-graph-stash-dot {
   fill: var(--color-surface);
   stroke: var(--color-text-muted);
   stroke-width: 2;
