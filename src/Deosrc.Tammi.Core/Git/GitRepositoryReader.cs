@@ -416,7 +416,11 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
     {
         if (options.AllRefs)
         {
-            return repository.Refs.Select(reference => reference.ResolveToDirectReference()?.Target)
+            // The stash isn't history: its commits (the stash, its index and its new files, which has no parent) are
+            // shown as a stash instead.
+            return repository.Refs
+                .Where(reference => reference.CanonicalName != "refs/stash")
+                .Select(reference => reference.ResolveToDirectReference()?.Target)
                 .OfType<Commit>()
                 .Concat(repository.Tags.Select(tag => tag.PeeledTarget).OfType<Commit>())
                 .Distinct()
