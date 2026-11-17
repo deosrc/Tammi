@@ -220,7 +220,7 @@
               @onsubmit="ConfirmAsync" @onsubmit:preventDefault="true">
             <p>@confirm.Message</p>
             <div class="git-graph-tag-prompt-actions">
-                <button type="submit" class="button" autofocus>Delete</button>
+                <button type="submit" class="button button-danger" autofocus>Delete</button>
                 <button type="button" class="button button-secondary" @onclick="() => _confirm = null">Cancel</button>
             </div>
         </form>
@@ -293,7 +293,7 @@
                 var deleteKey = DeleteBranchSubmenu + branch;
                 var hasUpstream = commitMenu.Upstreams.TryGetValue(branch, out var upstream);
                 <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = deleteKey">
-                    <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu" disabled="@isWorkspace"
+                    <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu" disabled="@isWorkspace"
                             title="@(isWorkspace ? "The workspace branch can't be deleted here" : null)"
                             aria-expanded="@(commitMenu.OpenSubmenu == deleteKey ? "true" : "false")"
                             @onclick="() => ToggleSubmenu(commitMenu, deleteKey)">
@@ -339,7 +339,7 @@
                     </button>
                 </li>
                 <li role="none">
-                    <button type="button" class="menu-item" role="menuitem"
+                    <button type="button" class="menu-item menu-item-danger" role="menuitem"
                             @onclick="() => ConfirmDeleteRemoteBranch(branch)">
                         Delete remote branch @branch…
                     </button>
@@ -362,7 +362,7 @@
                     </button>
                 </li>
                 <li role="none">
-                    <button type="button" class="menu-item" role="menuitem"
+                    <button type="button" class="menu-item menu-item-danger" role="menuitem"
                             @onclick="() => ConfirmDeleteTag(commitMenu, tag)">
                         Delete tag @tag@DeleteSuffix(commitMenu, tag)
                     </button>
@@ -396,7 +396,7 @@
                     }
                 </li>
                 <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = DeleteSubmenu">
-                    <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
+                    <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu"
                             aria-expanded="@(commitMenu.OpenSubmenu == DeleteSubmenu ? "true" : "false")"
                             @onclick="() => ToggleSubmenu(commitMenu, DeleteSubmenu)">
                         <span class="tab-label-text">Delete tag…</span>
