@@ -10,624 +10,626 @@
    and the selected commit's details beside them. Only the rows in view are rendered, and the history is read a page
    at a time as the list scrolls. *@
 
-<div class="git-graph">
-    <div class="git-graph-toolbar">
-        <div class="segmented" role="group" aria-label="Commits shown">
-            <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.WorkspaceBranch)"
-                    title="HEAD, the workspace branch, its upstream and its merge target"
-                    @onclick="() => Graph.SetScopeAsync(GitGraphScope.WorkspaceBranch)">
-                Workspace branch
-            </button>
-            <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.Everything)"
-                    title="Every branch and tag" @onclick="() => Graph.SetScopeAsync(GitGraphScope.Everything)">
-                Everything
-            </button>
-        </div>
-        <div class="git-graph-sync" role="group" aria-label="Sync with the remote">
-            <button type="button" class="button button-secondary button-icon" title="Download new commits from the remotes"
-                    disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Fetch)">
-                @if (Graph.Syncing == GitSyncOperation.Fetch)
-                {
-                    <span class="spinner" role="progressbar" aria-label="Fetching"></span>
-                }
-                else
-                {
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
-                    </svg>
-                }
-                Fetch
-            </button>
-            <button type="button" class="button button-secondary button-icon"
-                    title="Fetch the upstream branch and bring this branch up to date with it"
-                    disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Pull)">
-                @if (Graph.Syncing == GitSyncOperation.Pull)
-                {
-                    <span class="spinner" role="progressbar" aria-label="Pulling"></span>
-                }
-                else
-                {
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M12 5v14M19 12l-7 7-7-7" />
-                    </svg>
-                }
-                Pull
-            </button>
-            <button type="button" class="button button-secondary button-icon" title="Upload this branch's commits to the remote"
-                    disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Push)">
-                @if (Graph.Syncing == GitSyncOperation.Push)
-                {
-                    <span class="spinner" role="progressbar" aria-label="Pushing"></span>
-                }
-                else
-                {
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M12 19V5M5 12l7-7 7 7" />
-                    </svg>
-                }
-                Push
-            </button>
-        </div>
-        <div class="git-graph-sync" role="group" aria-label="Stash">
-            <button type="button" class="button button-secondary button-icon"
-                    title="Stash every change, including new files"
-                    disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
-                    @onclick="() => RunStashAsync(Graph.StashAsync())">
-                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M12 3v11M8 10l4 4 4-4" />
-                    <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
-                </svg>
-                Stash
-            </button>
-            <button type="button" class="button button-secondary button-icon"
-                    title="Apply the newest stash and drop it"
-                    disabled="@(Graph.Stashes.Count == 0 || _stashing)"
-                    @onclick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">
-                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M12 14V3M8 7l4-4 4 4" />
-                    <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
-                </svg>
-                Pop
-            </button>
-        </div>
-        <button type="button" class="button button-secondary button-icon git-graph-refresh" title="Read the graph again"
-                aria-label="Refresh" disabled="@Graph.IsLoading" @onclick="Graph.RefreshAsync">
-            <svg class="icon icon-small @(Graph.IsLoading ? "icon-spin" : null)" viewBox="0 0 24 24" aria-hidden="true"
-                 focusable="false">
-                <path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" />
-                <path d="M21 3v5h-5" />
-            </svg>
-        </button>
-    </div>
-
-    @* Only a failed fetch, pull or push is shown: the buttons' spinner says one is running. *@
-    @if (Graph.Syncing is null && Graph.SyncProblem is { } syncProblem)
-    {
-        <div class="error git-graph-sync-error" role="alert">
-            <div class="git-graph-sync-error-body">
-                <p>@syncProblem.Message</p>
-                @if (syncProblem.Details.Length > 0)
-                {
-                    <details>
-                        <summary>Git's output</summary>
-                        <pre class="git-graph-sync-details">@syncProblem.Details</pre>
-                    </details>
-                }
-            </div>
-            <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                    title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissSyncProblem">
-                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M6 6l12 12M18 6 6 18" />
-                </svg>
-            </button>
-        </div>
-    }
-
-    @if (Graph.Problem is { } problem)
-    {
-        <p class="error git-graph-problem">Couldn't read the git graph. @problem</p>
-    }
-
-    @if (Graph.TagProblem is { } tagProblem)
-    {
-        <div class="error git-graph-sync-error" role="alert">
-            <div class="git-graph-sync-error-body">
-                <p>@tagProblem</p>
-            </div>
-            <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                    title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissTagProblem">
-                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M6 6l12 12M18 6 6 18" />
-                </svg>
-            </button>
-        </div>
-    }
-
-    @if (Graph.BranchProblem is { } branchProblem)
-    {
-        <div class="error git-graph-sync-error" role="alert">
-            <div class="git-graph-sync-error-body">
-                <p>@branchProblem</p>
-            </div>
-            <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                    title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissBranchProblem">
-                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M6 6l12 12M18 6 6 18" />
-                </svg>
-            </button>
-        </div>
-    }
-
-    @if (Graph.DropRequest is { } dropRequest)
-    {
-        <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-drop-stash-title">
-            <h3 id="confirm-drop-stash-title" class="alert-title">Drop @dropRequest.Name?</h3>
-            <p>
-                "@dropRequest.Message" is deleted without being applied, and Tammi can't bring it back.
-            </p>
-            <div class="settings-field-row">
-                <button type="button" class="button button-danger" disabled="@_stashing"
-                        @onclick="() => RunStashAsync(Graph.ConfirmDropStashAsync())">Drop stash</button>
-                <button type="button" class="button button-secondary" disabled="@_stashing"
-                        @onclick="Graph.CancelDropStash">Cancel</button>
-            </div>
-        </div>
-    }
-
-    @if (Graph.PendingReset is { } reset)
-    {
-        <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-reset-title">
-            <h3 id="confirm-reset-title" class="alert-title">
-                @ResetTitle(reset.Mode) @(Graph.Refs.HeadBranch ?? "HEAD") to @reset.Sha[..Math.Min(7, reset.Sha.Length)]?
-            </h3>
-            <p>@ResetText(reset.Mode)</p>
-            <div class="settings-field-row">
-                <button type="button" class="button @(reset.Mode == GitResetMode.Hard ? "button-danger" : null)"
-                        @onclick="Graph.ConfirmResetAsync">@ResetTitle(reset.Mode)</button>
-                <button type="button" class="button button-secondary" @onclick="Graph.CancelReset">Cancel</button>
-            </div>
-        </div>
-    }
-
-    @if (Graph.StashProblem is { } stashProblem)
-    {
-        <div class="error git-graph-sync-error" role="alert">
-            <div class="git-graph-sync-error-body">
-                <p>@stashProblem</p>
-            </div>
-            <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                    title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissStashProblem">
-                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M6 6l12 12M18 6 6 18" />
-                </svg>
-            </button>
-        </div>
-    }
-
-    @if (_branchPrompt is { } branchPrompt)
-    {
-        <form class="git-graph-tag-prompt" @onsubmit="SubmitBranchPromptAsync" @onsubmit:preventDefault="true">
-            <label>
-                @(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")
-                <input type="text" class="input" @bind="_branchName" @bind:event="oninput" @ref="_branchInput"
-                       spellcheck="false" />
-            </label>
-            <div class="git-graph-tag-prompt-actions">
-                <button type="submit" class="button" disabled="@(!CanSubmitBranchPrompt)">
-                    @(branchPrompt.Kind == BranchPromptKind.Create ? "Create and checkout" : "Rename branch")
+<div class="git-graph" @ref="_body">
+    <div class="git-graph-main @(Graph.DiffTarget is not null ? "git-graph-main-diff" : null)">
+        <div class="git-graph-toolbar">
+            <div class="segmented" role="group" aria-label="Commits shown">
+                <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.WorkspaceBranch)"
+                        title="HEAD, the workspace branch, its upstream and its merge target"
+                        @onclick="() => Graph.SetScopeAsync(GitGraphScope.WorkspaceBranch)">
+                    Workspace branch
                 </button>
-                @if (branchPrompt.Kind == BranchPromptKind.Create)
-                {
-                    <button type="button" class="button button-secondary" disabled="@(!CanSubmitBranchPrompt)"
-                            @onclick="() => SubmitBranchPromptAsync(checkout: false)">
-                        Create branch
-                    </button>
-                }
-                <button type="button" class="button button-secondary" @onclick="() => _branchPrompt = null">Cancel</button>
-            </div>
-        </form>
-    }
-
-    @if (_confirm is { } confirm)
-    {
-        <form class="git-graph-tag-prompt" role="alertdialog" aria-label="Confirm delete"
-              @onsubmit="ConfirmAsync" @onsubmit:preventDefault="true">
-            <p>@confirm.Message</p>
-            <div class="git-graph-tag-prompt-actions">
-                <button type="submit" class="button button-danger" @ref="_confirmButton">Delete</button>
-                <button type="button" class="button button-secondary" @onclick="() => _confirm = null">Cancel</button>
-            </div>
-        </form>
-    }
-
-    @if (_tagPrompt is { } prompt)
-    {
-        <form class="git-graph-tag-prompt" @onsubmit="() => SubmitTagPromptAsync(push: false)" @onsubmit:preventDefault="true">
-            <label>
-                Tag name
-                <input type="text" class="input" @bind="_tagName" @bind:event="oninput" autofocus
-                       spellcheck="false" />
-            </label>
-            <div class="git-graph-tag-prompt-actions">
-                <button type="submit" class="button" disabled="@(!CanSubmitTagPrompt)">
-                    Create tag
+                <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.Everything)"
+                        title="Every branch and tag" @onclick="() => Graph.SetScopeAsync(GitGraphScope.Everything)">
+                    Everything
                 </button>
-                <button type="button" class="button button-secondary" disabled="@(!CanSubmitTagPrompt)"
-                        @onclick="() => SubmitTagPromptAsync(push: true)">
-                    Create and push tag
-                </button>
-                <button type="button" class="button button-secondary" @onclick="() => _tagPrompt = null">Cancel</button>
             </div>
-        </form>
-    }
-
-    @if (_stashMenu is { } stashMenu)
-    {
-        <ContextMenu @key="stashMenu" X="stashMenu.X" Y="stashMenu.Y" Label="Stash" OnClose="() => _stashMenu = null">
-            <li role="none">
-                <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
-                        @onclick="() => RunStashMenuAsync(Graph.PopStashAsync(stashMenu.Stash))">Pop stash</button>
-            </li>
-            <li role="none">
-                <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
-                        @onclick="() => RunStashMenuAsync(Graph.ApplyStashAsync(stashMenu.Stash))">Apply stash</button>
-            </li>
-            <li role="none">
-                <button type="button" class="menu-item menu-item-danger" role="menuitem" disabled="@_stashing"
-                        @onclick="() => ConfirmDrop(stashMenu.Stash)">Drop stash</button>
-            </li>
-        </ContextMenu>
-    }
-
-    @if (_commitMenu is { } commitMenu)
-    {
-        <ContextMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
-            @if (Graph.Refs.HeadBranch is not null && commitMenu.Sha != Graph.Refs.HeadSha)
-            {
-                var mergeable = commitMenu.Branches.Where(b => b != Graph.Refs.HeadBranch).Concat(commitMenu.RemoteBranches).ToList();
-                @foreach (var branch in mergeable)
-                {
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem"
-                                @onclick="() => RunBranchAsync(() => Graph.MergeBranchAsync(branch))">
-                            Merge @branch
-                        </button>
-                    </li>
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem"
-                                @onclick="() => RunBranchAsync(() => Graph.RebaseBranchAsync(branch))">
-                            Rebase onto @branch
-                        </button>
-                    </li>
-                }
-                @if (mergeable.Count > 0)
-                {
-                    <li role="separator" class="menu-separator"></li>
-                }
-            }
-            <li role="none">
-                <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateBranch(commitMenu)">
-                    Create branch…
-                </button>
-            </li>
-            @foreach (var branch in commitMenu.Branches)
-            {
-                var isCurrent = branch == Graph.Refs.HeadBranch;
-                var isWorkspace = Graph.IsWorkspaceBranch(branch);
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem" disabled="@isCurrent"
-                            @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
-                        Checkout @branch@(isCurrent ? " (current)" : null)
-                    </button>
-                </li>
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem" disabled="@isWorkspace"
-                            title="@(isWorkspace ? "The workspace branch can't be renamed here" : null)"
-                            @onclick="() => StartRenameBranch(branch)">
-                        Rename branch @branch…
-                    </button>
-                </li>
-                var deleteKey = DeleteBranchSubmenu + branch;
-                var hasUpstream = commitMenu.Upstreams.TryGetValue(branch, out var upstream);
-                <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = deleteKey">
-                    <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu" disabled="@isWorkspace"
-                            title="@(isWorkspace ? "The workspace branch can't be deleted here" : null)"
-                            aria-expanded="@(commitMenu.OpenSubmenu == deleteKey ? "true" : "false")"
-                            @onclick="() => ToggleSubmenu(commitMenu, deleteKey)">
-                        <span class="tab-label-text">Delete branch @branch…</span>
-                        <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <polyline points="9 6 15 12 9 18"></polyline>
-                        </svg>
-                    </button>
-                    @if (commitMenu.OpenSubmenu == deleteKey && !isWorkspace)
+            <div class="git-graph-sync" role="group" aria-label="Sync with the remote">
+                <button type="button" class="button button-secondary button-icon" title="Download new commits from the remotes"
+                        disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Fetch)">
+                    @if (Graph.Syncing == GitSyncOperation.Fetch)
                     {
-                        <ul class="menu menu-submenu" role="menu" aria-label="Delete branch">
-                            <li role="none">
-                                <button type="button" class="menu-item" role="menuitem" disabled="@isCurrent"
-                                        title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
-                                        @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: false, upstream)">
-                                    Local branch
-                                </button>
-                            </li>
-                            <li role="none">
-                                <button type="button" class="menu-item" role="menuitem" disabled="@(upstream is null)"
-                                        @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: false, deleteRemote: true, upstream)">
-                                    Remote branch@(!hasUpstream ? " (checking...)" : upstream is null ? " (none)" : $" ({upstream.Remote}/{upstream.Branch})")
-                                </button>
-                            </li>
-                            <li role="none">
-                                <button type="button" class="menu-item" role="menuitem" disabled="@(isCurrent || upstream is null)"
-                                        title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
-                                        @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: true, upstream)">
-                                    Local and remote branch
-                                </button>
-                            </li>
-                        </ul>
+                        <span class="spinner" role="progressbar" aria-label="Fetching"></span>
                     }
-                </li>
-            }
-            @foreach (var branch in commitMenu.RemoteBranches)
-            {
-                <li role="separator" class="menu-separator"></li>
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem"
-                            @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
-                        Checkout @branch
-                    </button>
-                </li>
-                <li role="none">
-                    <button type="button" class="menu-item menu-item-danger" role="menuitem"
-                            @onclick="() => ConfirmDeleteRemoteBranch(branch)">
-                        Delete remote branch @branch…
-                    </button>
-                </li>
-            }
-            <li role="separator" class="menu-separator"></li>
-            <li role="none">
-                <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateTag(commitMenu)">
-                    Create tag…
+                    else
+                    {
+                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+                        </svg>
+                    }
+                    Fetch
                 </button>
-            </li>
-            @if (commitMenu.Tags.Count == 1)
-            {
-                var tag = commitMenu.Tags[0];
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem"
-                            disabled="@(PushState(commitMenu, tag) is not false)"
-                            @onclick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
-                        Push tag @tag@(PushState(commitMenu, tag) is null ? " (checking...)" : PushState(commitMenu, tag) is true ? $" (already on {commitMenu.Remote})" : null)
-                    </button>
-                </li>
-                <li role="none">
-                    <button type="button" class="menu-item menu-item-danger" role="menuitem"
-                            @onclick="() => ConfirmDeleteTag(commitMenu, tag)">
-                        Delete tag @tag@DeleteSuffix(commitMenu, tag)
-                    </button>
-                </li>
-            }
-            else if (commitMenu.Tags.Count > 1)
-            {
-                <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = PushSubmenu">
-                    <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
-                            aria-expanded="@(commitMenu.OpenSubmenu == PushSubmenu ? "true" : "false")"
-                            @onclick="() => ToggleSubmenu(commitMenu, PushSubmenu)">
-                        <span class="tab-label-text">Push tag…</span>
-                        <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <polyline points="9 6 15 12 9 18"></polyline>
-                        </svg>
-                    </button>
-                    @if (commitMenu.OpenSubmenu == PushSubmenu)
+                <button type="button" class="button button-secondary button-icon"
+                        title="Fetch the upstream branch and bring this branch up to date with it"
+                        disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Pull)">
+                    @if (Graph.Syncing == GitSyncOperation.Pull)
                     {
-                        <ul class="menu menu-submenu" role="menu" aria-label="Push tag">
-                            @foreach (var tag in commitMenu.Tags)
-                            {
-                                var state = PushState(commitMenu, tag);
-                                <li role="none">
-                                    <button type="button" class="menu-item" role="menuitem" disabled="@(state is not false)"
-                                            @onclick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
-                                        @tag@(state is null ? " (checking...)" : state is true ? $" (already on {commitMenu.Remote})" : null)
-                                    </button>
-                                </li>
-                            }
-                        </ul>
+                        <span class="spinner" role="progressbar" aria-label="Pulling"></span>
                     }
-                </li>
-                <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = DeleteSubmenu">
-                    <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu"
-                            aria-expanded="@(commitMenu.OpenSubmenu == DeleteSubmenu ? "true" : "false")"
-                            @onclick="() => ToggleSubmenu(commitMenu, DeleteSubmenu)">
-                        <span class="tab-label-text">Delete tag…</span>
-                        <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <polyline points="9 6 15 12 9 18"></polyline>
-                        </svg>
-                    </button>
-                    @if (commitMenu.OpenSubmenu == DeleteSubmenu)
+                    else
                     {
-                        <ul class="menu menu-submenu" role="menu" aria-label="Delete tag">
-                            @foreach (var tag in commitMenu.Tags)
-                            {
-                                <li role="none">
-                                    <button type="button" class="menu-item" role="menuitem"
-                                            @onclick="() => ConfirmDeleteTag(commitMenu, tag)">
-                                        @tag@DeleteSuffix(commitMenu, tag)
-                                    </button>
-                                </li>
-                            }
-                        </ul>
+                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M12 5v14M19 12l-7 7-7-7" />
+                        </svg>
                     }
-                </li>
-            }
-            <li role="separator" class="menu-separator"></li>
-            @foreach (var mode in new[] { GitResetMode.Soft, GitResetMode.Mixed, GitResetMode.Hard })
-            {
-                <li role="none">
-                    <button type="button" class="menu-item @(mode == GitResetMode.Hard ? "menu-item-danger" : null)"
-                            role="menuitem" disabled="@(Graph.Refs.HeadBranch is null)"
-                            title="@ResetText(mode)" @onclick="() => StartReset(commitMenu, mode)">
-                        @ResetTitle(mode)…
-                    </button>
-                </li>
-            }
-        </ContextMenu>
-    }
+                    Pull
+                </button>
+                <button type="button" class="button button-secondary button-icon" title="Upload this branch's commits to the remote"
+                        disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Push)">
+                    @if (Graph.Syncing == GitSyncOperation.Push)
+                    {
+                        <span class="spinner" role="progressbar" aria-label="Pushing"></span>
+                    }
+                    else
+                    {
+                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M12 19V5M5 12l7-7 7 7" />
+                        </svg>
+                    }
+                    Push
+                </button>
+            </div>
+            <div class="git-graph-sync" role="group" aria-label="Stash">
+                <button type="button" class="button button-secondary button-icon"
+                        title="Stash every change, including new files"
+                        disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
+                        @onclick="() => RunStashAsync(Graph.StashAsync())">
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 3v11M8 10l4 4 4-4" />
+                        <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
+                    </svg>
+                    Stash
+                </button>
+                <button type="button" class="button button-secondary button-icon"
+                        title="Apply the newest stash and drop it"
+                        disabled="@(Graph.Stashes.Count == 0 || _stashing)"
+                        @onclick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 14V3M8 7l4-4 4 4" />
+                        <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
+                    </svg>
+                    Pop
+                </button>
+            </div>
+            <button type="button" class="button button-secondary button-icon git-graph-refresh" title="Read the graph again"
+                    aria-label="Refresh" disabled="@Graph.IsLoading" @onclick="Graph.RefreshAsync">
+                <svg class="icon icon-small @(Graph.IsLoading ? "icon-spin" : null)" viewBox="0 0 24 24" aria-hidden="true"
+                     focusable="false">
+                    <path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" />
+                    <path d="M21 3v5h-5" />
+                </svg>
+            </button>
+        </div>
 
-    <div class="git-graph-body" @ref="_body">
-        @* A diff takes the place of the list only, so the details stay beside it. The list stays in the page, only
-           hidden, so it keeps its scroll position and selection. *@
-        @if (Graph.DiffTarget is not null)
+        @* Only a failed fetch, pull or push is shown: the buttons' spinner says one is running. *@
+        @if (Graph.Syncing is null && Graph.SyncProblem is { } syncProblem)
         {
-            <GitFileDiffView Graph="Graph" />
-        }
-
-        <div class="git-graph-list" tabindex="0" @ref="_list" hidden="@(Graph.DiffTarget is not null)"
-             style="@ListStyle" @onkeydown="OnKeyDownAsync">
-            @* Stays at the top as the list scrolls down, and scrolls sideways with it. Each column but Description,
-               which takes the space left, has a handle on the edge towards Description that resizes it. Right-clicking
-               it shows or hides columns and labels. *@
-            <div class="git-graph-header" @ref="_header" @oncontextmenu="OpenViewMenu"
-                 @oncontextmenu:preventDefault="true">
-                @foreach (var column in _visibleColumns)
-                {
-                    <span class="git-graph-heading" @key="column">
-                        @if (column > GitGraphColumn.Description)
-                        {
-                            @ColumnHandle(column, end: false)
-                        }
-                        <span class="git-graph-heading-label">@column</span>
-                        @if (column < GitGraphColumn.Description)
-                        {
-                            @ColumnHandle(column, end: true)
-                        }
-                    </span>
-                }
-            </div>
-            @if (_viewMenu is { } menuAt)
-            {
-                <div class="menu-backdrop" @onclick="CloseViewMenu"
-                     @oncontextmenu="CloseViewMenu" @oncontextmenu:preventDefault="true"></div>
-                <ul class="menu git-graph-view-menu" role="menu" aria-label="View" @onkeydown="OnViewMenuKeyDown"
-                    style="@FormattableString.Invariant($"left: {menuAt.X}px; top: {menuAt.Y}px")">
-                    @* The columns, then the rows' labels. Graph is always shown, so it isn't offered. Description is,
-                       greyed out, as the column the others give their space to. *@
-                    @foreach (var column in Enum.GetValues<GitGraphColumn>().Where(column => column != GitGraphColumn.Graph))
+            <div class="error git-graph-sync-error" role="alert">
+                <div class="git-graph-sync-error-body">
+                    <p>@syncProblem.Message</p>
+                    @if (syncProblem.Details.Length > 0)
                     {
-                        @MenuCheckbox(
-                            column.ToString(),
-                            Options.IsVisible(column),
-                            GitGraphViewOptions.CanHide(column),
-                            () => Options.ToggleColumn(column))
-                    }
-                    <li role="separator" class="menu-separator"></li>
-                    @MenuCheckbox("Tags", Options.ShowTags, enabled: true, Options.ToggleTags)
-                    @MenuCheckbox("Remote branches", Options.ShowRemoteBranches, enabled: true, Options.ToggleRemoteBranches)
-                </ul>
-            }
-            @* The changes not yet committed, as a row above the commits, with a dashed line down to HEAD. There
-               is no row while there are none. *@
-            @if (Graph.WorkingChanges is { Count: > 0 })
-            {
-                <div class="git-graph-row git-graph-working @(Graph.IsWorkingChangesSelected ? "selected" : null)"
-                     role="option" aria-selected="@(Graph.IsWorkingChangesSelected ? "true" : "false")"
-                     @onclick="Graph.SelectWorkingChangesAsync">
-                    @foreach (var column in _visibleColumns)
-                    {
-                        @switch (column)
-                        {
-                            case GitGraphColumn.Graph:
-                                <span class="git-graph-lane-cell">
-                                    <svg class="git-graph-lanes" width="@GraphWidth" height="@GitGraphRowView.RowHeight"
-                                         viewBox="0 0 @GraphWidth @GitGraphRowView.RowHeight" aria-hidden="true" focusable="false">
-                                        <path class="git-graph-working-line" d="@WorkingLinePath" />
-                                        <circle class="git-graph-working-dot" cx="@WorkingX" cy="@(GitGraphRowView.RowHeight / 2.0)" r="4" />
-                                    </svg>
-                                </span>
-                                break;
-                            case GitGraphColumn.Description:
-                                <span class="git-graph-summary">
-                                    <span class="git-graph-subject git-graph-working-label">Working changes</span>
-                                    <span class="git-graph-working-counts">@WorkingCounts</span>
-                                </span>
-                                break;
-                            default:
-                                <span></span>
-                                break;
-                        }
+                        <details>
+                            <summary>Git's output</summary>
+                            <pre class="git-graph-sync-details">@syncProblem.Details</pre>
+                        </details>
                     }
                 </div>
-            }
-            <div role="listbox" aria-label="Commits">
-                <Virtualize @ref="_virtualize" TItem="GitGraphItem" ItemsProvider="ProvideRowsAsync"
-                            ItemSize="GitGraphRowView.RowHeight" OverscanCount="30">
-                    <ItemContent Context="item">
-                        @if (item.Stash is { } stash)
-                        {
-                            @StashRow(item, stash)
-                            return;
-                        }
+                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
+                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissSyncProblem">
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M6 6l12 12M18 6 6 18" />
+                    </svg>
+                </button>
+            </div>
+        }
 
-                        @{
-                            var row = item.Row!;
-                            var selected = row.Commit.Sha == Graph.Selected?.Commit.Sha;
-                            var isHead = row.Commit.Sha == Graph.Refs.HeadSha;
+        @if (Graph.Problem is { } problem)
+        {
+            <p class="error git-graph-problem">Couldn't read the git graph. @problem</p>
+        }
+
+        @if (Graph.TagProblem is { } tagProblem)
+        {
+            <div class="error git-graph-sync-error" role="alert">
+                <div class="git-graph-sync-error-body">
+                    <p>@tagProblem</p>
+                </div>
+                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
+                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissTagProblem">
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M6 6l12 12M18 6 6 18" />
+                    </svg>
+                </button>
+            </div>
+        }
+
+        @if (Graph.BranchProblem is { } branchProblem)
+        {
+            <div class="error git-graph-sync-error" role="alert">
+                <div class="git-graph-sync-error-body">
+                    <p>@branchProblem</p>
+                </div>
+                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
+                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissBranchProblem">
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M6 6l12 12M18 6 6 18" />
+                    </svg>
+                </button>
+            </div>
+        }
+
+        @if (Graph.DropRequest is { } dropRequest)
+        {
+            <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-drop-stash-title">
+                <h3 id="confirm-drop-stash-title" class="alert-title">Drop @dropRequest.Name?</h3>
+                <p>
+                    "@dropRequest.Message" is deleted without being applied, and Tammi can't bring it back.
+                </p>
+                <div class="settings-field-row">
+                    <button type="button" class="button button-danger" disabled="@_stashing"
+                            @onclick="() => RunStashAsync(Graph.ConfirmDropStashAsync())">Drop stash</button>
+                    <button type="button" class="button button-secondary" disabled="@_stashing"
+                            @onclick="Graph.CancelDropStash">Cancel</button>
+                </div>
+            </div>
+        }
+
+        @if (Graph.PendingReset is { } reset)
+        {
+            <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-reset-title">
+                <h3 id="confirm-reset-title" class="alert-title">
+                    @ResetTitle(reset.Mode) @(Graph.Refs.HeadBranch ?? "HEAD") to @reset.Sha[..Math.Min(7, reset.Sha.Length)]?
+                </h3>
+                <p>@ResetText(reset.Mode)</p>
+                <div class="settings-field-row">
+                    <button type="button" class="button @(reset.Mode == GitResetMode.Hard ? "button-danger" : null)"
+                            @onclick="Graph.ConfirmResetAsync">@ResetTitle(reset.Mode)</button>
+                    <button type="button" class="button button-secondary" @onclick="Graph.CancelReset">Cancel</button>
+                </div>
+            </div>
+        }
+
+        @if (Graph.StashProblem is { } stashProblem)
+        {
+            <div class="error git-graph-sync-error" role="alert">
+                <div class="git-graph-sync-error-body">
+                    <p>@stashProblem</p>
+                </div>
+                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
+                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissStashProblem">
+                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M6 6l12 12M18 6 6 18" />
+                    </svg>
+                </button>
+            </div>
+        }
+
+        @if (_branchPrompt is { } branchPrompt)
+        {
+            <form class="git-graph-tag-prompt" @onsubmit="SubmitBranchPromptAsync" @onsubmit:preventDefault="true">
+                <label>
+                    @(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")
+                    <input type="text" class="input" @bind="_branchName" @bind:event="oninput" @ref="_branchInput"
+                           spellcheck="false" />
+                </label>
+                <div class="git-graph-tag-prompt-actions">
+                    <button type="submit" class="button" disabled="@(!CanSubmitBranchPrompt)">
+                        @(branchPrompt.Kind == BranchPromptKind.Create ? "Create and checkout" : "Rename branch")
+                    </button>
+                    @if (branchPrompt.Kind == BranchPromptKind.Create)
+                    {
+                        <button type="button" class="button button-secondary" disabled="@(!CanSubmitBranchPrompt)"
+                                @onclick="() => SubmitBranchPromptAsync(checkout: false)">
+                            Create branch
+                        </button>
+                    }
+                    <button type="button" class="button button-secondary" @onclick="() => _branchPrompt = null">Cancel</button>
+                </div>
+            </form>
+        }
+
+        @if (_confirm is { } confirm)
+        {
+            <form class="git-graph-tag-prompt" role="alertdialog" aria-label="Confirm delete"
+                  @onsubmit="ConfirmAsync" @onsubmit:preventDefault="true">
+                <p>@confirm.Message</p>
+                <div class="git-graph-tag-prompt-actions">
+                    <button type="submit" class="button button-danger" @ref="_confirmButton">Delete</button>
+                    <button type="button" class="button button-secondary" @onclick="() => _confirm = null">Cancel</button>
+                </div>
+            </form>
+        }
+
+        @if (_tagPrompt is { } prompt)
+        {
+            <form class="git-graph-tag-prompt" @onsubmit="() => SubmitTagPromptAsync(push: false)" @onsubmit:preventDefault="true">
+                <label>
+                    Tag name
+                    <input type="text" class="input" @bind="_tagName" @bind:event="oninput" autofocus
+                           spellcheck="false" />
+                </label>
+                <div class="git-graph-tag-prompt-actions">
+                    <button type="submit" class="button" disabled="@(!CanSubmitTagPrompt)">
+                        Create tag
+                    </button>
+                    <button type="button" class="button button-secondary" disabled="@(!CanSubmitTagPrompt)"
+                            @onclick="() => SubmitTagPromptAsync(push: true)">
+                        Create and push tag
+                    </button>
+                    <button type="button" class="button button-secondary" @onclick="() => _tagPrompt = null">Cancel</button>
+                </div>
+            </form>
+        }
+
+        @if (_stashMenu is { } stashMenu)
+        {
+            <ContextMenu @key="stashMenu" X="stashMenu.X" Y="stashMenu.Y" Label="Stash" OnClose="() => _stashMenu = null">
+                <li role="none">
+                    <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
+                            @onclick="() => RunStashMenuAsync(Graph.PopStashAsync(stashMenu.Stash))">Pop stash</button>
+                </li>
+                <li role="none">
+                    <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
+                            @onclick="() => RunStashMenuAsync(Graph.ApplyStashAsync(stashMenu.Stash))">Apply stash</button>
+                </li>
+                <li role="none">
+                    <button type="button" class="menu-item menu-item-danger" role="menuitem" disabled="@_stashing"
+                            @onclick="() => ConfirmDrop(stashMenu.Stash)">Drop stash</button>
+                </li>
+            </ContextMenu>
+        }
+
+        @if (_commitMenu is { } commitMenu)
+        {
+            <ContextMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
+                @if (Graph.Refs.HeadBranch is not null && commitMenu.Sha != Graph.Refs.HeadSha)
+                {
+                    var mergeable = commitMenu.Branches.Where(b => b != Graph.Refs.HeadBranch).Concat(commitMenu.RemoteBranches).ToList();
+                    @foreach (var branch in mergeable)
+                    {
+                        <li role="none">
+                            <button type="button" class="menu-item" role="menuitem"
+                                    @onclick="() => RunBranchAsync(() => Graph.MergeBranchAsync(branch))">
+                                Merge @branch
+                            </button>
+                        </li>
+                        <li role="none">
+                            <button type="button" class="menu-item" role="menuitem"
+                                    @onclick="() => RunBranchAsync(() => Graph.RebaseBranchAsync(branch))">
+                                Rebase onto @branch
+                            </button>
+                        </li>
+                    }
+                    @if (mergeable.Count > 0)
+                    {
+                        <li role="separator" class="menu-separator"></li>
+                    }
+                }
+                <li role="none">
+                    <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateBranch(commitMenu)">
+                        Create branch…
+                    </button>
+                </li>
+                @foreach (var branch in commitMenu.Branches)
+                {
+                    var isCurrent = branch == Graph.Refs.HeadBranch;
+                    var isWorkspace = Graph.IsWorkspaceBranch(branch);
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem" disabled="@isCurrent"
+                                @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
+                            Checkout @branch@(isCurrent ? " (current)" : null)
+                        </button>
+                    </li>
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem" disabled="@isWorkspace"
+                                title="@(isWorkspace ? "The workspace branch can't be renamed here" : null)"
+                                @onclick="() => StartRenameBranch(branch)">
+                            Rename branch @branch…
+                        </button>
+                    </li>
+                    var deleteKey = DeleteBranchSubmenu + branch;
+                    var hasUpstream = commitMenu.Upstreams.TryGetValue(branch, out var upstream);
+                    <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = deleteKey">
+                        <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu" disabled="@isWorkspace"
+                                title="@(isWorkspace ? "The workspace branch can't be deleted here" : null)"
+                                aria-expanded="@(commitMenu.OpenSubmenu == deleteKey ? "true" : "false")"
+                                @onclick="() => ToggleSubmenu(commitMenu, deleteKey)">
+                            <span class="tab-label-text">Delete branch @branch…</span>
+                            <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <polyline points="9 6 15 12 9 18"></polyline>
+                            </svg>
+                        </button>
+                        @if (commitMenu.OpenSubmenu == deleteKey && !isWorkspace)
+                        {
+                            <ul class="menu menu-submenu" role="menu" aria-label="Delete branch">
+                                <li role="none">
+                                    <button type="button" class="menu-item" role="menuitem" disabled="@isCurrent"
+                                            title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
+                                            @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: false, upstream)">
+                                        Local branch
+                                    </button>
+                                </li>
+                                <li role="none">
+                                    <button type="button" class="menu-item" role="menuitem" disabled="@(upstream is null)"
+                                            @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: false, deleteRemote: true, upstream)">
+                                        Remote branch@(!hasUpstream ? " (checking...)" : upstream is null ? " (none)" : $" ({upstream.Remote}/{upstream.Branch})")
+                                    </button>
+                                </li>
+                                <li role="none">
+                                    <button type="button" class="menu-item" role="menuitem" disabled="@(isCurrent || upstream is null)"
+                                            title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
+                                            @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: true, upstream)">
+                                        Local and remote branch
+                                    </button>
+                                </li>
+                            </ul>
                         }
-                        <div class="git-graph-row @(selected ? "selected" : null)" role="option"
-                             aria-selected="@(selected ? "true" : "false")" @key="row.Commit.Sha"
-                             @onclick="() => Graph.SelectAsync(row.Commit.Sha)"
-                             @oncontextmenu="e => OpenCommitMenuAsync(row.Commit.Sha, e)"
-                             @oncontextmenu:preventDefault="true">
-                            @foreach (var column in _visibleColumns)
-                            {
-                                @switch (column)
+                    </li>
+                }
+                @foreach (var branch in commitMenu.RemoteBranches)
+                {
+                    <li role="separator" class="menu-separator"></li>
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem"
+                                @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
+                            Checkout @branch
+                        </button>
+                    </li>
+                    <li role="none">
+                        <button type="button" class="menu-item menu-item-danger" role="menuitem"
+                                @onclick="() => ConfirmDeleteRemoteBranch(branch)">
+                            Delete remote branch @branch…
+                        </button>
+                    </li>
+                }
+                <li role="separator" class="menu-separator"></li>
+                <li role="none">
+                    <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateTag(commitMenu)">
+                        Create tag…
+                    </button>
+                </li>
+                @if (commitMenu.Tags.Count == 1)
+                {
+                    var tag = commitMenu.Tags[0];
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem"
+                                disabled="@(PushState(commitMenu, tag) is not false)"
+                                @onclick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
+                            Push tag @tag@(PushState(commitMenu, tag) is null ? " (checking...)" : PushState(commitMenu, tag) is true ? $" (already on {commitMenu.Remote})" : null)
+                        </button>
+                    </li>
+                    <li role="none">
+                        <button type="button" class="menu-item menu-item-danger" role="menuitem"
+                                @onclick="() => ConfirmDeleteTag(commitMenu, tag)">
+                            Delete tag @tag@DeleteSuffix(commitMenu, tag)
+                        </button>
+                    </li>
+                }
+                else if (commitMenu.Tags.Count > 1)
+                {
+                    <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = PushSubmenu">
+                        <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
+                                aria-expanded="@(commitMenu.OpenSubmenu == PushSubmenu ? "true" : "false")"
+                                @onclick="() => ToggleSubmenu(commitMenu, PushSubmenu)">
+                            <span class="tab-label-text">Push tag…</span>
+                            <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <polyline points="9 6 15 12 9 18"></polyline>
+                            </svg>
+                        </button>
+                        @if (commitMenu.OpenSubmenu == PushSubmenu)
+                        {
+                            <ul class="menu menu-submenu" role="menu" aria-label="Push tag">
+                                @foreach (var tag in commitMenu.Tags)
                                 {
-                                    case GitGraphColumn.Graph:
-                                        <span class="git-graph-lane-cell">
-                                            <GitGraphRowView Row="row" Width="GraphWidth" IsHead="isHead" PassLanes="item.PassLanes" EndLines="item.EndLines" />
-                                        </span>
-                                        break;
-                                    case GitGraphColumn.Description:
-                                        <span class="git-graph-summary">
-                                            @References(row.Commit.Sha, isHead)
-                                            <span class="git-graph-subject" title="@row.Commit.Subject">@row.Commit.Subject</span>
-                                        </span>
-                                        break;
-                                    case GitGraphColumn.Author:
-                                        <span class="git-graph-author" title="@row.Commit.Author.Email">@row.Commit.Author.Name</span>
-                                        break;
-                                    case GitGraphColumn.Date:
-                                        <span class="git-graph-date" title="@GitGraphText.FullDate(row.Commit.Author.When)">
-                                            @GitGraphText.When(row.Commit.Author.When, _now)
-                                        </span>
-                                        break;
-                                    case GitGraphColumn.Commit:
-                                        <span class="git-graph-sha">@GitGraphText.ShortSha(row.Commit.Sha)</span>
-                                        break;
+                                    var state = PushState(commitMenu, tag);
+                                    <li role="none">
+                                        <button type="button" class="menu-item" role="menuitem" disabled="@(state is not false)"
+                                                @onclick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
+                                            @tag@(state is null ? " (checking...)" : state is true ? $" (already on {commitMenu.Remote})" : null)
+                                        </button>
+                                    </li>
                                 }
+                            </ul>
+                        }
+                    </li>
+                    <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = DeleteSubmenu">
+                        <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu"
+                                aria-expanded="@(commitMenu.OpenSubmenu == DeleteSubmenu ? "true" : "false")"
+                                @onclick="() => ToggleSubmenu(commitMenu, DeleteSubmenu)">
+                            <span class="tab-label-text">Delete tag…</span>
+                            <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <polyline points="9 6 15 12 9 18"></polyline>
+                            </svg>
+                        </button>
+                        @if (commitMenu.OpenSubmenu == DeleteSubmenu)
+                        {
+                            <ul class="menu menu-submenu" role="menu" aria-label="Delete tag">
+                                @foreach (var tag in commitMenu.Tags)
+                                {
+                                    <li role="none">
+                                        <button type="button" class="menu-item" role="menuitem"
+                                                @onclick="() => ConfirmDeleteTag(commitMenu, tag)">
+                                            @tag@DeleteSuffix(commitMenu, tag)
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+                <li role="separator" class="menu-separator"></li>
+                @foreach (var mode in new[] { GitResetMode.Soft, GitResetMode.Mixed, GitResetMode.Hard })
+                {
+                    <li role="none">
+                        <button type="button" class="menu-item @(mode == GitResetMode.Hard ? "menu-item-danger" : null)"
+                                role="menuitem" disabled="@(Graph.Refs.HeadBranch is null)"
+                                title="@ResetText(mode)" @onclick="() => StartReset(commitMenu, mode)">
+                            @ResetTitle(mode)…
+                        </button>
+                    </li>
+                }
+            </ContextMenu>
+        }
+
+        <div class="git-graph-body">
+            @* A diff takes the place of the controls and the list, so the details stay beside it. The list stays in the page, only
+               hidden, so it keeps its scroll position and selection. *@
+            @if (Graph.DiffTarget is not null)
+            {
+                <GitFileDiffView Graph="Graph" />
+            }
+
+            <div class="git-graph-list" tabindex="0" @ref="_list" hidden="@(Graph.DiffTarget is not null)"
+                 style="@ListStyle" @onkeydown="OnKeyDownAsync">
+                @* Stays at the top as the list scrolls down, and scrolls sideways with it. Each column but Description,
+                   which takes the space left, has a handle on the edge towards Description that resizes it. Right-clicking
+                   it shows or hides columns and labels. *@
+                <div class="git-graph-header" @ref="_header" @oncontextmenu="OpenViewMenu"
+                     @oncontextmenu:preventDefault="true">
+                    @foreach (var column in _visibleColumns)
+                    {
+                        <span class="git-graph-heading" @key="column">
+                            @if (column > GitGraphColumn.Description)
+                            {
+                                @ColumnHandle(column, end: false)
                             }
-                        </div>
-                    </ItemContent>
-                    <Placeholder>
-                        <div class="git-graph-row git-graph-row-placeholder"></div>
-                    </Placeholder>
-                </Virtualize>
+                            <span class="git-graph-heading-label">@column</span>
+                            @if (column < GitGraphColumn.Description)
+                            {
+                                @ColumnHandle(column, end: true)
+                            }
+                        </span>
+                    }
+                </div>
+                @if (_viewMenu is { } menuAt)
+                {
+                    <div class="menu-backdrop" @onclick="CloseViewMenu"
+                         @oncontextmenu="CloseViewMenu" @oncontextmenu:preventDefault="true"></div>
+                    <ul class="menu git-graph-view-menu" role="menu" aria-label="View" @onkeydown="OnViewMenuKeyDown"
+                        style="@FormattableString.Invariant($"left: {menuAt.X}px; top: {menuAt.Y}px")">
+                        @* The columns, then the rows' labels. Graph is always shown, so it isn't offered. Description is,
+                           greyed out, as the column the others give their space to. *@
+                        @foreach (var column in Enum.GetValues<GitGraphColumn>().Where(column => column != GitGraphColumn.Graph))
+                        {
+                            @MenuCheckbox(
+                                column.ToString(),
+                                Options.IsVisible(column),
+                                GitGraphViewOptions.CanHide(column),
+                                () => Options.ToggleColumn(column))
+                        }
+                        <li role="separator" class="menu-separator"></li>
+                        @MenuCheckbox("Tags", Options.ShowTags, enabled: true, Options.ToggleTags)
+                        @MenuCheckbox("Remote branches", Options.ShowRemoteBranches, enabled: true, Options.ToggleRemoteBranches)
+                    </ul>
+                }
+                @* The changes not yet committed, as a row above the commits, with a dashed line down to HEAD. There
+                   is no row while there are none. *@
+                @if (Graph.WorkingChanges is { Count: > 0 })
+                {
+                    <div class="git-graph-row git-graph-working @(Graph.IsWorkingChangesSelected ? "selected" : null)"
+                         role="option" aria-selected="@(Graph.IsWorkingChangesSelected ? "true" : "false")"
+                         @onclick="Graph.SelectWorkingChangesAsync">
+                        @foreach (var column in _visibleColumns)
+                        {
+                            @switch (column)
+                            {
+                                case GitGraphColumn.Graph:
+                                    <span class="git-graph-lane-cell">
+                                        <svg class="git-graph-lanes" width="@GraphWidth" height="@GitGraphRowView.RowHeight"
+                                             viewBox="0 0 @GraphWidth @GitGraphRowView.RowHeight" aria-hidden="true" focusable="false">
+                                            <path class="git-graph-working-line" d="@WorkingLinePath" />
+                                            <circle class="git-graph-working-dot" cx="@WorkingX" cy="@(GitGraphRowView.RowHeight / 2.0)" r="4" />
+                                        </svg>
+                                    </span>
+                                    break;
+                                case GitGraphColumn.Description:
+                                    <span class="git-graph-summary">
+                                        <span class="git-graph-subject git-graph-working-label">Working changes</span>
+                                        <span class="git-graph-working-counts">@WorkingCounts</span>
+                                    </span>
+                                    break;
+                                default:
+                                    <span></span>
+                                    break;
+                            }
+                        }
+                    </div>
+                }
+                <div role="listbox" aria-label="Commits">
+                    <Virtualize @ref="_virtualize" TItem="GitGraphItem" ItemsProvider="ProvideRowsAsync"
+                                ItemSize="GitGraphRowView.RowHeight" OverscanCount="30">
+                        <ItemContent Context="item">
+                            @if (item.Stash is { } stash)
+                            {
+                                @StashRow(item, stash)
+                                return;
+                            }
+
+                            @{
+                                var row = item.Row!;
+                                var selected = row.Commit.Sha == Graph.Selected?.Commit.Sha;
+                                var isHead = row.Commit.Sha == Graph.Refs.HeadSha;
+                            }
+                            <div class="git-graph-row @(selected ? "selected" : null)" role="option"
+                                 aria-selected="@(selected ? "true" : "false")" @key="row.Commit.Sha"
+                                 @onclick="() => Graph.SelectAsync(row.Commit.Sha)"
+                                 @oncontextmenu="e => OpenCommitMenuAsync(row.Commit.Sha, e)"
+                                 @oncontextmenu:preventDefault="true">
+                                @foreach (var column in _visibleColumns)
+                                {
+                                    @switch (column)
+                                    {
+                                        case GitGraphColumn.Graph:
+                                            <span class="git-graph-lane-cell">
+                                                <GitGraphRowView Row="row" Width="GraphWidth" IsHead="isHead" PassLanes="item.PassLanes" EndLines="item.EndLines" />
+                                            </span>
+                                            break;
+                                        case GitGraphColumn.Description:
+                                            <span class="git-graph-summary">
+                                                @References(row.Commit.Sha, isHead)
+                                                <span class="git-graph-subject" title="@row.Commit.Subject">@row.Commit.Subject</span>
+                                            </span>
+                                            break;
+                                        case GitGraphColumn.Author:
+                                            <span class="git-graph-author" title="@row.Commit.Author.Email">@row.Commit.Author.Name</span>
+                                            break;
+                                        case GitGraphColumn.Date:
+                                            <span class="git-graph-date" title="@GitGraphText.FullDate(row.Commit.Author.When)">
+                                                @GitGraphText.When(row.Commit.Author.When, _now)
+                                            </span>
+                                            break;
+                                        case GitGraphColumn.Commit:
+                                            <span class="git-graph-sha">@GitGraphText.ShortSha(row.Commit.Sha)</span>
+                                            break;
+                                    }
+                                }
+                            </div>
+                        </ItemContent>
+                        <Placeholder>
+                            <div class="git-graph-row git-graph-row-placeholder"></div>
+                        </Placeholder>
+                    </Virtualize>
+                </div>
             </div>
         </div>
-
-        @* Resizes the details panel: drag it, or focus it and use Left and Right. *@
-        <div class="git-graph-splitter" role="separator" aria-orientation="vertical" aria-label="Resize commit details"
-             aria-controls="@_detailsId" tabindex="0" title="Drag to resize. Double-click to reset." @ref="_splitter">
-        </div>
-
-        <aside class="git-graph-details" id="@_detailsId" aria-label="Commit details">
-            @if (Graph.IsWorkingChangesSelected)
-            {
-                <GitWorkingChanges Graph="Graph" />
-            }
-            else
-            {
-                <GitCommitDetails Graph="Graph" />
-            }
-        </aside>
     </div>
+
+    @* Resizes the details panel: drag it, or focus it and use Left and Right. *@
+    <div class="git-graph-splitter" role="separator" aria-orientation="vertical" aria-label="Resize commit details"
+         aria-controls="@_detailsId" tabindex="0" title="Drag to resize. Double-click to reset." @ref="_splitter">
+    </div>
+
+    <aside class="git-graph-details" id="@_detailsId" aria-label="Commit details">
+        @if (Graph.IsWorkingChangesSelected)
+        {
+            <GitWorkingChanges Graph="Graph" />
+        }
+        else
+        {
+            <GitCommitDetails Graph="Graph" />
+        }
+    </aside>
 </div>
 
 @code {

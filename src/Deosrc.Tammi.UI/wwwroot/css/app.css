@@ -2785,12 +2785,25 @@ label.task-choice {
    Git graph: a main area tab with a toolbar, the commit list and the selected commit's details.
    --------------------------------------------------------------------------------------------------------------- */
 
+/* The commit details run the full height of the tab, beside the main column: the controls, then the graph or a diff. */
 .git-graph {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.git-graph-main {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+}
+
+/* A diff covers the controls too: only the body, which holds the diff, stays. */
+.git-graph-main-diff > :not(.git-graph-body) {
+  display: none;
 }
 
 .git-graph-toolbar {
@@ -3112,7 +3125,7 @@ label.task-choice {
 }
 
 /* The details panel's width is set by dragging the splitter (GitGraphView.razor.js). Without it, the panel keeps to its
-   default, and leaves the list room. */
+   default, and leaves the main column room. */
 .git-graph-details {
   display: flex;
   flex: none;
