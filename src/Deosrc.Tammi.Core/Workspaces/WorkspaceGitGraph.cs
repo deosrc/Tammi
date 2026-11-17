@@ -28,6 +28,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     private readonly IGitWorkingTree _workingTree;
     private readonly IGitSync _sync;
     private readonly IGitTags _tags;
+    private readonly IGitBranches _branches;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<GitGraphRow> _rows = [];
     private IReadOnlyDictionary<string, IReadOnlyList<GitReference>> _labels =
@@ -46,7 +47,8 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         IGitRepositoryReader reader,
         IGitWorkingTree workingTree,
         IGitSync sync,
-        IGitTags tags)
+        IGitTags tags,
+        IGitBranches branches)
     {
         WorkspaceId = workspace.Id;
         Repository = repository;
@@ -56,6 +58,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         _workingTree = workingTree;
         _sync = sync;
         _tags = tags;
+        _branches = branches;
         string worktree = workspace.GetWorktreePath(repository);
         Path = submodulePath is null
             ? worktree
@@ -535,6 +538,99 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
 
         // Tags may have changed even when it failed part way.
         await RunAsync(() => Reload(Rows.Count)).ConfigureAwait(false);
+        return worked;
+    }
+
+    /// <summary>
+    /// The last branch action that failed, or <see langword="null"/> if the last one worked (or none has run).
+    /// </summary>
+    public string? BranchProblem { get; private set; }
+
+    /// <summary>
+    /// Creates a local branch on a commit, and optionally switches to it.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> CreateBranchAsync(string name, string sha, bool switchTo) =>
+        ChangeBranchesAsync(token => _branches.CreateAsync(Path, name, sha, switchTo, token));
+
+    /// <summary>
+    /// Switches to a local branch, or to a local branch that tracks a remote-tracking branch.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> SwitchBranchAsync(string name) => ChangeBranchesAsync(token => _branches.SwitchAsync(Path, name, token));
+
+    /// <summary>
+    /// Renames a local branch. Its remote branch isn't renamed.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> RenameBranchAsync(string name, string newName) =>
+        ChangeBranchesAsync(token => _branches.RenameAsync(Path, name, newName, token));
+
+    /// <summary>
+    /// Deletes a local branch, the remote branch it tracks, or both.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> DeleteBranchAsync(string name, bool deleteLocal, bool deleteRemote) =>
+        ChangeBranchesAsync(token => _branches.DeleteAsync(Path, name, deleteLocal, deleteRemote, token));
+
+    /// <summary>
+    /// Deletes a remote branch, given as a remote-tracking name such as <c>origin/feature</c>.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="BranchProblem"/> says why.</returns>
+    public Task<bool> DeleteRemoteBranchAsync(string remoteBranch) =>
+        ChangeBranchesAsync(token => _branches.DeleteRemoteAsync(Path, remoteBranch, token));
+
+    /// <summary>
+    /// Finds the remote branch a local branch tracks, or <see langword="null"/> if it has none.
+    /// </summary>
+    public async Task<GitUpstream?> BranchUpstreamAsync(string name)
+    {
+        try
+        {
+            return await _branches.GetUpstreamAsync(Path, name).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Whether a local branch is the workspace's branch, which can't be renamed or deleted from here.
+    /// </summary>
+    public bool IsWorkspaceBranch(string name) => SubmodulePath is null && name == Repository.Branch;
+
+    /// <summary>
+    /// Clears <see cref="BranchProblem"/>, once the user has seen it.
+    /// </summary>
+    public void DismissBranchProblem()
+    {
+        if (BranchProblem is not null)
+        {
+            BranchProblem = null;
+            Changed?.Invoke();
+        }
+    }
+
+    private async Task<bool> ChangeBranchesAsync(Func<CancellationToken, Task> change)
+    {
+        bool worked = false;
+        try
+        {
+            await change(CancellationToken.None).ConfigureAwait(false);
+            BranchProblem = null;
+            worked = true;
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            BranchProblem = ex.Message;
+        }
+
+        // Branches (and, after a switch, the working files) may have changed even when it failed part way.
+        await RunAsync(() =>
+        {
+            Reload(Rows.Count);
+        }).ConfigureAwait(false);
         return worked;
     }
 

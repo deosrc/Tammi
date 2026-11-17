@@ -12,7 +12,7 @@ public sealed class WorkspaceGitGraphTests : IDisposable
     private readonly WorkspaceGitGraphs _graphs;
 
     public WorkspaceGitGraphTests() =>
-        _graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new GitWorkingTree(_repos.Git), new GitSync(_repos.Git), new GitTags(_repos.Git), new InMemorySettingsStore());
+        _graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new GitWorkingTree(_repos.Git), new GitSync(_repos.Git), new GitTags(_repos.Git), new GitBranches(_repos.Git), new InMemorySettingsStore());
 
     public void Dispose()
     {

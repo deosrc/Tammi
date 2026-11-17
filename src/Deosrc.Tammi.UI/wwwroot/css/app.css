@@ -4305,6 +4305,15 @@ label.task-choice {
     gap: 0.25rem;
 }
 
+.git-graph-branch-delete {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border: 0;
+    padding: 0;
+    margin: 0;
+}
+
 .git-graph-tag-prompt-actions {
     display: flex;
     gap: 0.5rem;
