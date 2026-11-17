@@ -337,10 +337,17 @@
                 </div>
             }
             <div role="listbox" aria-label="Commits">
-                <Virtualize @ref="_virtualize" TItem="GitGraphRow" ItemsProvider="ProvideRowsAsync"
+                <Virtualize @ref="_virtualize" TItem="GitGraphItem" ItemsProvider="ProvideRowsAsync"
                             ItemSize="GitGraphRowView.RowHeight" OverscanCount="30">
-                    <ItemContent Context="row">
+                    <ItemContent Context="item">
+                        @if (item.Stash is { } stash)
+                        {
+                            @StashRow(item, stash)
+                            return;
+                        }
+
                         @{
+                            var row = item.Row!;
                             var selected = row.Commit.Sha == Graph.Selected?.Commit.Sha;
                             var isHead = row.Commit.Sha == Graph.Refs.HeadSha;
                         }
@@ -355,7 +362,7 @@
                                 {
                                     case GitGraphColumn.Graph:
                                         <span class="git-graph-lane-cell">
-                                            <GitGraphRowView Row="row" Width="GraphWidth" IsHead="isHead" />
+                                            <GitGraphRowView Row="row" Width="GraphWidth" IsHead="isHead" PassLanes="item.PassLanes" EndLines="item.EndLines" />
                                         </span>
                                         break;
                                     case GitGraphColumn.Description:
@@ -419,10 +426,12 @@
     private ElementReference _splitter;
     private IJSObjectReference? _splitterScript;
     private DotNetObjectReference<GitGraphView>? _self;
-    private Virtualize<GitGraphRow>? _virtualize;
+    private Virtualize<GitGraphItem>? _virtualize;
     private IJSObjectReference? _module;
     private IJSObjectReference? _listScript;
     private IReadOnlyList<GitGraphRow> _shownRows = [];
+    private IReadOnlyList<GitStashEntry> _shownStashes = [];
+    private IReadOnlyList<GitGraphItem> _items = [];
     private GitGraphScope _shownScope;
     private DateTimeOffset _now = DateTimeOffset.Now;
     private WorkspaceGitStatusMonitor? _monitor;
@@ -445,7 +454,8 @@
         }
     }
 
-    private int GraphWidth => Math.Clamp(Graph.LaneCount, 1, MaxLanes) * GitGraphRowView.LaneWidth;
+    // A stash that isn't above the end of a branch has a lane to the right of the others.
+    private int GraphWidth => Math.Clamp(Graph.LaneCount + (_items.Any(item => item.IsSide) ? 1 : 0), 1, MaxLanes) * GitGraphRowView.LaneWidth;
 
     // The working changes' dot is in HEAD's lane, with a dashed line down to HEAD's row.
     private int WorkingLane => Graph.Rows.FirstOrDefault(row => row.Commit.Sha == Graph.HeadSha)?.Lane is { } lane
@@ -592,20 +602,90 @@
 
     // Gives the list the rows it asks for, reading more of the history when it scrolls past what's been read. Until
     // every commit is read, the list is a page longer than what's been read, so it can scroll on.
-    private async ValueTask<ItemsProviderResult<GitGraphRow>> ProvideRowsAsync(ItemsProviderRequest request)
+    private async ValueTask<ItemsProviderResult<GitGraphItem>> ProvideRowsAsync(ItemsProviderRequest request)
     {
-        if (request.StartIndex + request.Count > Graph.Rows.Count && !Graph.IsComplete)
+        // The stashes are among the commits, so they count too.
+        if (request.StartIndex + request.Count > _items.Count && !Graph.IsComplete)
         {
             await Graph.LoadMoreAsync();
         }
 
-        var rows = Graph.Rows;
-        _shownRows = rows;
-        var start = Math.Min(request.StartIndex, rows.Count);
-        var count = Math.Min(request.Count, rows.Count - start);
-        var total = Graph.IsComplete ? rows.Count : rows.Count + WorkspaceGitGraph.PageSize;
-        return new ItemsProviderResult<GitGraphRow>(rows.Skip(start).Take(count), total);
+        _shownRows = Graph.Rows;
+        _shownStashes = Graph.Stashes;
+        _items = GitGraphItem.Build(
+            _shownRows,
+            _shownStashes,
+            Graph.IsComplete,
+            Graph.LaneCount,
+            MaxLanes - 1,
+            Graph.WorkingChanges is { Count: > 0 } ? Graph.HeadSha : null);
+        var start = Math.Min(request.StartIndex, _items.Count);
+        var count = Math.Min(request.Count, _items.Count - start);
+        var total = Graph.IsComplete ? _items.Count : _items.Count + WorkspaceGitGraph.PageSize;
+        return new ItemsProviderResult<GitGraphItem>(_items.Skip(start).Take(count), total);
     }
+
+    // A stash's row among the commits: its square in the lane of the commit it was made on, with a dotted line down to
+    // that commit, which also runs through the rows between.
+    private RenderFragment StashRow(GitGraphItem item, GitStashEntry stash) => __builder =>
+    {
+        <div class="git-graph-row git-graph-stash" role="option" aria-selected="false" @key="@($"stash-{stash.Index}")"
+             title="@stash.Name, @GitGraphText.FullDate(stash.CreatedAt)">
+            @foreach (var column in _visibleColumns)
+            {
+                @switch (column)
+                {
+                    case GitGraphColumn.Graph:
+                        <span class="git-graph-lane-cell">
+                            <svg class="git-graph-lanes" width="@GraphWidth" height="@GitGraphRowView.RowHeight"
+                                 viewBox="0 0 @GraphWidth @GitGraphRowView.RowHeight" aria-hidden="true" focusable="false">
+                                @foreach (var (lane, colour) in item.CommitLanes)
+                                {
+                                    <path d="@StashLine(lane, 0, GitGraphRowView.RowHeight)"
+                                          style="stroke: var(--color-graph-@(colour % GitGraphRowView.ColourCount))" />
+                                }
+                                @foreach (var lane in item.PassLanes)
+                                {
+                                    <path class="git-graph-stash-line" d="@StashLine(lane, 0, GitGraphRowView.RowHeight)" />
+                                }
+                                @if (item.HasLine)
+                                {
+                                    <path class="git-graph-stash-line"
+                                          d="@StashLine(item.Lane, GitGraphRowView.RowHeight / 2.0, GitGraphRowView.RowHeight)" />
+                                }
+                                <rect class="git-graph-stash-dot" x="@(LaneX(item.Lane) - 4)"
+                                      y="@(GitGraphRowView.RowHeight / 2.0 - 4)" width="8" height="8" />
+                            </svg>
+                        </span>
+                        break;
+                    case GitGraphColumn.Description:
+                        <span class="git-graph-summary">
+                            <span class="git-graph-subject git-graph-working-label">@stash.Message</span>
+                            <span class="git-graph-stash-actions">
+                                <button type="button" class="button button-secondary" title="Apply the stash and keep it"
+                                        disabled="@_stashing" @onclick="() => RunStashAsync(Graph.ApplyStashAsync(stash))">Apply</button>
+                                <button type="button" class="button button-secondary" title="Apply the stash and drop it"
+                                        disabled="@_stashing" @onclick="() => RunStashAsync(Graph.PopStashAsync(stash))">Pop</button>
+                                <button type="button" class="button button-secondary" title="Delete the stash without applying it"
+                                        disabled="@_stashing" @onclick="() => RunStashAsync(Graph.DropStashAsync(stash))">Drop</button>
+                            </span>
+                        </span>
+                        break;
+                    case GitGraphColumn.Date:
+                        <span class="git-graph-date" title="@GitGraphText.FullDate(stash.CreatedAt)">@GitGraphText.When(stash.CreatedAt, _now)</span>
+                        break;
+                    default:
+                        <span></span>
+                        break;
+                }
+            }
+        </div>
+    };
+
+    private static double LaneX(int lane) => lane * GitGraphRowView.LaneWidth + GitGraphRowView.LaneWidth / 2.0;
+
+    private static string StashLine(int lane, double top, double bottom) =>
+        FormattableString.Invariant($"M{LaneX(lane)} {top}V{bottom}");
 
     private void OnGraphChanged() => _ = InvokeAsync(async () =>
     {
@@ -620,9 +700,10 @@
 
         // Rows read while scrolling are already shown. Otherwise the graph was read again (e.g. after a commit), and
         // the list shows it from the start. Other commits start at the top.
-        if (!ReferenceEquals(_shownRows, Graph.Rows) && _virtualize is not null)
+        if ((!ReferenceEquals(_shownRows, Graph.Rows) || !ReferenceEquals(_shownStashes, Graph.Stashes)) && _virtualize is not null)
         {
             _shownRows = Graph.Rows;
+            _shownStashes = Graph.Stashes;
             if (scopeChanged)
             {
                 await ScrollToTopAsync();
@@ -660,6 +741,13 @@
         if (index < 0)
         {
             return;
+        }
+
+        // The list's rows include the stashes among the commits.
+        var itemIndex = _items.ToList().FindIndex(item => item.Row?.Commit.Sha == sha);
+        if (itemIndex >= 0)
+        {
+            index = itemIndex;
         }
 
         await Graph.SelectAsync(sha);

@@ -6,8 +6,15 @@ namespace Deosrc.Tammi.Core.Git;
 /// <param name="Index">The stash's position in the stash list, where 0 is the newest.</param>
 /// <param name="Message">What the stash was given, e.g. <c>On main: Try a fix</c>.</param>
 /// <param name="CreatedAt">When the stash was made.</param>
-public sealed record GitStashEntry(int Index, string Message, DateTimeOffset CreatedAt)
+/// <param name="BaseSha">The commit that was HEAD when the stash was made.</param>
+public sealed record GitStashEntry(int Index, string Message, DateTimeOffset CreatedAt, string BaseSha)
 {
+    /// <summary>
+    /// The commit the git graph draws the stash on: <see cref="BaseSha"/>, or, when the graph doesn't show that commit
+    /// (e.g. it's on a branch that isn't shown), the nearest commit it does show that the stash is built on.
+    /// </summary>
+    public string? AnchorSha { get; init; }
+
     /// <summary>
     /// The stash's name in git, e.g. <c>stash@{0}</c>.
     /// </summary>

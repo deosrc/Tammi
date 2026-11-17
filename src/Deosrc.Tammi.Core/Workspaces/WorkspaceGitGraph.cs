@@ -33,6 +33,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     private readonly List<GitGraphRow> _rows = [];
     private IReadOnlyDictionary<string, IReadOnlyList<GitReference>> _labels =
         new Dictionary<string, IReadOnlyList<GitReference>>();
+    private readonly Dictionary<string, string?> _anchors = [];
     private IGitHistoryCursor? _cursor;
     private GitGraphLayout _layout = new();
     private bool _loaded;
@@ -712,7 +713,13 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
                     .OrderBy(change => change.Path, StringComparer.Ordinal),
             ];
             HeadSha = status.HeadSha;
-            Stashes = _stash.ListAsync(Path).GetAwaiter().GetResult();
+            IReadOnlyList<GitStashEntry> stashes = AnchorStashes(_stash.ListAsync(Path).GetAwaiter().GetResult());
+            if (!stashes.SequenceEqual(Stashes))
+            {
+                // Only replaced when they've changed, so the view can tell by reference.
+                Stashes = stashes;
+            }
+
             if (IsWorkingChangesSelected && WorkingChanges.Count == 0)
             {
                 // The row is gone (e.g. after a commit), so show HEAD's commit instead.
@@ -734,12 +741,37 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         Changed?.Invoke();
     }
 
+    // Stashes made on a commit the graph doesn't show are drawn on the nearest commit it does: where that commit's
+    // branch joins HEAD's history.
+    private IReadOnlyList<GitStashEntry> AnchorStashes(IReadOnlyList<GitStashEntry> stashes)
+    {
+        var shown = _rows.Select(row => row.Commit.Sha).ToHashSet();
+        var anchored = new List<GitStashEntry>();
+        foreach (GitStashEntry stash in stashes)
+        {
+            string? anchor = stash.BaseSha;
+            if (stash.BaseSha.Length > 0 && !shown.Contains(stash.BaseSha))
+            {
+                if (!_anchors.TryGetValue(stash.BaseSha, out anchor))
+                {
+                    anchor = _stash.FindMergeBaseWithHeadAsync(Path, stash.BaseSha).GetAwaiter().GetResult();
+                    _anchors[stash.BaseSha] = anchor;
+                }
+            }
+
+            anchored.Add(stash with { AnchorSha = anchor });
+        }
+
+        return anchored;
+    }
+
     // Opens the history again with the current scope and reads at least `count` commits.
     private void Reload(int count)
     {
         string? selected = Selected?.Commit.Sha;
         CloseCursor();
         _rows.Clear();
+        _anchors.Clear();
         _layout = new GitGraphLayout();
         LaneCount = 0;
         IsComplete = false;

@@ -3657,6 +3657,26 @@ label.task-choice {
   stroke-width: 2;
 }
 
+.git-graph-lanes path.git-graph-stash-line {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+.git-graph-stash-dot {
+  fill: var(--color-surface);
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+}
+
+.git-graph-stash-actions {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+}
+
 .git-graph-working-label {
   font-style: italic;
 }

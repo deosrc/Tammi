@@ -55,4 +55,14 @@ public interface IGitStash
     /// <param name="cancellationToken">Cancelling kills the git process.</param>
     /// <exception cref="GitCommandException">Git failed.</exception>
     Task DropAsync(string path, int index, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds the commit that a commit and HEAD have in common, which is where a stash made on another branch joins
+    /// the history of the checked-out one.
+    /// </summary>
+    /// <param name="path">The repository's (or submodule's) working directory.</param>
+    /// <param name="sha">The commit.</param>
+    /// <param name="cancellationToken">Cancelling kills the git process.</param>
+    /// <returns>The common ancestor's sha, or <see langword="null"/> if there's none.</returns>
+    Task<string?> FindMergeBaseWithHeadAsync(string path, string sha, CancellationToken cancellationToken = default);
 }

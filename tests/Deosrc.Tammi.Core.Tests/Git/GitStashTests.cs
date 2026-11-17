@@ -36,6 +36,9 @@ public sealed class GitStashTests : IDisposable
         Assert.Equal(0, entry.Index);
         Assert.Equal("stash@{0}", entry.Name);
         Assert.EndsWith("Try it", entry.Message);
+        Assert.Equal(
+            (await _repos.Git.RunAsync(clone, ["rev-parse", "HEAD"], cancellationToken: Token)).StandardOutput.Trim(),
+            entry.BaseSha);
     }
 
     [Fact]
@@ -113,5 +116,23 @@ public sealed class GitStashTests : IDisposable
 
         GitStashEntry left = Assert.Single(await _stash.ListAsync(clone, Token));
         Assert.EndsWith("first", left.Message);
+    }
+
+    [Fact]
+    public async Task FindMergeBaseWithHeadAsync_StashMadeOnAnotherBranch_FindsWhereItJoinsHead()
+    {
+        string clone = await CloneAsync();
+        string fork = (await _repos.Git.RunAsync(clone, ["rev-parse", "HEAD"], cancellationToken: Token)).StandardOutput.Trim();
+        await _repos.RunAsync(clone, "switch", "-c", "other");
+        await _repos.CommitFileAsync(clone, "other.txt", "other", "On other");
+        TempRepositories.WriteFile(clone, "README.md", "changed");
+        await _stash.PushAsync(clone, null, null, Token);
+        await _repos.RunAsync(clone, "switch", "main");
+        await _repos.CommitFileAsync(clone, "main.txt", "main", "On main");
+
+        GitStashEntry entry = Assert.Single(await _stash.ListAsync(clone, Token));
+
+        Assert.NotEqual(fork, entry.BaseSha);
+        Assert.Equal(fork, await _stash.FindMergeBaseWithHeadAsync(clone, entry.BaseSha, Token));
     }
 }

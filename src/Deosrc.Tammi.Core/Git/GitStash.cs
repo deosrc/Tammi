@@ -12,7 +12,7 @@ public sealed class GitStash(IGitCli git) : IGitStash
     {
         GitCommandResult result = await git.RunAsync(
             path,
-            ["stash", "list", "--format=%gs%x1f%cI"],
+            ["stash", "list", "--format=%gs%x1f%cI%x1f%P"],
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         var entries = new List<GitStashEntry>();
@@ -23,7 +23,9 @@ public sealed class GitStash(IGitCli git) : IGitStash
                 && DateTimeOffset.TryParse(parts[1], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset parsed)
                     ? parsed
                     : default;
-            entries.Add(new GitStashEntry(entries.Count, parts[0], createdAt));
+            // A stash's first parent is the commit it was made on.
+            string baseSha = parts.Length > 2 ? parts[2].Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "" : "";
+            entries.Add(new GitStashEntry(entries.Count, parts[0], createdAt, baseSha));
         }
 
         return entries;
@@ -65,6 +67,18 @@ public sealed class GitStash(IGitCli git) : IGitStash
     /// <inheritdoc />
     public async Task DropAsync(string path, int index, CancellationToken cancellationToken = default) =>
         await git.RunAsync(path, ["stash", "drop", Name(index)], cancellationToken: cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<string?> FindMergeBaseWithHeadAsync(string path, string sha, CancellationToken cancellationToken = default)
+    {
+        GitCommandResult result = await git.RunAsync(
+            path,
+            ["merge-base", sha, "HEAD"],
+            new GitCommandOptions { ThrowOnError = false },
+            cancellationToken).ConfigureAwait(false);
+        string found = result.StandardOutput.Trim();
+        return result.Succeeded && found.Length > 0 ? found : null;
+    }
 
     private static string Name(int index) => $"stash@{{{index}}}";
 
