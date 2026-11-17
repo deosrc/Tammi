@@ -73,11 +73,23 @@
             <button type="button" class="button button-secondary button-icon"
                     title="Stash every change, including new files"
                     disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
-                    @onclick="() => RunStashAsync(Graph.StashAsync())">Stash</button>
+                    @onclick="() => RunStashAsync(Graph.StashAsync())">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 3v11M8 10l4 4 4-4" />
+                    <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
+                </svg>
+                Stash
+            </button>
             <button type="button" class="button button-secondary button-icon"
                     title="Apply the newest stash and drop it"
                     disabled="@(Graph.Stashes.Count == 0 || _stashing)"
-                    @onclick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">Pop</button>
+                    @onclick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 14V3M8 7l4-4 4 4" />
+                    <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
+                </svg>
+                Pop
+            </button>
         </div>
         <button type="button" class="button button-secondary button-icon git-graph-refresh" title="Read the graph again"
                 aria-label="Refresh" disabled="@Graph.IsLoading" @onclick="Graph.RefreshAsync">
