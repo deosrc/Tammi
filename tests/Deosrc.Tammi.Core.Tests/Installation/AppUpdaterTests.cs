@@ -94,16 +94,15 @@ public class AppUpdaterTests
     }
 
     [Fact]
-    public async Task CannotUpdateOutsideAVersionFolder()
+    public async Task CanUpdateOutsideAVersionFolder()
     {
         using var folder = new TempFolder();
         var (updater, handler) = Create(folder, "0.1.0", runningFolder: Path.Combine(Path.GetTempPath(), "somewhere-else"));
 
         await updater.CheckAsync(TestContext.Current.CancellationToken);
-        await updater.StartAsync();
 
-        Assert.False(updater.CanUpdate);
-        Assert.Equal(0, handler.Requests);
+        Assert.True(updater.CanUpdate);
+        Assert.Equal(1, handler.Requests);
     }
 
     [Fact]

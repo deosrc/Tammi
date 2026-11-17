@@ -44,7 +44,9 @@ public sealed class AppUpdater
         _releases = new GitHubReleaseClient(http);
         _installer = new AppInstaller(http, location, target ?? new ReleaseTarget("linux-x64"));
         _runningDirectory = runningDirectory ?? AppContext.BaseDirectory;
-        _running = target is null || IsDevelopmentBuild ? null : location.VersionRunningFrom(_runningDirectory);
+        _running = target is null || IsDevelopmentBuild || !PackageVersion.TryParse(CurrentVersion, out var running)
+            ? null
+            : running;
     }
 
     /// <summary>
@@ -53,7 +55,7 @@ public sealed class AppUpdater
     public event Action? Changed;
 
     /// <summary>
-    /// Whether this copy of Tammi can update itself. It can't if it's a development build, or isn't running from a version folder.
+    /// Whether this copy of Tammi can update itself. It can't if it's a development build, or its version can't be read.
     /// </summary>
     public bool CanUpdate => _running is not null;
 
@@ -117,7 +119,8 @@ public sealed class AppUpdater
 
     private void PointMenuLink()
     {
-        if (_running is null || _target is null)
+        // Only a copy in its version folder is the installed one: a copy run from elsewhere mustn't take over the menu link.
+        if (_running is null || _target is null || _location.VersionRunningFrom(_runningDirectory!) is null)
         {
             return;
         }
