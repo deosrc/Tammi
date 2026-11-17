@@ -3670,13 +3670,6 @@ label.task-choice {
   stroke-width: 2;
 }
 
-.git-graph-stash-actions {
-  display: flex;
-  flex: none;
-  gap: var(--space-1);
-  margin-left: var(--space-2);
-}
-
 .git-graph-working-label {
   font-style: italic;
 }

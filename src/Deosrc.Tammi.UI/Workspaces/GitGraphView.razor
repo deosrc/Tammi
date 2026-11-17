@@ -172,6 +172,24 @@
         </form>
     }
 
+    @if (_stashMenu is { } stashMenu)
+    {
+        <ContextMenu @key="stashMenu" X="stashMenu.X" Y="stashMenu.Y" Label="Stash" OnClose="() => _stashMenu = null">
+            <li role="none">
+                <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
+                        @onclick="() => RunStashMenuAsync(Graph.PopStashAsync(stashMenu.Stash))">Pop stash</button>
+            </li>
+            <li role="none">
+                <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
+                        @onclick="() => RunStashMenuAsync(Graph.ApplyStashAsync(stashMenu.Stash))">Apply stash</button>
+            </li>
+            <li role="none">
+                <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
+                        @onclick="() => RunStashMenuAsync(Graph.DropStashAsync(stashMenu.Stash))">Drop stash</button>
+            </li>
+        </ContextMenu>
+    }
+
     @if (_commitMenu is { } commitMenu)
     {
         <ContextMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
@@ -441,6 +459,17 @@
     [Parameter, EditorRequired]
     public WorkspaceGitGraph Graph { get; set; } = null!;
 
+    // Where a stash's right-click menu is open, or null when it's closed.
+    private sealed record StashMenu(double X, double Y, GitStashEntry Stash);
+
+    private StashMenu? _stashMenu;
+
+    private Task RunStashMenuAsync(Task<bool> action)
+    {
+        _stashMenu = null;
+        return RunStashAsync(action);
+    }
+
     private async Task RunStashAsync(Task<bool> action)
     {
         _stashing = true;
@@ -630,7 +659,9 @@
     private RenderFragment StashRow(GitGraphItem item, GitStashEntry stash) => __builder =>
     {
         <div class="git-graph-row git-graph-stash" role="option" aria-selected="false" @key="@($"stash-{stash.Index}")"
-             title="@stash.Name, @GitGraphText.FullDate(stash.CreatedAt)">
+             title="@stash.Name, @GitGraphText.FullDate(stash.CreatedAt)"
+             @oncontextmenu="e => _stashMenu = new StashMenu(e.ClientX, e.ClientY, stash)"
+             @oncontextmenu:preventDefault="true">
             @foreach (var column in _visibleColumns)
             {
                 @switch (column)
@@ -661,14 +692,6 @@
                     case GitGraphColumn.Description:
                         <span class="git-graph-summary">
                             <span class="git-graph-subject git-graph-working-label">@stash.Message</span>
-                            <span class="git-graph-stash-actions">
-                                <button type="button" class="button button-secondary" title="Apply the stash and keep it"
-                                        disabled="@_stashing" @onclick="() => RunStashAsync(Graph.ApplyStashAsync(stash))">Apply</button>
-                                <button type="button" class="button button-secondary" title="Apply the stash and drop it"
-                                        disabled="@_stashing" @onclick="() => RunStashAsync(Graph.PopStashAsync(stash))">Pop</button>
-                                <button type="button" class="button button-secondary" title="Delete the stash without applying it"
-                                        disabled="@_stashing" @onclick="() => RunStashAsync(Graph.DropStashAsync(stash))">Drop</button>
-                            </span>
                         </span>
                         break;
                     case GitGraphColumn.Date:
