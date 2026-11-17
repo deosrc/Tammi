@@ -20,6 +20,8 @@
 
   <ItemGroup>
     <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The window and menu icon, beside the executable so the desktop entry can point at it. -->
+    <Content Include="Assets\tammi.png" CopyToOutputDirectory="PreserveNewest" Link="tammi.png" />
   </ItemGroup>
 
 </Project>

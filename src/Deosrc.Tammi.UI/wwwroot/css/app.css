@@ -1,5 +1,6 @@
 /* ---------------------------------------------------------------------------------------------------------------
    Theme. Components use these variables rather than literal colours, so the light and dark themes stay in step.
+   They're built from the brand colours in palette.css.
    --------------------------------------------------------------------------------------------------------------- */
 
 :root {
@@ -19,14 +20,14 @@
   --app-bar-height: 40px;
   --side-panel-width: 280px;
 
-  --color-bg: #f7f7f8;
+  --color-bg: var(--tammi-white);
   --color-surface: #ffffff;
   --color-surface-hover: #eef0f2;
   --color-chrome: #e9ebee;
   --color-border: #d0d7de;
-  --color-text: #1f2328;
-  --color-text-muted: #656d76;
-  --color-accent: #512bd4;
+  --color-text: var(--tammi-slate);
+  --color-text-muted: var(--tammi-grey-dark);
+  --color-accent: var(--tammi-teal);
   --color-accent-text: #ffffff;
   --color-focus: #0969da;
   --color-error: #cf222e;
@@ -54,17 +55,60 @@
   --color-graph-7: #cf222e;
 }
 
+/* The dark theme, used when the app is set to dark, or when it follows the system and the system is dark. The theme
+   setting puts data-theme on the root element, except while the system theme is undetected, then the browser decides. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg: var(--tammi-slate);
+  --color-surface: var(--tammi-slate-raised);
+  --color-surface-hover: #35373c;
+  --color-chrome: #17181a;
+  --color-border: #3f4147;
+  --color-text: var(--tammi-white);
+  --color-text-muted: var(--tammi-grey);
+  --color-accent: var(--tammi-mint);
+  --color-accent-text: var(--tammi-slate);
+  --color-focus: #4c9aff;
+  --color-error: #ff7b72;
+  --color-success: #3fb950;
+  --color-info: #4c9aff;
+  --color-info-text: #1f2328;
+  --color-success-bg: #12261e;
+  --color-warning: #d29922;
+  --color-warning-bg: #3b2e0e;
+  --color-warning-border: #9e6a03;
+  --color-warning-text: #1f2328;
+  --color-error-bg: #2d1416;
+  --color-merged: #a371f7;
+  --color-jira: #4c9aff;
+
+  --color-graph-0: #4c9aff;
+  --color-graph-1: #f778ba;
+  --color-graph-2: #3fb950;
+  --color-graph-3: #f0883e;
+  --color-graph-4: #a371f7;
+  --color-graph-5: #39c5cf;
+  --color-graph-6: #d29922;
+  --color-graph-7: #ff7b72;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #1e1f22;
-    --color-surface: #2b2d31;
+  :root:not([data-theme]) {
+
+    --color-bg: var(--tammi-slate);
+    --color-surface: var(--tammi-slate-raised);
     --color-surface-hover: #35373c;
     --color-chrome: #17181a;
     --color-border: #3f4147;
-    --color-text: #e6e7e9;
-    --color-text-muted: #9ba1a8;
-    --color-accent: #8a6cf0;
-    --color-accent-text: #ffffff;
+    --color-text: var(--tammi-white);
+    --color-text-muted: var(--tammi-grey);
+    --color-accent: var(--tammi-mint);
+    --color-accent-text: var(--tammi-slate);
     --color-focus: #4c9aff;
     --color-error: #ff7b72;
     --color-success: #3fb950;
@@ -87,6 +131,7 @@
     --color-graph-5: #39c5cf;
     --color-graph-6: #d29922;
     --color-graph-7: #ff7b72;
+  
   }
 }
 
@@ -370,12 +415,11 @@ a {
   gap: var(--space-3);
 }
 
+/* The wordmark at the left of the app bar. */
 .app-name {
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-4);
-  font-weight: 700;
-  color: var(--color-accent);
+  align-self: center;
+  height: 24px;
+  margin: 0 var(--space-4);
 }
 
 .app-content {
@@ -4751,4 +4795,43 @@ label.task-choice {
   .placeholder-bar {
     animation: none;
   }
+}
+
+/* The wordmark: the version for the theme's background, chosen the way the theme variables are (see the data-theme
+   rules above). Its size comes from where it's used. */
+.brand-wordmark {
+  display: block;
+}
+
+.brand-wordmark img {
+  display: block;
+  height: 100%;
+}
+
+.brand-wordmark-on-dark {
+  display: none !important;
+}
+
+:root[data-theme="dark"] .brand-wordmark-on-light {
+  display: none !important;
+}
+
+:root[data-theme="dark"] .brand-wordmark-on-dark {
+  display: block !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .brand-wordmark-on-light {
+    display: none !important;
+  }
+
+  :root:not([data-theme]) .brand-wordmark-on-dark {
+    display: block !important;
+  }
+}
+
+/* The wordmark at the top of the About page. */
+.about-logo {
+  height: 64px;
+  margin-bottom: 1rem;
 }

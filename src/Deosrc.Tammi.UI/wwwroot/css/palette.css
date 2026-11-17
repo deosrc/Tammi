@@ -1,0 +1,56 @@
+/* ---------------------------------------------------------------------------------------------------------------
+   Tammi's brand colour palette, as produced with the icons. The theme variables in app.css (--color-*) are built from
+   the brand colours here; the --tammi-* theme tokens below are the palette's own and aren't used by the app yet.
+   --------------------------------------------------------------------------------------------------------------- */
+
+:root {
+  /* Brand colours (same in every theme) */
+  --tammi-slate:        #1e2327;  /* icon background, dark theme base */
+  --tammi-slate-raised: #262c31;  /* cards and panels on slate */
+  --tammi-mint:         #5EEAD4;  /* mark on dark backgrounds */
+  --tammi-teal:         #0F9E8E;  /* mark on light backgrounds */
+  --tammi-white:        #F4F6F7;
+  --tammi-grey:         #A9B4BC;  /* muted text on dark */
+  --tammi-grey-dark:    #55616B;  /* muted text on light */
+
+  /* Mark row tints (the faded rows under the crossbar) */
+  --tammi-mint-60:      rgb(94 234 212 / 0.6);
+  --tammi-mint-30:      rgb(94 234 212 / 0.3);
+  --tammi-teal-60:      rgb(15 158 142 / 0.6);
+  --tammi-teal-30:      rgb(15 158 142 / 0.3);
+
+  /* Theme tokens: light by default */
+  --tammi-bg:           var(--tammi-white);
+  --tammi-surface:      #FFFFFF;
+  --tammi-text:         var(--tammi-slate);
+  --tammi-text-muted:   var(--tammi-grey-dark);
+  --tammi-accent:       var(--tammi-teal);     /* 3.3:1 on white: icons and large text only */
+  --tammi-accent-60:    var(--tammi-teal-60);
+  --tammi-accent-30:    var(--tammi-teal-30);
+  --tammi-on-accent:    #FFFFFF;               /* tick / text placed on the accent */
+}
+
+/* Dark theme: follows the OS unless a theme is set explicitly */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --tammi-bg:         var(--tammi-slate);
+    --tammi-surface:    var(--tammi-slate-raised);
+    --tammi-text:       var(--tammi-white);
+    --tammi-text-muted: var(--tammi-grey);
+    --tammi-accent:     var(--tammi-mint);
+    --tammi-accent-60:  var(--tammi-mint-60);
+    --tammi-accent-30:  var(--tammi-mint-30);
+    --tammi-on-accent:  var(--tammi-slate);
+  }
+}
+
+:root[data-theme="dark"] {
+  --tammi-bg:           var(--tammi-slate);
+  --tammi-surface:      var(--tammi-slate-raised);
+  --tammi-text:         var(--tammi-white);
+  --tammi-text-muted:   var(--tammi-grey);
+  --tammi-accent:       var(--tammi-mint);
+  --tammi-accent-60:    var(--tammi-mint-60);
+  --tammi-accent-30:    var(--tammi-mint-30);
+  --tammi-on-accent:    var(--tammi-slate);
+}
