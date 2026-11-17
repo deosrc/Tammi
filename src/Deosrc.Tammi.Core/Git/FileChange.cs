@@ -6,7 +6,7 @@ namespace Deosrc.Tammi.Core.Git;
 /// <param name="Path">The path relative to the repository root, with <c>/</c> separators.</param>
 /// <param name="Staged">The change between HEAD and the index.</param>
 /// <param name="Unstaged">The change between the index and the working directory.</param>
-/// <param name="OldPath">For a staged rename, the path the file was renamed from.</param>
+/// <param name="OldPath">For a rename, staged or not, the path the file was renamed from.</param>
 /// <param name="IsSubmodule">
 /// Whether the path is a submodule, and the change is to the commit the repository records for it.
 /// </param>
@@ -50,6 +50,12 @@ public sealed record FileChange(
     /// Whether git doesn't track the file yet.
     /// </summary>
     public bool IsUntracked => Unstaged == FileChangeKind.Untracked;
+
+    /// <summary>
+    /// Whether the file was renamed in the working directory, and the rename isn't staged: git sees the old file as
+    /// deleted, and the new one as untracked.
+    /// </summary>
+    public bool IsUnstagedRename => Unstaged == FileChangeKind.Renamed && OldPath is not null;
 
     /// <summary>
     /// Whether the file has unresolved merge conflicts.

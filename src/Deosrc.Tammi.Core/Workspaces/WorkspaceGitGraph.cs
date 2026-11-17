@@ -405,8 +405,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public Task DiscardAsync(IReadOnlyCollection<FileChange> files) =>
         ChangeIndexAsync(token => _workingTree.DiscardAsync(
             Path,
-            PathsOf(files.Where(file => !file.IsUntracked)),
-            PathsOf(files.Where(file => file.IsUntracked)),
+            [.. PathsOf(files.Where(file => !file.IsUntracked && !file.IsUnstagedRename)),
+                .. files.Where(file => file.IsUnstagedRename).Select(file => file.OldPath!)],
+            [.. PathsOf(files.Where(file => file.IsUntracked)),
+                .. files.Where(file => file.IsUnstagedRename).Select(file => file.Path)],
             token));
 
     /// <summary>
