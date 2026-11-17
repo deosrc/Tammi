@@ -445,7 +445,9 @@ internal sealed partial class GitHubApiClient(
     private static string? Header(HttpResponseMessage response, string name) =>
         response.Headers.TryGetValues(name, out IEnumerable<string>? values) ? values.FirstOrDefault() : null;
 
-    // One entry of a Link header, e.g. <https://api.github.com/user/repos?page=2>; rel="next"
+    /// <summary>
+    /// One entry of a Link header, e.g. &lt;https://api.github.com/user/repos?page=2&gt;; rel="next"
+    /// </summary>
     [GeneratedRegex("<(?<url>[^>]*)>[^,]*?;\\s*rel=\"(?<rel>[^\"]*)\"")]
     private static partial Regex LinkPattern();
 }

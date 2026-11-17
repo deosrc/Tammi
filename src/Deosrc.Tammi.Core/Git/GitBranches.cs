@@ -99,7 +99,9 @@ public sealed class GitBranches(IGitCli git) : IGitBranches
         await git.RunAsync(path, ["push", remote, "--delete", $"refs/heads/{branch}"], cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
-    // The name, if it's a remote-tracking branch (refs/remotes/<name>) and not also a local branch.
+    /// <summary>
+    /// The name, if it's a remote-tracking branch (refs/remotes/&lt;name&gt;) and not also a local branch.
+    /// </summary>
     private async Task<string?> FindRemoteBranchAsync(string path, string name, CancellationToken cancellationToken)
     {
         GitCommandResult local = await git.RunAsync(

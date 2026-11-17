@@ -686,7 +686,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         }
     }
 
-    // Asks the remote which tags it has, without holding up the graph, then redraws so their badges show it.
+    /// <summary>
+    /// Asks the remote which tags it has, without holding up the graph, then redraws so their badges show it.
+    /// </summary>
     private async Task RefreshRemoteTagsAsync()
     {
         try
@@ -1104,8 +1106,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         Changed?.Invoke();
     }
 
-    // Stashes made on a commit the graph doesn't show are drawn on the nearest commit it does: where that commit's
-    // branch joins HEAD's history.
+    /// <summary>
+    /// Stashes made on a commit the graph doesn't show are drawn on the nearest commit it does: where that commit's
+    /// branch joins HEAD's history.
+    /// </summary>
     private IReadOnlyList<GitStashEntry> AnchorStashes(IReadOnlyList<GitStashEntry> stashes)
     {
         var shown = _rows.Select(row => row.Commit.Sha).ToHashSet();
@@ -1128,7 +1132,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         return anchored;
     }
 
-    // Opens the history again with the current scope and reads at least `count` commits.
+    /// <summary>
+    /// Opens the history again with the current scope and reads at least `count` commits.
+    /// </summary>
     private void Reload(int count)
     {
         string? selected = Selected?.Commit.Sha;
@@ -1239,8 +1245,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         }
     }
 
-    // Whether the refs read now are the ones the graph shows. Refs that can't be read count as changed, so reading the
-    // graph again says why.
+    /// <summary>
+    /// Whether the refs read now are the ones the graph shows. Refs that can't be read count as changed, so reading the
+    /// graph again says why.
+    /// </summary>
     private bool RefsUnchanged()
     {
         try
@@ -1264,8 +1272,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         },
     };
 
-    // Runs an operation on a background thread, after the one before it, and raises Changed when it's done. Once the
-    // graph is closed, it does nothing, since the view may still ask for a page as it goes.
+    /// <summary>
+    /// Runs an operation on a background thread, after the one before it, and raises Changed when it's done. Once the
+    /// graph is closed, it does nothing, since the view may still ask for a page as it goes.
+    /// </summary>
     private async Task RunAsync(Action operation)
     {
         if (_disposed)
@@ -1301,7 +1311,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         }
     }
 
-    // Shares what's been read with the UI. The row list is copied, so a later page doesn't change it as it's shown.
+    /// <summary>
+    /// Shares what's been read with the UI. The row list is copied, so a later page doesn't change it as it's shown.
+    /// </summary>
     private void Publish() => Rows = [.. _rows];
 
     private void CloseCursor()

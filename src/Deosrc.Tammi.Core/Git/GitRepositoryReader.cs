@@ -262,10 +262,10 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
         }).Count();
     }
 
-    // The diff of a submodule is the change to the commit recorded for it, as git shows it, or null if the path isn't
-    // a submodule in the states compared.
-    // The tree of the new files in a stash, or null for any other commit. Git writes them as a commit that's the stash's
-    // third parent, with a message that starts "untracked files on".
+    /// <summary>
+    /// The tree of the new files in a stash, or null for any other commit. Git writes them as a commit that's the stash's
+    /// third parent, with a message that starts "untracked files on".
+    /// </summary>
     private static Tree? UntrackedTreeOf(Commit commit)
     {
         Commit? third = commit.Parents.Skip(2).FirstOrDefault();
@@ -300,6 +300,10 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
         return new FileDiff(file, oldPath, hunks, IsTruncated: truncated);
     }
 
+    /// <summary>
+    /// The diff of a submodule is the change to the commit recorded for it, as git shows it, or null if the path isn't
+    /// a submodule in the states compared.
+    /// </summary>
     private static FileDiff? ReadSubmoduleDiff(Repository repository, GitDiffSource source, string file, string? sha)
     {
         static string? CommitOf(TreeEntry? entry) =>
@@ -491,7 +495,9 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
         }
     }
 
-    // The local branch a starting point names: HEAD's branch (unless it's detached), or a local branch by name.
+    /// <summary>
+    /// The local branch a starting point names: HEAD's branch (unless it's detached), or a local branch by name.
+    /// </summary>
     private static Branch? FindLocalBranch(Repository repository, string name)
     {
         if (name == "HEAD")

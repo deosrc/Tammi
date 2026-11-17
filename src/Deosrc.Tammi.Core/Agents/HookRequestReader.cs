@@ -137,7 +137,9 @@ internal sealed class HookRequestReader(Stream stream)
         }
     }
 
-    // Reads up to a line feed, and drops it and a carriage return before it.
+    /// <summary>
+    /// Reads up to a line feed, and drops it and a carriage return before it.
+    /// </summary>
     private async Task<string> ReadLineAsync(int maxLength, CancellationToken cancellationToken)
     {
         var line = new ArrayBufferWriter<byte>();

@@ -35,7 +35,9 @@ public sealed record IntegrationsSettings
         };
     }
 
-    // Compare the lists' contents rather than the list instances, so normalized settings equal the originals.
+    /// <summary>
+    /// Compare the lists' contents rather than the list instances, so normalized settings equal the originals.
+    /// </summary>
     public bool Equals(IntegrationsSettings? other) =>
         other is not null
         && (Bitbucket ?? []).SequenceEqual(other.Bitbucket ?? [])

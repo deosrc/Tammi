@@ -110,7 +110,9 @@ public sealed class GitWorkingTree(IGitCli git) : IGitWorkingTree
         await File.WriteAllTextAsync(file, message, cancellationToken).ConfigureAwait(false);
     }
 
-    // The git directory differs for a worktree or submodule, where the repository's .git is a file pointing elsewhere.
+    /// <summary>
+    /// The git directory differs for a worktree or submodule, where the repository's .git is a file pointing elsewhere.
+    /// </summary>
     private async Task<string> MessageFileAsync(string path, CancellationToken cancellationToken)
     {
         GitCommandResult result = await git.RunAsync(

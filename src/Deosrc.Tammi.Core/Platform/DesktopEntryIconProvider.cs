@@ -69,8 +69,10 @@ public sealed class DesktopEntryIconProvider : IApplicationIconProvider
         return [home, .. dirs.Split(':', StringSplitOptions.RemoveEmptyEntries)];
     }
 
-    // The Icon of the first desktop entry that belongs to the executable: one naming the same file wins over one with
-    // the same name.
+    /// <summary>
+    /// The Icon of the first desktop entry that belongs to the executable: one naming the same file wins over one with
+    /// the same name.
+    /// </summary>
     private static string? FindIconName(string executablePath, IReadOnlyList<string> dataDirectories)
     {
         var target = RealPath(executablePath);
@@ -175,7 +177,9 @@ public sealed class DesktopEntryIconProvider : IApplicationIconProvider
         return (exec, tryExec, icon);
     }
 
-    // The command in an Exec line: its first word, which may be in double quotes.
+    /// <summary>
+    /// The command in an Exec line: its first word, which may be in double quotes.
+    /// </summary>
     private static string? FirstWord(string? exec)
     {
         if (string.IsNullOrWhiteSpace(exec))
