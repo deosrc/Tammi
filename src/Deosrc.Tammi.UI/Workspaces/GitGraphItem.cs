@@ -38,6 +38,7 @@ public sealed record GitGraphItem(
     /// <param name="maxLane">The rightmost lane drawn.</param>
     /// <param name="busySha">
     /// The commit that has other changes on top of it (HEAD, while there are working changes), or <see langword="null"/>.
+    /// A dotted line is drawn from above the first row down to it.
     /// </param>
     public static IReadOnlyList<GitGraphItem> Build(
         IReadOnlyList<GitGraphRow> rows,
@@ -47,11 +48,6 @@ public sealed record GitGraphItem(
         int maxLane,
         string? busySha = null)
     {
-        if (stashes.Count == 0)
-        {
-            return [.. rows.Select(row => new GitGraphItem(row, null, 0, false, [], [], [], false))];
-        }
-
         var indexOf = new Dictionary<string, int>();
         for (int i = 0; i < rows.Count; i++)
         {
@@ -103,6 +99,12 @@ public sealed record GitGraphItem(
         int sideLane = Math.Min(laneCount, maxLane);
         var items = new List<GitGraphItem>();
         var active = new List<(int Lane, int Base)>();
+        if (busySha is not null && indexOf.TryGetValue(busySha, out int headIndex))
+        {
+            // The working changes' dotted line, from their row above the commits down to HEAD.
+            active.Add((Math.Min(rows[headIndex].Lane, maxLane), headIndex));
+        }
+
         for (int i = 0; i <= rows.Count; i++)
         {
             // The commit lines that carry on through the gap above this row.
