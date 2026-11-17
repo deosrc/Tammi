@@ -2226,6 +2226,14 @@ label.task-choice {
   background: var(--color-surface-hover);
 }
 
+.data-table-repositories {
+  font-size: var(--font-size);
+}
+
+.settings-help.repositories-help {
+  font-size: var(--font-size);
+}
+
 .data-table-repositories th {
   padding: var(--space-1) var(--space-2);
 }
