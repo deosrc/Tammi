@@ -49,9 +49,16 @@ public sealed class RepositoryListState : IDisposable
     public Task EnsureLoadedAsync() => _started ? Task.CompletedTask : RefreshAsync();
 
     /// <summary>
-    /// Reads every repository's state again. The rows already read stay until their new state arrives.
+    /// Scans the catalogue again, then reads every repository's state again. The rows already read stay until their
+    /// new state arrives.
     /// </summary>
-    public async Task RefreshAsync()
+    public Task RescanAndRefreshAsync() => RefreshAsync(rescan: true);
+
+    /// <summary>
+    /// Reads every repository's state again, with the catalogue as it is, or scanned again first. The rows already
+    /// read stay until their new state arrives. Does nothing while the rows are being read.
+    /// </summary>
+    public async Task RefreshAsync(bool rescan = false)
     {
         lock (_lock)
         {
@@ -66,7 +73,7 @@ public sealed class RepositoryListState : IDisposable
 
         try
         {
-            var snapshot = await _catalogue.GetAsync();
+            var snapshot = rescan ? await _catalogue.RescanAsync() : await _catalogue.GetAsync();
             var listings = await _workspaces.ListAsync();
             var previous = Rows.ToDictionary(row => row.Repository.Path);
             Rows =
