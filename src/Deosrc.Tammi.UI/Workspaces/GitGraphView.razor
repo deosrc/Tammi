@@ -23,7 +23,6 @@
                 Everything
             </button>
         </div>
-        <span class="git-graph-count">@CountText</span>
         <div class="git-graph-sync" role="group" aria-label="Sync with the remote">
             <button type="button" class="button button-secondary button-icon" title="Download new commits from the remotes"
                     disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Fetch)">
@@ -713,14 +712,6 @@
     private string WorkingCounts => Graph.WorkingChanges is null
         ? ""
         : $"{Graph.UnstagedChanges.Count} unstaged, {Graph.StagedChanges.Count} staged";
-
-    private string CountText => Graph.Rows.Count switch
-    {
-        0 when Graph.IsLoading => "Reading commits…",
-        1 when Graph.IsComplete => "1 commit",
-        var count when Graph.IsComplete => $"{count:N0} commits",
-        var count => $"{count:N0}+ commits",
-    };
 
     protected override void OnInitialized()
     {

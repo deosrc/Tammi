@@ -2802,11 +2802,6 @@ label.task-choice {
   border-bottom: 1px solid var(--color-border);
 }
 
-.git-graph-count {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-}
-
 .git-graph-refresh {
   margin-left: auto;
 }
