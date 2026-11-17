@@ -4073,6 +4073,24 @@ label.task-choice {
   }
 }
 
+.git-diff-number + .git-diff-number {
+  left: 4em;
+}
+
+.git-diff-added > .git-diff-number,
+.git-diff-side-added > .git-diff-number {
+  background: var(--color-success-bg);
+}
+
+.git-diff-removed > .git-diff-number,
+.git-diff-side-removed > .git-diff-number {
+  background: var(--color-error-bg);
+}
+
+.git-diff-side-blank > .git-diff-number {
+  background: var(--color-chrome);
+}
+
 .git-diff-side-added {
   background: var(--color-success-bg);
 }
@@ -4092,9 +4110,15 @@ label.task-choice {
   font-size: 0.85rem;
 }
 
+/* The line numbers stay put when the diff scrolls sideways. They need a background of their own, so the text that
+   scrolls under them doesn't show through. */
 .git-diff-number {
-  width: 1%;
-  min-width: 3.5em;
+  position: sticky;
+  left: 0;
+  box-sizing: border-box;
+  width: 4em;
+  min-width: 4em;
+  background: var(--color-surface);
   padding: 0 var(--space-2);
   color: var(--color-text-muted);
   text-align: right;
