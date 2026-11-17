@@ -4778,3 +4778,11 @@ label.task-choice {
     animation: none;
   }
 }
+
+/* The app icon at the top of the About page. */
+.about-icon {
+    display: block;
+    width: 128px;
+    height: 128px;
+    margin-bottom: 1rem;
+}

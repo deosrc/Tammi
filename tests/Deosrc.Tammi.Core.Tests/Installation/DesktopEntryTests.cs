@@ -17,5 +17,6 @@ public class DesktopEntryTests
         Assert.StartsWith("[Desktop Entry]\n", text);
         Assert.Contains("Exec=\"/data/tammi/versions/0.1.0/Deosrc.Tammi.Linux\"\n", text);
         Assert.Contains("Name=Tammi\n", text);
+        Assert.Contains("Icon=/data/tammi/versions/0.1.0/tammi.png\n", text);
     }
 }
