@@ -1024,6 +1024,11 @@ label.task-choice {
   height: 100%;
 }
 
+.repository-git {
+  display: flex;
+  height: 100%;
+}
+
 .side-panel {
   display: flex;
   flex: none;

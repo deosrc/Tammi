@@ -4,7 +4,10 @@
 @* The git graph of a Local Repository, opened from the Repositories page without a workspace. *@
 @if (_graph is not null)
 {
-    <GitGraphView @key="_graph" Graph="_graph" />
+    @* A flex container that fills the page, like the Workspace View, so the graph reaches the bottom. *@
+    <div class="repository-git">
+        <GitGraphView @key="_graph" Graph="_graph" />
+    </div>
 }
 
 @code {
