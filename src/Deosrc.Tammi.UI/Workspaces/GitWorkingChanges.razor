@@ -2,6 +2,7 @@
 @using Deosrc.Tammi.Core.Git
 @using Deosrc.Tammi.Core.Settings
 @using Deosrc.Tammi.Core.Windowing
+@using Deosrc.Tammi.Core.Workspaces
 @inject IJSRuntime JS
 @inject LayoutStateStore LayoutStore
 @inject GitGraphViewOptions Options
@@ -50,7 +51,27 @@
                 <button type="button" class="button button-secondary" title="Stash the selected files"
                         disabled="@(SelectedIn(staged: false).Count == 0 || _stashing)"
                         @onclick="() => StashAsync(SelectedIn(staged: false))">Stash</button>
+                <button type="button" class="button button-danger" title="Discard the changes to the selected files"
+                        disabled="@(SelectedIn(staged: false).Count == 0)"
+                        @onclick="() => RequestDiscard(SelectedIn(staged: false))">Discard</button>
+                <button type="button" class="button button-danger" title="Discard every unstaged change"
+                        disabled="@(Graph.UnstagedChanges.Count == 0)"
+                        @onclick="() => RequestDiscard(null)">Discard all</button>
             </div>
+            @if (Graph.PendingDiscard is { } discard)
+            {
+                <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-discard-title">
+                    <h3 id="confirm-discard-title" class="alert-title">Discard @DiscardSubject(discard)?</h3>
+                    <p>
+                        The changes are lost, and Tammi can't bring them back. Untracked files are deleted.
+                        Staged changes are kept.
+                    </p>
+                    <div class="settings-field-row">
+                        <button type="button" class="button button-danger" @onclick="Graph.ConfirmDiscardAsync">Discard</button>
+                        <button type="button" class="button button-secondary" @onclick="Graph.CancelDiscard">Cancel</button>
+                    </div>
+                </div>
+            }
             @FileList(Graph.UnstagedChanges, staged: false)
         </section>
 
@@ -384,6 +405,21 @@
 
         return Graph.OpenDiffAsync(staged ? GitDiffSource.Staged : GitDiffSource.Unstaged, change.Path, change.OldPath);
     }
+
+    private void RequestDiscard(IReadOnlyCollection<FileChange>? files)
+    {
+        _selected.Clear();
+        _active = null;
+        Graph.CloseDiff();
+        Graph.RequestDiscard(files);
+    }
+
+    private static string DiscardSubject(DiscardRequest request) => request.Files switch
+    {
+        null => "all unstaged changes",
+        { Count: 1 } files => $"the changes to {files[0].Path}",
+        var files => $"the changes to {files.Count} files",
+    };
 
     private Task MoveFolderAsync(IReadOnlyCollection<FileChange> files, bool staged) =>
         staged ? UnstageAsync(files) : StageAsync(files);
