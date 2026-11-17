@@ -44,7 +44,7 @@ else if (!Updater.CanUpdate)
     @if (Updater.CanUpdate)
     {
         <div class="settings-field-actions">
-            <button type="button" class="button" disabled="@(Updater.Status is UpdateStatus.Checking or UpdateStatus.Installing)"
+            <button type="button" class="button button-secondary" disabled="@(Updater.Status is UpdateStatus.Checking or UpdateStatus.Installing)"
                     @onclick="CheckForUpdatesAsync">
                 Check for updates
             </button>
@@ -52,6 +52,36 @@ else if (!Updater.CanUpdate)
         <p class="settings-help" role="status">@UpdateStatusText</p>
     }
 </div>
+
+@if (Updater.CanUpdate && Updater.Available is { } release && Updater.Status is not UpdateStatus.Checking)
+{
+    <section class="release-card" aria-label="Available release">
+        <h2 class="release-card-title">@release.Title</h2>
+        @if (release.Notes is not null)
+        {
+            <div class="release-card-notes">@release.Notes</div>
+        }
+        else
+        {
+            <p class="settings-help">This release has no release notes.</p>
+        }
+        <div class="release-card-actions">
+            @if (Updater.Status == UpdateStatus.Installed)
+            {
+                <span>Installed. Restart Tammi to use it.</span>
+            }
+            else if (Updater.Status == UpdateStatus.Installing)
+            {
+                <span>Downloading… @((int)(Updater.Progress * 100))%</span>
+                <progress max="1" value="@Updater.Progress"></progress>
+            }
+            else
+            {
+                <button type="button" class="button" @onclick="() => Updater.InstallAsync()">Update</button>
+            }
+        </div>
+    </section>
+}
 
 @if (SaveError is not null)
 {
@@ -86,11 +116,9 @@ else if (!Updater.CanUpdate)
     private string UpdateStatusText => Updater.Status switch
     {
         UpdateStatus.Checking => "Checking…",
-        UpdateStatus.Available => $"Tammi {Updater.Available!.Version} is available.",
-        UpdateStatus.Installing => $"Downloading Tammi {Updater.Available!.Version}…",
-        UpdateStatus.Installed => $"Tammi {Updater.Available!.Version} is installed. Restart Tammi to use it.",
         UpdateStatus.Failed => Updater.Error ?? "",
-        _ => _checked ? "Tammi is up to date." : "",
+        UpdateStatus.Idle => _checked ? "Tammi is up to date." : "",
+        _ => "",
     };
 
     private Task UpdateUpdatesAsync(Func<UpdateSettings, UpdateSettings> update) =>

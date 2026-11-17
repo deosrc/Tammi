@@ -78,9 +78,17 @@ public sealed class GitHubReleaseClient
                     new Uri(asset.GetProperty("browser_download_url").GetString()!),
                     asset.GetProperty("size").GetInt64()))
                 .ToList();
-            releases.Add(new ReleaseInfo(tag!, version, new Uri(item.GetProperty("html_url").GetString()!), assets));
+            releases.Add(new ReleaseInfo(
+                tag!, version, new Uri(item.GetProperty("html_url").GetString()!), assets,
+                StringProperty(item, "name"), StringProperty(item, "body")));
         }
 
         return releases;
     }
+
+    private static string? StringProperty(JsonElement item, string name) =>
+        item.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            && !string.IsNullOrWhiteSpace(value.GetString())
+            ? value.GetString()
+            : null;
 }
