@@ -144,6 +144,21 @@
         </div>
     }
 
+    @if (Graph.BranchProblem is { } branchProblem)
+    {
+        <div class="error git-graph-sync-error" role="alert">
+            <div class="git-graph-sync-error-body">
+                <p>@branchProblem</p>
+            </div>
+            <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
+                    title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissBranchProblem">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+            </button>
+        </div>
+    }
+
     @if (Graph.DropRequest is { } dropRequest)
     {
         <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-drop-stash-title">
@@ -173,6 +188,42 @@
                 </svg>
             </button>
         </div>
+    }
+
+    @if (_branchPrompt is { } branchPrompt)
+    {
+        <form class="git-graph-tag-prompt" @onsubmit="SubmitBranchPromptAsync" @onsubmit:preventDefault="true">
+            <label>
+                @(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")
+                <input type="text" class="input" @bind="_branchName" @bind:event="oninput" @ref="_branchInput"
+                       spellcheck="false" />
+            </label>
+            <div class="git-graph-tag-prompt-actions">
+                <button type="submit" class="button" disabled="@(!CanSubmitBranchPrompt)">
+                    @(branchPrompt.Kind == BranchPromptKind.Create ? "Create and checkout" : "Rename branch")
+                </button>
+                @if (branchPrompt.Kind == BranchPromptKind.Create)
+                {
+                    <button type="button" class="button button-secondary" disabled="@(!CanSubmitBranchPrompt)"
+                            @onclick="() => SubmitBranchPromptAsync(checkout: false)">
+                        Create branch
+                    </button>
+                }
+                <button type="button" class="button button-secondary" @onclick="() => _branchPrompt = null">Cancel</button>
+            </div>
+        </form>
+    }
+
+    @if (_confirm is { } confirm)
+    {
+        <form class="git-graph-tag-prompt" role="alertdialog" aria-label="Confirm delete"
+              @onsubmit="ConfirmAsync" @onsubmit:preventDefault="true">
+            <p>@confirm.Message</p>
+            <div class="git-graph-tag-prompt-actions">
+                <button type="submit" class="button button-danger" @ref="_confirmButton">Delete</button>
+                <button type="button" class="button button-secondary" @onclick="() => _confirm = null">Cancel</button>
+            </div>
+        </form>
     }
 
     @if (_tagPrompt is { } prompt)
@@ -218,6 +269,84 @@
     {
         <ContextMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
             <li role="none">
+                <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateBranch(commitMenu)">
+                    Create branch…
+                </button>
+            </li>
+            @foreach (var branch in commitMenu.Branches)
+            {
+                var isCurrent = branch == Graph.Refs.HeadBranch;
+                var isWorkspace = Graph.IsWorkspaceBranch(branch);
+                <li role="none">
+                    <button type="button" class="menu-item" role="menuitem" disabled="@isCurrent"
+                            @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
+                        Checkout @branch@(isCurrent ? " (current)" : null)
+                    </button>
+                </li>
+                <li role="none">
+                    <button type="button" class="menu-item" role="menuitem" disabled="@isWorkspace"
+                            title="@(isWorkspace ? "The workspace branch can't be renamed here" : null)"
+                            @onclick="() => StartRenameBranch(branch)">
+                        Rename branch @branch…
+                    </button>
+                </li>
+                var deleteKey = DeleteBranchSubmenu + branch;
+                var hasUpstream = commitMenu.Upstreams.TryGetValue(branch, out var upstream);
+                <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = deleteKey">
+                    <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu" disabled="@isWorkspace"
+                            title="@(isWorkspace ? "The workspace branch can't be deleted here" : null)"
+                            aria-expanded="@(commitMenu.OpenSubmenu == deleteKey ? "true" : "false")"
+                            @onclick="() => ToggleSubmenu(commitMenu, deleteKey)">
+                        <span class="tab-label-text">Delete branch @branch…</span>
+                        <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <polyline points="9 6 15 12 9 18"></polyline>
+                        </svg>
+                    </button>
+                    @if (commitMenu.OpenSubmenu == deleteKey && !isWorkspace)
+                    {
+                        <ul class="menu menu-submenu" role="menu" aria-label="Delete branch">
+                            <li role="none">
+                                <button type="button" class="menu-item" role="menuitem" disabled="@isCurrent"
+                                        title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
+                                        @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: false, upstream)">
+                                    Local branch
+                                </button>
+                            </li>
+                            <li role="none">
+                                <button type="button" class="menu-item" role="menuitem" disabled="@(upstream is null)"
+                                        @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: false, deleteRemote: true, upstream)">
+                                    Remote branch@(!hasUpstream ? " (checking...)" : upstream is null ? " (none)" : $" ({upstream.Remote}/{upstream.Branch})")
+                                </button>
+                            </li>
+                            <li role="none">
+                                <button type="button" class="menu-item" role="menuitem" disabled="@(isCurrent || upstream is null)"
+                                        title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
+                                        @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: true, upstream)">
+                                    Local and remote branch
+                                </button>
+                            </li>
+                        </ul>
+                    }
+                </li>
+            }
+            @foreach (var branch in commitMenu.RemoteBranches)
+            {
+                <li role="separator" class="menu-separator"></li>
+                <li role="none">
+                    <button type="button" class="menu-item" role="menuitem"
+                            @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
+                        Checkout @branch
+                    </button>
+                </li>
+                <li role="none">
+                    <button type="button" class="menu-item menu-item-danger" role="menuitem"
+                            @onclick="() => ConfirmDeleteRemoteBranch(branch)">
+                        Delete remote branch @branch…
+                    </button>
+                </li>
+            }
+            <li role="separator" class="menu-separator"></li>
+            <li role="none">
                 <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateTag(commitMenu)">
                     Create tag…
                 </button>
@@ -233,8 +362,8 @@
                     </button>
                 </li>
                 <li role="none">
-                    <button type="button" class="menu-item" role="menuitem"
-                            @onclick="() => RunTagAsync(commitMenu, () => Graph.DeleteTagAsync(tag))">
+                    <button type="button" class="menu-item menu-item-danger" role="menuitem"
+                            @onclick="() => ConfirmDeleteTag(commitMenu, tag)">
                         Delete tag @tag@DeleteSuffix(commitMenu, tag)
                     </button>
                 </li>
@@ -267,7 +396,7 @@
                     }
                 </li>
                 <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = DeleteSubmenu">
-                    <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
+                    <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu"
                             aria-expanded="@(commitMenu.OpenSubmenu == DeleteSubmenu ? "true" : "false")"
                             @onclick="() => ToggleSubmenu(commitMenu, DeleteSubmenu)">
                         <span class="tab-label-text">Delete tag…</span>
@@ -282,7 +411,7 @@
                             {
                                 <li role="none">
                                     <button type="button" class="menu-item" role="menuitem"
-                                            @onclick="() => RunTagAsync(commitMenu, () => Graph.DeleteTagAsync(tag))">
+                                            @onclick="() => ConfirmDeleteTag(commitMenu, tag)">
                                         @tag@DeleteSuffix(commitMenu, tag)
                                     </button>
                                 </li>
@@ -466,6 +595,12 @@
     private ElementReference _header;
     private ElementReference _body;
     private ElementReference _splitter;
+    private ElementReference _branchInput;
+    private ElementReference _confirmButton;
+
+    // Set when the branch prompt or the delete confirmation opens, so the next render moves focus into it.
+    private bool _focusBranchInput;
+    private bool _focusConfirm;
     private IJSObjectReference? _splitterScript;
     private DotNetObjectReference<GitGraphView>? _self;
     private Virtualize<GitGraphItem>? _virtualize;
@@ -579,6 +714,17 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_focusBranchInput && _branchPrompt is not null)
+        {
+            _focusBranchInput = false;
+            await _branchInput.FocusAsync();
+        }
+        else if (_focusConfirm && _confirm is not null)
+        {
+            _focusConfirm = false;
+            await _confirmButton.FocusAsync();
+        }
+
         if (!firstRender)
         {
             return;
@@ -851,14 +997,114 @@
 
     // Where a commit's right-click menu is open, or null when it's closed. RemoteTags says, for each of the commit's
     // tags, whether the remote has it, once that's known.
-    private sealed record CommitMenu(double X, double Y, string Sha, IReadOnlyList<string> Tags)
+    private sealed record CommitMenu(double X, double Y, string Sha, IReadOnlyList<string> Tags, IReadOnlyList<string> Branches, IReadOnlyList<string> RemoteBranches)
     {
         // The submenu that's open, if any, and the remote the tags are pushed to once that's known.
         public string? OpenSubmenu { get; set; }
 
         public string? Remote { get; set; }
 
+        // Each local branch's upstream (null for none), once it's been read.
+        public IReadOnlyDictionary<string, GitUpstream?> Upstreams { get; set; } = new Dictionary<string, GitUpstream?>();
+
         public IReadOnlyDictionary<string, bool> RemoteTags { get; set; } = new Dictionary<string, bool>();
+    }
+
+    private enum BranchPromptKind { Create, Rename }
+
+    // Asks for a branch's name. For Create, Name is the commit; for Rename, the branch.
+    private sealed record BranchPrompt(BranchPromptKind Kind, string Name);
+
+    // Asks the user to confirm a delete before it's done.
+    private sealed record Confirmation(string Message, Func<Task<bool>> Action);
+
+    private BranchPrompt? _branchPrompt;
+    private Confirmation? _confirm;
+    private string _branchName = "";
+
+    private bool CanSubmitBranchPrompt => _branchPrompt is not null && !string.IsNullOrWhiteSpace(_branchName);
+
+    private void ConfirmDelete(string message, Func<Task<bool>> action)
+    {
+        _commitMenu = null;
+        _confirm = new Confirmation(message, action);
+        _focusConfirm = true;
+    }
+
+    private void ConfirmDeleteBranch(string branch, bool deleteLocal, bool deleteRemote, GitUpstream? upstream)
+    {
+        string remote = upstream is null ? "" : $"{upstream.Remote}/{upstream.Branch}";
+        string message = (deleteLocal, deleteRemote) switch
+        {
+            (true, true) => $"Delete the local branch {branch} and the remote branch {remote}? Commits only on them may be lost.",
+            (true, false) => $"Delete the local branch {branch}? Commits only on it may be lost.",
+            _ => $"Delete the remote branch {remote}?",
+        };
+        ConfirmDelete(message, () => Graph.DeleteBranchAsync(branch, deleteLocal, deleteRemote));
+    }
+
+    private void ConfirmDeleteRemoteBranch(string branch) =>
+        ConfirmDelete($"Delete the remote branch {branch}?", () => Graph.DeleteRemoteBranchAsync(branch));
+
+    private void ConfirmDeleteTag(CommitMenu menu, string tag) =>
+        ConfirmDelete($"Delete the tag {tag}{DeleteTargets(menu, tag)}?", () => Graph.DeleteTagAsync(tag));
+
+    private async Task ConfirmAsync()
+    {
+        if (_confirm is not { } confirm)
+        {
+            return;
+        }
+
+        _confirm = null;
+        await confirm.Action();
+    }
+
+    private void StartCreateBranch(CommitMenu menu)
+    {
+        _commitMenu = null;
+        _branchName = "";
+        _branchPrompt = new BranchPrompt(BranchPromptKind.Create, menu.Sha);
+        _focusBranchInput = true;
+    }
+
+    private void StartRenameBranch(string branch)
+    {
+        _commitMenu = null;
+        _branchName = branch;
+        _branchPrompt = new BranchPrompt(BranchPromptKind.Rename, branch);
+        _focusBranchInput = true;
+    }
+
+    private async Task RunBranchAsync(Func<Task<bool>> action)
+    {
+        _commitMenu = null;
+        await action();
+    }
+
+    private Task SubmitBranchPromptAsync() => SubmitBranchPromptAsync(checkout: true);
+
+    private async Task SubmitBranchPromptAsync(bool checkout)
+    {
+        if (_branchPrompt is not { } prompt || !CanSubmitBranchPrompt)
+        {
+            return;
+        }
+
+        _branchPrompt = null;
+        var name = _branchName.Trim();
+        switch (prompt.Kind)
+        {
+            case BranchPromptKind.Create:
+                await Graph.CreateBranchAsync(name, prompt.Name, checkout);
+                break;
+            default:
+                if (name != prompt.Name)
+                {
+                    await Graph.RenameBranchAsync(prompt.Name, name);
+                }
+                break;
+        }
     }
 
     // Asks for a new tag's name.
@@ -866,6 +1112,7 @@
 
     private const string PushSubmenu = "push";
     private const string DeleteSubmenu = "delete";
+    private const string DeleteBranchSubmenu = "delete-branch:";
 
     private CommitMenu? _commitMenu;
     private TagPrompt? _tagPrompt;
@@ -876,8 +1123,11 @@
     private async Task OpenCommitMenuAsync(string sha, MouseEventArgs e)
     {
         string[] tags = [.. Graph.LabelsFor(sha).Where(reference => reference.Kind == GitReferenceKind.Tag).Select(reference => reference.Name)];
-        var menu = new CommitMenu(e.ClientX, e.ClientY, sha, tags);
+        string[] branches = [.. Graph.LabelsFor(sha).Where(reference => reference.Kind == GitReferenceKind.LocalBranch).Select(reference => reference.Name)];
+        string[] remoteBranches = [.. Graph.LabelsFor(sha).Where(reference => reference.Kind == GitReferenceKind.RemoteBranch).Select(reference => reference.Name)];
+        var menu = new CommitMenu(e.ClientX, e.ClientY, sha, tags, branches, remoteBranches);
         _commitMenu = menu;
+        _ = LoadUpstreamsAsync(menu);
         if (tags.Length == 0)
         {
             return;
@@ -898,6 +1148,25 @@
             await InvokeAsync(StateHasChanged);
         }
     }
+
+    // Which remote branch each local branch tracks is in the config, so the menu opens first.
+    private async Task LoadUpstreamsAsync(CommitMenu menu)
+    {
+        var found = new Dictionary<string, GitUpstream?>();
+        foreach (var branch in menu.Branches)
+        {
+            found[branch] = await Graph.BranchUpstreamAsync(branch);
+        }
+
+        if (ReferenceEquals(_commitMenu, menu) && !_disposed)
+        {
+            menu.Upstreams = found;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // Where deleting a tag removes it from, for the confirmation.
+    private static string DeleteTargets(CommitMenu menu, string tag) => PushState(menu, tag) is true ? $" locally and on {menu.Remote}" : " locally";
 
     // Whether the remote has a tag: null until it's been checked.
     private static bool? PushState(CommitMenu menu, string tag) =>
