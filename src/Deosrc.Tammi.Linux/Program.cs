@@ -7,6 +7,7 @@ using Deosrc.Tammi.Core;
 using Deosrc.Tammi.Core.Agents;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Terminals;
+using Deosrc.Tammi.Core.Updates;
 using Deosrc.Tammi.Core.Windowing;
 using Deosrc.Tammi.Linux.PlatformServices;
 using Deosrc.Tammi.UI;
@@ -62,7 +63,18 @@ internal static class Program
             .Center();
         var windowStateTracker = TrackWindowState(app.MainWindow, windowState);
         var agents = app.Services.GetRequiredService<WorkspaceAgents>();
-        app.MainWindow.RegisterWindowClosingHandler((_, _) => !ConfirmClose(app.MainWindow, agents));
+        var updater = app.Services.GetRequiredService<AppUpdater>();
+        app.MainWindow.RegisterWindowClosingHandler((_, _) =>
+        {
+            var close = ConfirmClose(app.MainWindow, agents);
+            if (!close)
+            {
+                // Restarting to update was asked for, but the user chose to keep Tammi open.
+                updater.CancelRestart();
+            }
+
+            return !close;
+        });
 
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             app.MainWindow.ShowMessage("Unhandled error", e.ExceptionObject.ToString());
@@ -77,6 +89,10 @@ internal static class Program
         Task.WhenAll(
             app.Services.GetRequiredService<WorkspaceTerminals>().DisposeAsync().AsTask(),
             agents.DisposeAsync().AsTask()).GetAwaiter().GetResult();
+
+        // Let go of the instance lock before starting the new version, or it would see this copy still running.
+        instanceLock.Dispose();
+        updater.StartInstalledVersionIfRequested();
         app.Services.StopTammiLogging();
     }
 

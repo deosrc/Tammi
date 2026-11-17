@@ -11,8 +11,9 @@ internal static class CloseConfirmation
 {
     /// <summary>
     /// Asks before the window closes, whenever agents are running. Call it when the window is created.
+    /// <paramref name="onCancelled"/> is called when the user chooses to keep the window open.
     /// </summary>
-    public static void Attach(Microsoft.UI.Xaml.Window window, WorkspaceAgents agents)
+    public static void Attach(Microsoft.UI.Xaml.Window window, WorkspaceAgents agents, Action? onCancelled = null)
     {
         var confirmed = false;
         var asking = false;
@@ -49,6 +50,10 @@ internal static class CloseConfirmation
                 {
                     confirmed = true;
                     window.Close();
+                }
+                else
+                {
+                    onCancelled?.Invoke();
                 }
             }
             finally

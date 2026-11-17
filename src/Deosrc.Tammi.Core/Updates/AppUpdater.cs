@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Installation;
@@ -248,6 +249,50 @@ public sealed class AppUpdater
         finally
         {
             _busy.Release();
+        }
+    }
+
+    /// <summary>
+    /// Whether Tammi should start the installed version when it closes: the user asked to restart to update.
+    /// </summary>
+    public bool RestartRequested { get; private set; }
+
+    /// <summary>
+    /// Asks for the installed version to be started when Tammi closes. Call <see cref="CancelRestart"/> if closing is
+    /// cancelled.
+    /// </summary>
+    public void RequestRestart() => RestartRequested = Status == UpdateStatus.Installed;
+
+    /// <summary>
+    /// Withdraws <see cref="RequestRestart"/>, e.g. because the user chose not to close Tammi after all.
+    /// </summary>
+    public void CancelRestart() => RestartRequested = false;
+
+    /// <summary>
+    /// Starts the version that was installed, if a restart was requested. Call it once Tammi has closed, and has let go
+    /// of <see cref="SingleInstanceLock"/>, or the new copy would take it for a second copy and stop.
+    /// </summary>
+    public void StartInstalledVersionIfRequested()
+    {
+        if (!RestartRequested || _target is null || Available is not { } release)
+        {
+            return;
+        }
+
+        RestartRequested = false;
+        try
+        {
+            var directory = _location.DirectoryFor(release.Version);
+            Process.Start(new ProcessStartInfo(Path.Combine(directory, _target.ExecutableName))
+            {
+                WorkingDirectory = directory,
+                UseShellExecute = false,
+            })?.Dispose();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+            or System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            _logger.LogWarning(ex, "Couldn't start Tammi {Version}", release.Version);
         }
     }
 
