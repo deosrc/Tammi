@@ -302,8 +302,12 @@
             @ondblclick="() => MoveAsync(change, staged)">
             <span class="git-commit-file-kind git-graph-file-@kind.ToString().ToLowerInvariant()"
                   title="@(change.IsSubmodule ? "Submodule commit changed" : GitGraphText.Label(kind))">@(change.IsSubmodule ? "S" : GitGraphText.Letter(kind))</span>
-            <span class="git-commit-file-name">@CommitFileTree.NameOf(change.Path)</span>
-            @if (showFolder)
+            <span class="git-commit-file-name">@CommitFileTree.DisplayName(change.Path, change.OldPath)</span>
+            @if (CommitFileTree.MovedFrom(change.Path, change.OldPath) is { } movedFrom)
+            {
+                <span class="git-commit-file-folder">@(showFolder ? $"{CommitFileTree.FolderOf(change.Path)} ← {movedFrom}" : $"from {movedFrom}")</span>
+            }
+            else if (showFolder)
             {
                 <span class="git-commit-file-folder">@CommitFileTree.FolderOf(change.Path)</span>
             }

@@ -219,6 +219,11 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public (string Path, GitDiffSource Source)? DiffTarget { get; private set; }
 
     /// <summary>
+    /// For a diff of a renamed file, the path it was renamed from, or <see langword="null"/>.
+    /// </summary>
+    public string? DiffOldPath => _diffRequest?.OldPath;
+
+    /// <summary>
     /// The fetch, pull or push that's running, or <see langword="null"/> when none is.
     /// </summary>
     public GitSyncOperation? Syncing { get; private set; }
