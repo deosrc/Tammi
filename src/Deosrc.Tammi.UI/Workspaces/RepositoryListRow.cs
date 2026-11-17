@@ -9,13 +9,11 @@ namespace Deosrc.Tammi.UI.Workspaces;
 /// <param name="Repository">The catalogued repository.</param>
 /// <param name="IsLoaded">Whether the state has been read yet. Until then the row shows placeholders.</param>
 /// <param name="Status">The git status, or <see langword="null"/> if it hasn't been read or couldn't be.</param>
-/// <param name="WorktreeCount">How many linked worktrees the repository has.</param>
 /// <param name="WorkspaceCount">How many workspaces have a worktree of the repository.</param>
 /// <param name="Problem">Why the status couldn't be read, or <see langword="null"/>.</param>
 public sealed record RepositoryListRow(
     CatalogueRepository Repository,
     bool IsLoaded,
     RepositoryStatus? Status,
-    int WorktreeCount,
     int WorkspaceCount,
     string? Problem);

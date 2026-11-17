@@ -32,7 +32,6 @@
                     <th scope="col">Changes</th>
                     <th scope="col">Ahead</th>
                     <th scope="col">Behind</th>
-                    <th scope="col">Worktrees</th>
                     <th scope="col">Workspaces</th>
                     <th scope="col"><span class="visually-hidden">Actions</span></th>
                 </tr>
@@ -44,7 +43,7 @@
                         <td title="@row.Repository.Path">@row.Repository.Name</td>
                         @if (!row.IsLoaded)
                         {
-                            @for (var i = 0; i < 6; i++)
+                            @for (var i = 0; i < 5; i++)
                             {
                                 <td><span class="placeholder-bar" aria-hidden="true"></span></td>
                             }
@@ -68,7 +67,6 @@
                             <td>
                                 <GitSyncChips Ahead="0" Behind="row.Status?.BehindBy ?? 0" Upstream="@row.Status?.Upstream" Inline="true" />
                             </td>
-                            <td>@row.WorktreeCount</td>
                             <td>@row.WorkspaceCount</td>
                         }
                         <td>

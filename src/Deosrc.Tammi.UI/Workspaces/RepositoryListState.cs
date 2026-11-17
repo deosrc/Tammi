@@ -14,16 +14,14 @@ public sealed class RepositoryListState : IDisposable
 
     private readonly IRepositoryCatalogue _catalogue;
     private readonly IGitRepositoryReader _reader;
-    private readonly IGitCli _git;
     private readonly IWorkspaceStore _workspaces;
     private readonly Lock _lock = new();
     private bool _started;
 
-    public RepositoryListState(IRepositoryCatalogue catalogue, IGitRepositoryReader reader, IGitCli git, IWorkspaceStore workspaces)
+    public RepositoryListState(IRepositoryCatalogue catalogue, IGitRepositoryReader reader, IWorkspaceStore workspaces)
     {
         _catalogue = catalogue;
         _reader = reader;
-        _git = git;
         _workspaces = workspaces;
         _catalogue.Changed += OnCatalogueChanged;
     }
@@ -77,7 +75,7 @@ public sealed class RepositoryListState : IDisposable
                     .OrderBy(repository => repository.Name, StringComparer.OrdinalIgnoreCase)
                     .Select(repository => previous.TryGetValue(repository.Path, out var old)
                         ? old with { Repository = repository }
-                        : new RepositoryListRow(repository, false, null, 0, 0, null)),
+                        : new RepositoryListRow(repository, false, null, 0, null)),
             ];
             Changed?.Invoke();
 
@@ -117,27 +115,11 @@ public sealed class RepositoryListState : IDisposable
         try
         {
             var status = await Task.Run(() => _reader.ReadStatus(repository.Path));
-            return new RepositoryListRow(repository, true, status, await CountWorktreesAsync(repository.Path), workspaces, null);
+            return new RepositoryListRow(repository, true, status, workspaces, null);
         }
         catch (Exception ex) when (ex is GitException or IOException)
         {
-            return new RepositoryListRow(repository, true, null, 0, workspaces, ex.Message);
-        }
-    }
-
-    private async Task<int> CountWorktreesAsync(string path)
-    {
-        try
-        {
-            var result = await _git.RunAsync(path, ["worktree", "list", "--porcelain"], new GitCommandOptions { ThrowOnError = false });
-            // The repository itself is listed too; the count is of its linked worktrees.
-            return result.Succeeded
-                ? Math.Max(0, result.OutputLines.Count(line => line.StartsWith("worktree ", StringComparison.Ordinal)) - 1)
-                : 0;
-        }
-        catch (GitException)
-        {
-            return 0;
+            return new RepositoryListRow(repository, true, null, workspaces, ex.Message);
         }
     }
 }
