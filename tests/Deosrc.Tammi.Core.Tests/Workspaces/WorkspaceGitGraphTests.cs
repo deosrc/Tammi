@@ -199,6 +199,31 @@ public sealed class WorkspaceGitGraphTests : IDisposable
     }
 
     [Fact]
+    public async Task SelectStashAsync_ReadsTrackedAndNewFiles_AndOpensTheirDiffs()
+    {
+        (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();
+        string clone = workspace.GetWorktreePath(repository);
+        TempRepositories.WriteFile(clone, "README.md", "changed");
+        TempRepositories.WriteFile(clone, "new.txt", "new");
+        WorkspaceGitGraph graph = _graphs.Open(workspace, repository);
+        await graph.LoadAsync();
+        await graph.StashAsync();
+
+        await graph.SelectStashAsync(Assert.Single(graph.Stashes));
+
+        Assert.NotNull(graph.SelectedStash);
+        Assert.Null(graph.Selected);
+        Assert.Equal(["README.md", "new.txt"], graph.SelectedChanges!.Select(change => change.Path));
+        await graph.OpenDiffAsync(GitDiffSource.Commit, "new.txt", null, graph.SelectedStash!.Sha);
+        Assert.Contains(graph.ActiveDiff!.Hunks.SelectMany(hunk => hunk.Lines), line => line.Text.Contains("new"));
+
+        await graph.PopStashAsync(graph.SelectedStash!);
+
+        Assert.Null(graph.SelectedStash);
+        Assert.Empty(graph.Stashes);
+    }
+
+    [Fact]
     public async Task StashAsync_NothingToStash_ReportsTheProblem()
     {
         (Workspace workspace, WorkspaceRepository repository) = await CreateWorkspaceAsync();

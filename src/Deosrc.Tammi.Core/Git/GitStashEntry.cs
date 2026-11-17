@@ -7,7 +7,8 @@ namespace Deosrc.Tammi.Core.Git;
 /// <param name="Message">What the stash was given, e.g. <c>On main: Try a fix</c>.</param>
 /// <param name="CreatedAt">When the stash was made.</param>
 /// <param name="BaseSha">The commit that was HEAD when the stash was made.</param>
-public sealed record GitStashEntry(int Index, string Message, DateTimeOffset CreatedAt, string BaseSha)
+/// <param name="Sha">The stash's own commit, which holds the stashed changes: read its changed files and diffs like a commit's.</param>
+public sealed record GitStashEntry(int Index, string Message, DateTimeOffset CreatedAt, string BaseSha, string Sha)
 {
     /// <summary>
     /// The commit the git graph draws the stash on: <see cref="BaseSha"/>, or, when the graph doesn't show that commit

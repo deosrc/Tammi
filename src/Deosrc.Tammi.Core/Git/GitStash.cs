@@ -12,7 +12,7 @@ public sealed class GitStash(IGitCli git) : IGitStash
     {
         GitCommandResult result = await git.RunAsync(
             path,
-            ["stash", "list", "--format=%gs%x1f%cI%x1f%P"],
+            ["stash", "list", "--format=%gs%x1f%cI%x1f%P%x1f%H"],
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         var entries = new List<GitStashEntry>();
@@ -25,7 +25,7 @@ public sealed class GitStash(IGitCli git) : IGitStash
                     : default;
             // A stash's first parent is the commit it was made on.
             string baseSha = parts.Length > 2 ? parts[2].Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "" : "";
-            entries.Add(new GitStashEntry(entries.Count, parts[0], createdAt, baseSha));
+            entries.Add(new GitStashEntry(entries.Count, parts[0], createdAt, baseSha, parts.Length > 3 ? parts[3] : ""));
         }
 
         return entries;

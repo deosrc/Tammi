@@ -10,27 +10,49 @@
    changed, as a list or a tree. *@
 
 <div class="git-commit-details" @ref="_root">
-    @if (Graph.Selected is not { } selection)
+    @if (Graph.Selected is null && Graph.SelectedStash is null)
     {
         <p class="placeholder git-commit-details-empty">Select a commit to see its details.</p>
     }
     else
     {
-        var commit = selection.Commit;
-        var body = GitGraphText.Body(commit);
+        // A stash shows its message and the files it holds, with buttons to bring it back or delete it.
+        var stash = Graph.SelectedStash;
+        var commit = Graph.Selected?.Commit;
+        var body = commit is null ? "" : GitGraphText.Body(commit);
         _hasBody = body.Length > 0;
+        var sha = commit?.Sha ?? stash!.Sha;
 
         <div class="git-commit-bar">
-            <button type="button" class="git-commit-hash" title="Copy the commit id (@commit.Sha)"
-                    @onclick="() => CopyAsync(commit.Sha)">
-                @GitGraphText.ShortSha(commit.Sha)
+            <button type="button" class="git-commit-hash" title="Copy the @(stash is null ? "commit" : "stash") id (@sha)"
+                    @onclick="() => CopyAsync(sha)">
+                @(stash is null ? GitGraphText.ShortSha(sha) : $"{stash.Name} {GitGraphText.ShortSha(sha)}")
             </button>
-            <span class="git-commit-copied @(_copied == commit.Sha ? "shown" : null)" role="status">
-                @(_copied == commit.Sha ? "Copied" : null)
+            <span class="git-commit-copied @(_copied == sha ? "shown" : null)" role="status">
+                @(_copied == sha ? "Copied" : null)
             </span>
         </div>
 
-        <h2 class="git-commit-subject">@commit.Subject</h2>
+        <h2 class="git-commit-subject">@(commit?.Subject ?? stash!.Message)</h2>
+
+        @if (stash is not null)
+        {
+            @* The date and the buttons share a row when there's room, and wrap when there isn't. *@
+            <div class="git-commit-stash-bar">
+                <span class="git-commit-stash-date" title="@GitGraphText.FullDate(stash.CreatedAt)">
+                    Stashed @GitGraphText.When(stash.CreatedAt, DateTimeOffset.Now).ToLowerInvariant()
+                </span>
+                <div class="git-commit-actions">
+                    <button type="button" class="button button-secondary" disabled="@_busy" @onclick="() => RunAsync(Graph.DropStashAsync(stash))">Drop stash</button>
+                    <button type="button" class="button button-secondary" disabled="@_busy" @onclick="() => RunAsync(Graph.ApplyStashAsync(stash))">Apply stash</button>
+                    <button type="button" class="button" disabled="@_busy" @onclick="() => RunAsync(Graph.PopStashAsync(stash))">Pop stash</button>
+                </div>
+            </div>
+            @if (Graph.StashProblem is { } stashProblem)
+            {
+                <p class="error git-commit-actions-problem">@stashProblem</p>
+            }
+        }
 
         @if (_hasBody)
         {
@@ -44,6 +66,8 @@
 
         <div class="git-commit-lower">
             @* Collapses to its heading, with the author's name beside it. *@
+            @if (commit is not null)
+            {
             <section class="git-commit-section" aria-labelledby="@($"{_id}-authors")">
                 <h3 class="git-commit-heading" id="@($"{_id}-authors")">
                     <button type="button" class="git-commit-collapse" aria-expanded="@(Options.AuthorsCollapsed ? "false" : "true")"
@@ -71,6 +95,7 @@
                     }
                 </ul>
             </section>
+            }
 
             <section class="git-commit-section" aria-labelledby="@($"{_id}-files")">
                 <div class="git-commit-files-heading">
@@ -137,6 +162,7 @@
                 }
             </section>
         </div>
+
     }
 </div>
 
@@ -154,18 +180,33 @@
     private string? _copied;
     private bool _hasBody;
     private bool _disposed;
+    private bool _busy;
 
     [Parameter, EditorRequired]
     public WorkspaceGitGraph Graph { get; set; } = null!;
 
     protected override void OnInitialized() => Options.Changed += OnOptionsChanged;
 
+    private async Task RunAsync(Task<bool> action)
+    {
+        _busy = true;
+        try
+        {
+            await action;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
     protected override void OnParametersSet()
     {
         // Another commit's folders all start closed.
-        if (Graph.Selected?.Commit.Sha != _shownSha)
+        string? shown = Graph.Selected?.Commit.Sha ?? Graph.SelectedStash?.Sha;
+        if (shown != _shownSha)
         {
-            _shownSha = Graph.Selected?.Commit.Sha;
+            _shownSha = shown;
             _expanded.Clear();
         }
     }
@@ -288,7 +329,7 @@
             return Task.CompletedTask;
         }
 
-        return Graph.OpenDiffAsync(GitDiffSource.Commit, change.Path, change.OldPath, Graph.Selected?.Commit.Sha);
+        return Graph.OpenDiffAsync(GitDiffSource.Commit, change.Path, change.OldPath, Graph.Selected?.Commit.Sha ?? Graph.SelectedStash?.Sha);
     }
 
     private void ToggleFolder(string path)

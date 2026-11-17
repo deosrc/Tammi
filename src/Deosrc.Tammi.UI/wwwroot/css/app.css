@@ -3155,6 +3155,34 @@ label.task-choice {
   padding: 0 var(--space-4);
 }
 
+.git-commit-stash-bar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.git-commit-stash-date {
+  color: var(--color-text-muted);
+}
+
+/* The stash's buttons, right-aligned under the summary, also when they wrap onto a row of their own. */
+.git-commit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.git-commit-actions-problem {
+  flex: none;
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3);
+}
+
 /* A divider between the sections. */
 .git-commit-section + .git-commit-section {
   margin-top: var(--space-3);

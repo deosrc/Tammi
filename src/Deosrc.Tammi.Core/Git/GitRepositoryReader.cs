@@ -98,14 +98,20 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
             commit.Tree,
             new CompareOptions { Similarity = SimilarityOptions.Renames });
 
-        return changes
+        IEnumerable<CommitFileChange> tracked = changes
             .Where(change => change.Status != ChangeKind.Unmodified)
             .Select(change => new CommitFileChange(
                 change.Path,
                 CommitChangeKind(change.Status),
-                change.Status == ChangeKind.Renamed ? change.OldPath : null))
-            .OrderBy(change => change.Path, StringComparer.Ordinal)
-            .ToArray();
+                change.Status == ChangeKind.Renamed ? change.OldPath : null));
+
+        // A stash keeps its new files in a commit of their own, which git makes its third parent.
+        IEnumerable<CommitFileChange> untracked = UntrackedTreeOf(commit) is { } untrackedTree
+            ? repository.Diff.Compare<TreeChanges>(null, untrackedTree)
+                .Select(change => new CommitFileChange(change.Path, FileChangeKind.Added, null))
+            : [];
+
+        return [.. tracked.Concat(untracked).OrderBy(change => change.Path, StringComparer.Ordinal)];
     }
 
     /// <inheritdoc />
@@ -127,6 +133,12 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
                 Commit commit = repository.Lookup<Commit>(sha)
                     ?? throw new GitException($"There's no commit {sha} in '{path}'.");
                 patch = repository.Diff.Compare<Patch>(commit.Parents.FirstOrDefault()?.Tree, commit.Tree, paths, options);
+                if (!patch.Any() && UntrackedTreeOf(commit) is { } untrackedTree)
+                {
+                    // A new file in a stash.
+                    patch = repository.Diff.Compare<Patch>(null, untrackedTree, paths, options);
+                }
+
                 break;
             case GitDiffSource.Staged:
                 patch = repository.Diff.Compare<Patch>(repository.Head.Tip?.Tree, DiffTargets.Index, paths, null, options);
@@ -245,6 +257,16 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
 
     // The diff of a submodule is the change to the commit recorded for it, as git shows it, or null if the path isn't
     // a submodule in the states compared.
+    // The tree of the new files in a stash, or null for any other commit. Git writes them as a commit that's the stash's
+    // third parent, with a message that starts "untracked files on".
+    private static Tree? UntrackedTreeOf(Commit commit)
+    {
+        Commit? third = commit.Parents.Skip(2).FirstOrDefault();
+        return third is not null && third.Message.StartsWith("untracked files on", StringComparison.Ordinal)
+            ? third.Tree
+            : null;
+    }
+
     private static FileDiff? ReadSubmoduleDiff(Repository repository, GitDiffSource source, string file, string? sha)
     {
         static string? CommitOf(TreeEntry? entry) =>

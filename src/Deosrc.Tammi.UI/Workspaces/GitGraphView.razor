@@ -654,8 +654,9 @@
     // that commit, which also runs through the rows between.
     private RenderFragment StashRow(GitGraphItem item, GitStashEntry stash) => __builder =>
     {
-        <div class="git-graph-row git-graph-stash" role="option" aria-selected="false" @key="@($"stash-{stash.Index}")"
-             title="@stash.Name, @GitGraphText.FullDate(stash.CreatedAt)"
+        <div class="git-graph-row git-graph-stash @(Graph.SelectedStash?.Sha == stash.Sha ? "selected" : null)" role="option"
+             aria-selected="@(Graph.SelectedStash?.Sha == stash.Sha ? "true" : "false")" @key="@($"stash-{stash.Sha}")"
+             title="@stash.Name, @GitGraphText.FullDate(stash.CreatedAt)" @onclick="() => Graph.SelectStashAsync(stash)"
              @oncontextmenu="e => _stashMenu = new StashMenu(e.ClientX, e.ClientY, stash)"
              @oncontextmenu:preventDefault="true">
             @foreach (var column in _visibleColumns)

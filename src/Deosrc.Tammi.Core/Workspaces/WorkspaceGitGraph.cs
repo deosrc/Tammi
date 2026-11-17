@@ -152,6 +152,12 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public string? SelectedChangesProblem { get; private set; }
 
     /// <summary>
+    /// The selected stash, or <see langword="null"/> if none is. Its changed files are in <see cref="SelectedChanges"/>,
+    /// and the details panel is then for the stash.
+    /// </summary>
+    public GitStashEntry? SelectedStash { get; private set; }
+
+    /// <summary>
     /// Whether the working changes are selected, instead of a commit. The details panel is then for making a commit.
     /// </summary>
     public bool IsWorkingChangesSelected { get; private set; }
@@ -302,7 +308,19 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     {
         ClearDiff();
         IsWorkingChangesSelected = false;
+        SelectedStash = null;
         Select(sha);
+    });
+
+    /// <summary>
+    /// Selects a stash, and reads the files it changed.
+    /// </summary>
+    public Task SelectStashAsync(GitStashEntry stash) => RunAsync(() =>
+    {
+        ClearDiff();
+        IsWorkingChangesSelected = false;
+        Selected = null;
+        SelectStash(stash);
     });
 
     /// <summary>
@@ -312,6 +330,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     {
         ClearDiff();
         Selected = null;
+        SelectedStash = null;
         SelectedChanges = null;
         SelectedChangesProblem = null;
         IsWorkingChangesSelected = true;
@@ -720,6 +739,23 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
                 Stashes = stashes;
             }
 
+            if (SelectedStash is { } selectedStash)
+            {
+                // Follow the selected stash as the others come and go and its index changes, or let go of it when it's gone.
+                GitStashEntry? current = Stashes.FirstOrDefault(stash => stash.Sha == selectedStash.Sha);
+                if (current is null)
+                {
+                    ClearDiff();
+                    SelectedStash = null;
+                    SelectedChanges = null;
+                    SelectedChangesProblem = null;
+                }
+                else
+                {
+                    SelectedStash = current;
+                }
+            }
+
             if (IsWorkingChangesSelected && WorkingChanges.Count == 0)
             {
                 // The row is gone (e.g. after a commit), so show HEAD's commit instead.
@@ -769,6 +805,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     private void Reload(int count)
     {
         string? selected = Selected?.Commit.Sha;
+        string? selectedStash = SelectedStash?.Sha;
         CloseCursor();
         _rows.Clear();
         _anchors.Clear();
@@ -809,6 +846,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         {
             Select(selected);
         }
+        else if (Stashes.FirstOrDefault(stash => stash.Sha == selectedStash) is { } stillThere)
+        {
+            SelectStash(stillThere);
+        }
     }
 
     private void ReadPage(int count)
@@ -833,8 +874,25 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         Publish();
     }
 
+    private void SelectStash(GitStashEntry stash)
+    {
+        SelectedStash = stash;
+        SelectedChanges = null;
+        SelectedChangesProblem = null;
+        Changed?.Invoke();
+        try
+        {
+            SelectedChanges = _reader.ReadCommitChanges(Path, stash.Sha);
+        }
+        catch (Exception ex) when (IsReadError(ex))
+        {
+            SelectedChangesProblem = ex.Message;
+        }
+    }
+
     private void Select(string? sha)
     {
+        SelectedStash = null;
         Selected = sha is null ? null : _rows.Find(row => row.Commit.Sha == sha);
         SelectedChanges = null;
         SelectedChangesProblem = null;
