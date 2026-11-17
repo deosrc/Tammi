@@ -18,6 +18,7 @@ internal static class PlatformServiceCollectionExtensions
         services.AddSingleton<IProcessLauncher, LinuxProcessLauncher>();
         services.AddSingleton<IFileSystemWatchService, FileSystemWatchService>();
         services.AddSingleton<ICredentialStore, LibSecretCredentialStore>();
+        services.AddSingleton<ISystemTheme, LinuxSystemTheme>();
         services.AddSingleton<IPtyService, LinuxPtyService>();
         services.AddSingleton<IApplicationIconProvider, DesktopEntryIconProvider>();
         services.AddSingleton<IFolderPicker>(provider =>

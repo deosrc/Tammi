@@ -118,6 +118,20 @@
     </div>
 
     <div class="settings-field">
+        <label for="theme">Theme</label>
+        <select id="theme" value="@Current.Theme"
+                @onchange="e => UpdateGeneralAsync(g => g with { Theme = Parse(e, g.Theme) })">
+            <option value="@ThemePreference.Auto">Auto</option>
+            <option value="@ThemePreference.Light">Light</option>
+            <option value="@ThemePreference.Dark">Dark</option>
+        </select>
+        <p class="settings-help">
+            Auto follows the system theme, and changes with it, e.g. when the system switches to dark mode in the
+            evening. Changes apply straight away.
+        </p>
+    </div>
+
+    <div class="settings-field">
         <label for="log-level">Log level</label>
         <select id="log-level" value="@Current.LogLevel"
                 @onchange="e => UpdateGeneralAsync(g => g with { LogLevel = Parse(e, g.LogLevel) })">

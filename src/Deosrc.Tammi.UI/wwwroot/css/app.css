@@ -54,8 +54,51 @@
   --color-graph-7: #cf222e;
 }
 
+/* The dark theme, used when the app is set to dark, or when it follows the system and the system is dark. The theme
+   setting puts data-theme on the root element, except while the system theme is undetected, then the browser decides. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg: #1e1f22;
+  --color-surface: #2b2d31;
+  --color-surface-hover: #35373c;
+  --color-chrome: #17181a;
+  --color-border: #3f4147;
+  --color-text: #e6e7e9;
+  --color-text-muted: #9ba1a8;
+  --color-accent: #8a6cf0;
+  --color-accent-text: #ffffff;
+  --color-focus: #4c9aff;
+  --color-error: #ff7b72;
+  --color-success: #3fb950;
+  --color-info: #4c9aff;
+  --color-info-text: #1f2328;
+  --color-success-bg: #12261e;
+  --color-warning: #d29922;
+  --color-warning-bg: #3b2e0e;
+  --color-warning-border: #9e6a03;
+  --color-warning-text: #1f2328;
+  --color-error-bg: #2d1416;
+  --color-merged: #a371f7;
+  --color-jira: #4c9aff;
+
+  --color-graph-0: #4c9aff;
+  --color-graph-1: #f778ba;
+  --color-graph-2: #3fb950;
+  --color-graph-3: #f0883e;
+  --color-graph-4: #a371f7;
+  --color-graph-5: #39c5cf;
+  --color-graph-6: #d29922;
+  --color-graph-7: #ff7b72;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
+
     --color-bg: #1e1f22;
     --color-surface: #2b2d31;
     --color-surface-hover: #35373c;
@@ -87,6 +130,7 @@
     --color-graph-5: #39c5cf;
     --color-graph-6: #d29922;
     --color-graph-7: #ff7b72;
+  
   }
 }
 
