@@ -78,10 +78,6 @@
                     title="Apply the newest stash and drop it"
                     disabled="@(Graph.Stashes.Count == 0 || _stashing)"
                     @onclick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">Pop</button>
-            <button type="button" class="button button-secondary button-icon"
-                    title="Apply the newest stash and keep it"
-                    disabled="@(Graph.Stashes.Count == 0 || _stashing)"
-                    @onclick="() => RunStashAsync(Graph.ApplyStashAsync(Graph.Stashes[0]))">Apply</button>
         </div>
         <button type="button" class="button button-secondary button-icon git-graph-refresh" title="Read the graph again"
                 aria-label="Refresh" disabled="@Graph.IsLoading" @onclick="Graph.RefreshAsync">
