@@ -7,12 +7,23 @@
 
 @* The Repository Catalogue's Local Repositories with their git state, outside any workspace. *@
 <div class="page">
-    <h1>Repositories</h1>
+    <div class="page-header">
+        <h1>Repositories</h1>
+        <div class="page-header-actions">
+            <a class="button button-secondary button-icon" href="@AppRoutes.SettingsRepositories"
+               title="Repository settings" aria-label="Repository settings">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="6.5" />
+                    <circle cx="12" cy="12" r="2.5" />
+                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" stroke-width="3" />
+                </svg>
+            </a>
+        </div>
+    </div>
     <div class="usage-toolbar">
         <button type="button" class="button" @onclick="State.RefreshAsync" disabled="@State.IsLoading">
             @(State.IsLoading ? "Reading…" : "Refresh")
         </button>
-        <a href="@AppRoutes.SettingsRepositories">Repository settings</a>
     </div>
 
     @if (State.Rows.Count == 0 && !State.IsLoading)
