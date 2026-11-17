@@ -69,6 +69,20 @@
                 Push
             </button>
         </div>
+        <div class="git-graph-sync" role="group" aria-label="Stash">
+            <button type="button" class="button button-secondary button-icon"
+                    title="Stash every change, including new files"
+                    disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
+                    @onclick="() => RunStashAsync(Graph.StashAsync())">Stash</button>
+            <button type="button" class="button button-secondary button-icon"
+                    title="Apply the newest stash and drop it"
+                    disabled="@(Graph.Stashes.Count == 0 || _stashing)"
+                    @onclick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">Pop</button>
+            <button type="button" class="button button-secondary button-icon"
+                    title="Apply the newest stash and keep it"
+                    disabled="@(Graph.Stashes.Count == 0 || _stashing)"
+                    @onclick="() => RunStashAsync(Graph.ApplyStashAsync(Graph.Stashes[0]))">Apply</button>
+        </div>
         <button type="button" class="button button-secondary button-icon git-graph-refresh" title="Read the graph again"
                 aria-label="Refresh" disabled="@Graph.IsLoading" @onclick="Graph.RefreshAsync">
             <svg class="icon icon-small @(Graph.IsLoading ? "icon-spin" : null)" viewBox="0 0 24 24" aria-hidden="true"
@@ -115,6 +129,21 @@
             </div>
             <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
                     title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissTagProblem">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+            </button>
+        </div>
+    }
+
+    @if (Graph.StashProblem is { } stashProblem)
+    {
+        <div class="error git-graph-sync-error" role="alert">
+            <div class="git-graph-sync-error-body">
+                <p>@stashProblem</p>
+            </div>
+            <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
+                    title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissStashProblem">
                 <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <path d="M6 6l12 12M18 6 6 18" />
                 </svg>
@@ -398,9 +427,23 @@
     private DateTimeOffset _now = DateTimeOffset.Now;
     private WorkspaceGitStatusMonitor? _monitor;
     private bool _disposed;
+    private bool _stashing;
 
     [Parameter, EditorRequired]
     public WorkspaceGitGraph Graph { get; set; } = null!;
+
+    private async Task RunStashAsync(Task<bool> action)
+    {
+        _stashing = true;
+        try
+        {
+            await action;
+        }
+        finally
+        {
+            _stashing = false;
+        }
+    }
 
     private int GraphWidth => Math.Clamp(Graph.LaneCount, 1, MaxLanes) * GitGraphRowView.LaneWidth;
 

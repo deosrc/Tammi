@@ -69,40 +69,6 @@
         </section>
     }
 
-    <section class="git-working-section git-working-stashes" aria-label="Stashes">
-        <div class="git-working-heading">
-            <h3>Stashes <span class="git-working-count">@Graph.Stashes.Count</span></h3>
-            <button type="button" class="button button-secondary" title="Stash every change, including new files"
-                    disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
-                    @onclick="() => StashAsync(null)">Stash all</button>
-        </div>
-        @if (Graph.Stashes.Count == 0)
-        {
-            <p class="placeholder">No stashes.</p>
-        }
-        else
-        {
-            <ul class="git-working-files" aria-label="Stashes">
-                @foreach (var stash in Graph.Stashes)
-                {
-                    <li class="git-working-file" @key="stash.Index" title="@stash.Name, @stash.CreatedAt.LocalDateTime.ToString("g")">
-                        <span class="git-commit-file-name">@stash.Message</span>
-                        <button type="button" class="button button-secondary" title="Apply the stash and keep it"
-                                disabled="@_stashing" @onclick="() => RunStashAsync(Graph.ApplyStashAsync(stash))">Apply</button>
-                        <button type="button" class="button button-secondary" title="Apply the stash and drop it"
-                                disabled="@_stashing" @onclick="() => RunStashAsync(Graph.PopStashAsync(stash))">Pop</button>
-                        <button type="button" class="button button-secondary" title="Delete the stash without applying it"
-                                disabled="@_stashing" @onclick="() => RunStashAsync(Graph.DropStashAsync(stash))">Drop</button>
-                    </li>
-                }
-            </ul>
-        }
-        @if (Graph.StashProblem is { } stashProblem)
-        {
-            <p class="error git-working-problem">@stashProblem</p>
-        }
-    </section>
-
     @* Resizes the message's body: drag it up to make the body taller, or focus it and use Up and Down. *@
     <div class="git-working-splitter" role="separator" aria-orientation="horizontal" aria-label="Resize the commit message"
          tabindex="0" title="Drag to resize. Double-click to reset." @ref="_splitter"></div>
