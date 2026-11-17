@@ -89,8 +89,6 @@ else if (!Updater.CanUpdate)
 }
 
 @code {
-    private bool _checked;
-
     private UpdateSettings Current => SettingsStore.Current.Updates;
 
     protected override void OnInitialized() => Updater.Changed += OnUpdaterChanged;
@@ -99,25 +97,19 @@ else if (!Updater.CanUpdate)
 
     public void Dispose() => Updater.Changed -= OnUpdaterChanged;
 
-    private async Task CheckForUpdatesAsync()
-    {
-        _checked = true;
-        await Updater.CheckAsync();
-    }
+    private Task CheckForUpdatesAsync() => Updater.CheckAsync();
 
-    // The updater only knows a release when it's newer than the running one, so after a check that found none, the
-    // running version is the latest.
-    private string LatestVersionText => Updater.Available is { } release
-        ? release.Version.ToString()
-        : _checked && Updater.Status is not (UpdateStatus.Checking or UpdateStatus.Failed)
-            ? Updater.CurrentVersion
-            : "Not checked yet";
+    private string LatestVersionText =>
+        Updater.Latest is { } latest ? latest.Version.ToString()
+        : Updater.Status == UpdateStatus.Checking ? "Checking…"
+        : Updater.HasChecked ? "No releases found"
+        : "Not checked yet";
 
     private string UpdateStatusText => Updater.Status switch
     {
         UpdateStatus.Checking => "Checking…",
         UpdateStatus.Failed => Updater.Error ?? "",
-        UpdateStatus.Idle => _checked ? "Tammi is up to date." : "",
+        UpdateStatus.Idle => Updater.HasChecked ? "Tammi is up to date." : "",
         _ => "",
     };
 

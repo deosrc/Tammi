@@ -65,6 +65,17 @@ public sealed class AppUpdater
     public string CurrentVersion { get; }
 
     /// <summary>
+    /// Whether a check for updates has finished since Tammi started, whatever it found.
+    /// </summary>
+    public bool HasChecked { get; private set; }
+
+    /// <summary>
+    /// The newest release the last successful check found, whether or not it's newer than the running one, or
+    /// <see langword="null"/> if there hasn't been one yet or there are no releases.
+    /// </summary>
+    public ReleaseInfo? Latest { get; private set; }
+
+    /// <summary>
     /// Whether this is a development build, going by its version: it has the pre-release tag <c>dev</c>, e.g. <c>0.0.0-dev</c>.
     /// </summary>
     public bool IsDevelopmentBuild { get; }
@@ -176,6 +187,8 @@ public sealed class AppUpdater
             _installFailed = false;
             Set(UpdateStatus.Checking);
             var latest = await _releases.GetLatestAsync(_settings.Current.Updates.IncludePreReleases, cancellationToken);
+            Latest = latest;
+            HasChecked = true;
             if (latest is not null && latest.Version > _running)
             {
                 _logger.LogInformation("Tammi {Version} is available (running {Running})", latest.Version, _running);

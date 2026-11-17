@@ -82,6 +82,20 @@ public class AppUpdaterTests
     }
 
     [Fact]
+    public async Task RemembersTheLatestReleaseEvenWhenItIsNotNewer()
+    {
+        using var folder = new TempFolder();
+        var (updater, _) = Create(folder, "0.2.0");
+        Assert.False(updater.HasChecked);
+
+        await updater.CheckAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(updater.HasChecked);
+        Assert.Equal("v0.2.0", updater.Latest!.Tag);
+        Assert.Null(updater.Available);
+    }
+
+    [Fact]
     public async Task DoesNotPromptAgainAfterNotNow()
     {
         using var folder = new TempFolder();
