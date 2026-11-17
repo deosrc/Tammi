@@ -308,6 +308,21 @@
                         Checkout @branch@(isCurrent ? " (current)" : null)
                     </button>
                 </li>
+                @if (!isCurrent && Graph.Refs.HeadBranch is not null)
+                {
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem"
+                                @onclick="() => RunBranchAsync(() => Graph.MergeBranchAsync(branch))">
+                            Merge @branch
+                        </button>
+                    </li>
+                    <li role="none">
+                        <button type="button" class="menu-item" role="menuitem"
+                                @onclick="() => RunBranchAsync(() => Graph.RebaseBranchAsync(branch))">
+                            Rebase onto @branch
+                        </button>
+                    </li>
+                }
                 <li role="none">
                     <button type="button" class="menu-item" role="menuitem" disabled="@isWorkspace"
                             title="@(isWorkspace ? "The workspace branch can't be renamed here" : null)"

@@ -52,6 +52,51 @@ public sealed class GitBranchesTests : IDisposable
     }
 
     [Fact]
+    public async Task MergeAsync_DivergedBranch_MakesMergeCommit()
+    {
+        var (_, mine) = await CloneAsync();
+        await _branches.CreateAsync(mine, "feature", "HEAD", checkout: true, Token);
+        await _repos.CommitFileAsync(mine, "feature.txt", "f", "feature work");
+        await _branches.CheckoutAsync(mine, "main", Token);
+        await _repos.CommitFileAsync(mine, "main.txt", "m", "main work");
+
+        await _branches.MergeAsync(mine, "feature", Token);
+
+        Assert.Equal("main", await GitAsync(mine, "branch", "--show-current"));
+        Assert.Equal("2", await GitAsync(mine, "rev-list", "--parents", "-1", "HEAD").ContinueWith(
+            r => (r.Result.Split(' ').Length - 1).ToString(), TaskScheduler.Default));
+        Assert.True(File.Exists(Path.Combine(mine, "feature.txt")));
+    }
+
+    [Fact]
+    public async Task RebaseAsync_PutsCurrentBranchOnTopOfTheOther()
+    {
+        var (_, mine) = await CloneAsync();
+        await _branches.CreateAsync(mine, "feature", "HEAD", checkout: true, Token);
+        await _repos.CommitFileAsync(mine, "feature.txt", "f", "feature work");
+        await _branches.CheckoutAsync(mine, "main", Token);
+        await _repos.CommitFileAsync(mine, "main.txt", "m", "main work");
+
+        await _branches.RebaseAsync(mine, "feature", Token);
+
+        Assert.Equal("main", await GitAsync(mine, "branch", "--show-current"));
+        Assert.Equal("main work", await GitAsync(mine, "log", "-1", "--format=%s"));
+        Assert.Equal("feature work", await GitAsync(mine, "log", "-1", "--format=%s", "HEAD~1"));
+    }
+
+    [Fact]
+    public async Task MergeAsync_Conflict_Throws()
+    {
+        var (_, mine) = await CloneAsync();
+        await _branches.CreateAsync(mine, "feature", "HEAD", checkout: true, Token);
+        await _repos.CommitFileAsync(mine, "same.txt", "a", "feature");
+        await _branches.CheckoutAsync(mine, "main", Token);
+        await _repos.CommitFileAsync(mine, "same.txt", "b", "main");
+
+        await Assert.ThrowsAsync<GitCommandException>(() => _branches.MergeAsync(mine, "feature", Token));
+    }
+
+    [Fact]
     public async Task SwitchAsync_LocalBranch()
     {
         var (_, mine) = await CloneAsync();
