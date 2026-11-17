@@ -1,7 +1,7 @@
 namespace Deosrc.Tammi.Core.Git;
 
 /// <summary>
-/// Changes a repository's index and history with the <c>git</c> CLI: staging, unstaging and committing. Works in
+/// Changes a repository's index and history with the <c>git</c> CLI: staging, unstaging, discarding, resetting and committing. Works in
 /// submodules too, by giving the submodule's folder as the path.
 /// </summary>
 public interface IGitWorkingTree
@@ -23,6 +23,40 @@ public interface IGitWorkingTree
     /// <param name="cancellationToken">Cancelling kills the git process.</param>
     /// <exception cref="GitCommandException">Git failed.</exception>
     Task UnstageAsync(string path, IReadOnlyCollection<string> files, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Discards the unstaged changes to files, restoring them from the index and deleting untracked ones. Staged
+    /// changes are kept. The discarded changes can't be brought back.
+    /// </summary>
+    /// <param name="path">The repository's (or submodule's) working directory.</param>
+    /// <param name="tracked">The files to restore from the index. For a rename, include both paths.</param>
+    /// <param name="untracked">The untracked files (or folders) to delete.</param>
+    /// <param name="cancellationToken">Cancelling kills the git process.</param>
+    /// <exception cref="GitCommandException">Git failed.</exception>
+    Task DiscardAsync(
+        string path,
+        IReadOnlyCollection<string> tracked,
+        IReadOnlyCollection<string> untracked,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Discards every unstaged change in the working directory: restores tracked files from the index and deletes
+    /// untracked files (but not ignored ones). Staged changes are kept. The discarded changes can't be brought back.
+    /// </summary>
+    /// <param name="path">The repository's (or submodule's) working directory.</param>
+    /// <param name="cancellationToken">Cancelling kills the git process.</param>
+    /// <exception cref="GitCommandException">Git failed.</exception>
+    Task DiscardAllAsync(string path, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves the current branch to a commit, and resets the index and working directory as the mode says.
+    /// </summary>
+    /// <param name="path">The repository's (or submodule's) working directory.</param>
+    /// <param name="target">The commit (or branch, or tag) to reset to.</param>
+    /// <param name="mode">What to reset besides the branch.</param>
+    /// <param name="cancellationToken">Cancelling kills the git process.</param>
+    /// <exception cref="GitCommandException">Git failed.</exception>
+    Task ResetAsync(string path, string target, GitResetMode mode, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Commits what's staged. Git's hooks run, and can reject the commit.

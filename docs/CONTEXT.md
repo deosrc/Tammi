@@ -624,7 +624,18 @@ Operations available in the Workspace View:
 - Status and the git graph
 - Fetch, pull and push
 - Stage, unstage and commit
+- Discard and reset
 - View diffs
+
+**Discard and reset** both lose work, so they ask for confirmation first.
+- **Discard** is in the right-click menu of the working changes' unstaged files (for the selected files, or the file
+  clicked) and folders (for the files in the folder). It restores tracked files from the index and deletes untracked
+  files (not ignored ones). Staged changes are kept. The *Discard all* button in the list's heading does this for every
+  unstaged change.
+- **Stash** is in the same menu, on staged and unstaged files and folders, and stashes those files.
+- **Reset** is in a commit's context menu, as *Soft reset…*, *Mixed reset…* and *Hard reset…*. It moves the current
+  branch to that commit. Soft keeps the changes since then staged, mixed (git's default) keeps them as unstaged
+  changes, and hard discards them. It isn't offered when HEAD is detached.
 
 **Fetch, pull and push** are buttons in each git graph tab, so they apply to the repository or submodule the tab is
 for. They run the `git` CLI, so the user's git config and credential helpers apply, and Tammi never prompts for
