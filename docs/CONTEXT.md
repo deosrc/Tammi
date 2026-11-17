@@ -540,6 +540,10 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     one, and examples of the names it suggests (see [Name and locate the workspace](#core-flow-creating-a-workspace))
   - Suggested folder name: separator, case and whether to start with the task's reference, with examples of the
     folder names it suggests
+  - Theme: Auto (the default), Light or Dark. It applies straight away. Auto follows the system theme and changes with
+    it, e.g. when the system switches to dark mode in the evening. On Linux the theme is read from the desktop's
+    appearance setting (the XDG desktop portal), because the web view doesn't always follow it; where it can't be read,
+    the web view's own detection is used.
   - Log level: Trace, Debug, Information (the default), Warning or Error. It applies straight away. A button opens the
     folder the log files are in (see [Technical Constraints](#technical-constraints)) in the system file manager.
   - Updates: whether Tammi checks for a newer release when it starts (on by default), whether pre-releases count

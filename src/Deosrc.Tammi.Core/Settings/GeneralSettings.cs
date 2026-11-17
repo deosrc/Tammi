@@ -42,6 +42,12 @@ public sealed record GeneralSettings
     public const string DefaultWorkspaceNameTemplate = "{TaskReference} {TaskTitle}";
 
     /// <summary>
+    /// The colour theme: light, dark, or following the system's.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<ThemePreference>))]
+    public ThemePreference Theme { get; init; } = ThemePreference.Auto;
+
+    /// <summary>
     /// The lowest level Tammi logs at.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter<LogLevel>))]
@@ -77,10 +83,11 @@ public sealed record GeneralSettings
     public IReadOnlyList<WorkspaceStatus> HomeStatusOrder { get; init; } = WorkspaceStatuses.DefaultOrder;
 
     /// <summary>
-    /// Replaces a missing folder, folder name format or name template, or an unknown log level, with the default.
+    /// Replaces a missing folder, folder name format or name template, an unknown theme or an unknown log level, with the default.
     /// </summary>
     public GeneralSettings Normalize() => this with
     {
+        Theme = Enum.IsDefined(Theme) ? Theme : ThemePreference.Auto,
         HomeTabBy = Enum.IsDefined(HomeTabBy) ? HomeTabBy : HomeGrouping.Status,
         HomeGroupBy = !Enum.IsDefined(HomeGroupBy) ? HomeGrouping.Source
             : HomeGroupBy == HomeTabBy && HomeGroupBy != HomeGrouping.None ? HomeGrouping.None
@@ -104,6 +111,7 @@ public sealed record GeneralSettings
         && DefaultWorkspaceParentFolder == other.DefaultWorkspaceParentFolder
         && WorkspaceFolderNameFormat == other.WorkspaceFolderNameFormat
         && WorkspaceNameTemplate == other.WorkspaceNameTemplate
+        && Theme == other.Theme
         && LogLevel == other.LogLevel
         && HomeTabBy == other.HomeTabBy
         && HomeGroupBy == other.HomeGroupBy
@@ -114,6 +122,6 @@ public sealed record GeneralSettings
     /// <inheritdoc />
     public override int GetHashCode() =>
         HashCode.Combine(
-            HashCode.Combine(DefaultWorkspaceParentFolder, WorkspaceFolderNameFormat, WorkspaceNameTemplate, LogLevel),
+            HashCode.Combine(DefaultWorkspaceParentFolder, WorkspaceFolderNameFormat, WorkspaceNameTemplate, LogLevel, Theme),
             HomeTabBy, HomeGroupBy, HomeSourceOrder, HomeCustomSourceOrder.Count, HomeStatusOrder.Count);
 }

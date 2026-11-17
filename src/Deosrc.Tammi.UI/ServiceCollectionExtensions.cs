@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Deosrc.Tammi.Core;
 using Deosrc.Tammi.Core.Agents;
 using Deosrc.Tammi.Core.Catalogue;
@@ -54,6 +55,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddTammiUI(this IServiceCollection services)
     {
         services.AddTammiLogging();
+        services.TryAddSingleton<ISystemTheme, UndetectedSystemTheme>();
 
         // One window per app, so the open tabs are shared app-wide.
         services.AddSingleton<WorkspaceTabs>();
