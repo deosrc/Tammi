@@ -27,10 +27,13 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     private readonly IGitRepositoryReader _reader;
     private readonly IGitWorkingTree _workingTree;
     private readonly IGitSync _sync;
+    private readonly IGitTags _tags;
+    private readonly IGitStash _stash;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<GitGraphRow> _rows = [];
     private IReadOnlyDictionary<string, IReadOnlyList<GitReference>> _labels =
         new Dictionary<string, IReadOnlyList<GitReference>>();
+    private readonly Dictionary<string, string?> _anchors = [];
     private IGitHistoryCursor? _cursor;
     private GitGraphLayout _layout = new();
     private bool _loaded;
@@ -44,7 +47,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         GitGraphScope scope,
         IGitRepositoryReader reader,
         IGitWorkingTree workingTree,
-        IGitSync sync)
+        IGitSync sync,
+        IGitTags tags,
+        IGitStash stash)
     {
         WorkspaceId = workspace.Id;
         Repository = repository;
@@ -53,6 +58,8 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         _reader = reader;
         _workingTree = workingTree;
         _sync = sync;
+        _tags = tags;
+        _stash = stash;
         string worktree = workspace.GetWorktreePath(repository);
         Path = submodulePath is null
             ? worktree
@@ -105,6 +112,11 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public GitRefs Refs { get; private set; } = GitRefs.Empty;
 
     /// <summary>
+    /// The names of the tags the remote has, as last read. Empty until it's been read, or if there's no remote.
+    /// </summary>
+    public IReadOnlySet<string> RemoteTags { get; private set; } = new HashSet<string>();
+
+    /// <summary>
     /// The most lanes any row read so far uses.
     /// </summary>
     public int LaneCount { get; private set; }
@@ -138,6 +150,12 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     /// Why the selected commit's changed files couldn't be read, or <see langword="null"/>.
     /// </summary>
     public string? SelectedChangesProblem { get; private set; }
+
+    /// <summary>
+    /// The selected stash, or <see langword="null"/> if none is. Its changed files are in <see cref="SelectedChanges"/>,
+    /// and the details panel is then for the stash.
+    /// </summary>
+    public GitStashEntry? SelectedStash { get; private set; }
 
     /// <summary>
     /// Whether the working changes are selected, instead of a commit. The details panel is then for making a commit.
@@ -290,7 +308,19 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     {
         ClearDiff();
         IsWorkingChangesSelected = false;
+        SelectedStash = null;
         Select(sha);
+    });
+
+    /// <summary>
+    /// Selects a stash, and reads the files it changed.
+    /// </summary>
+    public Task SelectStashAsync(GitStashEntry stash) => RunAsync(() =>
+    {
+        ClearDiff();
+        IsWorkingChangesSelected = false;
+        Selected = null;
+        SelectStash(stash);
     });
 
     /// <summary>
@@ -300,6 +330,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     {
         ClearDiff();
         Selected = null;
+        SelectedStash = null;
         SelectedChanges = null;
         SelectedChangesProblem = null;
         IsWorkingChangesSelected = true;
@@ -431,6 +462,213 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     }
 
     /// <summary>
+    /// The last tag action that failed, or <see langword="null"/> if the last one worked (or none has run).
+    /// </summary>
+    public string? TagProblem { get; private set; }
+
+    /// <summary>
+    /// Creates a lightweight tag on a commit, then reads the graph again so it shows.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
+    public Task<bool> CreateTagAsync(string name, string sha) =>
+        ChangeTagsAsync(token => _tags.CreateAsync(Path, name, sha, token));
+
+    /// <summary>
+    /// Pushes a tag to the remote.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
+    public Task<bool> PushTagAsync(string name) => ChangeTagsAsync(token => _tags.PushAsync(Path, name, token));
+
+    /// <summary>
+    /// Deletes a tag locally and, if the remote has it, there too.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="TagProblem"/> says why.</returns>
+    public Task<bool> DeleteTagAsync(string name) => ChangeTagsAsync(token => _tags.DeleteAsync(Path, name, token));
+
+    /// <summary>
+    /// Finds the remote that tags are pushed to, or <see langword="null"/> if there's none.
+    /// </summary>
+    public async Task<string?> TagRemoteAsync()
+    {
+        try
+        {
+            return await _tags.GetRemoteAsync(Path).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Finds out whether the remote has a tag. Contacts the remote, so it can be slow.
+    /// </summary>
+    public async Task<bool> TagExistsOnRemoteAsync(string name)
+    {
+        try
+        {
+            return await _tags.ExistsOnRemoteAsync(Path, name).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Clears <see cref="TagProblem"/>, once the user has seen it.
+    /// </summary>
+    public void DismissTagProblem()
+    {
+        if (TagProblem is not null)
+        {
+            TagProblem = null;
+            Changed?.Invoke();
+        }
+    }
+
+    // Asks the remote which tags it has, without holding up the graph, then redraws so their badges show it.
+    private async Task RefreshRemoteTagsAsync()
+    {
+        try
+        {
+            IReadOnlySet<string> found = await _tags.ListRemoteAsync(Path).ConfigureAwait(false);
+            RemoteTags = found;
+            Changed?.Invoke();
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            // The badges just don't show the remote icon.
+        }
+    }
+
+    private async Task<bool> ChangeTagsAsync(Func<CancellationToken, Task> change)
+    {
+        bool worked = false;
+        try
+        {
+            await change(CancellationToken.None).ConfigureAwait(false);
+            TagProblem = null;
+            worked = true;
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            TagProblem = ex.Message;
+        }
+
+        // Tags may have changed even when it failed part way.
+        await RunAsync(() => Reload(Rows.Count)).ConfigureAwait(false);
+        return worked;
+    }
+
+    /// <summary>
+    /// The stashes, newest first, as last read.
+    /// </summary>
+    public IReadOnlyList<GitStashEntry> Stashes { get; private set; } = [];
+
+    /// <summary>
+    /// Why the last stash, apply, pop or drop failed, or <see langword="null"/> if the last one worked (or none has run).
+    /// </summary>
+    public string? StashProblem { get; private set; }
+
+    /// <summary>
+    /// Stashes changes, including new files.
+    /// </summary>
+    /// <param name="files">The files to stash, or <see langword="null"/> to stash every change.</param>
+    /// <param name="message">What to call the stash, or <see langword="null"/> for git's own.</param>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> StashAsync(IReadOnlyCollection<FileChange>? files = null, string? message = null) =>
+        ChangeStashAsync(token => _stash.PushAsync(Path, files is null ? null : PathsOf(files), message, token));
+
+    /// <summary>
+    /// Applies a stash to the working directory and keeps it.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> ApplyStashAsync(GitStashEntry stash) =>
+        ChangeStashAsync(async token => { await _stash.ApplyAsync(Path, stash.Index, token).ConfigureAwait(false); return true; });
+
+    /// <summary>
+    /// Applies a stash to the working directory and drops it. A stash that conflicts is kept.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> PopStashAsync(GitStashEntry stash) =>
+        ChangeStashAsync(async token => { await _stash.PopAsync(Path, stash.Index, token).ConfigureAwait(false); return true; });
+
+    /// <summary>
+    /// Deletes a stash without applying it.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public Task<bool> DropStashAsync(GitStashEntry stash) =>
+        ChangeStashAsync(async token => { await _stash.DropAsync(Path, stash.Index, token).ConfigureAwait(false); return true; });
+
+    /// <summary>
+    /// The stash the user has asked to drop, and has yet to confirm, or <see langword="null"/>.
+    /// </summary>
+    public GitStashEntry? DropRequest { get; private set; }
+
+    /// <summary>
+    /// Asks the user to confirm dropping a stash, which can't be undone.
+    /// </summary>
+    public void RequestDropStash(GitStashEntry stash)
+    {
+        DropRequest = stash;
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Drops the stash that was asked for, once the user has confirmed.
+    /// </summary>
+    /// <returns>Whether it worked. If not, <see cref="StashProblem"/> says why.</returns>
+    public async Task<bool> ConfirmDropStashAsync()
+    {
+        GitStashEntry? stash = DropRequest;
+        DropRequest = null;
+        return stash is not null && await DropStashAsync(stash).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Forgets the request to drop a stash.
+    /// </summary>
+    public void CancelDropStash()
+    {
+        if (DropRequest is not null)
+        {
+            DropRequest = null;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Clears <see cref="StashProblem"/>, once the user has seen it.
+    /// </summary>
+    public void DismissStashProblem()
+    {
+        if (StashProblem is not null)
+        {
+            StashProblem = null;
+            Changed?.Invoke();
+        }
+    }
+
+    private async Task<bool> ChangeStashAsync(Func<CancellationToken, Task<bool>> change)
+    {
+        bool worked = false;
+        try
+        {
+            worked = await change(CancellationToken.None).ConfigureAwait(false);
+            StashProblem = worked ? null : "There was nothing to stash.";
+        }
+        catch (Exception ex) when (ex is GitException or IOException)
+        {
+            StashProblem = ex.Message;
+        }
+
+        // A conflicted apply or pop changes the working directory even though it failed.
+        await RunAsync(() => ReadWorkingChanges(readMessage: false)).ConfigureAwait(false);
+        return worked;
+    }
+
+    /// <summary>
     /// Clears <see cref="SyncProblem"/>, once the user has seen it.
     /// </summary>
     public void DismissSyncProblem()
@@ -531,6 +769,30 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
                     .OrderBy(change => change.Path, StringComparer.Ordinal),
             ];
             HeadSha = status.HeadSha;
+            IReadOnlyList<GitStashEntry> stashes = AnchorStashes(_stash.ListAsync(Path).GetAwaiter().GetResult());
+            if (!stashes.SequenceEqual(Stashes))
+            {
+                // Only replaced when they've changed, so the view can tell by reference.
+                Stashes = stashes;
+            }
+
+            if (SelectedStash is { } selectedStash)
+            {
+                // Follow the selected stash as the others come and go and its index changes, or let go of it when it's gone.
+                GitStashEntry? current = Stashes.FirstOrDefault(stash => stash.Sha == selectedStash.Sha);
+                if (current is null)
+                {
+                    ClearDiff();
+                    SelectedStash = null;
+                    SelectedChanges = null;
+                    SelectedChangesProblem = null;
+                }
+                else
+                {
+                    SelectedStash = current;
+                }
+            }
+
             if (IsWorkingChangesSelected && WorkingChanges.Count == 0)
             {
                 // The row is gone (e.g. after a commit), so show HEAD's commit instead.
@@ -552,12 +814,38 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         Changed?.Invoke();
     }
 
+    // Stashes made on a commit the graph doesn't show are drawn on the nearest commit it does: where that commit's
+    // branch joins HEAD's history.
+    private IReadOnlyList<GitStashEntry> AnchorStashes(IReadOnlyList<GitStashEntry> stashes)
+    {
+        var shown = _rows.Select(row => row.Commit.Sha).ToHashSet();
+        var anchored = new List<GitStashEntry>();
+        foreach (GitStashEntry stash in stashes)
+        {
+            string? anchor = stash.BaseSha;
+            if (stash.BaseSha.Length > 0 && !shown.Contains(stash.BaseSha))
+            {
+                if (!_anchors.TryGetValue(stash.BaseSha, out anchor))
+                {
+                    anchor = _stash.FindMergeBaseWithHeadAsync(Path, stash.BaseSha).GetAwaiter().GetResult();
+                    _anchors[stash.BaseSha] = anchor;
+                }
+            }
+
+            anchored.Add(stash with { AnchorSha = anchor });
+        }
+
+        return anchored;
+    }
+
     // Opens the history again with the current scope and reads at least `count` commits.
     private void Reload(int count)
     {
         string? selected = Selected?.Commit.Sha;
+        string? selectedStash = SelectedStash?.Sha;
         CloseCursor();
         _rows.Clear();
+        _anchors.Clear();
         _layout = new GitGraphLayout();
         LaneCount = 0;
         IsComplete = false;
@@ -574,6 +862,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
                 .ToDictionary(group => group.Key, group => (IReadOnlyList<GitReference>)group.ToArray());
             _cursor = _reader.OpenHistory(Path, OptionsFor(Scope));
             Problem = null;
+            if (Refs.References.Any(reference => reference.Kind == GitReferenceKind.Tag))
+            {
+                _ = RefreshRemoteTagsAsync();
+            }
         }
         catch (Exception ex) when (IsReadError(ex))
         {
@@ -590,6 +882,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         if (selected is not null)
         {
             Select(selected);
+        }
+        else if (Stashes.FirstOrDefault(stash => stash.Sha == selectedStash) is { } stillThere)
+        {
+            SelectStash(stillThere);
         }
     }
 
@@ -615,8 +911,25 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         Publish();
     }
 
+    private void SelectStash(GitStashEntry stash)
+    {
+        SelectedStash = stash;
+        SelectedChanges = null;
+        SelectedChangesProblem = null;
+        Changed?.Invoke();
+        try
+        {
+            SelectedChanges = _reader.ReadCommitChanges(Path, stash.Sha);
+        }
+        catch (Exception ex) when (IsReadError(ex))
+        {
+            SelectedChangesProblem = ex.Message;
+        }
+    }
+
     private void Select(string? sha)
     {
+        SelectedStash = null;
         Selected = sha is null ? null : _rows.Find(row => row.Commit.Sha == sha);
         SelectedChanges = null;
         SelectedChangesProblem = null;

@@ -47,6 +47,9 @@
                         @onclick="() => StageAsync(SelectedIn(staged: false))">Stage</button>
                 <button type="button" class="button button-secondary" disabled="@(Graph.UnstagedChanges.Count == 0)"
                         @onclick="() => StageAsync(Graph.UnstagedChanges)">Stage all</button>
+                <button type="button" class="button button-secondary" title="Stash the selected files"
+                        disabled="@(SelectedIn(staged: false).Count == 0 || _stashing)"
+                        @onclick="() => StashAsync(SelectedIn(staged: false))">Stash</button>
             </div>
             @FileList(Graph.UnstagedChanges, staged: false)
         </section>
@@ -58,6 +61,9 @@
                         @onclick="() => UnstageAsync(SelectedIn(staged: true))">Unstage</button>
                 <button type="button" class="button button-secondary" disabled="@(Graph.StagedChanges.Count == 0)"
                         @onclick="() => UnstageAsync(Graph.StagedChanges)">Unstage all</button>
+                <button type="button" class="button button-secondary" title="Stash the selected files"
+                        disabled="@(SelectedIn(staged: true).Count == 0 || _stashing)"
+                        @onclick="() => StashAsync(SelectedIn(staged: true))">Stash</button>
             </div>
             @FileList(Graph.StagedChanges, staged: true)
         </section>
@@ -106,6 +112,7 @@
     private string _subject = "";
     private string _body = "";
     private bool _committing;
+    private bool _stashing;
 
     [Parameter, EditorRequired]
     public WorkspaceGitGraph Graph { get; set; } = null!;
@@ -397,6 +404,28 @@
         _active = null;
         Graph.CloseDiff();
         await Graph.UnstageAsync(files);
+    }
+
+    // Stashes the files, or everything if there are none given.
+    private async Task StashAsync(IReadOnlyCollection<FileChange>? files)
+    {
+        _selected.Clear();
+        _active = null;
+        Graph.CloseDiff();
+        await RunStashAsync(Graph.StashAsync(files));
+    }
+
+    private async Task RunStashAsync(Task<bool> action)
+    {
+        _stashing = true;
+        try
+        {
+            await action;
+        }
+        finally
+        {
+            _stashing = false;
+        }
     }
 
     private async Task CommitAsync()

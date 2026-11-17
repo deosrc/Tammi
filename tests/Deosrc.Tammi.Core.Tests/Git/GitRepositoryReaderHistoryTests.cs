@@ -42,6 +42,19 @@ public sealed class GitRepositoryReaderHistoryTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadHistory_AllRefs_LeavesOutTheCommitsOfAStash()
+    {
+        string clone = await CloneAsync();
+        TempRepositories.WriteFile(clone, "README.md", "changed");
+        TempRepositories.WriteFile(clone, "new.txt", "new");
+        await _repos.RunAsync(clone, "stash", "push", "--include-untracked");
+
+        IReadOnlyList<CommitInfo> allRefs = _reader.ReadHistory(clone, new HistoryOptions { AllRefs = true });
+
+        Assert.Equal(["Initial commit"], allRefs.Select(commit => commit.Subject));
+    }
+
+    [Fact]
     public async Task ReadHistory_AllRefs_IncludesOtherBranches()
     {
         string clone = await CloneAsync();

@@ -78,5 +78,49 @@ public static class GitGraphText
         _ => "git-graph-ref-tag",
     };
 
+    /// <summary>
+    /// Groups a commit's labels so a local branch and its remote-tracking branch (e.g. <c>main</c> and
+    /// <c>origin/main</c>) share one badge. Other labels stay on their own. Order follows the first label of each group.
+    /// </summary>
+    public static IReadOnlyList<GitReferenceBadge> CombineBranches(IEnumerable<GitReference> references)
+    {
+        var list = references.ToList();
+        var badges = new List<GitReferenceBadge>();
+        var used = new HashSet<GitReference>();
+        foreach (var reference in list)
+        {
+            if (used.Contains(reference))
+            {
+                continue;
+            }
+
+            if (reference.Kind == GitReferenceKind.LocalBranch)
+            {
+                var remotes = list.Where(other => other.Kind == GitReferenceKind.RemoteBranch
+                                                  && other.Name.EndsWith("/" + reference.Name, StringComparison.Ordinal)
+                                                  && !used.Contains(other)).ToList();
+                used.UnionWith(remotes);
+                badges.Add(new GitReferenceBadge(reference, remotes));
+            }
+            else if (reference.Kind == GitReferenceKind.RemoteBranch)
+            {
+                var local = list.FirstOrDefault(other => other.Kind == GitReferenceKind.LocalBranch
+                                                         && reference.Name.EndsWith("/" + other.Name, StringComparison.Ordinal));
+                if (local is not null)
+                {
+                    continue; // Rendered with its local branch.
+                }
+
+                badges.Add(new GitReferenceBadge(reference, []));
+            }
+            else
+            {
+                badges.Add(new GitReferenceBadge(reference, []));
+            }
+        }
+
+        return badges;
+    }
+
     private static string Ago(int count, string unit) => count == 1 ? $"1 {unit} ago" : $"{count} {unit}s ago";
 }
