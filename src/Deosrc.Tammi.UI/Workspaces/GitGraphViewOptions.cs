@@ -127,6 +127,35 @@ public sealed class GitGraphViewOptions : IDisposable
     }
 
     /// <summary>
+    /// Lays diffs out in one column or two, and keeps the choice in the settings, which every open diff follows. If the
+    /// settings can't be saved, the choice lasts until the app closes.
+    /// </summary>
+    public Task SetDiffLayoutAsync(GitDiffLayout layout) =>
+        SaveAsync(settings => settings.Git.DiffLayout == layout
+            ? settings
+            : settings with { Git = settings.Git with { DiffLayout = layout } });
+
+    /// <summary>
+    /// Chooses how diffs treat whitespace changes, and keeps the choice in the settings, which every open diff follows.
+    /// </summary>
+    public Task SetDiffWhitespaceAsync(GitDiffWhitespace whitespace) =>
+        SaveAsync(settings => settings.Git.DiffWhitespace == whitespace
+            ? settings
+            : settings with { Git = settings.Git with { DiffWhitespace = whitespace } });
+
+    private async Task SaveAsync(Func<AppSettings, AppSettings> change)
+    {
+        try
+        {
+            await _settings.UpdateAsync(change);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Not kept for next time.
+        }
+    }
+
+    /// <summary>
     /// Stops following the settings.
     /// </summary>
     public void Dispose() => _settings.Changed -= OnSettingsChanged;

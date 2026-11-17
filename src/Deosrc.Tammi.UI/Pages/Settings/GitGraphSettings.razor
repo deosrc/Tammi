@@ -1,4 +1,5 @@
 @inherits SettingsSectionBase
+@using Deosrc.Tammi.Core.Git
 @using Deosrc.Tammi.Core.Settings
 
 @* The Git section's options for the git graph: which commits a graph shows when it opens. *@
@@ -43,7 +44,102 @@
     }
 </div>
 
+@* How file diffs are shown. Layout and whitespace can also be switched from a diff's own header. *@
+<div class="settings-field">
+    <label for="git-diff-layout">Diff layout</label>
+    <div class="settings-field-row">
+        <select id="git-diff-layout" value="@SettingsStore.Current.Git.DiffLayout" @onchange="OnDiffLayoutChanged">
+            <option value="@GitDiffLayout.Unified">Unified</option>
+            <option value="@GitDiffLayout.SideBySide">Side by side</option>
+        </select>
+    </div>
+    <p class="settings-help">
+        Side by side shows the old and new versions in two columns. It shows as unified when there isn't room for two
+        columns.
+    </p>
+</div>
+
+<div class="settings-field">
+    <label for="git-diff-whitespace">Diff whitespace</label>
+    <div class="settings-field-row">
+        <select id="git-diff-whitespace" value="@SettingsStore.Current.Git.DiffWhitespace" @onchange="OnDiffWhitespaceChanged">
+            <option value="@GitDiffWhitespace.Show">Show whitespace changes</option>
+            <option value="@GitDiffWhitespace.IgnoreAmount">Ignore changes in the amount of whitespace</option>
+            <option value="@GitDiffWhitespace.IgnoreAll">Ignore all whitespace</option>
+            <option value="@GitDiffWhitespace.IgnoreAtEol">Ignore whitespace at the end of lines</option>
+        </select>
+    </div>
+    <label class="settings-choice">
+        <input type="checkbox" checked="@SettingsStore.Current.Git.DiffIgnoreBlankLines" @onchange="OnIgnoreBlankLinesChanged" />
+        Ignore blank lines
+    </label>
+    <p class="settings-help">
+        Only changes what a diff shows, never the files.
+    </p>
+</div>
+
+<div class="settings-field">
+    <label for="git-diff-tab-width">Diff tab width</label>
+    <div class="settings-field-row">
+        <input @key="_diffRevision" id="git-diff-tab-width" type="number" class="settings-number"
+               min="@GitSettings.MinDiffTabWidth" max="@GitSettings.MaxDiffTabWidth" step="1"
+               value="@SettingsStore.Current.Git.DiffTabWidth" @onchange="OnDiffTabWidthChanged" />
+        <span>columns</span>
+    </div>
+    <p class="settings-help">How many columns a tab is drawn as in a diff (@GitSettings.MinDiffTabWidth to @GitSettings.MaxDiffTabWidth).</p>
+</div>
+
+<div class="settings-field">
+    <label for="git-diff-context">Diff context lines</label>
+    <div class="settings-field-row">
+        <input @key="_diffRevision" id="git-diff-context" type="number" class="settings-number"
+               min="0" max="@GitDiffOptions.MaxContextLines" step="1"
+               value="@SettingsStore.Current.Git.DiffContextLines" @onchange="OnDiffContextChanged" />
+        <span>lines</span>
+    </div>
+    <p class="settings-help">How many unchanged lines a diff shows around each change (0 to @GitDiffOptions.MaxContextLines).</p>
+</div>
+
 @code {
+    private int _diffRevision;
+
+    private Task OnDiffLayoutChanged(ChangeEventArgs e) =>
+        Enum.TryParse(e.Value?.ToString(), out GitDiffLayout layout)
+            ? UpdateAsync(settings => settings with { Git = settings.Git with { DiffLayout = layout } })
+            : Task.CompletedTask;
+
+    private Task OnDiffWhitespaceChanged(ChangeEventArgs e) =>
+        Enum.TryParse(e.Value?.ToString(), out GitDiffWhitespace whitespace)
+            ? UpdateAsync(settings => settings with { Git = settings.Git with { DiffWhitespace = whitespace } })
+            : Task.CompletedTask;
+
+    private Task OnIgnoreBlankLinesChanged(ChangeEventArgs e)
+    {
+        bool ignore = e.Value is true;
+        return UpdateAsync(settings => settings with { Git = settings.Git with { DiffIgnoreBlankLines = ignore } });
+    }
+
+    private async Task OnDiffTabWidthChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var width)
+            && width is >= GitSettings.MinDiffTabWidth and <= GitSettings.MaxDiffTabWidth)
+        {
+            await UpdateAsync(settings => settings with { Git = settings.Git with { DiffTabWidth = width } });
+        }
+
+        _diffRevision++;
+    }
+
+    private async Task OnDiffContextChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var lines) && lines is >= 0 and <= GitDiffOptions.MaxContextLines)
+        {
+            await UpdateAsync(settings => settings with { Git = settings.Git with { DiffContextLines = lines } });
+        }
+
+        _diffRevision++;
+    }
+
     private int _subjectLimitRevision;
 
     private async Task OnSubjectLimitChanged(ChangeEventArgs e)

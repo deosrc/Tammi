@@ -4032,6 +4032,51 @@ label.task-choice {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  container-type: inline-size;
+}
+
+.git-diff-whitespace {
+  max-width: 16rem;
+}
+
+/* Two columns need room: below this width a side by side diff shows as unified. */
+.git-diff-narrow {
+  display: none;
+}
+
+@container (max-width: 700px) {
+  .git-diff-sbs {
+    display: none;
+  }
+
+  .git-diff-narrow {
+    display: table;
+  }
+}
+
+.git-diff-sbs {
+  table-layout: fixed;
+}
+
+.git-diff-col-number {
+  width: 4em;
+}
+
+.git-diff-sbs .git-diff-half {
+  width: 50%;
+  overflow: hidden;
+}
+
+.git-diff-side-added {
+  background: var(--color-success-bg);
+}
+
+.git-diff-side-removed {
+  background: var(--color-error-bg);
+}
+
+.git-diff-side-blank {
+  background: var(--color-chrome);
 }
 
 .git-diff-table {

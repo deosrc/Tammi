@@ -451,9 +451,25 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     its diff shows the old and new commit. The submodule's own uncommitted files aren't part of it: commit them from the
     submodule's own graph tab first.
   - **Diffs:** a file's diff (a commit's changes to it, or a working change's unstaged or staged changes) is shown in
-    place of the list of commits (the details stay beside it) as unified hunks with old and new line numbers. Deselecting the file, or the close button in its top right, goes back to
+    place of the list of commits (the details stay beside it) as hunks with old and new line numbers, unified (the default) or side by side. Deselecting the file, or the close button in its top right, goes back to
     the list, which keeps its scroll position and selection. Binary files say so instead, and very large diffs are cut
-    short.
+    short (at 20,000 lines of the diff git reports, so ignoring whitespace only makes the diff shorter, and side by side
+    never has more rows than unified has lines).
+    - **Settings:** how diffs are shown is set in Settings → Git (see below) and applies straight away, including to
+      diffs already open. The layout and whitespace can also be switched from the diff's header, and that choice is
+      kept in the same settings, like the file list or tree view.
+    - **Whitespace:** show whitespace changes (the default), ignore changes in the amount of whitespace (`git diff -b`),
+      ignore all whitespace (`-w`) or ignore whitespace at the end of lines (`--ignore-space-at-eol`), and optionally
+      ignore blank lines (`--ignore-blank-lines`). The mode is passed to the git CLI, so the hunks and line numbers are
+      what git reports. It only changes what is shown, never the files. Any future staging by hunk or line must use the
+      real, unfiltered diff.
+    - **Context lines:** unchanged lines around each change (git's `-U<n>`), 3 by default.
+    - **Tab width:** how many columns a tab is drawn as, 1 to 16, 8 by default (how diffs were always drawn).
+    - **Side by side:** the old version on the left and the new on the right. Context lines are on both sides, and each
+      run of removed lines sits beside the run of added lines that follows it, with blanks where a side has none. When
+      the space for the diff is narrower than 700 pixels (the details panel can be wide) it shows as unified instead.
+    - A submodule's diff (the old and new commit), renames and binary files are shown as before, whatever the settings.
+    - Not yet: intra-line highlighting, showing whitespace, wrapping long lines and hiding line numbers.
   - The split between the list and the details is resizable: drag it, or focus it and use Left and Right. Double-click
     resets it. The details' width is kept as a fixed width in pixels (see [Layout state](#technical-constraints)), so
     every graph opens with it, even after a restart. Each side keeps a minimum width: when the window is too narrow
@@ -538,6 +554,9 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     can't be connected twice.
 - **Git**
   - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that Tammi uses
+  - **Diffs:** the layout (unified or side by side), whitespace handling (and ignoring blank lines), tab width and
+    context lines of file diffs in the git graph (see **Diffs** under the git graph). They're saved with the other
+    settings and apply straight away, including in graphs that are already open.
   - **Author:** the name and email address git records on commits (`user.name` and `user.email` in the user's global
     git config, `git config --global`). Tammi uses the git CLI and the user's own config, so these apply to every git
     tool on the computer, and the section says so. Clearing one unsets it.

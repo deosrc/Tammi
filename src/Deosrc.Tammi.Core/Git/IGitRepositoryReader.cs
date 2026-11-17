@@ -71,8 +71,9 @@ public interface IGitRepositoryReader
     /// <param name="file">The file's path relative to the repository root, with <c>/</c> separators.</param>
     /// <param name="oldPath">For a rename, the path the file was renamed from.</param>
     /// <param name="sha">For <see cref="GitDiffSource.Commit"/>, the commit's full id.</param>
+    /// <param name="contextLines">How many unchanged lines are shown around each change.</param>
     /// <returns>The diff, which has no hunks if the file hasn't changed.</returns>
     /// <exception cref="GitRepositoryNotFoundException">There's no repository at <paramref name="path"/>.</exception>
     /// <exception cref="GitException">The repository has no commit <paramref name="sha"/>.</exception>
-    FileDiff ReadDiff(string path, GitDiffSource source, string file, string? oldPath = null, string? sha = null);
+    FileDiff ReadDiff(string path, GitDiffSource source, string file, string? oldPath = null, string? sha = null, int contextLines = GitDiffOptions.DefaultContextLines);
 }
