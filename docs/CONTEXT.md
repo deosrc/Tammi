@@ -629,7 +629,7 @@ Operations available in the Workspace View:
 
 **Discard and reset** both lose work, so they ask for confirmation first.
 - **Discard** is in the right-click menu of the working changes' unstaged files (for the selected files, or the file
-  clicked) and folders (for the files in the folder). It restores tracked files from the index and deletes untracked files (not ignored ones). Staged
+  clicked) and folders (for the files in the folder), where staged files and folders have **Stash** too. It restores tracked files from the index and deletes untracked files (not ignored ones). Staged
   changes are kept.
 - **Reset** is in a commit's context menu, as *Soft reset…*, *Mixed reset…* and *Hard reset…*. It moves the current
   branch to that commit. Soft keeps the changes since then staged, mixed (git's default) keeps them as unstaged
