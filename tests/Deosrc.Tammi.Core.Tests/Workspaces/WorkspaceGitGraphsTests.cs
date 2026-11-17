@@ -67,6 +67,15 @@ public sealed class WorkspaceGitGraphsTests : IDisposable
     }
 
     [Fact]
+    public async Task SetScopeAsync_KeepsTheScopeForGraphsOpenedAfterwards()
+    {
+        await _graphs.Open(WorkspaceWith("one"), Api).SetScopeAsync(GitGraphScope.Everything);
+
+        Assert.Equal(GitGraphScope.Everything, _settings.Current.Git.GraphScope);
+        Assert.Equal(GitGraphScope.Everything, _graphs.Open(WorkspaceWith("two"), Api).Scope);
+    }
+
+    [Fact]
     public void For_ListsTheWorkspacesGraphsInTheOrderTheyOpened()
     {
         WorkspaceGitGraph web = _graphs.Open(WorkspaceWith("one"), Web);

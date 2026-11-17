@@ -276,16 +276,39 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     });
 
     /// <summary>
-    /// Shows other commits, reading the graph again from the top.
+    /// Shows other commits, reading the graph again from the top, and keeps the choice in the settings, so graphs opened
+    /// after this show the same. If the settings can't be saved, it only lasts until the app closes.
     /// </summary>
-    public Task SetScopeAsync(GitGraphScope scope) => RunAsync(() =>
+    public async Task SetScopeAsync(GitGraphScope scope)
     {
-        if (scope != Scope)
+        bool changed = false;
+        await RunAsync(() =>
         {
-            Scope = scope;
-            Reload(0);
+            if (scope != Scope)
+            {
+                Scope = scope;
+                Reload(0);
+                changed = true;
+            }
+        }).ConfigureAwait(false);
+
+        if (!changed)
+        {
+            return;
         }
-    });
+
+        try
+        {
+            await _settings.UpdateAsync(settings => settings with
+            {
+                Git = settings.Git with { GraphScope = scope },
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Not kept for next time.
+        }
+    }
 
     /// <summary>
     /// Reads the graph again from the top, as many commits as were read before, keeping the selection if it's still
