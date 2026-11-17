@@ -455,9 +455,11 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     the list, which keeps its scroll position and selection. Binary files say so instead, and very large diffs are cut
     short (at 20,000 lines of the diff git reports, so ignoring whitespace only makes the diff shorter, and side by side
     never has more rows than unified has lines).
-    - **Settings:** how diffs are shown is set in Settings → Git (see below) and applies straight away, including to
-      diffs already open. The layout and whitespace can also be switched from the diff's header, and that choice is
-      kept in the same settings, like the file list or tree view.
+    - **Settings:** how diffs are shown is chosen in the diff's own header: the layout (unified or side by side) is
+      always visible, and a settings button beside the close button opens a popover with the whitespace handling,
+      ignoring blank lines, tab width and context lines. There's no diff section in Settings. Each choice is saved with
+      the other settings, so it applies straight away, including to diffs already open in other graphs, and is used for
+      the next diff opened, like the file list or tree view.
     - **Whitespace:** show whitespace changes (the default), ignore changes in the amount of whitespace (`git diff -b`),
       ignore all whitespace (`-w`) or ignore whitespace at the end of lines (`--ignore-space-at-eol`), and optionally
       ignore blank lines (`--ignore-blank-lines`). The mode is passed to the git CLI, so the hunks and line numbers are
@@ -554,9 +556,6 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     can't be connected twice.
 - **Git**
   - The versions of the git CLI and of libgit2 (used through LibGit2Sharp) that Tammi uses
-  - **Diffs:** the layout (unified or side by side), whitespace handling (and ignoring blank lines), tab width and
-    context lines of file diffs in the git graph (see **Diffs** under the git graph). They're saved with the other
-    settings and apply straight away, including in graphs that are already open.
   - **Author:** the name and email address git records on commits (`user.name` and `user.email` in the user's global
     git config, `git config --global`). Tammi uses the git CLI and the user's own config, so these apply to every git
     tool on the computer, and the section says so. Clearing one unsets it.
