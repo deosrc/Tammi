@@ -2821,6 +2821,12 @@ label.task-choice {
   justify-self: start;
 }
 
+.git-graph-toolbar .segmented-option {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+}
+
 /* The buttons fill the toolbar's height, so the toolbar's own height comes from them. */
 .git-graph-actions {
   display: flex;
