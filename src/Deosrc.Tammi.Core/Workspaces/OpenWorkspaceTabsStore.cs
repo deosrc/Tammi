@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
-/// Keeps the workspaces open in tabs in <c>open-workspace-tabs.json</c> in the app's data folder
+/// Keeps the workspaces and repository git graphs open in tabs in <c>open-workspace-tabs.json</c> in the app's data folder
 /// (<see cref="IAppPaths.DataDirectory"/>), so they can be opened again when the app starts. A file that can't be
 /// read is treated as holding no tabs.
 /// </summary>
@@ -64,7 +64,15 @@ public sealed class OpenWorkspaceTabsStore
                 .Distinct()
                 .ToList();
             var active = ids.Contains(file.ActiveWorkspaceId!) ? file.ActiveWorkspaceId : null;
-            return new OpenWorkspaceTabs(ids, active);
+            var repositoryPaths = (file.RepositoryPaths ?? [])
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Distinct()
+                .ToList();
+            return new OpenWorkspaceTabs(ids, active) 
+            {
+                RepositoryPaths = repositoryPaths,
+                ActiveRepositoryPath = repositoryPaths.Contains(file.ActiveRepositoryPath!) ? file.ActiveRepositoryPath : null,
+            };
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
@@ -89,7 +97,7 @@ public sealed class OpenWorkspaceTabsStore
         {
             await VersionedJsonFile.WriteAsync(
                 FilePath,
-                new TabsFile(tabs.WorkspaceIds, tabs.ActiveWorkspaceId),
+                new TabsFile(tabs.WorkspaceIds, tabs.ActiveWorkspaceId, tabs.RepositoryPaths, tabs.ActiveRepositoryPath),
                 CurrentVersion,
                 cancellationToken).ConfigureAwait(false);
             return true;
@@ -101,5 +109,9 @@ public sealed class OpenWorkspaceTabsStore
         }
     }
 
-    private sealed record TabsFile(IReadOnlyList<string>? WorkspaceIds, string? ActiveWorkspaceId = null);
+    private sealed record TabsFile(
+        IReadOnlyList<string>? WorkspaceIds,
+        string? ActiveWorkspaceId = null,
+        IReadOnlyList<string>? RepositoryPaths = null,
+        string? ActiveRepositoryPath = null);
 }
