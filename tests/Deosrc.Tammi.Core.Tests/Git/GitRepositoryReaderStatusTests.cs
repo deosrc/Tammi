@@ -153,6 +153,19 @@ public sealed class GitRepositoryReaderStatusTests : IDisposable
     }
 
     [Fact]
+    public async Task UnstagedRename_ReportsOldPath()
+    {
+        string clone = await CloneAsync();
+        File.Move(Path.Combine(clone, "README.md"), Path.Combine(clone, "OVERVIEW.md"));
+
+        RepositoryStatus status = _reader.ReadStatus(clone);
+
+        Assert.Equal(
+            [new FileChange("OVERVIEW.md", FileChangeKind.None, FileChangeKind.Renamed, "README.md")],
+            status.Changes);
+    }
+
+    [Fact]
     public async Task MergeConflict_IsChanged()
     {
         string clone = await CloneAsync();

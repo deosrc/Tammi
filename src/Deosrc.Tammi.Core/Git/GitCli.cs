@@ -158,7 +158,9 @@ public sealed partial class GitCli(GitCliOptions? options = null, ILogger<GitCli
         return result;
     }
 
-    // Reads standard error to the end, reporting each line (a progress line ends with a carriage return) as it arrives.
+    /// <summary>
+    /// Reads standard error to the end, reporting each line (a progress line ends with a carriage return) as it arrives.
+    /// </summary>
     private static async Task<string> ReadErrorAsync(StreamReader reader, Action<string>? onLine)
     {
         if (onLine is null)

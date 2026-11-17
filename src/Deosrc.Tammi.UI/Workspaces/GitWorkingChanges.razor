@@ -302,8 +302,12 @@
             @ondblclick="() => MoveAsync(change, staged)">
             <span class="git-commit-file-kind git-graph-file-@kind.ToString().ToLowerInvariant()"
                   title="@(change.IsSubmodule ? "Submodule commit changed" : GitGraphText.Label(kind))">@(change.IsSubmodule ? "S" : GitGraphText.Letter(kind))</span>
-            <span class="git-commit-file-name">@CommitFileTree.NameOf(change.Path)</span>
-            @if (showFolder)
+            <span class="git-commit-file-name">@CommitFileTree.DisplayName(change.Path, change.OldPath)</span>
+            @if (CommitFileTree.MovedFrom(change.Path, change.OldPath) is { } movedFrom)
+            {
+                <span class="git-commit-file-folder">@(showFolder ? $"{CommitFileTree.FolderOf(change.Path)} ← {movedFrom}" : $"from {movedFrom}")</span>
+            }
+            else if (showFolder)
             {
                 <span class="git-commit-file-folder">@CommitFileTree.FolderOf(change.Path)</span>
             }
@@ -325,29 +329,30 @@
                 var folderKey = (staged ? "S" : "U") + node.Path;
                 var open = !_collapsed.Contains(folderKey);
                 var folderFiles = CommitFileTree.FilesIn(node).ToList();
+                var folderChanges = folderFiles.Select(change => byPath[change.Path]).ToList();
+                var folderKeys = folderChanges.Select(change => Key(change, staged)).ToList();
+                var folderSelected = folderKeys.Count > 0 && folderKeys.All(_selected.Contains);
                 <li role="treeitem" aria-expanded="@(open ? "true" : "false")" @key="folderKey">
-                    <div class="git-working-folder"
-                         @oncontextmenu="e => OpenFolderMenu(e, node.Path, folderFiles.Select(change => byPath[change.Path]).ToList(), staged)"
+                    @* Selects every file in the folder, so the Stage/Unstage buttons above the list act on them like on
+                       selected files. The chevron opens and closes it. *@
+                    <div class="git-working-folder @(folderSelected ? "selected" : null)" title="@node.Path"
+                         style="--git-commit-tree-depth: @depth"
+                         @onclick="e => SelectFolderAsync(folderKeys, e.CtrlKey || e.MetaKey)"
+                         @oncontextmenu="e => OpenFolderMenu(e, node.Path, folderChanges, staged)"
                          @oncontextmenu:preventDefault>
-                    <button type="button" class="git-commit-file git-commit-folder" title="@node.Path"
-                            style="--git-commit-tree-depth: @depth" @onclick="() => ToggleFolder(folderKey)">
-                        <svg class="icon icon-small git-commit-folder-chevron @(open ? "open" : null)" viewBox="0 0 24 24"
-                             aria-hidden="true" focusable="false">
-                            <polyline points="9 6 15 12 9 18"></polyline>
-                        </svg>
+                        <button type="button" class="git-commit-folder-toggle" aria-label="@(open ? "Close" : "Open") @node.Path"
+                                @onclick="() => ToggleFolder(folderKey)" @onclick:stopPropagation>
+                            <svg class="icon icon-small git-commit-folder-chevron @(open ? "open" : null)" viewBox="0 0 24 24"
+                                 aria-hidden="true" focusable="false">
+                                <polyline points="9 6 15 12 9 18"></polyline>
+                            </svg>
+                        </button>
                         <svg class="icon icon-small git-commit-folder-icon" viewBox="0 0 24 24" aria-hidden="true"
                              focusable="false">
                             <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
                         </svg>
                         <span class="git-commit-folder-name">@node.Name</span>
                         <GitFileChangeCounts Kinds="folderFiles.Select(change => change.Kind)" />
-                    </button>
-                    @* Moves every file in the folder to the other list. *@
-                    <button type="button" class="button button-secondary git-working-folder-action"
-                            title="@(staged ? "Unstage" : "Stage") everything in @node.Path"
-                            @onclick="() => MoveFolderAsync(folderFiles.Select(change => byPath[change.Path]).ToList(), staged)">
-                        @(staged ? "Unstage" : "Stage")
-                    </button>
                     </div>
                     @if (open)
                     {
@@ -393,6 +398,30 @@
         }
 
         return ShowDiffForSelectionAsync(_selected.Contains(key) ? key : null);
+    }
+
+    // Selecting a folder selects all the files in it. Like for a file, selecting it again deselects them: if they're
+    // all selected, and the only ones (or with Ctrl, whatever else is).
+    private Task SelectFolderAsync(IReadOnlyList<string> keys, bool add)
+    {
+        bool all = keys.All(_selected.Contains);
+        bool deselect = all && (add || _selected.Count == keys.Count);
+        if (!add)
+        {
+            _selected.Clear();
+        }
+
+        foreach (var key in keys)
+        {
+            _selected.Remove(key);
+        }
+
+        if (!deselect)
+        {
+            _selected.AddRange(keys);
+        }
+
+        return ShowDiffForSelectionAsync(deselect ? null : keys[^1]);
     }
 
     // Shows the diff of a selected file (the given one, or else any other that's selected), or closes the diff if none
@@ -473,9 +502,6 @@
         { Count: 1 } files => $"the changes to {files[0].Path}",
         var files => $"the changes to {files.Count} files",
     };
-
-    private Task MoveFolderAsync(IReadOnlyCollection<FileChange> files, bool staged) =>
-        staged ? UnstageAsync(files) : StageAsync(files);
 
     private Task MoveAsync(FileChange change, bool staged) => staged ? UnstageAsync([change]) : StageAsync([change]);
 

@@ -77,11 +77,15 @@ internal sealed partial record GitHubIssueKey(string Owner, string Repository, i
     [GeneratedRegex(@"^(?<owner>[^/#\s]+)/(?<repo>[^/#\s]+)#(?<number>[0-9]+)$")]
     private static partial Regex KeyPattern();
 
-    // GitHub user and organisation names: letters, digits and hyphens.
+    /// <summary>
+    /// GitHub user and organisation names: letters, digits and hyphens.
+    /// </summary>
     [GeneratedRegex("^[A-Za-z0-9-]+$")]
     private static partial Regex OwnerPattern();
 
-    // GitHub repository names: letters, digits, hyphens, underscores and dots.
+    /// <summary>
+    /// GitHub repository names: letters, digits, hyphens, underscores and dots.
+    /// </summary>
     [GeneratedRegex(@"^[A-Za-z0-9._-]+$")]
     private static partial Regex RepositoryPattern();
 }

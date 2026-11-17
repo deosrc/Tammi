@@ -105,7 +105,9 @@ public sealed class GitGraphLayout
         return new GitGraphRow(commit, lane, colour, lines, LaneCount(lane, lines));
     }
 
-    // One more than the rightmost lane the dot or any line is in.
+    /// <summary>
+    /// One more than the rightmost lane the dot or any line is in.
+    /// </summary>
     private static int LaneCount(int lane, List<GitGraphLine> lines) =>
         lines.Aggregate(lane + 1, (count, line) => Math.Max(count, Math.Max(line.FromLane, line.ToLane) + 1));
 

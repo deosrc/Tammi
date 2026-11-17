@@ -219,6 +219,11 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public (string Path, GitDiffSource Source)? DiffTarget { get; private set; }
 
     /// <summary>
+    /// For a diff of a renamed file, the path it was renamed from, or <see langword="null"/>.
+    /// </summary>
+    public string? DiffOldPath => _diffRequest?.OldPath;
+
+    /// <summary>
     /// The fetch, pull or push that's running, or <see langword="null"/> when none is.
     /// </summary>
     public GitSyncOperation? Syncing { get; private set; }
@@ -276,16 +281,39 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     });
 
     /// <summary>
-    /// Shows other commits, reading the graph again from the top.
+    /// Shows other commits, reading the graph again from the top, and keeps the choice in the settings, so graphs opened
+    /// after this show the same. If the settings can't be saved, it only lasts until the app closes.
     /// </summary>
-    public Task SetScopeAsync(GitGraphScope scope) => RunAsync(() =>
+    public async Task SetScopeAsync(GitGraphScope scope)
     {
-        if (scope != Scope)
+        bool changed = false;
+        await RunAsync(() =>
         {
-            Scope = scope;
-            Reload(0);
+            if (scope != Scope)
+            {
+                Scope = scope;
+                Reload(0);
+                changed = true;
+            }
+        }).ConfigureAwait(false);
+
+        if (!changed)
+        {
+            return;
         }
-    });
+
+        try
+        {
+            await _settings.UpdateAsync(settings => settings with
+            {
+                Git = settings.Git with { GraphScope = scope },
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Not kept for next time.
+        }
+    }
 
     /// <summary>
     /// Reads the graph again from the top, as many commits as were read before, keeping the selection if it's still
@@ -377,8 +405,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     public Task DiscardAsync(IReadOnlyCollection<FileChange> files) =>
         ChangeIndexAsync(token => _workingTree.DiscardAsync(
             Path,
-            PathsOf(files.Where(file => !file.IsUntracked)),
-            PathsOf(files.Where(file => file.IsUntracked)),
+            [.. PathsOf(files.Where(file => !file.IsUntracked && !file.IsUnstagedRename)),
+                .. files.Where(file => file.IsUnstagedRename).Select(file => file.OldPath!)],
+            [.. PathsOf(files.Where(file => file.IsUntracked)),
+                .. files.Where(file => file.IsUnstagedRename).Select(file => file.Path)],
             token));
 
     /// <summary>
@@ -656,7 +686,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         }
     }
 
-    // Asks the remote which tags it has, without holding up the graph, then redraws so their badges show it.
+    /// <summary>
+    /// Asks the remote which tags it has, without holding up the graph, then redraws so their badges show it.
+    /// </summary>
     private async Task RefreshRemoteTagsAsync()
     {
         try
@@ -1074,8 +1106,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         Changed?.Invoke();
     }
 
-    // Stashes made on a commit the graph doesn't show are drawn on the nearest commit it does: where that commit's
-    // branch joins HEAD's history.
+    /// <summary>
+    /// Stashes made on a commit the graph doesn't show are drawn on the nearest commit it does: where that commit's
+    /// branch joins HEAD's history.
+    /// </summary>
     private IReadOnlyList<GitStashEntry> AnchorStashes(IReadOnlyList<GitStashEntry> stashes)
     {
         var shown = _rows.Select(row => row.Commit.Sha).ToHashSet();
@@ -1098,7 +1132,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         return anchored;
     }
 
-    // Opens the history again with the current scope and reads at least `count` commits.
+    /// <summary>
+    /// Opens the history again with the current scope and reads at least `count` commits.
+    /// </summary>
     private void Reload(int count)
     {
         string? selected = Selected?.Commit.Sha;
@@ -1209,8 +1245,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         }
     }
 
-    // Whether the refs read now are the ones the graph shows. Refs that can't be read count as changed, so reading the
-    // graph again says why.
+    /// <summary>
+    /// Whether the refs read now are the ones the graph shows. Refs that can't be read count as changed, so reading the
+    /// graph again says why.
+    /// </summary>
     private bool RefsUnchanged()
     {
         try
@@ -1234,8 +1272,10 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         },
     };
 
-    // Runs an operation on a background thread, after the one before it, and raises Changed when it's done. Once the
-    // graph is closed, it does nothing, since the view may still ask for a page as it goes.
+    /// <summary>
+    /// Runs an operation on a background thread, after the one before it, and raises Changed when it's done. Once the
+    /// graph is closed, it does nothing, since the view may still ask for a page as it goes.
+    /// </summary>
     private async Task RunAsync(Action operation)
     {
         if (_disposed)
@@ -1271,7 +1311,9 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
         }
     }
 
-    // Shares what's been read with the UI. The row list is copied, so a later page doesn't change it as it's shown.
+    /// <summary>
+    /// Shares what's been read with the UI. The row list is copied, so a later page doesn't change it as it's shown.
+    /// </summary>
     private void Publish() => Rows = [.. _rows];
 
     private void CloseCursor()

@@ -65,6 +65,29 @@ public static class CommitFileTree
         return path[(path.LastIndexOf('/') + 1)..];
     }
 
+    /// <summary>
+    /// A file's name for a row: for a file renamed from another name, both (<c>old → new</c>), else just the name.
+    /// </summary>
+    public static string DisplayName(string path, string? oldPath)
+    {
+        string name = NameOf(path);
+        return oldPath is not null && NameOf(oldPath) != name ? $"{NameOf(oldPath)} → {name}" : name;
+    }
+
+    /// <summary>
+    /// For a file moved to another folder, the folder it was moved from (<c>/</c> for the repository root), else null.
+    /// </summary>
+    public static string? MovedFrom(string path, string? oldPath)
+    {
+        if (oldPath is null)
+        {
+            return null;
+        }
+
+        string from = FolderOf(oldPath);
+        return from == FolderOf(path) ? null : from.Length == 0 ? "/" : from;
+    }
+
     private static CommitFileTreeNode[] Nodes(Folder folder, string path)
     {
         var folders = folder.Folders

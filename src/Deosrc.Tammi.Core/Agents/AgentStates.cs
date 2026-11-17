@@ -50,7 +50,9 @@ public static class AgentStates
         return summary;
     }
 
-    // Lower is more important. Exited is last, and doesn't count.
+    /// <summary>
+    /// Lower is more important. Exited is last, and doesn't count.
+    /// </summary>
     private static int Rank(AgentState state) => state switch
     {
         AgentState.Error => 0,

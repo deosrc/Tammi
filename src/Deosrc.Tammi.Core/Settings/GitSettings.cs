@@ -6,8 +6,8 @@ using Deosrc.Tammi.Core.Platform;
 namespace Deosrc.Tammi.Core.Settings;
 
 /// <summary>
-/// The Repositories section of the Settings screen, and the git graph's options (<see cref="GraphScope"/> on the Git
-/// section, <see cref="GraphFileView"/> and <see cref="SubjectLimit"/>). It keeps its earlier name, and its <c>git</c> key in
+/// The Repositories section of the Settings screen, and the git graph's options (<see cref="GraphScope"/>, <see cref="GraphFileView"/>
+/// and <see cref="SubjectLimit"/>). It keeps its earlier name, and its <c>git</c> key in
 /// <c>settings.json</c>, from when the Repositories section was called Git.
 /// </summary>
 public sealed record GitSettings
@@ -75,7 +75,8 @@ public sealed record GitSettings
     public TimeSpan StatusRefreshInterval { get; init; } = DefaultStatusRefreshInterval;
 
     /// <summary>
-    /// Which commits a git graph shows when it opens. Each graph can switch while it's open.
+    /// Which commits a git graph shows when it opens: the one most recently chosen in a graph. Each graph can switch
+    /// while it's open.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter<GitGraphScope>))]
     public GitGraphScope GraphScope { get; init; } = GitGraphScope.WorkspaceBranch;

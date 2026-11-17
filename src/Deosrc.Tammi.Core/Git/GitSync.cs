@@ -71,8 +71,10 @@ public sealed class GitSync(IGitCli git) : IGitSync
         }
     }
 
-    // Pulling and pushing need a branch. A submodule is usually on a detached HEAD, so say so rather than showing
-    // git's advice about setting up tracking.
+    /// <summary>
+    /// Pulling and pushing need a branch. A submodule is usually on a detached HEAD, so say so rather than showing
+    /// git's advice about setting up tracking.
+    /// </summary>
     private async Task RequireBranchAsync(GitSyncOperation operation, string path, CancellationToken cancellationToken)
     {
         GitCommandResult branch = await git.RunAsync(

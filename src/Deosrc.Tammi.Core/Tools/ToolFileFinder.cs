@@ -67,7 +67,9 @@ public static class ToolFileFinder
             .ToArray();
     }
 
-    // A pattern's path segments, e.g. [".devcontainer", "devcontainer.json"], and whether it only matches at the root.
+    /// <summary>
+    /// A pattern's path segments, e.g. [".devcontainer", "devcontainer.json"], and whether it only matches at the root.
+    /// </summary>
     private sealed record Pattern(int Index, string[] Segments, bool Anchored);
 
     private static Pattern? Parse(string? pattern, int index)
@@ -117,7 +119,9 @@ public static class ToolFileFinder
         }
     }
 
-    // Finds the files at a path of segments, each a name or wildcard, from a folder's entries.
+    /// <summary>
+    /// Finds the files at a path of segments, each a name or wildcard, from a folder's entries.
+    /// </summary>
     private static void FindPath(FileSystemInfo[] entries, ReadOnlySpan<string> segments, List<string> files)
     {
         var last = segments.Length == 1;
