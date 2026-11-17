@@ -4651,7 +4651,7 @@ label.task-choice {
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--border, currentColor);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .git-graph-tag-prompt label {
