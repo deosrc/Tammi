@@ -4046,8 +4046,10 @@ label.task-choice {
   display: none;
 }
 
+/* At least as tall as the body, so the panes reach its bottom and a sideways scroll anywhere on them scrolls. */
 .git-diff-sbs {
   display: flex;
+  min-height: 100%;
 }
 
 .git-diff-pane {
