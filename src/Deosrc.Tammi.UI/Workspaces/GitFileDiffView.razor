@@ -15,10 +15,20 @@
         <div class="segmented segmented-small" role="group" aria-label="Layout">
             <button type="button" class="segmented-option" title="Unified" aria-label="Unified"
                     aria-pressed="@(Current.DiffLayout == GitDiffLayout.Unified ? "true" : "false")"
-                    @onclick="() => Options.SetDiffLayoutAsync(GitDiffLayout.Unified)">Unified</button>
+                    @onclick="() => Options.SetDiffLayoutAsync(GitDiffLayout.Unified)">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <rect x="4" y="4" width="16" height="16" rx="2" />
+                    <path d="M8 9h8M8 12h8M8 15h8" />
+                </svg>
+            </button>
             <button type="button" class="segmented-option" title="Side by side" aria-label="Side by side"
                     aria-pressed="@(Current.DiffLayout == GitDiffLayout.SideBySide ? "true" : "false")"
-                    @onclick="() => Options.SetDiffLayoutAsync(GitDiffLayout.SideBySide)">Side by side</button>
+                    @onclick="() => Options.SetDiffLayoutAsync(GitDiffLayout.SideBySide)">
+                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <rect x="4" y="4" width="16" height="16" rx="2" />
+                    <path d="M12 4v16M7 9h2M7 12h2M7 15h2M15 9h2M15 12h2M15 15h2" />
+                </svg>
+            </button>
         </div>
         <div class="git-diff-settings">
             <button type="button" class="button button-secondary button-icon" title="Diff settings"
