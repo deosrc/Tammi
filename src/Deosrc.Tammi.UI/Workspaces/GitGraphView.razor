@@ -311,16 +311,6 @@
                     Create branch…
                 </button>
             </li>
-            @foreach (var mode in new[] { GitResetMode.Soft, GitResetMode.Mixed, GitResetMode.Hard })
-            {
-                <li role="none">
-                    <button type="button" class="menu-item @(mode == GitResetMode.Hard ? "menu-item-danger" : null)"
-                            role="menuitem" disabled="@(Graph.Refs.HeadBranch is null)"
-                            title="@ResetText(mode)" @onclick="() => StartReset(commitMenu, mode)">
-                        @ResetTitle(mode)…
-                    </button>
-                </li>
-            }
             @foreach (var branch in commitMenu.Branches)
             {
                 var isCurrent = branch == Graph.Refs.HeadBranch;
@@ -466,6 +456,17 @@
                             }
                         </ul>
                     }
+                </li>
+            }
+            <li role="separator" class="menu-separator"></li>
+            @foreach (var mode in new[] { GitResetMode.Soft, GitResetMode.Mixed, GitResetMode.Hard })
+            {
+                <li role="none">
+                    <button type="button" class="menu-item @(mode == GitResetMode.Hard ? "menu-item-danger" : null)"
+                            role="menuitem" disabled="@(Graph.Refs.HeadBranch is null)"
+                            title="@ResetText(mode)" @onclick="() => StartReset(commitMenu, mode)">
+                        @ResetTitle(mode)…
+                    </button>
                 </li>
             }
         </ContextMenu>
