@@ -6,6 +6,7 @@
 {
     @* A flex container that fills the page, like the Workspace View, so the graph reaches the bottom. *@
     <div class="repository-git">
+        <RepositoryToolsPanel RepositoryPath="@_graph.Path" />
         <GitGraphView @key="_graph" Graph="_graph" />
     </div>
 }

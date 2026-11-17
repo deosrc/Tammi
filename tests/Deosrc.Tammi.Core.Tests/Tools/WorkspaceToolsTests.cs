@@ -76,6 +76,19 @@ public sealed class WorkspaceToolsTests : IDisposable
     }
 
     [Fact]
+    public void GetEntriesForRepository_OpensTheRepository_WithoutTheTerminal()
+    {
+        var tool = Editor with { Arguments = ["{LaunchFolder}", "{RepositoryFolder}"] };
+
+        var entries = CreateTools().GetEntriesForRepository(ApiFolder + Path.DirectorySeparatorChar, new ToolSettings { CustomTools = [tool] });
+
+        var entry = Assert.Single(entries, candidate => candidate.Tool == tool);
+        Assert.Equal(ApiFolder, entry.Path);
+        Assert.Equal([ApiFolder, ApiFolder], entry.Request!.Arguments);
+        Assert.DoesNotContain(entries, entry => entry.OpensTerminal);
+    }
+
+    [Fact]
     public void GetEntries_FillsInPlaceholdersInName()
     {
         var tool = Editor with { Name = "Edit {LaunchFolder}" };

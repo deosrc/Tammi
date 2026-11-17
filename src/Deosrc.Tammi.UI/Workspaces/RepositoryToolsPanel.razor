@@ -1,0 +1,124 @@
+@implements IDisposable
+@using Deosrc.Tammi.Core.Settings
+@using Deosrc.Tammi.Core.Tools
+@inject WorkspaceTools Tools
+@inject ToolImages ToolImages
+@inject ISettingsStore SettingsStore
+
+@* The side panel of a git tab opened outside any workspace: what the repository can be opened in. It's only icons, to
+   take little room, with each tool's name as the tooltip. Its header isn't a collapsible section's. *@
+<aside class="side-panel side-panel-icons">
+    <div class="side-panel-sections">
+        <h2 class="side-panel-static-header">Tools</h2>
+        <div class="side-panel-section-body">
+            @if (!_loaded)
+            {
+                <p class="placeholder" title="Finding tools…">…</p>
+            }
+            else if (_entries.Count == 0)
+            {
+                <p class="placeholder">
+                    <a href="@AppRoutes.SettingsTools" title="No tools to open the repository in. Add or enable them in Settings.">
+                        Add tools
+                    </a>
+                </p>
+            }
+            else
+            {
+                <ul class="tool-list">
+                    @foreach (var entry in _entries)
+                    {
+                        <li @key="@($"{entry.Tool.Name}\0{entry.Path}")">
+                            <button type="button" class="tool-item" title="@entry.Label" aria-label="@entry.Label"
+                                    @onclick="() => Open(entry)">
+                                <ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" Class="tool-icon-large" />
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+            @if (_error is not null)
+            {
+                <p class="error">@_error</p>
+            }
+        </div>
+    </div>
+</aside>
+
+@code {
+    private IReadOnlyList<ToolEntry> _entries = [];
+    private string? _error;
+    private string? _loadedPath;
+    private bool _loaded;
+    private int _updates;
+    private bool _disposed;
+
+    /// <summary>
+    /// The full path of the repository.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string RepositoryPath { get; set; } = "";
+
+    protected override void OnInitialized() => SettingsStore.Changed += OnSettingsChanged;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedPath != RepositoryPath)
+        {
+            _loadedPath = RepositoryPath;
+            await UpdateAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        SettingsStore.Changed -= OnSettingsChanged;
+    }
+
+    private void OnSettingsChanged() => _ = InvokeAsync(UpdateAsync);
+
+    // Reads the repository's folders for the files file tools open, so it's done in the background.
+    private async Task UpdateAsync()
+    {
+        var update = ++_updates;
+        var path = RepositoryPath;
+        var settings = SettingsStore.Current.Tools;
+        var entries = await Task.Run(() => Tools.GetEntriesForRepository(path, settings));
+        if (update != _updates || _disposed)
+        {
+            return;
+        }
+
+        _entries = entries;
+        _loaded = true;
+        StateHasChanged();
+
+        // The icons are shown once they're found. Until then, each tool shows its generic icon.
+        var withImages = new List<ToolEntry>(entries.Count);
+        foreach (var entry in entries)
+        {
+            withImages.Add(entry with { Image = await ToolImages.GetAsync(entry.Tool, entry.Request?.FileName) });
+        }
+
+        if (update == _updates && !_disposed)
+        {
+            _entries = withImages;
+            StateHasChanged();
+        }
+    }
+
+    private void Open(ToolEntry entry)
+    {
+        _error = null;
+        try
+        {
+            Tools.Open(entry);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException
+            or System.ComponentModel.Win32Exception)
+        {
+            _error = $"Couldn't open {entry.Label}. {ex.Message}";
+        }
+    }
+}
