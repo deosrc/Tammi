@@ -48,7 +48,7 @@
                                 <span>@limit.Description</span>
                                 <span>@limit.PercentUsed.ToString("0")% used</span>
                             </div>
-                            <UsageBar Limit="limit" Class="usage-bar-large" />
+                            <UsageBar Limit="limit" Large="true" />
                             @if (limit.ResetsAt is { } resetsAt)
                             {
                                 <div class="usage-limit-reset">Resets @ResetText(resetsAt)</div>

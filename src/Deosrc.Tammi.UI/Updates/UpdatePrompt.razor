@@ -3,40 +3,51 @@
 
 @if (Updater.ShowPrompt)
 {
-    <div class="update-prompt" role="status">
-        @switch (Updater.Status)
-        {
-            case UpdateStatus.Available:
-                <span>Tammi @Updater.Available!.Version is available (you have @Updater.CurrentVersion).</span>
-                <a href="@AppRoutes.SettingsUpdates">Release notes</a>
-                <span class="update-prompt-actions">
-                    <button type="button" class="button" @onclick="() => Updater.InstallAsync()">Update</button>
-                    <button type="button" class="tab-close" title="Not now" aria-label="Not now" @onclick="Updater.Dismiss">
-                        &times;
-                    </button>
-                </span>
-                break;
-            case UpdateStatus.Installing:
-                <span>Downloading Tammi @Updater.Available!.Version… @((int)(Updater.Progress * 100))%</span>
-                <progress max="1" value="@Updater.Progress"></progress>
-                break;
-            case UpdateStatus.Installed:
-                <span>Tammi @Updater.Available!.Version is installed. Restart Tammi to use it.</span>
-                break;
-            case UpdateStatus.Failed:
-                <span class="error">@Updater.Error</span>
-                <span class="update-prompt-actions">
-                    <button type="button" class="button" @onclick="() => Updater.InstallAsync()">Try again</button>
-                    <button type="button" class="tab-close" title="Not now" aria-label="Not now" @onclick="Updater.Dismiss">
-                        &times;
-                    </button>
-                </span>
-                break;
-        }
-    </div>
+    <FluentMessageBar Intent="@(Updater.Status == UpdateStatus.Failed ? MessageBarIntent.Error : MessageBarIntent.Info)"
+                      Layout="MessageBarLayout.SingleLine" AllowDismiss="@CanDismiss" Visible="true"
+                      VisibleChanged="OnVisibleChanged" role="status">
+        <ChildContent>
+            @switch (Updater.Status)
+            {
+                case UpdateStatus.Available:
+                    <span>Tammi @Updater.Available!.Version is available (you have @Updater.CurrentVersion).</span>
+                    <FluentLink Href="@AppRoutes.SettingsUpdates">Release notes</FluentLink>
+                    break;
+                case UpdateStatus.Installing:
+                    <span>Downloading Tammi @Updater.Available!.Version… @((int)(Updater.Progress * 100))%</span>
+                    <FluentProgressBar Value="@((int)(Updater.Progress * 100))" Max="100" Width="160px" />
+                    break;
+                case UpdateStatus.Installed:
+                    <span>Tammi @Updater.Available!.Version is installed. Restart Tammi to use it.</span>
+                    break;
+                case UpdateStatus.Failed:
+                    <span>@Updater.Error</span>
+                    break;
+            }
+        </ChildContent>
+        <ActionsTemplate>
+            @if (Updater.Status is UpdateStatus.Available or UpdateStatus.Failed)
+            {
+                <FluentButton Appearance="ButtonAppearance.Primary" Size="ButtonSize.Small" OnClick="() => Updater.InstallAsync()">
+                    @(Updater.Status == UpdateStatus.Failed ? "Try again" : "Update")
+                </FluentButton>
+            }
+        </ActionsTemplate>
+    </FluentMessageBar>
 }
 
 @code {
+    // Not now is the message bar's own dismiss button, shown while there's something to dismiss.
+    private bool CanDismiss => Updater.Status is UpdateStatus.Available or UpdateStatus.Failed;
+
+    private void OnVisibleChanged(bool visible)
+    {
+        if (!visible)
+        {
+            Updater.Dismiss();
+        }
+    }
+
     protected override void OnInitialized() => Updater.Changed += OnChanged;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
