@@ -57,6 +57,9 @@ jobs:
       - name: Test
         run: dotnet test --project tests/Deosrc.Tammi.Core.Tests --no-build --configuration ${{ env.CONFIGURATION }}
 
+      - name: Test UI
+        run: dotnet test --project tests/Deosrc.Tammi.UI.Tests --no-build --configuration ${{ env.CONFIGURATION }}
+
       # The packages take over a minute to save, so only `main` saves them: a cache saved by a pull request can only be
       # used by that pull request.
       - name: Save NuGet packages cache
@@ -94,3 +97,6 @@ jobs:
       # project directly.
       - name: Test
         run: dotnet test --project tests/Deosrc.Tammi.Core.Tests --no-build --configuration ${{ env.CONFIGURATION }}
+
+      - name: Test UI
+        run: dotnet test --project tests/Deosrc.Tammi.UI.Tests --no-build --configuration ${{ env.CONFIGURATION }}

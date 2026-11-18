@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
@@ -21,4 +23,10 @@ public interface IMainAreaTab
     /// higher number. Taken from <see cref="MainAreaTabOrder.Next"/>.
     /// </summary>
     long StartOrder { get; }
+
+    /// <summary>
+    /// The ID of the tab, for its address: it's unique among all the main area tabs while the app runs, so no two tabs
+    /// of any workspace share one. It isn't kept between runs, as the tabs aren't: they're restored as new tabs.
+    /// </summary>
+    string Id => StartOrder.ToString(CultureInfo.InvariantCulture);
 }

@@ -5,7 +5,8 @@
       "src/Deosrc.Tammi.Core/Deosrc.Tammi.Core.csproj",
       "src/Deosrc.Tammi.Linux/Deosrc.Tammi.Linux.csproj",
       "src/Deosrc.Tammi.UI/Deosrc.Tammi.UI.csproj",
-      "tests/Deosrc.Tammi.Core.Tests/Deosrc.Tammi.Core.Tests.csproj"
+      "tests/Deosrc.Tammi.Core.Tests/Deosrc.Tammi.Core.Tests.csproj",
+      "tests/Deosrc.Tammi.UI.Tests/Deosrc.Tammi.UI.Tests.csproj"
     ]
   }
 }
