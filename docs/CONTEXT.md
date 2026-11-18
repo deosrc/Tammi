@@ -161,7 +161,7 @@ listed once.
 - Adding a Monitored Folder that holds manually added repositories asks the user to confirm, then removes those
   repositories from the manually added ones.
 - Missing folders and repositories that can't be read are left out of the catalogue and shown on the Settings screen.
-- The catalogue is scanned when it's first needed, when the user asks (Rescan on the Settings screen), when the
+- The catalogue is scanned when it's first needed, when the user asks (Refresh on the Repositories Tab), when the
   Monitored Folders or manually added repositories change, and when folders appear in or disappear from a Monitored
   Folder. Only a Monitored Folder's own entries are watched, not its subfolders, so watching a large clone folder
   doesn't use up the platform's watch limits. A repository cloned deeper down is found by the next scan.
@@ -592,7 +592,6 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 - **Repositories**
   - Monitored Folder(s), each with how many repositories were found in it
   - Manually added local repositories
-  - The Repository Catalogue's size, with a Rescan button
   - Status refresh interval for workspaces that aren't open (whole minutes from 1 to 1440, default 5)
 - **Agents**
   - **Supported Agents** are always listed, and can't be edited or removed. Each one shows whether its CLI is ready:
