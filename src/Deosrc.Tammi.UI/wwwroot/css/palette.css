@@ -29,6 +29,13 @@
   --tammi-accent-60:    var(--tammi-teal-60);
   --tammi-accent-30:    var(--tammi-teal-30);
   --tammi-on-accent:    #FFFFFF;               /* tick / text placed on the accent */
+
+  /* Primary: filled controls such as primary buttons and the switch. Between the accent and a calmer shade of it. */
+  --tammi-primary:          #148A7C;
+  --tammi-primary-hover:    #1B675D;
+  --tammi-primary-pressed:  #173C36;
+  --tammi-primary-selected: #1A584F;
+  --tammi-on-primary:       var(--tammi-white);
 }
 
 /* Dark theme: follows the OS unless a theme is set explicitly */
@@ -42,6 +49,12 @@
     --tammi-accent-60:  var(--tammi-mint-60);
     --tammi-accent-30:  var(--tammi-mint-30);
     --tammi-on-accent:  var(--tammi-slate);
+
+    --tammi-primary:          #48A898;
+    --tammi-primary-hover:    #62B4A6;
+    --tammi-primary-pressed:  #429487;
+    --tammi-primary-selected: #429487;
+    --tammi-on-primary:       var(--tammi-slate);
   }
 }
 
@@ -54,4 +67,10 @@
   --tammi-accent-60:    var(--tammi-mint-60);
   --tammi-accent-30:    var(--tammi-mint-30);
   --tammi-on-accent:    var(--tammi-slate);
+
+  --tammi-primary:          #48A898;
+  --tammi-primary-hover:    #62B4A6;
+  --tammi-primary-pressed:  #429487;
+  --tammi-primary-selected: #429487;
+  --tammi-on-primary:       var(--tammi-slate);
 }

@@ -60,7 +60,8 @@
     }
 
     // Fluent's mode comes first, as it also marks the page light or dark. Then its theme is built from the brand
-    // palette (see palette.css) and replaces the generated colours it would otherwise use.
+    // palette (see palette.css) and replaces the colours it would otherwise generate. The accent seeds Fluent's brand
+    // ramp, and the primary colours (filled controls and their text) are the palette's own.
     private async Task ApplyFluentAsync(string? theme)
     {
         var mode = theme switch
@@ -72,7 +73,11 @@
         await FluentTheme.SetThemeAsync(mode);
 
         var brand = await _module!.InvokeAsync<BrandColors>("brandColors");
-        var fluent = await FluentTheme.CreateCustomThemeAsync(new ThemeSettings(brand.Accent, 0, 0, mode, true));
+        var fluent = await FluentTheme.CreateCustomThemeAsync(new ThemeSettings(brand.Accent, 0, 0, mode, false));
+        fluent.Colors.Brand.Background = brand.Primary;
+        fluent.Colors.Brand.BackgroundHover = brand.PrimaryHover;
+        fluent.Colors.Brand.BackgroundPressed = brand.PrimaryPressed;
+        fluent.Colors.Brand.BackgroundSelected = brand.PrimarySelected;
         var neutral = fluent.Colors.Neutral;
         neutral.Background1 = brand.Surface;
         neutral.Background2 = brand.Background;
@@ -80,12 +85,13 @@
         neutral.Foreground1 = brand.Text;
         neutral.Foreground2 = brand.Text;
         neutral.Foreground3 = brand.TextMuted;
-        neutral.ForegroundOnBrand = brand.OnAccent;
+        neutral.ForegroundOnBrand = brand.OnPrimary;
         await FluentTheme.SetThemeAsync(fluent);
     }
 
     private sealed record BrandColors(
-        string Background, string Surface, string Text, string TextMuted, string Accent, string OnAccent);
+        string Background, string Surface, string Text, string TextMuted, string Accent, string Primary,
+        string PrimaryHover, string PrimaryPressed, string PrimarySelected, string OnPrimary);
 
     public async ValueTask DisposeAsync()
     {

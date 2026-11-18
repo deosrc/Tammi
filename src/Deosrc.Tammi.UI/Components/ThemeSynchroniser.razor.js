@@ -18,6 +18,10 @@ export function brandColors() {
         text: colour("--tammi-text"),
         textMuted: colour("--tammi-text-muted"),
         accent: colour("--tammi-accent"),
-        onAccent: colour("--tammi-on-accent"),
+        primary: colour("--tammi-primary"),
+        primaryHover: colour("--tammi-primary-hover"),
+        primaryPressed: colour("--tammi-primary-pressed"),
+        primarySelected: colour("--tammi-primary-selected"),
+        onPrimary: colour("--tammi-on-primary"),
     };
 }
