@@ -8,6 +8,7 @@
 @inject WorkspaceGitGraphs GitGraphs
 @inject Deosrc.Tammi.Core.Terminals.WorkspaceTerminals Terminals
 @inject NavigationManager Navigation
+@inject Deosrc.Tammi.UI.Workspaces.WorkspaceViewState ViewState
 
 <nav class="tab-strip" aria-label="Main">
     <a class="tab home-tab @ActiveClass(AppRoutes.Home)" href="@AppRoutes.Home" title="Home" aria-label="Home"
@@ -36,7 +37,7 @@
             var tab = WorkspaceTabs.Tabs.First(t => WorkspaceKey + t.WorkspaceId == key);
             // Returns to the edit flow if the workspace has one in progress.
             var route = EditSessions.Find(tab.WorkspaceId) is null
-                ? AppRoutes.Workspace(tab.WorkspaceId)
+                ? ViewState.RouteOf(tab.WorkspaceId)
                 : AppRoutes.EditWorkspace(tab.WorkspaceId);
             var shown = IsWorkspaceShown(tab.WorkspaceId);
             <div class="tab workspace-tab @(shown ? "active" : null)" @key="key">
@@ -60,9 +61,10 @@
         else if (key.StartsWith(GraphKey, StringComparison.Ordinal))
         {
             var graph = GitGraphs.StandaloneGraphs().First(g => GraphKey + g.Path == key);
-            var graphRoute = AppRoutes.RepositoryGit(graph.Path);
-            <div class="tab workspace-tab @ActiveClass(graphRoute)" @key="key">
-                <a class="tab-label" href="@graphRoute" title="@graph.Path" aria-current="@AriaCurrent(graphRoute)">
+            var graphRoute = ViewState.RepositoryRouteOf(graph.Path);
+            var graphShown = IsRepositoryShown(graph.Path);
+            <div class="tab workspace-tab @(graphShown ? "active" : null)" @key="key">
+                <a class="tab-label" href="@graphRoute" title="@graph.Path" aria-current="@(graphShown ? "page" : null)">
                     <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <circle cx="6" cy="5" r="2" />
                         <circle cx="6" cy="19" r="2" />
@@ -151,7 +153,7 @@
         var next = WorkspaceTabs.Close(tab.WorkspaceId);
         if (wasShown)
         {
-            Navigation.NavigateTo(next is null ? AppRoutes.Home : AppRoutes.Workspace(next.WorkspaceId));
+            Navigation.NavigateTo(next is null ? AppRoutes.Home : ViewState.RouteOf(next.WorkspaceId));
         }
     }
 
@@ -177,7 +179,7 @@
 
     private void CloseRepositoryGraph(WorkspaceGitGraph graph)
     {
-        var wasShown = IsCurrent(AppRoutes.RepositoryGit(graph.Path));
+        var wasShown = IsRepositoryShown(graph.Path);
         // Closes everything in the tab: its graphs, and the terminals, which end their shells.
         GitGraphs.CloseAll(graph.WorkspaceId);
         _ = Terminals.CloseAllAsync(graph.WorkspaceId);
@@ -212,6 +214,9 @@
         IsCurrent(AppRoutes.Settings) || _currentPath.StartsWith(AppRoutes.Settings + "/", StringComparison.Ordinal);
 
     private bool IsCurrent(string route) => string.Equals(_currentPath, route, StringComparison.Ordinal);
+
+    // A repository's tab also shows its secondary tabs.
+    private bool IsRepositoryShown(string repositoryPath) => AppRoutes.RepositoryGitPathOf(_currentPath) == repositoryPath;
 
     // A workspace's tab also shows its edit flow.
     private bool IsWorkspaceShown(string workspaceId) => AppRoutes.WorkspaceIdOf(_currentPath) == workspaceId;

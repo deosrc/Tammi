@@ -16,6 +16,20 @@ public sealed class WorkspaceViewState
     public IMainAreaTab? GetShown(string workspaceId) => _shown.GetValueOrDefault(workspaceId);
 
     /// <summary>
+    /// The path to open a workspace's tab at: its view as it was last shown, or the dashboard.
+    /// </summary>
+    public string RouteOf(string workspaceId) =>
+        GetShown(workspaceId) is { } tab ? AppRoutes.WorkspaceTab(workspaceId, tab.Id) : AppRoutes.Workspace(workspaceId);
+
+    /// <summary>
+    /// The path to open a repository's git tab at: its secondary tab as it was last shown, or its own git graph.
+    /// </summary>
+    public string RepositoryRouteOf(string repositoryPath) =>
+        GetShown(StandaloneRepository.IdFor(repositoryPath)) is { } tab
+            ? AppRoutes.RepositoryGitTab(repositoryPath, tab.Id)
+            : AppRoutes.RepositoryGit(repositoryPath);
+
+    /// <summary>
     /// Sets the main area tab a workspace's view shows, or <c>null</c> for the dashboard.
     /// </summary>
     public void SetShown(string workspaceId, IMainAreaTab? tab)

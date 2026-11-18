@@ -4,6 +4,7 @@
 @inject RepositoryListState State
 @inject WorkspaceGitGraphs GitGraphs
 @inject NavigationManager Navigation
+@inject Deosrc.Tammi.UI.Workspaces.WorkspaceViewState ViewState
 
 @* The Repository Catalogue's Local Repositories with their git state, outside any workspace. *@
 <div class="page">
@@ -124,6 +125,6 @@
         }
 
         GitGraphs.OpenRepository(repository.Path);
-        Navigation.NavigateTo(AppRoutes.RepositoryGit(repository.Path));
+        Navigation.NavigateTo(ViewState.RepositoryRouteOf(repository.Path));
     }
 }

@@ -1,4 +1,5 @@
 @page "/workspaces/{WorkspaceId}"
+@page "/workspaces/{WorkspaceId}/tabs/{TabId}"
 @implements IDisposable
 @using Deosrc.Tammi.Core.Agents
 @using Deosrc.Tammi.Core.Git
@@ -264,25 +265,24 @@ else
             <div class="session-tabs">
                 <div class="session-tab-list" role="tablist" aria-label="Workspace">
                     <div class="session-tab session-tab-dashboard @(_shown is null ? "active" : null)">
-                        <button type="button" class="session-tab-label session-tab-icon" role="tab"
-                                aria-selected="@(_shown is null ? "true" : "false")" title="Dashboard"
-                                aria-label="Dashboard" @onclick="ShowDashboard">
+                        <a class="session-tab-label session-tab-icon" role="tab" href="@AppRoutes.Workspace(WorkspaceId)"
+                           aria-selected="@(_shown is null ? "true" : "false")" title="Dashboard"
+                           aria-label="Dashboard">
                             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <rect x="3" y="3" width="7" height="9" rx="1" />
                                 <rect x="14" y="3" width="7" height="5" rx="1" />
                                 <rect x="14" y="12" width="7" height="9" rx="1" />
                                 <rect x="3" y="16" width="7" height="5" rx="1" />
                             </svg>
-                        </button>
+                        </a>
                     </div>
                     @foreach (var tab in _tabs)
                     {
                         var shown = ReferenceEquals(tab, _shown);
                         <div class="session-tab @(shown ? "active" : null)" @key="tab">
-                            <button type="button" class="session-tab-label" role="tab"
-                                    aria-selected="@(shown ? "true" : "false")"
-                                    title="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })"
-                                    @onclick="() => ShowTab(tab)">
+                            <a class="session-tab-label" role="tab" href="@AppRoutes.WorkspaceTab(WorkspaceId, tab.Id)"
+                               aria-selected="@(shown ? "true" : "false")"
+                               title="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })">
                                 @if (tab is WorkspaceAgent iconAgent)
                                 {
                                     <AgentIcon Definition="iconAgent.Agent.Definition" />
@@ -313,7 +313,7 @@ else
                                     @* Agents' tabs show their state at the end, next to the close button. *@
                                     <AgentStateIndicator State="agent.State" />
                                 }
-                            </button>
+                            </a>
                             <button type="button" class="tab-close" title="Close @tab.Name"
                                     aria-label="Close @tab.Name" @onclick="() => CloseTabAsync(tab)">
                                 &times;
@@ -423,6 +423,9 @@ else
     // The workspace's main area tabs after the dashboard, in the order they started.
     private IReadOnlyList<IMainAreaTab> _tabs = [];
     private IMainAreaTab? _shown;
+
+    // Set when restoring the tabs sends the view to the tab that was shown before Tammi closed.
+    private bool _restoredTabShown;
     private string _deletingName = "";
 
     // Keeps running while the tab is open, so it isn't disposed with the page.
@@ -465,6 +468,12 @@ else
     public string WorkspaceId { get; set; } = "";
 
     /// <summary>
+    /// The ID of the main area tab shown, or <see langword="null"/> for the dashboard.
+    /// </summary>
+    [Parameter]
+    public string? TabId { get; set; }
+
+    /// <summary>
     /// Starts the Delete Workspace flow when the tab is shown, e.g. from the button on Home's Done workspaces.
     /// </summary>
     [SupplyParameterFromQuery(Name = "delete")]
@@ -499,7 +508,28 @@ else
 
         _tab = WorkspaceTabs.Find(WorkspaceId);
         UpdateTabs();
-        await LoadAsync();
+
+        // Showing another of the workspace's tabs only changes the tab, so it isn't read again.
+        _restoredTabShown = false;
+        if (!IsLoaded)
+        {
+            await LoadAsync();
+        }
+
+        // The tabs were just restored and the restored tab is being shown: this is its turn to be remembered.
+        if (IsLoaded && !_restoredTabShown)
+        {
+            // The tab was closed, or isn't there (e.g. an old address): show the dashboard.
+            if (TabId is not null && _shown is null)
+            {
+                Navigation.NavigateTo(AppRoutes.Workspace(WorkspaceId), replace: true);
+                return;
+            }
+
+            // Remembers what the view shows, here and for the next time Tammi starts, as it changes. Not before the
+            // tabs have loaded and been restored: until then a tab that hasn't opened yet looks like the dashboard.
+            SetShownTab(_shown);
+        }
 
         if (Delete && IsLoaded && _listing is not null && !_deleting)
         {
@@ -568,6 +598,13 @@ else
         }
 
         UpdateTabs();
+
+        // Shows the tab that was shown before Tammi closed, instead of the dashboard that the workspace opens at.
+        if (restoration.Restored && TabId is null && restoration.Active is { } active)
+        {
+            _restoredTabShown = true;
+            Navigation.NavigateTo(AppRoutes.WorkspaceTab(WorkspaceId, active.Id), replace: true);
+        }
     }
 
     private IReadOnlyList<ToolEntry> RepositoryTools(WorkspaceRepository repository) =>
@@ -918,11 +955,8 @@ else
             .Concat(HistoryTabs.For(WorkspaceId))
             .OrderBy(tab => tab.StartOrder)];
 
-        // Show the tab the view was showing last time (in this run, or before Tammi restarted), or the dashboard if it
-        // wasn't showing one or it has been closed. This only reads: what the view shows is only remembered when the
-        // user changes it, as a tab that hasn't opened yet (while tabs are restored) isn't the dashboard.
-        _shown = (ViewState.GetShown(WorkspaceId) ?? TabRestorer.GetActive(WorkspaceId)) is { } shown
-            && _tabs.Contains(shown) ? shown : null;
+        // The tab the address names, or the dashboard if it names none or the tab isn't open.
+        _shown = TabId is null ? null : _tabs.FirstOrDefault(tab => tab.Id == TabId);
     }
 
     // Remembers the tab the view shows, here and for the next time Tammi starts.
@@ -932,17 +966,11 @@ else
         TabRestorer.SetActive(WorkspaceId, tab);
     }
 
-    private void ShowDashboard()
-    {
-        SetShownTab(null);
-        _shown = null;
-    }
-
+    // Shows a tab by going to its address, which is what changes the tab shown.
     private void ShowTab(IMainAreaTab tab)
     {
-        SetShownTab(tab);
-        _shown = tab;
         UpdateTabs();
+        Navigation.NavigateTo(AppRoutes.WorkspaceTab(WorkspaceId, tab.Id));
     }
 
     private void StartTerminal(WorkspaceRepository? repository)
@@ -996,7 +1024,7 @@ else
             // Show the next tab, or the previous one if it was the last, or else the dashboard.
             var index = _tabs.ToList().IndexOf(tab);
             var next = index + 1 < _tabs.Count ? _tabs[index + 1] : index > 0 ? _tabs[index - 1] : null;
-            SetShownTab(next);
+            Navigation.NavigateTo(next is null ? AppRoutes.Workspace(WorkspaceId) : AppRoutes.WorkspaceTab(WorkspaceId, next.Id));
         }
 
         // Closing an agent's tab stops it. Its session can still be resumed.

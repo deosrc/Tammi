@@ -1,4 +1,6 @@
 @page "/repositories/git/{EncodedPath}"
+@page "/repositories/git/{EncodedPath}/tabs/{TabId}"
+@inject NavigationManager Navigation
 @implements IDisposable
 @using Deosrc.Tammi.Core.Agents
 @using Deosrc.Tammi.Core.Settings
@@ -23,10 +25,9 @@
                     var shown = ReferenceEquals(tab, _shown);
                     var primary = tab is WorkspaceGitGraph { IsPrimary: true };
                     <div class="session-tab @(shown ? "active" : null)" @key="tab">
-                        <button type="button" class="session-tab-label" role="tab"
-                                aria-selected="@(shown ? "true" : "false")"
-                                title="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })"
-                                @onclick="() => ShowTab(tab)">
+                        <a class="session-tab-label" role="tab" href="@RouteOf(tab)"
+                           aria-selected="@(shown ? "true" : "false")"
+                           title="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })">
                             @if (tab is WorkspaceTerminal)
                             {
                                 <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -61,7 +62,7 @@
                                 @* Agents' tabs show their state at the end, next to the close button. *@
                                 <AgentStateIndicator State="agent.State" />
                             }
-                        </button>
+                        </a>
                         @if (!primary)
                         {
                             <button type="button" class="tab-close" title="Close @tab.Name"
@@ -144,6 +145,12 @@
     [Parameter]
     public string EncodedPath { get; set; } = "";
 
+    /// <summary>
+    /// The ID of the secondary tab shown, or <see langword="null"/> for the repository's own git graph.
+    /// </summary>
+    [Parameter]
+    public string? TabId { get; set; }
+
     protected override void OnInitialized()
     {
         GitGraphs.Changed += OnTabsChanged;
@@ -165,6 +172,16 @@
         // Opens the repository's own graph, which is always the first tab.
         GitGraphs.OpenRepository(path);
         UpdateTabs();
+
+        // The tab was closed, or isn't there (e.g. an old address): show the repository's own graph.
+        if (TabId is not null && _shown is null)
+        {
+            Navigation.NavigateTo(AppRoutes.RepositoryGit(_path), replace: true);
+            return;
+        }
+
+        // Remembers what the view shows, so it shows the same again when the user comes back to it.
+        ViewState.SetShown(_id, _shown is WorkspaceGitGraph { IsPrimary: true } ? null : _shown);
     }
 
     public void Dispose()
@@ -194,15 +211,16 @@
                 .OrderBy(tab => tab.StartOrder),
         ];
 
-        // The tab the view was showing, or the repository's graph if it wasn't showing one or it has been closed.
-        _shown = ViewState.GetShown(_id) is { } shown && _tabs.Contains(shown) ? shown : _tabs.FirstOrDefault();
+        // The tab the address names, or the repository's graph if it names none. Null if the tab isn't open.
+        _shown = TabId is null ? _tabs.FirstOrDefault() : _tabs.FirstOrDefault(tab => tab.Id == TabId);
     }
 
-    private void ShowTab(IMainAreaTab tab)
-    {
-        ViewState.SetShown(_id, tab is WorkspaceGitGraph { IsPrimary: true } ? null : tab);
-        UpdateTabs();
-    }
+    // The address of a tab: the repository's own graph is at the repository's address.
+    private string RouteOf(IMainAreaTab tab) =>
+        tab is WorkspaceGitGraph { IsPrimary: true } ? AppRoutes.RepositoryGit(_path) : AppRoutes.RepositoryGitTab(_path, tab.Id);
+
+    // Shows a tab by going to its address, which is what changes the tab shown.
+    private void ShowTab(IMainAreaTab tab) => Navigation.NavigateTo(RouteOf(tab));
 
     // Opens a submodule's or another worktree's graph as a new secondary tab.
     private void OpenGit(string path)
@@ -255,7 +273,7 @@
         {
             // Show the next tab, or the previous one if it was the last.
             var index = _tabs.ToList().IndexOf(tab);
-            ViewState.SetShown(_id, index + 1 < _tabs.Count ? _tabs[index + 1] : _tabs[index - 1]);
+            Navigation.NavigateTo(RouteOf(index + 1 < _tabs.Count ? _tabs[index + 1] : _tabs[index - 1]));
         }
 
         var closing = tab switch

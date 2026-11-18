@@ -7,6 +7,7 @@
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceTabs WorkspaceTabs
 @inject NavigationManager Navigation
+@inject Deosrc.Tammi.UI.Workspaces.WorkspaceViewState ViewState
 @inject HomeGitStatus GitStatus
 @inject WorkspaceAgents Agents
 @inject ISettingsStore SettingsStore
@@ -484,7 +485,7 @@
     {
         // Opening a workspace that's already open keeps its tab, so this just shows it.
         WorkspaceTabs.Open(workspace.Id, workspace.Name);
-        Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id));
+        Navigation.NavigateTo(ViewState.RouteOf(workspace.Id));
     }
 
     private void OnWorkspacesChanged() => InvokeAsync(async () =>

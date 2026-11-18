@@ -1695,6 +1695,7 @@ label.task-choice {
   background: none;
   color: inherit;
   font: inherit;
+  text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
 }
