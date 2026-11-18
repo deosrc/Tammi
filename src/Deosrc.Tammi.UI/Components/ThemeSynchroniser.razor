@@ -4,6 +4,7 @@
 @inject IJSRuntime JS
 @inject ISettingsStore SettingsStore
 @inject ISystemTheme SystemTheme
+@inject IThemeService FluentTheme
 
 @code {
     private IJSObjectReference? _module;
@@ -31,7 +32,9 @@
     // Both events can be raised on any thread.
     private void OnChanged() => _ = InvokeAsync(ApplyAsync);
 
-    // Light or dark when known. Auto with an undetected system theme is left to the browser's own detection.
+    // Light or dark when known. Auto with an undetected system theme is left to the browser's own detection. Fluent's
+    // components are told the same theme, as their own system detection (the browser's) can disagree with the
+    // platform's, e.g. WebKitGTK reports light while the desktop is dark.
     private async Task ApplyAsync()
     {
         if (_module is null || _disposed)
@@ -48,6 +51,12 @@
         try
         {
             await _module.InvokeVoidAsync("setTheme", theme);
+            await FluentTheme.SetThemeAsync(theme switch
+            {
+                "light" => ThemeMode.Light,
+                "dark" => ThemeMode.Dark,
+                _ => ThemeMode.System,
+            });
         }
         catch (JSDisconnectedException)
         {
