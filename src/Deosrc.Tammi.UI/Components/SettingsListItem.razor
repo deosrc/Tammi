@@ -1,0 +1,17 @@
+@* An item in a list in the settings, e.g. a folder with its status and actions, in a card. Put it in a <ul
+   class="settings-list">. Its content sits in a row: its text first, then any status and buttons. *@
+<li>
+    <FluentCard>
+        <div class="settings-list-item-row">
+            @ChildContent
+        </div>
+    </FluentCard>
+</li>
+
+@code {
+    /// <summary>
+    /// What the item shows, laid out in a row.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}
