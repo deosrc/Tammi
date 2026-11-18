@@ -1723,6 +1723,21 @@ label.task-choice {
   margin: 0 0 var(--space-6);
 }
 
+/* The parts of one section of a settings form (its title and help, then its fields) stay close together, as the form
+   spaces its sections apart. */
+.settings-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Fluent's fields come with vertical margins (its .my-3-o class), which double up with the gap above. The selector has
+   to be more specific than that class. */
+.settings-field-group fluent-field {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 .settings-field label {
   display: block;
   margin-bottom: var(--space-2);
