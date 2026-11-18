@@ -1911,6 +1911,12 @@ label.task-choice {
   margin: 0;
 }
 
+/* A header that toggles its card when clicked. */
+.agent-definition-toggle {
+  cursor: pointer;
+  user-select: none;
+}
+
 /* A predefined prompt's name with its description below it, in a menu item. The menu item keeps its text on one line
    and cuts it off, so this lets the description wrap, within a width that suits it. */
 .prompt-menu-item {

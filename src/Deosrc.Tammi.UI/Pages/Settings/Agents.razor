@@ -37,21 +37,38 @@
     {
         var index = i;
         var definition = agents.CustomDefinitions[index];
+        var collapsed = !_expanded.Contains(index);
         <li>
             <FluentCard>
                 <div class="agent-settings-card">
-                    <div class="agent-definition-header">
+                    @* The whole header toggles the card, except its buttons, which stop the click reaching it. The chevron
+                       doesn't, so clicking it, or pressing it with the keyboard, toggles the card the same way. *@
+                    <div class="agent-definition-header agent-definition-toggle" @onclick="() => ToggleCollapsed(index)">
+                        <FluentButton Size="ButtonSize.Small" Appearance="ButtonAppearance.Transparent" IconOnly="true"
+                                      IconStart="@(collapsed ? new Icons.Regular.Size16.ChevronRight() : new Icons.Regular.Size16.ChevronDown())"
+                                      Title="@(collapsed ? "Expand" : "Collapse")"
+                                      aria-label="@($"{(collapsed ? "Expand" : "Collapse")} {definition.Name}")"
+                                      aria-expanded="@(collapsed ? "false" : "true")" />
                         <span class="agent-definition-name">@(string.IsNullOrWhiteSpace(definition.Name) ? "Unnamed agent" : definition.Name)</span>
-                        <FluentButton Size="ButtonSize.Small" IconOnly="true" Disabled="@(index == 0)"
+                        <FluentButton Size="ButtonSize.Small" IconOnly="true" Disabled="@(index == 0)" StopPropagation="true"
                                       IconStart="@(new Icons.Regular.Size16.ArrowUp())" Title="Move up"
                                       aria-label="@($"Move {definition.Name} up")" OnClick="() => MoveAsync(index, -1)" />
-                        <FluentButton Size="ButtonSize.Small" IconOnly="true"
+                        <FluentButton Size="ButtonSize.Small" IconOnly="true" StopPropagation="true"
                                       Disabled="@(index == agents.CustomDefinitions.Count - 1)"
                                       IconStart="@(new Icons.Regular.Size16.ArrowDown())" Title="Move down"
                                       aria-label="@($"Move {definition.Name} down")" OnClick="() => MoveAsync(index, 1)" />
-                        <FluentButton Size="ButtonSize.Small" OnClick="() => RemoveAsync(index)">Remove</FluentButton>
+                        <FluentButton Size="ButtonSize.Small" StopPropagation="true" OnClick="() => RemoveAsync(index)">Remove</FluentButton>
                     </div>
 
+                    @if (collapsed)
+                    {
+                        <dl class="settings-values agent-status">
+                            <dt>Command</dt>
+                            <dd><code>@definition.Command</code></dd>
+                        </dl>
+                    }
+                    else
+                    {
                     <div class="settings-field-group">
                         <FluentTextInput Label="Name" Width="100%" Value="@definition.Name"
                                          ValueChanged="value => UpdateDefinitionAsync(index, d => d with { Name = Text(value) })"
@@ -155,6 +172,7 @@
                             }
                         </dl>
                     }
+                    }
                 </div>
             </FluentCard>
         </li>
@@ -245,6 +263,10 @@
 @code {
     private int _templateRevision;
 
+    // The custom agents whose cards are expanded, by their position in the list. They start collapsed, except one that
+    // was just added.
+    private readonly HashSet<int> _expanded = [];
+
     private static readonly InitialPromptStyle[] PromptStyles = [InitialPromptStyle.Prefill, InitialPromptStyle.Submit];
 
     // Shown in place of the prompt in the command previews.
@@ -260,19 +282,53 @@
     private static bool HasSessionIdPlaceholder(IEnumerable<string> arguments) =>
         arguments.Any(argument => argument.Contains(AgentDefinition.SessionIdPlaceholder, StringComparison.Ordinal));
 
-    private Task AddDefinitionAsync() =>
-        UpdateDefinitionsAsync(definitions =>
+    // The new agent's card starts expanded, so it can be filled in.
+    private Task AddDefinitionAsync()
+    {
+        _expanded.Add(SettingsStore.Current.Agents.CustomDefinitions.Count);
+        return UpdateDefinitionsAsync(definitions =>
             [.. definitions, new AgentDefinition("New agent", "") { PromptArguments = [AgentDefinition.PromptPlaceholder] }]);
+    }
 
-    private Task RemoveAsync(int index) =>
-        UpdateDefinitionsAsync(definitions => index < definitions.Count
+    private void ToggleCollapsed(int index)
+    {
+        if (!_expanded.Remove(index))
+        {
+            _expanded.Add(index);
+        }
+    }
+
+    // The cards after the removed one move up, so they keep their state.
+    private Task RemoveAsync(int index)
+    {
+        var after = _expanded.Where(expanded => expanded > index).Select(expanded => expanded - 1).ToList();
+        _expanded.RemoveWhere(expanded => expanded >= index);
+        _expanded.UnionWith(after);
+        return UpdateDefinitionsAsync(definitions => index < definitions.Count
             ? [.. definitions.Take(index), .. definitions.Skip(index + 1)]
             : definitions);
+    }
 
-    private Task MoveAsync(int index, int offset) =>
-        UpdateDefinitionsAsync(definitions =>
+    private Task MoveAsync(int index, int offset)
+    {
+        // A card keeps its state when it moves.
+        var target = index + offset;
+        var wasExpanded = _expanded.Contains(index);
+        var targetWasExpanded = _expanded.Contains(target);
+        _expanded.Remove(index);
+        _expanded.Remove(target);
+        if (wasExpanded)
         {
-            var target = index + offset;
+            _expanded.Add(target);
+        }
+
+        if (targetWasExpanded)
+        {
+            _expanded.Add(index);
+        }
+
+        return UpdateDefinitionsAsync(definitions =>
+        {
             if (index >= definitions.Count || target < 0 || target >= definitions.Count)
             {
                 return definitions;
@@ -282,6 +338,7 @@
             (moved[index], moved[target]) = (moved[target], moved[index]);
             return moved;
         });
+    }
 
     private Task UpdateDefinitionAsync(int index, Func<AgentDefinition, AgentDefinition> update) =>
         UpdateDefinitionsAsync(definitions => index < definitions.Count
