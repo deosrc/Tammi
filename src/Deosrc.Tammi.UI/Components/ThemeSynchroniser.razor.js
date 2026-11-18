@@ -6,3 +6,18 @@ export function setTheme(theme) {
         delete document.documentElement.dataset.theme;
     }
 }
+
+// The brand palette's theme colours for the current theme, as palette.css defines them, so Fluent's theme is built
+// from the same colours. Read after setTheme, as the colours depend on the theme.
+export function brandColors() {
+    const styles = getComputedStyle(document.documentElement);
+    const colour = (name) => styles.getPropertyValue(name).trim();
+    return {
+        background: colour("--tammi-bg"),
+        surface: colour("--tammi-surface"),
+        text: colour("--tammi-text"),
+        textMuted: colour("--tammi-text-muted"),
+        accent: colour("--tammi-accent"),
+        onAccent: colour("--tammi-on-accent"),
+    };
+}

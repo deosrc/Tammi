@@ -1,6 +1,7 @@
 /* ---------------------------------------------------------------------------------------------------------------
    Tammi's brand colour palette, as produced with the icons. The theme variables in app.css (--color-*) are built from
-   the brand colours here; the --tammi-* theme tokens below are the palette's own and aren't used by the app yet.
+   the brand colours here. The --tammi-* theme tokens below are the palette's own: Fluent's theme is built from them
+   (see ThemeSynchroniser).
    --------------------------------------------------------------------------------------------------------------- */
 
 :root {

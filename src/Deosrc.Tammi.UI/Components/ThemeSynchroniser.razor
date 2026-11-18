@@ -51,18 +51,41 @@
         try
         {
             await _module.InvokeVoidAsync("setTheme", theme);
-            await FluentTheme.SetThemeAsync(theme switch
-            {
-                "light" => ThemeMode.Light,
-                "dark" => ThemeMode.Dark,
-                _ => ThemeMode.System,
-            });
+            await ApplyFluentAsync(theme);
         }
         catch (JSDisconnectedException)
         {
             // The window is closing.
         }
     }
+
+    // Fluent's mode comes first, as it also marks the page light or dark. Then its theme is built from the brand
+    // palette (see palette.css) and replaces the generated colours it would otherwise use.
+    private async Task ApplyFluentAsync(string? theme)
+    {
+        var mode = theme switch
+        {
+            "light" => ThemeMode.Light,
+            "dark" => ThemeMode.Dark,
+            _ => ThemeMode.System,
+        };
+        await FluentTheme.SetThemeAsync(mode);
+
+        var brand = await _module!.InvokeAsync<BrandColors>("brandColors");
+        var fluent = await FluentTheme.CreateCustomThemeAsync(new ThemeSettings(brand.Accent, 0, 0, mode, true));
+        var neutral = fluent.Colors.Neutral;
+        neutral.Background1 = brand.Surface;
+        neutral.Background2 = brand.Background;
+        neutral.Background3 = brand.Background;
+        neutral.Foreground1 = brand.Text;
+        neutral.Foreground2 = brand.Text;
+        neutral.Foreground3 = brand.TextMuted;
+        neutral.ForegroundOnBrand = brand.OnAccent;
+        await FluentTheme.SetThemeAsync(fluent);
+    }
+
+    private sealed record BrandColors(
+        string Background, string Surface, string Text, string TextMuted, string Accent, string OnAccent);
 
     public async ValueTask DisposeAsync()
     {
