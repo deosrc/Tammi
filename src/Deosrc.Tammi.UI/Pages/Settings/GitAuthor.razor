@@ -72,11 +72,13 @@
         }
     }
 
-    private Task OnNameChanged(string? value) => SaveAsync(name => GitUserConfig.SetNameAsync(name), value);
+    private Task OnNameChanged(string? value) =>
+        SaveAsync(name => GitUserConfig.SetNameAsync(name), value, identity => identity.Name);
 
-    private Task OnEmailChanged(string? value) => SaveAsync(email => GitUserConfig.SetEmailAsync(email), value);
+    private Task OnEmailChanged(string? value) =>
+        SaveAsync(email => GitUserConfig.SetEmailAsync(email), value, identity => identity.Email);
 
-    private async Task SaveAsync(Func<string?, Task> save, string? value)
+    private async Task SaveAsync(Func<string?, Task> save, string? value, Func<GitIdentity, string?> shown)
     {
         try
         {
@@ -99,6 +101,10 @@
             _loadError = $"Couldn't read your git config. {ex.Message}";
         }
 
-        _revision++;
+        // Recreating the inputs drops their focus, so it's only done when what's shown differs from what was typed.
+        if (_identity is null || !string.Equals(shown(_identity) ?? "", value ?? "", StringComparison.Ordinal))
+        {
+            _revision++;
+        }
     }
 }
