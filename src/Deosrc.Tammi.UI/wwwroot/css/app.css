@@ -1675,7 +1675,7 @@ label.task-choice {
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
-   Settings: a vertical tab list of sections, with the selected section beside it
+   Settings: a navigation menu of sections, with the selected section beside it
    --------------------------------------------------------------------------------------------------------------- */
 
 .settings {
@@ -1684,34 +1684,12 @@ label.task-choice {
 }
 
 .settings-nav {
-  display: flex;
   flex: none;
-  flex-direction: column;
-  gap: 2px;
   width: 200px;
   overflow-y: auto;
   padding: var(--space-4) var(--space-2);
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
-}
-
-.settings-nav-item {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius);
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.settings-nav-item:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
-}
-
-.settings-nav-item.active {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
-  font-weight: 600;
-  box-shadow: inset 2px 0 0 var(--color-accent);
 }
 
 .settings-content {
