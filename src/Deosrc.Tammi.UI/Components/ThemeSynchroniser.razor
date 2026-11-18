@@ -9,6 +9,8 @@
 @code {
     private IJSObjectReference? _module;
     private bool _disposed;
+    private bool _applied;
+    private string? _appliedTheme;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -48,10 +50,20 @@
             ThemePreference.Dark => "dark",
             _ => SystemTheme.IsDark switch { true => "dark", false => "light", null => null },
         };
+
+        // Any setting changing raises the event, but applying the theme resets Fluent's colours before setting Tammi's,
+        // which shows as a flash, so only do it when the theme has changed.
+        if (_applied && theme == _appliedTheme)
+        {
+            return;
+        }
+
         try
         {
             await _module.InvokeVoidAsync("setTheme", theme);
             await ApplyFluentAsync(theme);
+            _applied = true;
+            _appliedTheme = theme;
         }
         catch (JSDisconnectedException)
         {
