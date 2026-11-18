@@ -2522,12 +2522,11 @@ label.task-choice {
   background: var(--color-error);
 }
 
-/* SSH keys in the Git settings: each key's details, actions and services stacked in its list item. */
-.settings-list-item.ssh-key {
+/* SSH keys in the Git settings: each key's details, actions and services stacked in its card. */
+.ssh-key {
+  display: flex;
   flex-direction: column;
-  align-items: stretch;
   gap: var(--space-2);
-  padding: var(--space-2);
 }
 
 .ssh-key-summary {
@@ -2542,8 +2541,7 @@ label.task-choice {
   font-size: var(--font-size-small);
 }
 
-.ssh-key p,
-.ssh-key .alert {
+.ssh-key p {
   margin: 0;
 }
 
