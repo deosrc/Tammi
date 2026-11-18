@@ -1725,6 +1725,11 @@ label.task-choice {
 
 /* The parts of one section of a settings form (its title and help, then its fields) stay close together, as the form
    spaces its sections apart. */
+/* A notice at the top of a settings page, with room below it. It's only in the page while it applies, so the space is too. */
+.settings-banner {
+  margin-bottom: var(--space-4);
+}
+
 .settings-field-group {
   display: flex;
   flex-direction: column;

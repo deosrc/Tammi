@@ -9,13 +9,15 @@
 
 @if (Updater.IsDevelopmentBuild)
 {
-    <p class="warning" role="alert">New version detection is disabled as this is a development build of Tammi</p>
+    <FluentMessageBar Class="settings-banner" Intent="MessageBarIntent.Warning" AllowDismiss="false">
+        New version detection is disabled as this is a development build of Tammi
+    </FluentMessageBar>
 }
 else if (!Updater.CanUpdate)
 {
-    <p class="warning" role="alert">
+    <FluentMessageBar Class="settings-banner" Intent="MessageBarIntent.Warning" AllowDismiss="false">
         New version detection is disabled as the version of this copy of Tammi can't be read.
-    </p>
+    </FluentMessageBar>
 }
 
 <p class="settings-help settings-intro">Tammi will automatically check for new releases on startup and ask to install it.</p>
@@ -28,26 +30,20 @@ else if (!Updater.CanUpdate)
 </dl>
 
 <div class="settings-form">
-    <div class="settings-field">
-        <label class="settings-choice">
-            <Switch Id="update-check-on-startup" Checked="Current.CheckOnStartup" Label="Check for updates when Tammi starts"
-                    CheckedChanged="enabled => UpdateUpdatesAsync(u => u with { CheckOnStartup = enabled })" />
-            Check for updates when Tammi starts
-        </label>
-        <label class="settings-choice">
-            <Switch Id="update-include-pre-releases" Checked="Current.IncludePreReleases" Label="Include pre-releases"
-                    CheckedChanged="enabled => UpdateUpdatesAsync(u => u with { IncludePreReleases = enabled })" />
-            Include pre-releases
-        </label>
+    <div class="settings-field-group">
+        <FluentSwitch Label="Check for updates when Tammi starts" Value="Current.CheckOnStartup"
+                      ValueChanged="enabled => UpdateUpdatesAsync(u => u with { CheckOnStartup = enabled })" />
+        <FluentSwitch Label="Include pre-releases" Value="Current.IncludePreReleases"
+                      ValueChanged="enabled => UpdateUpdatesAsync(u => u with { IncludePreReleases = enabled })" />
     </div>
 
     @if (Updater.CanUpdate)
     {
         <div class="settings-field-actions">
-            <button type="button" class="button button-secondary" disabled="@(Updater.Status is UpdateStatus.Checking or UpdateStatus.Installing)"
-                    @onclick="CheckForUpdatesAsync">
+            <FluentButton Disabled="@(Updater.Status is UpdateStatus.Checking or UpdateStatus.Installing)"
+                          OnClick="CheckForUpdatesAsync">
                 Check for updates
-            </button>
+            </FluentButton>
         </div>
         <p class="settings-help" role="status">@UpdateStatusText</p>
     }
@@ -73,11 +69,11 @@ else if (!Updater.CanUpdate)
             else if (Updater.Status == UpdateStatus.Installing)
             {
                 <span>Downloading… @((int)(Updater.Progress * 100))%</span>
-                <progress max="1" value="@Updater.Progress"></progress>
+                <FluentProgressBar Value="@((int)(Updater.Progress * 100))" Max="100" Width="160px" />
             }
             else
             {
-                <button type="button" class="button" @onclick="() => Updater.InstallAsync()">Update</button>
+                <FluentButton Appearance="ButtonAppearance.Primary" OnClick="() => Updater.InstallAsync()">Update</FluentButton>
             }
         </div>
     </section>
@@ -85,7 +81,9 @@ else if (!Updater.CanUpdate)
 
 @if (SaveError is not null)
 {
-    <p class="error">@SaveError</p>
+    <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+        @SaveError
+    </FluentMessageBar>
 }
 
 @code {
