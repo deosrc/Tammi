@@ -37,173 +37,141 @@
     {
         var index = i;
         var definition = agents.CustomDefinitions[index];
-        <li class="agent-definition">
-            <div class="agent-definition-header">
-                <span class="agent-definition-name">@(string.IsNullOrWhiteSpace(definition.Name) ? "Unnamed agent" : definition.Name)</span>
-                <button type="button" class="button button-secondary" disabled="@(index == 0)" @onclick="() => MoveAsync(index, -1)"
-                        title="Move up" aria-label="Move @definition.Name up">↑</button>
-                <button type="button" class="button button-secondary" disabled="@(index == agents.CustomDefinitions.Count - 1)"
-                        @onclick="() => MoveAsync(index, 1)" title="Move down"
-                        aria-label="Move @definition.Name down">↓</button>
-                <button type="button" class="button button-secondary" @onclick="() => RemoveAsync(index)">Remove</button>
-            </div>
+        <li>
+            <FluentCard>
+                <div class="agent-settings-card">
+                    <div class="agent-definition-header">
+                        <span class="agent-definition-name">@(string.IsNullOrWhiteSpace(definition.Name) ? "Unnamed agent" : definition.Name)</span>
+                        <FluentButton Size="ButtonSize.Small" IconOnly="true" Disabled="@(index == 0)"
+                                      IconStart="@(new Icons.Regular.Size16.ArrowUp())" Title="Move up"
+                                      aria-label="@($"Move {definition.Name} up")" OnClick="() => MoveAsync(index, -1)" />
+                        <FluentButton Size="ButtonSize.Small" IconOnly="true"
+                                      Disabled="@(index == agents.CustomDefinitions.Count - 1)"
+                                      IconStart="@(new Icons.Regular.Size16.ArrowDown())" Title="Move down"
+                                      aria-label="@($"Move {definition.Name} down")" OnClick="() => MoveAsync(index, 1)" />
+                        <FluentButton Size="ButtonSize.Small" OnClick="() => RemoveAsync(index)">Remove</FluentButton>
+                    </div>
 
-            <div class="settings-form">
-                <div class="settings-field">
-                    <label for="agent-@index-name">Name</label>
-                    <input id="agent-@index-name"
-                           class="@(agents.HasDuplicateName(index) ? "invalid" : null)"
-                           value="@definition.Name"
-                           aria-invalid="@(agents.HasDuplicateName(index) ? "true" : null)"
-                           aria-describedby="@(agents.HasDuplicateName(index) ? $"agent-{index}-name-error" : null)"
-                           @onchange="e => UpdateDefinitionAsync(index, d => d with { Name = Text(e) })" />
-                    @if (agents.HasDuplicateName(index))
-                    {
-                        <p id="agent-@index-name-error" class="error">
-                            Another agent is called "@definition.Name.Trim()". Give each one its own name, so you can
-                            tell them apart.
+                    <div class="settings-field-group">
+                        <FluentTextInput Label="Name" Width="100%" Value="@definition.Name"
+                                         ValueChanged="value => UpdateDefinitionAsync(index, d => d with { Name = Text(value) })"
+                                         MessageCondition="FluentFieldCondition.Always"
+                                         MessageState="@(agents.HasDuplicateName(index) ? MessageState.Error : null)"
+                                         Message="@(agents.HasDuplicateName(index) ? $"Another agent is called \"{definition.Name.Trim()}\". Give each one its own name, so you can tell them apart." : null)" />
+
+                        <FluentTextInput Label="Command" Width="100%" Value="@definition.Command"
+                                         ValueChanged="value => UpdateDefinitionAsync(index, d => d with { Command = Text(value) })"
+                                         MessageCondition="FluentFieldCondition.Always"
+                                         MessageState="@(string.IsNullOrWhiteSpace(definition.Command) ? MessageState.Warning : null)"
+                                         Message="@(string.IsNullOrWhiteSpace(definition.Command) ? "This agent can't be started until it has a command." : "The agent's executable: a name on the search path, or a full path.")" />
+
+                        <FluentTextArea Label="Arguments" Width="100%" Height="72px"
+                                        Value="@ArgumentLines.Format(definition.Arguments)"
+                                        ValueChanged="value => UpdateDefinitionAsync(index, d => d with { Arguments = ArgumentLines.Parse(Text(value)) })" />
+                        <p class="settings-help">
+                            Passed <strong>every time</strong> the agent starts, e.g. an option that picks a model. One
+                            argument on each line, without quotes.
                         </p>
-                    }
-                </div>
 
-                <div class="settings-field">
-                    <label for="agent-@index-command">Command</label>
-                    <input id="agent-@index-command"
-                           class="settings-path"
-                           value="@definition.Command"
-                           @onchange="e => UpdateDefinitionAsync(index, d => d with { Command = Text(e) })" />
-                    <p class="settings-help">The agent's executable: a name on the search path, or a full path.</p>
-                    @if (string.IsNullOrWhiteSpace(definition.Command))
-                    {
-                        <p class="warning">This agent can't be started until it has a command.</p>
-                    }
-                </div>
-
-                <div class="settings-field">
-                    <label for="agent-@index-arguments">Arguments</label>
-                    <textarea id="agent-@index-arguments"
-                              class="settings-arguments"
-                              rows="2"
-                              value="@ArgumentLines.Format(definition.Arguments)"
-                              @onchange="e => UpdateDefinitionAsync(index, d => d with { Arguments = ArgumentLines.Parse(Text(e)) })"></textarea>
-                    <p class="settings-help">
-                        Passed <strong>every time</strong> the agent starts, e.g. an option that picks a model. One
-                        argument on each line, without quotes.
-                    </p>
-                </div>
-
-                <div class="settings-field">
-                    <label for="agent-@index-prompt-arguments">Initial prompt arguments</label>
-                    <textarea id="agent-@index-prompt-arguments"
-                              class="settings-arguments"
-                              rows="2"
-                              value="@ArgumentLines.Format(definition.PromptArguments)"
-                              @onchange="e => UpdateDefinitionAsync(index, d => d with { PromptArguments = ArgumentLines.Parse(Text(e)) })"></textarea>
-                    <p class="settings-help">
-                        Added after the arguments <strong>only when</strong> Tammi sends the agent an initial prompt
-                        (see below). <code>@AgentDefinition.PromptPlaceholder</code> is replaced with the prompt. Most
-                        agents take it on its own line. If the agent takes the prompt as an option's value, put the
-                        option on the line before, e.g. <code>--prompt</code>, so it's left out with the prompt. Leave
-                        this empty if the agent can't take a prompt: it then starts without one.
-                    </p>
-                    @if (definition.AcceptsInitialPrompt && !HasPromptPlaceholder(definition))
-                    {
-                        <p class="warning">
-                            None of these arguments has <code>@AgentDefinition.PromptPlaceholder</code>, so the prompt
-                            won't be passed.
+                        <FluentTextArea Label="Initial prompt arguments" Width="100%" Height="72px"
+                                        Value="@ArgumentLines.Format(definition.PromptArguments)"
+                                        ValueChanged="value => UpdateDefinitionAsync(index, d => d with { PromptArguments = ArgumentLines.Parse(Text(value)) })" />
+                        <p class="settings-help">
+                            Added after the arguments <strong>only when</strong> Tammi sends the agent an initial prompt
+                            (see below). <code>@AgentDefinition.PromptPlaceholder</code> is replaced with the prompt. Most
+                            agents take it on its own line. If the agent takes the prompt as an option's value, put the
+                            option on the line before, e.g. <code>--prompt</code>, so it's left out with the prompt. Leave
+                            this empty if the agent can't take a prompt: it then starts without one.
                         </p>
-                    }
-                </div>
-
-                <div class="settings-field">
-                    <label for="agent-@index-session-id-arguments">Session ID arguments</label>
-                    <textarea id="agent-@index-session-id-arguments"
-                              class="settings-arguments"
-                              rows="2"
-                              value="@ArgumentLines.Format(definition.SessionIdArguments)"
-                              @onchange="e => UpdateDefinitionAsync(index, d => d with { SessionIdArguments = ArgumentLines.Parse(Text(e)) })"></textarea>
-                    <p class="settings-help">
-                        Added after the arguments when the agent starts a new session, so Tammi can resume it later.
-                        <code>@AgentDefinition.SessionIdPlaceholder</code> is replaced with a session ID that Tammi
-                        makes up (a UUID), e.g. <code>--session-id</code> then <code>@AgentDefinition.SessionIdPlaceholder</code>.
-                        Leave this empty if the agent can't be given a session ID.
-                    </p>
-                    @if (definition.SessionIdArguments.Count > 0 && !HasSessionIdPlaceholder(definition.SessionIdArguments))
-                    {
-                        <p class="warning">
-                            None of these arguments has <code>@AgentDefinition.SessionIdPlaceholder</code>, so the
-                            session can't be resumed.
-                        </p>
-                    }
-                </div>
-
-                <div class="settings-field">
-                    <label for="agent-@index-resume-arguments">Resume arguments</label>
-                    <textarea id="agent-@index-resume-arguments"
-                              class="settings-arguments"
-                              rows="2"
-                              value="@ArgumentLines.Format(definition.ResumeArguments)"
-                              @onchange="e => UpdateDefinitionAsync(index, d => d with { ResumeArguments = ArgumentLines.Parse(Text(e)) })"></textarea>
-                    <p class="settings-help">
-                        Added after the arguments, in place of the session ID and initial prompt arguments, to resume a
-                        session. <code>@AgentDefinition.SessionIdPlaceholder</code> is replaced with the session's ID,
-                        e.g. <code>--resume</code> then <code>@AgentDefinition.SessionIdPlaceholder</code>. Sessions
-                        can only be resumed when both these and the session ID arguments are set.
-                    </p>
-                    @if (definition.ResumeArguments.Count > 0 && !HasSessionIdPlaceholder(definition.ResumeArguments))
-                    {
-                        <p class="warning">
-                            None of these arguments has <code>@AgentDefinition.SessionIdPlaceholder</code>, so the
-                            agent won't know which session to resume.
-                        </p>
-                    }
-                    else if (definition.SessionIdArguments.Count > 0 != definition.ResumeArguments.Count > 0)
-                    {
-                        <p class="warning">
-                            Set both the session ID arguments and the resume arguments to resume this agent's sessions.
-                        </p>
-                    }
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(definition.Command))
-                {
-                    <dl class="settings-values agent-command-preview">
-                        <dt>Starts as</dt>
-                        <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildArguments(null))</code></dd>
-                        @if (definition.AcceptsInitialPrompt)
+                        @if (definition.AcceptsInitialPrompt && !HasPromptPlaceholder(definition))
                         {
-                            <dt>With a prompt</dt>
-                            <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildArguments(PromptExample))</code></dd>
+                            <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
+                                              AllowDismiss="false">
+                                None of these arguments has <code>@AgentDefinition.PromptPlaceholder</code>, so the prompt
+                                won't be passed.
+                            </FluentMessageBar>
                         }
-                        @if (definition.CanResume)
+
+                        <FluentTextArea Label="Session ID arguments" Width="100%" Height="72px"
+                                        Value="@ArgumentLines.Format(definition.SessionIdArguments)"
+                                        ValueChanged="value => UpdateDefinitionAsync(index, d => d with { SessionIdArguments = ArgumentLines.Parse(Text(value)) })" />
+                        <p class="settings-help">
+                            Added after the arguments when the agent starts a new session, so Tammi can resume it later.
+                            <code>@AgentDefinition.SessionIdPlaceholder</code> is replaced with a session ID that Tammi
+                            makes up (a UUID), e.g. <code>--session-id</code> then <code>@AgentDefinition.SessionIdPlaceholder</code>.
+                            Leave this empty if the agent can't be given a session ID.
+                        </p>
+                        @if (definition.SessionIdArguments.Count > 0 && !HasSessionIdPlaceholder(definition.SessionIdArguments))
                         {
-                            <dt>New session</dt>
-                            <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildArguments(PromptExample, SessionIdExample))</code></dd>
-                            <dt>Resuming</dt>
-                            <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildResumeArguments(SessionIdExample))</code></dd>
+                            <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
+                                              AllowDismiss="false">
+                                None of these arguments has <code>@AgentDefinition.SessionIdPlaceholder</code>, so the
+                                session can't be resumed.
+                            </FluentMessageBar>
                         }
-                    </dl>
-                }
-            </div>
+
+                        <FluentTextArea Label="Resume arguments" Width="100%" Height="72px"
+                                        Value="@ArgumentLines.Format(definition.ResumeArguments)"
+                                        ValueChanged="value => UpdateDefinitionAsync(index, d => d with { ResumeArguments = ArgumentLines.Parse(Text(value)) })" />
+                        <p class="settings-help">
+                            Added after the arguments, in place of the session ID and initial prompt arguments, to resume a
+                            session. <code>@AgentDefinition.SessionIdPlaceholder</code> is replaced with the session's ID,
+                            e.g. <code>--resume</code> then <code>@AgentDefinition.SessionIdPlaceholder</code>. Sessions
+                            can only be resumed when both these and the session ID arguments are set.
+                        </p>
+                        @if (definition.ResumeArguments.Count > 0 && !HasSessionIdPlaceholder(definition.ResumeArguments))
+                        {
+                            <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
+                                              AllowDismiss="false">
+                                None of these arguments has <code>@AgentDefinition.SessionIdPlaceholder</code>, so the
+                                agent won't know which session to resume.
+                            </FluentMessageBar>
+                        }
+                        else if (definition.SessionIdArguments.Count > 0 != definition.ResumeArguments.Count > 0)
+                        {
+                            <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
+                                              AllowDismiss="false">
+                                Set both the session ID arguments and the resume arguments to resume this agent's sessions.
+                            </FluentMessageBar>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(definition.Command))
+                    {
+                        <dl class="settings-values agent-command-preview">
+                            <dt>Starts as</dt>
+                            <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildArguments(null))</code></dd>
+                            @if (definition.AcceptsInitialPrompt)
+                            {
+                                <dt>With a prompt</dt>
+                                <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildArguments(PromptExample))</code></dd>
+                            }
+                            @if (definition.CanResume)
+                            {
+                                <dt>New session</dt>
+                                <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildArguments(PromptExample, SessionIdExample))</code></dd>
+                                <dt>Resuming</dt>
+                                <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildResumeArguments(SessionIdExample))</code></dd>
+                            }
+                        </dl>
+                    }
+                </div>
+            </FluentCard>
         </li>
     }
 </ul>
 
 <div class="settings-actions">
-    <button type="button" class="button" @onclick="AddDefinitionAsync">Add custom agent</button>
+    <FluentButton Appearance="ButtonAppearance.Primary" OnClick="AddDefinitionAsync">Add custom agent</FluentButton>
 </div>
 
 <h2>Initial prompt</h2>
 
 <div class="settings-form">
-    <div class="settings-field">
-        <label for="initial-prompt-style">Style</label>
-        <div class="settings-field-row">
-            <select id="initial-prompt-style" value="@agents.InitialPromptStyle" @onchange="OnStyleChanged">
-                <option value="@InitialPromptStyle.Prefill">Prefill</option>
-                <option value="@InitialPromptStyle.Submit">Submit</option>
-            </select>
-        </div>
+    <div class="settings-field-group">
+        <FluentSelect Label="Style" Items="PromptStyles" OptionText="@(style => style.ToString())"
+                      Value="agents.InitialPromptStyle"
+                      ValueChanged="@((InitialPromptStyle style) => UpdateAgentsAsync(a => a with { InitialPromptStyle = style }))" />
         <p class="settings-help">
             <strong>Prefill</strong> types the prompt into the agent's input a moment after it starts, so you can change
             it and send it yourself. <strong>Submit</strong> passes it to the agent as its initial prompt arguments say,
@@ -211,16 +179,11 @@
         </p>
     </div>
 
-    <div class="settings-field">
-        <label for="initial-prompt-template">Template</label>
-        @* Recreated after each change, so it shows the saved value even when that's unchanged, e.g. when a cleared
-           template goes back to the default. *@
-        <textarea @key="_templateRevision"
-                  id="initial-prompt-template"
-                  class="settings-template"
-                  rows="4"
-                  value="@agents.InitialPromptTemplate"
-                  @onchange="OnTemplateChanged"></textarea>
+    <div class="settings-field-group">
+        @* Recreated when what it shows isn't what was saved, e.g. when a cleared template goes back to the default, as
+           recreating it drops its focus. *@
+        <FluentTextArea @key="_templateRevision" Label="Template" Width="100%" Height="120px"
+                        Value="@agents.InitialPromptTemplate" ValueChanged="OnTemplateChanged" />
         <p class="settings-help">
             Sent to an agent when it starts, to tell it about the workspace's workspace context file.
             <code>@InitialPrompt.ContextFilePlaceholder</code> is replaced with the file's full path, and the rest is sent
@@ -229,78 +192,66 @@
         </p>
         @if (!agents.InitialPromptTemplate.Contains(InitialPrompt.ContextFilePlaceholder, StringComparison.Ordinal))
         {
-            <p class="warning">
+            <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
                 The template doesn't have <code>@InitialPrompt.ContextFilePlaceholder</code>, so agents won't be told
                 where the context file is.
-            </p>
+            </FluentMessageBar>
         }
         @if (agents.InitialPromptTemplate.AsSpan().ContainsAny('\r', '\n'))
         {
-            <p class="warning">
+            <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
                 On Windows, agents whose command is a batch file (e.g. <code>claude.cmd</code>) can't be given a prompt
                 with several lines, so they won't start. Keep the template on one line to start them.
-            </p>
+            </FluentMessageBar>
         }
         <div class="settings-field-row">
-            @* Closes on Escape, or on a click anywhere outside the menu. *@
-            <div class="menu-anchor" @onkeydown="OnPromptMenuKeyDown">
-                <button type="button" class="button button-secondary button-icon" aria-haspopup="menu"
-                        aria-expanded="@(_promptMenuOpen ? "true" : "false")"
-                        @onclick="() => _promptMenuOpen = !_promptMenuOpen">
-                    Use a predefined prompt
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </button>
-                @if (_promptMenuOpen)
-                {
-                    <div class="menu-backdrop" @onclick="() => _promptMenuOpen = false"></div>
-                    <ul class="menu" role="menu" aria-label="Predefined prompts">
-                        @foreach (var prompt in InitialPrompt.Predefined)
-                        {
-                            var used = prompt.Template == agents.InitialPromptTemplate;
-                            <li role="none">
-                                <button type="button" class="menu-item menu-item-choice" role="menuitemradio"
-                                        aria-checked="@(used ? "true" : "false")"
-                                        @onclick="() => UsePredefinedPromptAsync(prompt)">
-                                    <svg class="icon icon-small @(used ? null : "icon-hidden")" viewBox="0 0 24 24"
-                                         aria-hidden="true" focusable="false">
-                                        <polyline points="20 6 9 17 4 12"></polyline>
-                                    </svg>
-                                    <span class="menu-item-text">
-                                        <span>
-                                            @prompt.Name
-                                            @if (prompt.Template == InitialPrompt.DefaultTemplate)
-                                            {
-                                                <span class="menu-item-note">(default)</span>
-                                            }
-                                        </span>
-                                        <span class="menu-item-description">@prompt.Description</span>
-                                    </span>
-                                </button>
-                            </li>
-                        }
-                    </ul>
-                }
-            </div>
+            <FluentButton Id="predefined-prompts" IconEnd="@(new Icons.Regular.Size16.ChevronDown())">
+                Use a predefined prompt
+            </FluentButton>
+            <FluentMenu Trigger="predefined-prompts">
+                <FluentMenuList>
+                    @foreach (var prompt in InitialPrompt.Predefined)
+                    {
+                        var chosen = prompt;
+                        var used = chosen.Template == agents.InitialPromptTemplate;
+                        @* The prompt in use is marked with a tick. *@
+                        <FluentMenuItem IconEnd="@(used ? new Icons.Regular.Size16.Checkmark() : null)"
+                                        OnClick="() => UsePredefinedPromptAsync(chosen)">
+                            <span class="prompt-menu-item">
+                                <span>
+                                    @chosen.Name
+                                    @if (chosen.Template == InitialPrompt.DefaultTemplate)
+                                    {
+                                        <span class="placeholder">(default)</span>
+                                    }
+                                </span>
+                                <span class="placeholder">@chosen.Description</span>
+                            </span>
+                        </FluentMenuItem>
+                    }
+                </FluentMenuList>
+            </FluentMenu>
         </div>
     </div>
 </div>
 
 @if (SaveError is not null)
 {
-    <p class="error">@SaveError</p>
+    <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+        @SaveError
+    </FluentMessageBar>
 }
 
 @code {
     private int _templateRevision;
-    private bool _promptMenuOpen;
+
+    private static readonly InitialPromptStyle[] PromptStyles = [InitialPromptStyle.Prefill, InitialPromptStyle.Submit];
 
     // Shown in place of the prompt in the command previews.
     private const string PromptExample = "<initial prompt>";
     private const string SessionIdExample = "<session ID>";
 
-    private static string Text(ChangeEventArgs e) => e.Value?.ToString() ?? "";
+    private static string Text(string? value) => value ?? "";
 
     private static bool HasPromptPlaceholder(AgentDefinition definition) =>
         definition.PromptArguments.Any(argument =>
@@ -340,30 +291,21 @@
     private Task UpdateDefinitionsAsync(Func<IReadOnlyList<AgentDefinition>, IReadOnlyList<AgentDefinition>> update) =>
         UpdateAgentsAsync(agents => agents with { CustomDefinitions = update(agents.CustomDefinitions) });
 
-    private Task OnTemplateChanged(ChangeEventArgs e)
+    private async Task OnTemplateChanged(string? template)
     {
-        _templateRevision++;
-        return UpdateAgentsAsync(agents => agents with { InitialPromptTemplate = Text(e) });
-    }
+        await UpdateAgentsAsync(agents => agents with { InitialPromptTemplate = Text(template) });
 
-    private Task OnStyleChanged(ChangeEventArgs e) =>
-        Enum.TryParse(e.Value?.ToString(), out InitialPromptStyle style)
-            ? UpdateAgentsAsync(agents => agents with { InitialPromptStyle = style })
-            : Task.CompletedTask;
+        // Recreating the text area drops its focus, so it's only done when what it shows isn't what was saved.
+        if (!string.Equals(Text(template), SettingsStore.Current.Agents.InitialPromptTemplate, StringComparison.Ordinal))
+        {
+            _templateRevision++;
+        }
+    }
 
     private Task UsePredefinedPromptAsync(PredefinedPrompt prompt)
     {
-        _promptMenuOpen = false;
         _templateRevision++;
         return UpdateAgentsAsync(agents => agents with { InitialPromptTemplate = prompt.Template });
-    }
-
-    private void OnPromptMenuKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-        {
-            _promptMenuOpen = false;
-        }
     }
 
     private Task UpdateAgentsAsync(Func<AgentSettings, AgentSettings> update) =>

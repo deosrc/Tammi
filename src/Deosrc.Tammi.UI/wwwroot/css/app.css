@@ -1897,6 +1897,32 @@ label.task-choice {
   margin-bottom: var(--space-4);
 }
 
+/* The content of an agent's card on the Agents settings page: its header, fields and previews, spaced evenly. */
+.agent-settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.agent-settings-card .agent-definition-header,
+.agent-settings-card .agent-status,
+.agent-settings-card .agent-command-preview,
+.agent-settings-card p {
+  margin: 0;
+}
+
+/* A predefined prompt's name with its description below it, in a menu item. The menu item keeps its text on one line
+   and cuts it off, so this lets the description wrap, within a width that suits it. */
+.prompt-menu-item {
+  display: flex;
+  flex-direction: column;
+  width: 28rem;
+  max-width: 100%;
+  padding: var(--space-1) 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .agent-definition-header {
   display: flex;
   align-items: center;
