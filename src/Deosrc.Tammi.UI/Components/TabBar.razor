@@ -3,8 +3,9 @@
 @inject NavigationManager Navigation
 
 @* A row of tabs that are links: fixed tabs first, which can't be closed, then the tabs that can be, which scroll and,
-   when they don't all fit, can be reached from a menu of every tab. Then come the end content, for something that is
-   always after the tabs (e.g. a menu to open a new one), and the trailing content, which sits at the far end. *@
+   when they don't all fit, can be reached from a menu of them. The fixed and trailing tabs are always in sight, so
+   they aren't in the menu. Then come the end content, for something that is
+   always after the tabs (e.g. a menu to open a new one), and the trailing tabs, which sit at the far end. *@
 <nav class="tab-bar @Class" aria-label="@AriaLabel">
     @foreach (var item in FixedItems)
     {
@@ -22,17 +23,31 @@
                       Size="ButtonSize.Small" IconOnly="true" Title="All tabs" aria-label="All tabs"
                       IconStart="@(new Icons.Regular.Size16.ChevronDown())" />
         <FluentMenu Trigger="@_overflowId">
-            @foreach (var item in AllItems)
-            {
-                var target = item;
-                <FluentMenuItem Label="@(item.Label ?? item.Title)" Checked="@item.Active"
-                                OnClick="() => Navigation.NavigateTo(target.Href)" />
-            }
+            <FluentMenuList>
+                @foreach (var item in Items)
+                {
+                    var target = item;
+                    @* The tab shown is marked with a tick. *@
+                    <FluentMenuItem IconEnd="@(item.Active ? new Icons.Regular.Size16.Checkmark() : null)"
+                                    OnClick="() => Navigation.NavigateTo(target.Href)">
+                        <span class="tab-bar-menu-item">
+                            @if (item.Icon is not null)
+                            {
+                                <span class="tab-bar-slot">@item.Icon</span>
+                            }
+                            <span>@(item.Label ?? item.Title)</span>
+                        </span>
+                    </FluentMenuItem>
+                }
+            </FluentMenuList>
         </FluentMenu>
     }
     @EndContent
     <div class="tab-bar-trailing">
-        @TrailingContent
+        @foreach (var item in TrailingItems)
+        {
+            @Tab(item, closable: false)
+        }
     </div>
 </nav>
 
@@ -79,10 +94,10 @@
     public RenderFragment? EndContent { get; set; }
 
     /// <summary>
-    /// At the far end of the bar, e.g. a Settings tab. Use <c>tab-bar-tab</c> classes for a tab.
+    /// The tabs at the far end of the bar, which can't be closed, e.g. Settings.
     /// </summary>
     [Parameter]
-    public RenderFragment? TrailingContent { get; set; }
+    public IReadOnlyList<TabBarItem> TrailingItems { get; set; } = [];
 
     /// <summary>
     /// Extra CSS classes for the bar, e.g. its colours and height.
@@ -90,7 +105,7 @@
     [Parameter]
     public string? Class { get; set; }
 
-    private IEnumerable<TabBarItem> AllItems => FixedItems.Concat(Items);
+    private IEnumerable<TabBarItem> AllItems => FixedItems.Concat(Items).Concat(TrailingItems);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -134,12 +149,18 @@
         @<div class="tab-bar-tab @(item.Active ? "active" : null) @(closable ? "closable" : null)" @key="item.Key">
             <a class="tab-bar-label @(item.Label is null ? "icon-only" : null)" href="@item.Href" title="@item.Title"
                aria-label="@(item.Label is null ? item.Title : null)" aria-current="@(item.Active ? "page" : null)">
-                @item.Icon
+                @if (item.Icon is not null)
+                {
+                    <span class="tab-bar-slot">@item.Icon</span>
+                }
                 @if (item.Label is not null)
                 {
                     <span class="tab-bar-text">@item.Label</span>
                 }
-                @item.Indicator
+                @if (item.Indicator is not null)
+                {
+                    <span class="tab-bar-slot">@item.Indicator</span>
+                }
             </a>
             @if (closable)
             {

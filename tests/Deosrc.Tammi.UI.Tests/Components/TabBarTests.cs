@@ -23,14 +23,14 @@ public sealed class TabBarTests : BunitContext
         IReadOnlyList<TabBarItem>? items = null,
         Action<TabBarItem>? onClose = null,
         RenderFragment? end = null,
-        RenderFragment? trailing = null) =>
+        IReadOnlyList<TabBarItem>? trailing = null) =>
         Render<TabBar>(parameters => parameters
             .Add(bar => bar.AriaLabel, "Main")
             .Add(bar => bar.FixedItems, fixedItems ?? [])
             .Add(bar => bar.Items, items ?? [])
             .Add(bar => bar.OnClose, EventCallback.Factory.Create<TabBarItem>(this, item => onClose?.Invoke(item)))
             .Add(bar => bar.EndContent, end)
-            .Add(bar => bar.TrailingContent, trailing));
+            .Add(bar => bar.TrailingItems, trailing ?? []));
 
     [Fact]
     public void Tabs_AreLinksToTheirAddresses()
@@ -107,15 +107,24 @@ public sealed class TabBarTests : BunitContext
     }
 
     [Fact]
-    public void EndAndTrailingContent_AreShownOutsideTheScrollingTabs()
+    public void EndContent_IsShownAfterTheScrollingTabsAndOutsideThem()
     {
         RenderFragment end = builder => builder.AddMarkupContent(0, "<button class=\"test-end\">New</button>");
-        RenderFragment trailing = builder => builder.AddMarkupContent(0, "<a class=\"test-trailing\">Settings</a>");
-        var bar = Render(items: [Item("one", "One")], end: end, trailing: trailing);
+        var bar = Render(items: [Item("one", "One")], end: end);
 
-        Assert.Empty(bar.Find(".tab-bar-scroll").QuerySelectorAll(".test-end, .test-trailing"));
+        Assert.Empty(bar.Find(".tab-bar-scroll").QuerySelectorAll(".test-end"));
         Assert.Single(bar.FindAll(".test-end"));
-        Assert.Single(bar.Find(".tab-bar-trailing").QuerySelectorAll(".test-trailing"));
+    }
+
+    [Fact]
+    public void TrailingTabs_AreAtTheFarEndAndCantBeClosed()
+    {
+        var bar = Render(items: [Item("one", "One")], trailing: [Item("settings", "Settings")]);
+
+        var trailing = bar.Find(".tab-bar-trailing");
+
+        Assert.Equal("/settings", trailing.QuerySelector("a.tab-bar-label")!.GetAttribute("href"));
+        Assert.Empty(trailing.QuerySelectorAll(".tab-bar-close"));
     }
 
     [Fact]
@@ -132,13 +141,30 @@ public sealed class TabBarTests : BunitContext
     }
 
     [Fact]
-    public void TheMenuOfAllTabs_ListsTheFixedTabsToo()
+    public void TheMenuOfTabs_ListsOnlyTheTabsThatScroll()
     {
-        var bar = Render(fixedItems: [Item("home", "Home")], items: [Item("one", "One"), Item("two")]);
+        var bar = Render(
+            fixedItems: [Item("home", "Home")],
+            items: [Item("one", "One"), Item("two")],
+            trailing: [Item("settings", "Settings")]);
 
         bar.InvokeAsync(() => bar.Instance.SetOverflowing(true));
 
-        var labels = bar.FindAll("fluent-menu-item").Select(item => item.GetAttribute("label") ?? item.TextContent.Trim());
-        Assert.Equal(["Home", "One", "two tooltip"], labels);
+        var labels = bar.FindAll(".tab-bar-menu-item").Select(item => item.TextContent.Trim());
+        Assert.Equal(["One", "two tooltip"], labels);
+    }
+
+    [Fact]
+    public void TheMenuOfTabs_ShowsEachTabsIcon()
+    {
+        RenderFragment icon = builder => builder.AddMarkupContent(0, "<span class=\"test-icon\"></span>");
+        var withIcon = Item("one", "One") with { Icon = icon };
+        var bar = Render(items: [withIcon, Item("two", "Two")]);
+
+        bar.InvokeAsync(() => bar.Instance.SetOverflowing(true));
+
+        var menuItems = bar.FindAll(".tab-bar-menu-item");
+        Assert.Single(menuItems[0].QuerySelectorAll(".test-icon"));
+        Assert.Empty(menuItems[1].QuerySelectorAll(".test-icon"));
     }
 }

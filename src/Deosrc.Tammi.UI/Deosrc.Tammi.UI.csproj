@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <!-- The hosts serve this project's assets from the manifest the build writes, by their plain paths (see
+         index.html), so the scoped CSS bundle can't have a fingerprint in its name. -->
+    <StaticWebAssetFingerprintingEnabled>false</StaticWebAssetFingerprintingEnabled>
   </PropertyGroup>
 
   <ItemGroup>

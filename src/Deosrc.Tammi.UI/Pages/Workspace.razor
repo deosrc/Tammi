@@ -262,104 +262,43 @@ else
         </aside>
         <div class="workspace-main">
             @* The first tab is the dashboard and the last opens the New menu, so they're always there. *@
-            <div class="session-tabs">
-                <div class="session-tab-list" role="tablist" aria-label="Workspace">
-                    <div class="session-tab session-tab-dashboard @(_shown is null ? "active" : null)">
-                        <a class="session-tab-label session-tab-icon" role="tab" href="@AppRoutes.Workspace(WorkspaceId)"
-                           aria-selected="@(_shown is null ? "true" : "false")" title="Dashboard"
-                           aria-label="Dashboard">
-                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <rect x="3" y="3" width="7" height="9" rx="1" />
-                                <rect x="14" y="3" width="7" height="5" rx="1" />
-                                <rect x="14" y="12" width="7" height="9" rx="1" />
-                                <rect x="3" y="16" width="7" height="5" rx="1" />
-                            </svg>
-                        </a>
+            <TabBar Class="session-tabs" AriaLabel="Workspace" FixedItems="DashboardItems" Items="TabItems"
+                    OnClose="CloseTabItemAsync">
+                <EndContent>
+                    <div class="menu-anchor session-tab-new" @onkeydown="OnNewMenuKeyDown">
+                        <FluentButton Appearance="ButtonAppearance.Transparent" IconOnly="true" Title="New…" aria-label="New…"
+                                      aria-haspopup="menu" aria-expanded="@(_newMenuOpen ? "true" : "false")"
+                                      IconStart="@(new Icons.Regular.Size20.Add())" OnClick="ToggleNewMenu" />
+                        @if (_newMenuOpen)
+                        {
+                            <div class="menu-backdrop" @onclick="CloseNewMenu"></div>
+                            <ul class="menu" role="menu" aria-label="New">
+                                @NewMenuItem(TerminalSubmenu, "Terminal", TerminalIcon, StartTerminal)
+                                @if (_listing?.Workspace?.Repositories.Count > 0)
+                                {
+                                    @GitMenuItem()
+                                }
+                                @if (AgentDefinitions.Count > 0)
+                                {
+                                    <li role="separator" class="menu-separator"></li>
+                                }
+                                @for (var i = 0; i < AgentDefinitions.Count; i++)
+                                {
+                                    var definition = AgentDefinitions[i];
+                                    var name = string.IsNullOrWhiteSpace(definition.Name)
+                                        ? WorkspaceAgents.DefaultName
+                                        : definition.Name;
+                                    @NewMenuItem(
+                                        $"agent-{i}",
+                                        name,
+                                        @<AgentIcon Definition="definition" />,
+                                        repository => StartAgentAsync(definition, repository))
+                                }
+                            </ul>
+                        }
                     </div>
-                    @foreach (var tab in _tabs)
-                    {
-                        var shown = ReferenceEquals(tab, _shown);
-                        <div class="session-tab @(shown ? "active" : null)" @key="tab">
-                            <a class="session-tab-label" role="tab" href="@AppRoutes.WorkspaceTab(WorkspaceId, tab.Id)"
-                               aria-selected="@(shown ? "true" : "false")"
-                               title="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })">
-                                @if (tab is WorkspaceAgent iconAgent)
-                                {
-                                    <AgentIcon Definition="iconAgent.Agent.Definition" />
-                                }
-                                else if (tab is WorkspaceTerminal)
-                                {
-                                    @TerminalIcon
-                                }
-                                else if (tab is WorkspaceHistoryTab)
-                                {
-                                    @HistoryIcon
-                                }
-                                else if (tab is WorkspaceGitGraph)
-                                {
-                                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        @GitGraphIconPaths
-                                    </svg>
-                                }
-                                <span class="tab-label-text">@tab.Name</span>
-                                @if (tab is IWorkspaceProcess { HasExited: true })
-                                {
-                                    <span class="session-tab-status">
-                                        @(tab is WorkspaceAgent { State: AgentState.Error } ? "Error" : "Exited")
-                                    </span>
-                                }
-                                @if (tab is WorkspaceAgent agent)
-                                {
-                                    @* Agents' tabs show their state at the end, next to the close button. *@
-                                    <AgentStateIndicator State="agent.State" />
-                                }
-                            </a>
-                            <button type="button" class="tab-close" title="Close @tab.Name"
-                                    aria-label="Close @tab.Name" @onclick="() => CloseTabAsync(tab)">
-                                &times;
-                            </button>
-                        </div>
-                    }
-                </div>
-                @* Outside the tab list, which scrolls and would clip the menu. Closes on Escape, or on a click anywhere
-                   outside the menu. *@
-                <div class="menu-anchor session-tab-new" @onkeydown="OnNewMenuKeyDown">
-                    <button type="button" class="session-tab-label session-tab-icon" title="New…" aria-label="New…"
-                            aria-haspopup="menu" aria-expanded="@(_newMenuOpen ? "true" : "false")"
-                            @onclick="ToggleNewMenu">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M12 5v14M5 12h14" />
-                        </svg>
-                    </button>
-                    @if (_newMenuOpen)
-                    {
-                        <div class="menu-backdrop" @onclick="CloseNewMenu"></div>
-                        <ul class="menu" role="menu" aria-label="New">
-                            @NewMenuItem(TerminalSubmenu, "Terminal", TerminalIcon, StartTerminal)
-                            @if (_listing?.Workspace?.Repositories.Count > 0)
-                            {
-                                @GitMenuItem()
-                            }
-                            @if (AgentDefinitions.Count > 0)
-                            {
-                                <li role="separator" class="menu-separator"></li>
-                            }
-                            @for (var i = 0; i < AgentDefinitions.Count; i++)
-                            {
-                                var definition = AgentDefinitions[i];
-                                var name = string.IsNullOrWhiteSpace(definition.Name)
-                                    ? WorkspaceAgents.DefaultName
-                                    : definition.Name;
-                                @NewMenuItem(
-                                    $"agent-{i}",
-                                    name,
-                                    @<AgentIcon Definition="definition" />,
-                                    repository => StartAgentAsync(definition, repository))
-                            }
-                        </ul>
-                    }
-                </div>
-            </div>
+                </EndContent>
+            </TabBar>
             @if (_startError is not null)
             {
                 <p class="error workspace-main-error">@_startError</p>
@@ -967,6 +906,55 @@ else
     }
 
     // Shows a tab by going to its address, which is what changes the tab shown.
+    private static RenderFragment IconOf(Microsoft.FluentUI.AspNetCore.Components.Icon icon) =>
+        builder =>
+        {
+            builder.OpenComponent<FluentIcon<Microsoft.FluentUI.AspNetCore.Components.Icon>>(0);
+            builder.AddAttribute(1, "Value", icon);
+            builder.CloseComponent();
+        };
+
+    // The first tab is the dashboard, which is always there.
+    private IReadOnlyList<TabBarItem> DashboardItems =>
+    [
+        new("dashboard", AppRoutes.Workspace(WorkspaceId), "Dashboard", Icon: IconOf(new Icons.Regular.Size20.Board()),
+            Active: _shown is null),
+    ];
+
+    private IReadOnlyList<TabBarItem> TabItems => [.. _tabs.Select(tab => new TabBarItem(
+        tab.Id,
+        AppRoutes.WorkspaceTab(WorkspaceId, tab.Id),
+        tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => tab.Name },
+        tab.Name,
+        TabIconOf(tab),
+        tab is WorkspaceAgent agent ? AgentIndicator(agent) : null,
+        ReferenceEquals(tab, _shown)))];
+
+    private static RenderFragment? TabIconOf(IMainAreaTab tab) => tab switch
+    {
+        WorkspaceAgent agent => builder =>
+        {
+            builder.OpenComponent<AgentIcon>(0);
+            builder.AddAttribute(1, "Definition", agent.Agent.Definition);
+            builder.CloseComponent();
+        },
+        WorkspaceTerminal => IconOf(new Icons.Regular.Size20.WindowConsole()),
+        WorkspaceHistoryTab => IconOf(new Icons.Regular.Size16.History()),
+        WorkspaceGitGraph => IconOf(new Icons.Regular.Size16.BranchFork()),
+        _ => null,
+    };
+
+    // Agents' tabs show their state at the end, next to the close button.
+    private static RenderFragment AgentIndicator(WorkspaceAgent agent) => builder =>
+    {
+        builder.OpenComponent<AgentStateIndicator>(0);
+        builder.AddAttribute(1, "State", agent.State);
+        builder.CloseComponent();
+    };
+
+    private Task CloseTabItemAsync(TabBarItem item) =>
+        _tabs.FirstOrDefault(tab => tab.Id == item.Key) is { } tab ? CloseTabAsync(tab) : Task.CompletedTask;
+
     private void ShowTab(IMainAreaTab tab)
     {
         UpdateTabs();
