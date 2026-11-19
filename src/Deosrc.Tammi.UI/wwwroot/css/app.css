@@ -1944,18 +1944,9 @@ label.task-choice {
   max-width: 480px;
 }
 
-/* A group of radio buttons, with a label like a field's. */
 .settings-field-label {
   margin-bottom: var(--space-2);
   font-weight: 600;
-}
-
-.settings-field label.settings-choice {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-1);
-  font-weight: normal;
 }
 
 .settings-help.settings-intro {
@@ -2164,11 +2155,18 @@ label.task-choice {
   list-style: none;
 }
 
-.integration-item {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
+/* An integration's card: its header, status and messages, spaced evenly. */
+.integration-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* An item of the Add integration menu: a service's logo and name. */
+.integration-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .integration-header {
@@ -2202,7 +2200,8 @@ label.task-choice {
 
 /* JIRA's logo is shown in its brand blue, except on buttons, where it takes the button's text colour. */
 .integration-heading .integration-icon-jira,
-.menu-item .integration-icon-jira {
+.menu-item .integration-icon-jira,
+.integration-menu-item .integration-icon-jira {
   color: var(--color-jira);
 }
 
@@ -2390,50 +2389,14 @@ label.task-choice {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-2);
 }
 
 .integration-message {
   overflow-wrap: anywhere;
 }
 
-/* The authenticate and remove forms, shown inside an integration's entry. */
-.integration-panel {
-  margin: var(--space-3) 0 0;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
-}
-
-.integration-panel p {
-  margin-top: 0;
-}
-
-.integration-panel.settings-form {
-  gap: var(--space-4);
-}
-
 .integration-add {
-  margin-top: var(--space-4);
-}
-
-.status-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-text-muted);
-}
-
-.status-ok {
-  background: var(--color-success);
-}
-
-.status-warning {
-  background: var(--color-warning);
-}
-
-.status-error {
-  background: var(--color-error);
+  margin-top: var(--space-3);
 }
 
 /* SSH keys in the Git settings: each key's details, actions and services stacked in its card. */

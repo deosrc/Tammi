@@ -52,7 +52,7 @@
                             @foreach (var integration in SshKeyIntegrations)
                             {
                                 <div class="settings-field-row ssh-key-service">
-                                    <span class="status-dot status-@StatusClass(key, integration)" aria-hidden="true"></span>
+                                    <StatusDot Tone="@StatusClass(key, integration)" />
                                     <span>@integration.Name: @StatusText(key, integration)</span>
                                     @if (UploadState(key, integration) != true)
                                     {
