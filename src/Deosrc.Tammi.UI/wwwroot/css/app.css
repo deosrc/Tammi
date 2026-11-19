@@ -1887,36 +1887,10 @@ label.task-choice {
   margin: 0;
 }
 
-/* The list of custom agents is a Fluent sortable list, made for compact rows. Its list border, item height, border and
-   background are turned off, so each item is just its card, with a drag handle in the card's header. */
-.agent-sortable-list {
-  --fluent-sortable-list-border-width: 0;
-  --fluent-sortable-list-padding: 0;
-  --fluent-sortable-list-item-height: auto;
-  --fluent-sortable-list-item-padding: 0;
-  --fluent-sortable-list-item-border-width: 0;
-  --fluent-sortable-list-item-background-color: transparent;
-  --fluent-sortable-list-item-focused-background-color: transparent;
-  --fluent-sortable-list-item-grabbed-background-color: transparent;
-  --fluent-sortable-list-item-spacing: var(--space-3);
+/* A list of cards in a settings page: the width of the rest of the page's content. */
+.settings-card-list {
   max-width: 720px;
   margin: 0 0 var(--space-4);
-}
-
-.agent-sortable-list .sortable-item {
-  align-items: stretch;
-  user-select: auto;
-}
-
-.agent-sortable-list .sortable-grab {
-  position: static;
-  display: flex;
-  align-items: center;
-  width: auto;
-  height: auto;
-  padding: 0;
-  background: none;
-  cursor: grab;
 }
 
 /* A header that toggles its card when clicked. */

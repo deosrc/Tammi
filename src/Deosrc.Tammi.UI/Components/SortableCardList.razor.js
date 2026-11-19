@@ -1,10 +1,10 @@
-// Makes the image that follows the cursor while a custom agent's card is dragged a small copy of the card, not the card
-// at its full size. The browser takes the image once the drag starts, from the element given to setDragImage, so a
-// scaled copy is made off screen. It sits in a box of the scaled size, as the browser takes the image from the element's
-// box and a transform doesn't change that.
-export function useScaledDragImage(listSelector, scale) {
+// Makes the image that follows the cursor while a card in the list is dragged a small copy of the card, not the card at
+// its full size. The browser takes the image once the drag starts, from the element given to setDragImage, so a scaled
+// copy is made off screen. It sits in a box of the scaled size, as the browser takes the image from the element's box
+// and a transform doesn't change that.
+export function useScaledDragImage(list, scale) {
     const onDragStart = (event) => {
-        const item = event.target.closest?.(`${listSelector} .sortable-item`);
+        const item = event.target.closest?.(".sortable-item");
         const card = item?.querySelector(".fluent-card") ?? item;
         if (!card || !event.dataTransfer) {
             return;
@@ -26,10 +26,10 @@ export function useScaledDragImage(listSelector, scale) {
     };
 
     // In the capture phase, so it runs before the sortable list's own handler.
-    document.addEventListener("dragstart", onDragStart, true);
+    list.addEventListener("dragstart", onDragStart, true);
     return {
         dispose() {
-            document.removeEventListener("dragstart", onDragStart, true);
+            list.removeEventListener("dragstart", onDragStart, true);
         },
     };
 }
