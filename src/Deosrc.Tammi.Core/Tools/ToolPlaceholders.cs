@@ -63,12 +63,18 @@ public static partial class ToolPlaceholders
     public const string MatchFolder = "MatchFolder";
 
     /// <summary>
+    /// The name of the <see cref="MatchFolder"/> (its last segment), e.g. <c>Alpha</c> for
+    /// <c>~/Alpha/.devcontainer/devcontainer.json</c>. Only for file tools.
+    /// </summary>
+    public const string MatchFolderName = "MatchFolderName";
+
+    /// <summary>
     /// Every placeholder, in the order they're listed on the Settings screen.
     /// </summary>
     public static IReadOnlyList<string> All { get; } =
     [
         PreferredFolder, LaunchFolder, WorkspaceFolder, RepositoryFolder, FileDirectory, FileName,
-        FileNameWithoutExtension, FilePath, MatchFolder,
+        FileNameWithoutExtension, FilePath, MatchFolder, MatchFolderName,
     ];
 
     private static readonly HashSet<string> Known = new(All, StringComparer.OrdinalIgnoreCase);

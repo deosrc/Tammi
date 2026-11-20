@@ -267,6 +267,11 @@ public sealed class WorkspaceToolsTests : IDisposable
                 ["open", Path.Combine(ApiFolder, "tools"), "--config", file],
             ],
             entries.Select(entry => entry.Request!.Arguments));
+        Assert.Equal(
+            [
+                "Dev Container - " + Path.GetFileName(ApiFolder), "Dev Container - web", "Dev Container - tools",
+            ],
+            entries.Select(entry => entry.Label));
         Assert.Equal(Path.Combine(ApiFolder, "services", "web"), entries[1].Request!.WorkingDirectory);
         Assert.DoesNotContain(
             External(CreateTools(), Workspace, _web, settings), e => e.Tool.Id == PredefinedTools.DevContainer.Id);

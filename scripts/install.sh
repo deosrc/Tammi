@@ -59,4 +59,11 @@ mkdir -p "$destination"
 cp -R "$work/unpacked/." "$destination/"
 chmod +x "$destination/$executable"
 
-"$destination/$executable"
+# Start Tammi in the background, detached from this terminal, so the terminal stays usable and closing it doesn't
+# close Tammi.
+if command -v setsid >/dev/null 2>&1; then
+  nohup setsid "$destination/$executable" >/dev/null 2>&1 </dev/null &
+else
+  nohup "$destination/$executable" >/dev/null 2>&1 </dev/null &
+fi
+echo "Started Tammi $version."

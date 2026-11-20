@@ -17,7 +17,9 @@ public sealed class SavedTabsFileStore(string filePath, ILogger? logger = null)
     /// </summary>
     public const string DefaultFileName = "open-tabs.json";
 
-    private static readonly IReadOnlyList<Action<JsonObject>> Migrations = [];
+    // Version 2 gives every tab the shared shape (see SavedTab): an agent's session ID is its id, and a git graph's
+    // repository and submodule path are its id and path.
+    private static readonly IReadOnlyList<Action<JsonObject>> Migrations = [MigrateToShared];
 
     private readonly ILogger _logger = logger ?? NullLogger.Instance;
 
@@ -77,6 +79,42 @@ public sealed class SavedTabsFileStore(string filePath, ILogger? logger = null)
         SavedTab? active = null,
         CancellationToken cancellationToken = default) =>
         VersionedJsonFile.WriteAsync(FilePath, new TabsFile(tabs, active), Migrations.Count + 1, cancellationToken);
+
+    private static void MigrateToShared(JsonObject json)
+    {
+        if (json["tabs"] is JsonArray tabs)
+        {
+            foreach (var tab in tabs.OfType<JsonObject>())
+            {
+                MigrateTab(tab);
+            }
+        }
+
+        if (json["active"] is JsonObject active)
+        {
+            MigrateTab(active);
+        }
+    }
+
+    private static void MigrateTab(JsonObject tab)
+    {
+        var sessionId = tab["sessionId"]?.GetValue<string>();
+        var repository = tab["repository"]?.GetValue<string>();
+        var submodulePath = tab["submodulePath"]?.GetValue<string>();
+        tab.Remove("sessionId");
+        tab.Remove("repository");
+        tab.Remove("submodulePath");
+        var id = tab["kind"]?.GetValue<string>() == SavedTab.AgentKind ? sessionId : repository;
+        if (id is not null)
+        {
+            tab["id"] = id;
+        }
+
+        if (submodulePath is not null)
+        {
+            tab["path"] = submodulePath;
+        }
+    }
 
     private sealed record TabsFile(IReadOnlyList<SavedTab>? Tabs, SavedTab? Active = null);
 }
