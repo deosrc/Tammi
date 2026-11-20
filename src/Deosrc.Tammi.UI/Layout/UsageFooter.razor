@@ -2,8 +2,10 @@
 @using Deosrc.Tammi.Core.Platform
 @using Deosrc.Tammi.Core.Usage
 @using Deosrc.Tammi.UI.Components
+@using Deosrc.Tammi.UI.Visualiser
 @inject AgentUsageMonitor Monitor
 @inject UsageTabState TabState
+@inject IVisualiserWindow VisualiserWindow
 @inject NavigationManager Navigation
 @inject AppUpdater Updater
 @inject IAppCloser AppCloser
@@ -31,6 +33,10 @@
                 }
             </span>
         }
+    </button>
+    <button type="button" class="visualiser-toggle" title="Open the visualiser" aria-label="Open the visualiser"
+            @onclick="VisualiserWindow.OpenOrFocus">
+        VISUALISER
     </button>
     @if (Updater.CanUpdate && Updater.Available is { } release)
     {

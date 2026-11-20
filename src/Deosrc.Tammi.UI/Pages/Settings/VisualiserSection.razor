@@ -1,0 +1,69 @@
+@page "/settings/visualiser"
+@layout SettingsLayout
+@inherits SettingsSectionBase
+@using Deosrc.Tammi.Core.Settings
+
+<h1>Visualiser</h1>
+
+<div class="settings-form">
+    <div class="settings-field">
+        <label for="visualiser-workspace-visualisation">Workspace visualisation</label>
+        <div class="settings-field-row">
+            <select id="visualiser-workspace-visualisation"
+                    value="@SettingsStore.Current.Visualiser.WorkspaceVisualisation"
+                    @onchange="OnWorkspaceVisualisationChanged">
+                <option value="@WorkspaceVisualisationType.Glow">Glow</option>
+                <option value="@WorkspaceVisualisationType.Plasma">Plasma</option>
+            </select>
+        </div>
+        <p class="settings-help">
+            How the visualiser draws each workspace: a soft glow, or a ball of animated plasma. Either way it's in the
+            colour of the workspace's status. It applies straight away, including in a visualiser that's already open.
+        </p>
+        @if (SaveError is not null)
+        {
+            <p class="error">@SaveError</p>
+        }
+    </div>
+
+    <div class="settings-field">
+        <label for="visualiser-burst">Burst when an agent finishes working</label>
+        <div class="settings-field-row">
+            <Switch Id="visualiser-burst"
+                    Checked="SettingsStore.Current.Visualiser.BurstWhenWorkingFinishes"
+                    Label="Burst when an agent finishes working"
+                    CheckedChanged="OnBurstChanged" />
+        </div>
+        <p class="settings-help">
+            When an agent stops working, it throws out a one-off burst of particles in the colour of the state it moved
+            to. It applies straight away, including in a visualiser that's already open.
+        </p>
+    </div>
+
+    <div class="settings-field">
+        <label for="visualiser-always-on-top">Keep the window on top</label>
+        <div class="settings-field-row">
+            <Switch Id="visualiser-always-on-top"
+                    Checked="SettingsStore.Current.Visualiser.AlwaysOnTop"
+                    Label="Keep the visualiser's window on top"
+                    CheckedChanged="OnAlwaysOnTopChanged" />
+        </div>
+        <p class="settings-help">
+            Keeps the visualiser's window above other windows, so it can stay in view while you work in another
+            application. It applies straight away, including in a visualiser that's already open.
+        </p>
+    </div>
+</div>
+
+@code {
+    private Task OnAlwaysOnTopChanged(bool alwaysOnTop) =>
+        UpdateAsync(settings => settings with { Visualiser = settings.Visualiser with { AlwaysOnTop = alwaysOnTop } });
+
+    private Task OnBurstChanged(bool burst) =>
+        UpdateAsync(settings => settings with { Visualiser = settings.Visualiser with { BurstWhenWorkingFinishes = burst } });
+
+    private Task OnWorkspaceVisualisationChanged(ChangeEventArgs e) =>
+        Enum.TryParse(e.Value?.ToString(), out WorkspaceVisualisationType type)
+            ? UpdateAsync(settings => settings with { Visualiser = settings.Visualiser with { WorkspaceVisualisation = type } })
+            : Task.CompletedTask;
+}
