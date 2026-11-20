@@ -100,7 +100,7 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
     public async Task RestoreAsync_RepositoryNoLongerInTheWorkspace_ReportsAProblem()
     {
         await new SavedTabsFileStore(Path.Combine(_workspace.MetadataFolder, SavedTabsFileStore.DefaultFileName))
-            .SetAsync([new SavedTab(SavedTab.GitGraphKind, Repository: "gone")], cancellationToken: TestContext.Current.CancellationToken);
+            .SetAsync([new SavedTab(SavedTab.GitGraphKind, Id: "gone")], cancellationToken: TestContext.Current.CancellationToken);
         var run = NewRun();
 
         var problems = (await run.Restorer.RestoreAsync(_workspace)).Problems;

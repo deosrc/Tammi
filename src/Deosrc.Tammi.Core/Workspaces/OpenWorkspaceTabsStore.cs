@@ -19,10 +19,10 @@ public sealed class OpenWorkspaceTabsStore
     /// </summary>
     public const string FileName = "open-workspace-tabs.json";
 
-    private const int CurrentVersion = 1;
+    // Version 2 keeps the tabs in one list, in tab order, in the shape shared by every tab control (see SavedTab).
+    private static readonly IReadOnlyList<Action<JsonObject>> Migrations = [MigrateToShared];
 
-    // None yet: the file is at its first version.
-    private static readonly IReadOnlyList<Action<JsonObject>> Migrations = [];
+    private static int CurrentVersion => Migrations.Count + 1;
 
     private readonly string _directory;
     private readonly ILogger _logger;
@@ -59,40 +59,17 @@ public sealed class OpenWorkspaceTabsStore
         {
             var contents = await File.ReadAllTextAsync(FilePath, cancellationToken).ConfigureAwait(false);
             var file = VersionedJsonFile.Deserialize<TabsFile>(contents, Migrations);
-            var ids = (file.WorkspaceIds ?? [])
-                .Where(id => !string.IsNullOrWhiteSpace(id))
-                .Distinct()
-                .ToList();
-            var active = ids.Contains(file.ActiveWorkspaceId!) ? file.ActiveWorkspaceId : null;
-            var repositoryPaths = (file.RepositoryPaths ?? [])
-                .Where(path => !string.IsNullOrWhiteSpace(path))
-                .Distinct()
-                .ToList();
-            var secondary = new Dictionary<string, IReadOnlyList<string>>();
-            var shownGraphs = new Dictionary<string, string>();
-            foreach (var repositoryPath in repositoryPaths)
+            var tabs = new List<SavedTab>();
+            foreach (var tab in file.Tabs ?? [])
             {
-                if (file.SecondaryGraphPaths?.GetValueOrDefault(repositoryPath) is { } graphPaths)
+                var kept = Clean(tab);
+                if (kept is not null && !tabs.Any(kept.IsSameTab))
                 {
-                    var kept = graphPaths.Where(path => !string.IsNullOrWhiteSpace(path)).Distinct().ToList();
-                    if (kept.Count > 0)
-                    {
-                        secondary[repositoryPath] = kept;
-                        if (file.ShownGraphPaths?.GetValueOrDefault(repositoryPath) is { } shownPath && kept.Contains(shownPath))
-                        {
-                            shownGraphs[repositoryPath] = shownPath;
-                        }
-                    }
+                    tabs.Add(kept);
                 }
             }
 
-            return new OpenWorkspaceTabs(ids, active)
-            {
-                RepositoryPaths = repositoryPaths,
-                SecondaryGraphPaths = secondary,
-                ShownGraphPaths = shownGraphs,
-                ActiveRepositoryPath = repositoryPaths.Contains(file.ActiveRepositoryPath!) ? file.ActiveRepositoryPath : null,
-            };
+            return new OpenWorkspaceTabs(tabs, tabs.Find(tab => tab.IsSameTab(file.Active)));
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
@@ -117,13 +94,7 @@ public sealed class OpenWorkspaceTabsStore
         {
             await VersionedJsonFile.WriteAsync(
                 FilePath,
-                new TabsFile(
-                    tabs.WorkspaceIds,
-                    tabs.ActiveWorkspaceId,
-                    tabs.RepositoryPaths,
-                    tabs.ActiveRepositoryPath,
-                    tabs.SecondaryGraphPaths,
-                    tabs.ShownGraphPaths),
+                new TabsFile(tabs.Tabs, tabs.Active),
                 CurrentVersion,
                 cancellationToken).ConfigureAwait(false);
             return true;
@@ -135,11 +106,85 @@ public sealed class OpenWorkspaceTabsStore
         }
     }
 
-    private sealed record TabsFile(
-        IReadOnlyList<string>? WorkspaceIds,
-        string? ActiveWorkspaceId = null,
-        IReadOnlyList<string>? RepositoryPaths = null,
-        string? ActiveRepositoryPath = null,
-        IReadOnlyDictionary<string, IReadOnlyList<string>>? SecondaryGraphPaths = null,
-        IReadOnlyDictionary<string, string>? ShownGraphPaths = null);
+    // A workspace tab needs an ID and a repository tab a path. A repository's own tabs are git graphs, each with a path.
+    private static SavedTab? Clean(SavedTab? tab)
+    {
+        switch (tab?.Kind)
+        {
+            case SavedTab.WorkspaceKind when !string.IsNullOrWhiteSpace(tab.Id):
+                return new SavedTab(SavedTab.WorkspaceKind, Id: tab.Id);
+
+            case SavedTab.RepositoryKind when !string.IsNullOrWhiteSpace(tab.Path):
+                var graphs = new List<SavedTab>();
+                foreach (var graph in tab.Tabs ?? [])
+                {
+                    if (graph is { Kind: SavedTab.GitGraphKind, Path: { } path } && !string.IsNullOrWhiteSpace(path)
+                        && !graphs.Any(graph.IsSameTab))
+                    {
+                        graphs.Add(new SavedTab(SavedTab.GitGraphKind, Path: path));
+                    }
+                }
+
+                return new SavedTab(
+                    SavedTab.RepositoryKind,
+                    Path: tab.Path,
+                    Tabs: graphs.Count > 0 ? graphs : null,
+                    Active: graphs.Find(graph => graph.IsSameTab(tab.Active)));
+
+            default:
+                return null;
+        }
+    }
+
+    private static void MigrateToShared(JsonObject json)
+    {
+        var tabs = new JsonArray();
+        var active = (JsonNode?)null;
+        var activeWorkspaceId = json["activeWorkspaceId"]?.GetValue<string>();
+        var activeRepositoryPath = json["activeRepositoryPath"]?.GetValue<string>();
+        foreach (var id in (json["workspaceIds"] as JsonArray ?? []).Select(node => node?.GetValue<string>()))
+        {
+            var tab = new JsonObject { ["kind"] = SavedTab.WorkspaceKind, ["id"] = id };
+            tabs.Add(tab);
+            if (id is not null && id == activeWorkspaceId)
+            {
+                active = tab.DeepClone();
+            }
+        }
+
+        var secondary = json["secondaryGraphPaths"] as JsonObject;
+        var shown = json["shownGraphPaths"] as JsonObject;
+        foreach (var path in (json["repositoryPaths"] as JsonArray ?? []).Select(node => node?.GetValue<string>()))
+        {
+            var tab = new JsonObject { ["kind"] = SavedTab.RepositoryKind, ["path"] = path };
+            if (path is not null && secondary?[path] is JsonArray graphs && graphs.Count > 0)
+            {
+                tab["tabs"] = new JsonArray([.. graphs.Select(graph =>
+                    (JsonNode)new JsonObject { ["kind"] = SavedTab.GitGraphKind, ["path"] = graph?.GetValue<string>() })]);
+                if (shown?[path]?.GetValue<string>() is { } shownPath)
+                {
+                    tab["active"] = new JsonObject { ["kind"] = SavedTab.GitGraphKind, ["path"] = shownPath };
+                }
+            }
+
+            tabs.Add(tab);
+            if (path is not null && path == activeRepositoryPath && active is null)
+            {
+                active = new JsonObject { ["kind"] = SavedTab.RepositoryKind, ["path"] = path };
+            }
+        }
+
+        foreach (var old in new[] { "workspaceIds", "activeWorkspaceId", "repositoryPaths", "activeRepositoryPath", "secondaryGraphPaths", "shownGraphPaths" })
+        {
+            json.Remove(old);
+        }
+
+        json["tabs"] = tabs;
+        if (active is not null)
+        {
+            json["active"] = active;
+        }
+    }
+
+    private sealed record TabsFile(IReadOnlyList<SavedTab>? Tabs, SavedTab? Active = null);
 }

@@ -29,11 +29,21 @@ public sealed class WorkspaceTabsKeeperTests : IDisposable
         Assert.Empty(tabs.Tabs);
     }
 
+    private static SavedTab Workspace(string id) => new(SavedTab.WorkspaceKind, Id: id);
+
+    private static SavedTab Repository(string path, IReadOnlyList<string>? graphs = null, string? shown = null) => new(
+        SavedTab.RepositoryKind,
+        Path: path,
+        Tabs: graphs?.Select(graph => new SavedTab(SavedTab.GitGraphKind, Path: graph)).ToList(),
+        Active: shown is null ? null : new SavedTab(SavedTab.GitGraphKind, Path: shown));
+
     [Fact]
     public async Task RestoreAsync_OpensSavedWorkspacesInOrder_SkippingUnavailableOnes()
     {
         var store = new OpenWorkspaceTabsStore(_directory);
-        await store.SaveAsync(new OpenWorkspaceTabs(["a", "gone", "broken", "b"], "b"), CancellationToken);
+        await store.SaveAsync(
+            new OpenWorkspaceTabs([Workspace("a"), Workspace("gone"), Workspace("broken"), Workspace("b")], Workspace("b")),
+            CancellationToken);
         var workspaces = new FakeStore(
             new WorkspaceListing("b", "Bee", "/b", WorkspaceAvailability.Available),
             new WorkspaceListing("a", "Ay", "/a", WorkspaceAvailability.Available),
@@ -60,21 +70,28 @@ public sealed class WorkspaceTabsKeeperTests : IDisposable
         keeper.SetActive("a");
         tabs.Close("b");
 
-        OpenWorkspaceTabs saved = OpenWorkspaceTabs.None;
-        for (var i = 0; i < 100 && !(saved.WorkspaceIds.Count == 1 && saved.ActiveWorkspaceId == "a"); i++)
-        {
-            await Task.Delay(20, CancellationToken);
-            saved = await store.LoadAsync(CancellationToken);
-        }
+        var saved = await WaitForSavedAsync(store, saved => saved.Tabs.Count == 1 && saved.Active?.Id == "a");
 
-        Assert.Equal(["a"], saved.WorkspaceIds);
-        Assert.Equal("a", saved.ActiveWorkspaceId);
+        Assert.Equal([Workspace("a")], saved.Tabs);
+        Assert.Equal(Workspace("a"), saved.Active);
     }
 
     private static WorkspaceGitGraphs NewGraphs() => new(
         new GitRepositoryReader(), new GitWorkingTree(new GitCli()), new GitSync(new GitCli()), new GitTags(new GitCli()),
         new GitBranches(new GitCli()), new GitStash(new GitCli()), new GitDiffs(new GitRepositoryReader(), new GitCli()),
         new InMemorySettingsStore());
+
+    private async Task<OpenWorkspaceTabs> WaitForSavedAsync(OpenWorkspaceTabsStore store, Func<OpenWorkspaceTabs, bool> done)
+    {
+        var saved = OpenWorkspaceTabs.None;
+        for (var i = 0; i < 100 && !done(saved); i++)
+        {
+            await Task.Delay(20, CancellationToken);
+            saved = await store.LoadAsync(CancellationToken);
+        }
+
+        return saved;
+    }
 
     [Fact]
     public async Task RestoreAsync_OpensSavedRepositoryGraphs_SkippingMissingFolders()
@@ -83,7 +100,7 @@ public sealed class WorkspaceTabsKeeperTests : IDisposable
         Directory.CreateDirectory(existing);
         var store = new OpenWorkspaceTabsStore(_directory);
         await store.SaveAsync(
-            new OpenWorkspaceTabs([]) { RepositoryPaths = [existing, Path.Combine(_directory, "gone")] },
+            new OpenWorkspaceTabs([Repository(existing), Repository(Path.Combine(_directory, "gone"))]),
             CancellationToken);
         using var graphs = NewGraphs();
         using var keeper = new WorkspaceTabsKeeper(new WorkspaceTabs(), new FakeStore(), store, graphs);
@@ -106,14 +123,9 @@ public sealed class WorkspaceTabsKeeperTests : IDisposable
             graphs.OpenRepository(repo);
             keeper.SetActive(null, repo);
 
-            OpenWorkspaceTabs saved = OpenWorkspaceTabs.None;
-            for (var i = 0; i < 100 && saved.ActiveRepositoryPath != repo; i++)
-            {
-                await Task.Delay(20, CancellationToken);
-                saved = await store.LoadAsync(CancellationToken);
-            }
+            var saved = await WaitForSavedAsync(store, saved => saved.Active is not null);
 
-            Assert.Equal(repo, saved.ActiveRepositoryPath);
+            Assert.Equal(Repository(repo), saved.Active);
         }
 
         using var restoredGraphs = NewGraphs();
@@ -135,14 +147,9 @@ public sealed class WorkspaceTabsKeeperTests : IDisposable
         graphs.OpenRepository("/repos/b");
         graphs.Close(graphs.ForRepository("/repos/a")!);
 
-        OpenWorkspaceTabs saved = OpenWorkspaceTabs.None;
-        for (var i = 0; i < 100 && !saved.RepositoryPaths.SequenceEqual(["/repos/b"]); i++)
-        {
-            await Task.Delay(20, CancellationToken);
-            saved = await store.LoadAsync(CancellationToken);
-        }
+        var saved = await WaitForSavedAsync(store, saved => saved.Tabs.SequenceEqual([Repository("/repos/b")]));
 
-        Assert.Equal(["/repos/b"], saved.RepositoryPaths);
+        Assert.Equal([Repository("/repos/b")], saved.Tabs);
     }
 
     [Fact]
@@ -163,14 +170,9 @@ public sealed class WorkspaceTabsKeeperTests : IDisposable
             graphs.OpenRepository(repo, other);
             keeper.SetShownGraph(repo, sub);
 
-            OpenWorkspaceTabs saved = OpenWorkspaceTabs.None;
-            for (var i = 0; i < 100 && saved.ShownGraphPaths.GetValueOrDefault(repo) != sub; i++)
-            {
-                await Task.Delay(20, CancellationToken);
-                saved = await store.LoadAsync(CancellationToken);
-            }
+            var saved = await WaitForSavedAsync(store, saved => saved.Tabs.FirstOrDefault()?.Active is not null);
 
-            Assert.Equal([sub, other], saved.SecondaryGraphPaths[repo]);
+            Assert.Equal([Repository(repo, [sub, other], sub)], saved.Tabs);
         }
 
         using var restoredGraphs = NewGraphs();
@@ -184,12 +186,53 @@ public sealed class WorkspaceTabsKeeperTests : IDisposable
     }
 
     [Fact]
+    public async Task WorkspaceAndRepositoryTabs_KeepTheirOrderTogether()
+    {
+        var repo = Path.Combine(_directory, "repo");
+        Directory.CreateDirectory(repo);
+        var store = new OpenWorkspaceTabsStore(_directory);
+        var workspaces = new FakeStore(
+            new WorkspaceListing("a", "Ay", "/a", WorkspaceAvailability.Available),
+            new WorkspaceListing("b", "Bee", "/b", WorkspaceAvailability.Available));
+        await store.SaveAsync(
+            new OpenWorkspaceTabs([Workspace("a"), Repository(repo), Workspace("b")], Repository(repo)),
+            CancellationToken);
+        using var graphs = NewGraphs();
+        var order = new MainTabOrder();
+        using var keeper = new WorkspaceTabsKeeper(new WorkspaceTabs(), workspaces, store, graphs, order);
+
+        await keeper.RestoreAsync(CancellationToken);
+
+        Assert.Equal(
+            [MainTabOrder.WorkspaceKey("a"), MainTabOrder.RepositoryKey(repo), MainTabOrder.WorkspaceKey("b")],
+            order.Keys);
+        var saved = await WaitForSavedAsync(store, saved => saved.Tabs.Count == 3);
+        Assert.Equal([Workspace("a"), Repository(repo), Workspace("b")], saved.Tabs);
+    }
+
+    [Fact]
+    public async Task LoadAsync_FromVersion1File_KeepsTabsAndTheirGraphs()
+    {
+        Directory.CreateDirectory(_directory);
+        await File.WriteAllTextAsync(Path.Combine(_directory, OpenWorkspaceTabsStore.FileName), """
+            { "version": 1, "workspaceIds": ["a", "b"], "activeWorkspaceId": "b",
+              "repositoryPaths": ["/r"], "activeRepositoryPath": "/r",
+              "secondaryGraphPaths": { "/r": ["/r/sub"] }, "shownGraphPaths": { "/r": "/r/sub" } }
+            """, CancellationToken);
+
+        var saved = await new OpenWorkspaceTabsStore(_directory).LoadAsync(CancellationToken);
+
+        Assert.Equal([Workspace("a"), Workspace("b"), Repository("/r", ["/r/sub"], "/r/sub")], saved.Tabs);
+        Assert.Equal(Workspace("b"), saved.Active);
+    }
+
+    [Fact]
     public async Task LoadAsync_WithCorruptFile_ReturnsNone()
     {
         Directory.CreateDirectory(_directory);
         await File.WriteAllTextAsync(Path.Combine(_directory, OpenWorkspaceTabsStore.FileName), "{ nope", CancellationToken);
 
-        Assert.Empty((await new OpenWorkspaceTabsStore(_directory).LoadAsync(CancellationToken)).WorkspaceIds);
+        Assert.Empty((await new OpenWorkspaceTabsStore(_directory).LoadAsync(CancellationToken)).Tabs);
     }
 
     private sealed class FakeStore(params WorkspaceListing[] listings) : IWorkspaceStore
