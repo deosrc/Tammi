@@ -874,6 +874,11 @@ are left to other tools for now.
     Sessions and its Git Graphs are opened, in their old order. The tab that was shown is shown again (the dashboard if it was the dashboard or a terminal). An agent whose session can't be resumed, or a graph
     whose repository is no longer in the workspace, isn't reopened, and the view says so. Agents without a recorded
     session aren't kept. Terminals are left out, as keeping them would depend on the terminal supporting it.
+  - **A repository's tab reopens its Git Graphs after a restart.** A Local Repository's tab (opened from the Repositories
+    page) keeps, with the repository's path in the app's data (`open-workspace-tabs.json`), the Git Graphs of its
+    submodules and other worktrees, and which of them was shown. They reopen in their old order the next time Tammi
+    starts, and the one that was shown is shown again. One whose folder is gone isn't reopened. Terminals and agents
+    in a repository's tab aren't kept: terminals as for workspaces, and agents as they have no stored session there.
 
 ## Integrations
 

@@ -19,6 +19,19 @@ public sealed record OpenWorkspaceTabs(IReadOnlyList<string> WorkspaceIds, strin
     public string? ActiveRepositoryPath { get; init; }
 
     /// <summary>
+    /// For each repository in <see cref="RepositoryPaths"/>, the working directories (submodules and other worktrees)
+    /// whose git graphs were open in its tab besides its own, in tab order. A repository with none has no entry.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> SecondaryGraphPaths { get; init; } =
+        new Dictionary<string, IReadOnlyList<string>>();
+
+    /// <summary>
+    /// For each repository in <see cref="RepositoryPaths"/>, the working directory of the secondary git graph that its
+    /// tab was showing. A repository that was showing its own graph (or a terminal or agent) has no entry.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> ShownGraphPaths { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>
     /// No tabs.
     /// </summary>
     public static OpenWorkspaceTabs None { get; } = new([]);

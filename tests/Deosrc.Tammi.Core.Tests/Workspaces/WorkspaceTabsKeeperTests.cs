@@ -146,6 +146,44 @@ public sealed class WorkspaceTabsKeeperTests : IDisposable
     }
 
     [Fact]
+    public async Task SecondaryRepositoryGraphs_AreSavedAndRestoredWithTheShownOne()
+    {
+        var repo = Path.Combine(_directory, "repo");
+        var sub = Path.Combine(repo, "sub");
+        var other = Path.Combine(_directory, "worktree");
+        Directory.CreateDirectory(sub);
+        Directory.CreateDirectory(other);
+        var store = new OpenWorkspaceTabsStore(_directory);
+        using (var graphs = NewGraphs())
+        using (var keeper = new WorkspaceTabsKeeper(new WorkspaceTabs(), new FakeStore(), store, graphs))
+        {
+            await keeper.RestoreAsync(CancellationToken);
+            graphs.OpenRepository(repo);
+            graphs.OpenRepository(repo, sub);
+            graphs.OpenRepository(repo, other);
+            keeper.SetShownGraph(repo, sub);
+
+            OpenWorkspaceTabs saved = OpenWorkspaceTabs.None;
+            for (var i = 0; i < 100 && saved.ShownGraphPaths.GetValueOrDefault(repo) != sub; i++)
+            {
+                await Task.Delay(20, CancellationToken);
+                saved = await store.LoadAsync(CancellationToken);
+            }
+
+            Assert.Equal([sub, other], saved.SecondaryGraphPaths[repo]);
+        }
+
+        using var restoredGraphs = NewGraphs();
+        using var restoredKeeper = new WorkspaceTabsKeeper(new WorkspaceTabs(), new FakeStore(), store, restoredGraphs);
+
+        await restoredKeeper.RestoreAsync(CancellationToken);
+
+        Assert.Equal([repo, sub, other], restoredGraphs.For(StandaloneRepository.IdFor(repo)).Select(graph => graph.Path));
+        Assert.Equal(sub, restoredKeeper.TakeRestoredShownGraph(repo));
+        Assert.Null(restoredKeeper.TakeRestoredShownGraph(repo));
+    }
+
+    [Fact]
     public async Task LoadAsync_WithCorruptFile_ReturnsNone()
     {
         Directory.CreateDirectory(_directory);

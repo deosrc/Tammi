@@ -68,9 +68,29 @@ public sealed class OpenWorkspaceTabsStore
                 .Where(path => !string.IsNullOrWhiteSpace(path))
                 .Distinct()
                 .ToList();
-            return new OpenWorkspaceTabs(ids, active) 
+            var secondary = new Dictionary<string, IReadOnlyList<string>>();
+            var shownGraphs = new Dictionary<string, string>();
+            foreach (var repositoryPath in repositoryPaths)
+            {
+                if (file.SecondaryGraphPaths?.GetValueOrDefault(repositoryPath) is { } graphPaths)
+                {
+                    var kept = graphPaths.Where(path => !string.IsNullOrWhiteSpace(path)).Distinct().ToList();
+                    if (kept.Count > 0)
+                    {
+                        secondary[repositoryPath] = kept;
+                        if (file.ShownGraphPaths?.GetValueOrDefault(repositoryPath) is { } shownPath && kept.Contains(shownPath))
+                        {
+                            shownGraphs[repositoryPath] = shownPath;
+                        }
+                    }
+                }
+            }
+
+            return new OpenWorkspaceTabs(ids, active)
             {
                 RepositoryPaths = repositoryPaths,
+                SecondaryGraphPaths = secondary,
+                ShownGraphPaths = shownGraphs,
                 ActiveRepositoryPath = repositoryPaths.Contains(file.ActiveRepositoryPath!) ? file.ActiveRepositoryPath : null,
             };
         }
@@ -97,7 +117,13 @@ public sealed class OpenWorkspaceTabsStore
         {
             await VersionedJsonFile.WriteAsync(
                 FilePath,
-                new TabsFile(tabs.WorkspaceIds, tabs.ActiveWorkspaceId, tabs.RepositoryPaths, tabs.ActiveRepositoryPath),
+                new TabsFile(
+                    tabs.WorkspaceIds,
+                    tabs.ActiveWorkspaceId,
+                    tabs.RepositoryPaths,
+                    tabs.ActiveRepositoryPath,
+                    tabs.SecondaryGraphPaths,
+                    tabs.ShownGraphPaths),
                 CurrentVersion,
                 cancellationToken).ConfigureAwait(false);
             return true;
@@ -113,5 +139,7 @@ public sealed class OpenWorkspaceTabsStore
         IReadOnlyList<string>? WorkspaceIds,
         string? ActiveWorkspaceId = null,
         IReadOnlyList<string>? RepositoryPaths = null,
-        string? ActiveRepositoryPath = null);
+        string? ActiveRepositoryPath = null,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? SecondaryGraphPaths = null,
+        IReadOnlyDictionary<string, string>? ShownGraphPaths = null);
 }
