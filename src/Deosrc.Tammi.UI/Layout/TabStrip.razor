@@ -7,6 +7,7 @@
 @inject NewWorkspaceTabState NewWorkspaceTabState
 @inject WorkspaceGitGraphs GitGraphs
 @inject Deosrc.Tammi.Core.Terminals.WorkspaceTerminals Terminals
+@inject MainTabOrder TabOrder
 @inject NavigationManager Navigation
 @inject Deosrc.Tammi.UI.Workspaces.WorkspaceViewState ViewState
 
@@ -79,9 +80,9 @@
             var items = new List<TabBarItem>();
             foreach (var key in OrderedKeys())
             {
-                if (key.StartsWith(WorkspaceKey, StringComparison.Ordinal))
+                if (MainTabOrder.IsWorkspaceKey(key))
                 {
-                    var tab = WorkspaceTabs.Tabs.First(t => WorkspaceKey + t.WorkspaceId == key);
+                    var tab = WorkspaceTabs.Tabs.First(t => MainTabOrder.WorkspaceKey(t.WorkspaceId) == key);
                     // Returns to the edit flow if the workspace has one in progress.
                     var route = EditSessions.Find(tab.WorkspaceId) is null
                         ? ViewState.RouteOf(tab.WorkspaceId)
@@ -89,19 +90,19 @@
                     items.Add(new(key, route, tab.Name, tab.Name, IconOf(new Icons.Regular.Size16.Folder()),
                         AgentIndicatorOf(tab.WorkspaceId), IsWorkspaceShown(tab.WorkspaceId)));
                 }
-                else if (key.StartsWith(GraphKey, StringComparison.Ordinal))
+                else if (MainTabOrder.IsRepositoryKey(key))
                 {
-                    var graph = GitGraphs.StandaloneGraphs().First(g => GraphKey + g.Path == key);
+                    var graph = GitGraphs.StandaloneGraphs().First(g => MainTabOrder.RepositoryKey(g.Path) == key);
                     items.Add(new(key, ViewState.RepositoryRouteOf(graph.Path), graph.Path, graph.Name,
                         IconOf(new Icons.Regular.Size16.BranchFork()), AgentIndicatorOf(graph.WorkspaceId),
                         IsRepositoryShown(graph.Path)));
                 }
-                else if (key == NewWorkspaceKey)
+                else if (key == MainTabOrder.NewWorkspaceKey)
                 {
                     items.Add(new(key, AppRoutes.NewWorkspace, "New workspace", "New workspace",
                         Active: IsCurrent(AppRoutes.NewWorkspace)));
                 }
-                else if (key == UsageKey)
+                else if (key == MainTabOrder.UsageKey)
                 {
                     items.Add(new(key, AppRoutes.Usage, "AI usage", "AI usage", Active: IsCurrent(AppRoutes.Usage)));
                 }
@@ -113,19 +114,19 @@
 
     private void CloseAsync(TabBarItem item)
     {
-        if (item.Key.StartsWith(WorkspaceKey, StringComparison.Ordinal))
+        if (MainTabOrder.IsWorkspaceKey(item.Key))
         {
-            Close(WorkspaceTabs.Tabs.First(t => WorkspaceKey + t.WorkspaceId == item.Key));
+            Close(WorkspaceTabs.Tabs.First(t => MainTabOrder.WorkspaceKey(t.WorkspaceId) == item.Key));
         }
-        else if (item.Key.StartsWith(GraphKey, StringComparison.Ordinal))
+        else if (MainTabOrder.IsRepositoryKey(item.Key))
         {
-            CloseRepositoryGraph(GitGraphs.StandaloneGraphs().First(g => GraphKey + g.Path == item.Key));
+            CloseRepositoryGraph(GitGraphs.StandaloneGraphs().First(g => MainTabOrder.RepositoryKey(g.Path) == item.Key));
         }
-        else if (item.Key == NewWorkspaceKey)
+        else if (item.Key == MainTabOrder.NewWorkspaceKey)
         {
             CloseNewWorkspace();
         }
-        else if (item.Key == UsageKey)
+        else if (item.Key == MainTabOrder.UsageKey)
         {
             CloseUsage();
         }
@@ -141,24 +142,15 @@
         }
     }
 
-    private const string WorkspaceKey = "workspace:";
-    private const string GraphKey = "git:";
-    private const string NewWorkspaceKey = "new-workspace";
-    private const string UsageKey = "usage";
-
-    // The open tabs' keys, in the order they were opened.
-    private readonly List<string> _order = [];
-
-    private List<string> OrderedKeys()
+    // The open tabs' keys, in the order they were opened (or, after a restart, the order they were saved in).
+    private IReadOnlyList<string> OrderedKeys()
     {
-        var open = WorkspaceTabs.Tabs.Select(tab => WorkspaceKey + tab.WorkspaceId)
-            .Concat(GitGraphs.StandaloneGraphs().Select(graph => GraphKey + graph.Path))
-            .Concat(NewWorkspaceTabState.IsOpen ? [NewWorkspaceKey] : [])
-            .Concat(UsageTabState.IsOpen ? [UsageKey] : [])
+        var open = WorkspaceTabs.Tabs.Select(tab => MainTabOrder.WorkspaceKey(tab.WorkspaceId))
+            .Concat(GitGraphs.StandaloneGraphs().Select(graph => MainTabOrder.RepositoryKey(graph.Path)))
+            .Concat(NewWorkspaceTabState.IsOpen ? [MainTabOrder.NewWorkspaceKey] : [])
+            .Concat(UsageTabState.IsOpen ? [MainTabOrder.UsageKey] : [])
             .ToList();
-        _order.RemoveAll(key => !open.Contains(key));
-        _order.AddRange(open.Where(key => !_order.Contains(key)));
-        return [.. _order];
+        return TabOrder.Sync(open);
     }
 
     private void CloseRepositoryGraph(WorkspaceGitGraph graph)

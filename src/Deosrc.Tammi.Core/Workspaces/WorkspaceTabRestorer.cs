@@ -169,15 +169,15 @@ public sealed class WorkspaceTabRestorer : IDisposable
     {
         switch (saved.Kind)
         {
-            case SavedTab.AgentKind when AgentSession.IsValidId(saved.SessionId):
-                if (_agents.IsRunning(workspace.Id, saved.SessionId!))
+            case SavedTab.AgentKind when AgentSession.IsValidId(saved.Id):
+                if (_agents.IsRunning(workspace.Id, saved.Id!))
                 {
                     return null;
                 }
 
                 var sessions = await _agents.SessionsOf(workspace).ListAsync().ConfigureAwait(false);
                 if (sessions.FirstOrDefault(session => string.Equals(
-                        session.Id, saved.SessionId, StringComparison.OrdinalIgnoreCase)) is not { } found)
+                        session.Id, saved.Id, StringComparison.OrdinalIgnoreCase)) is not { } found)
                 {
                     return "An agent that was open couldn't be opened again, as its session isn't recorded any more.";
                 }
@@ -185,14 +185,14 @@ public sealed class WorkspaceTabRestorer : IDisposable
                 await _agents.ResumeAsync(workspace, found).ConfigureAwait(false);
                 return null;
 
-            case SavedTab.GitGraphKind when saved.Repository is not null:
-                if (workspace.Repositories.FirstOrDefault(repository => repository.FolderName == saved.Repository)
+            case SavedTab.GitGraphKind when saved.Id is not null:
+                if (workspace.Repositories.FirstOrDefault(repository => repository.FolderName == saved.Id)
                     is not { } repository)
                 {
-                    return $"The git graph of {saved.Repository} couldn't be opened again, as it's no longer in the workspace.";
+                    return $"The git graph of {saved.Id} couldn't be opened again, as it's no longer in the workspace.";
                 }
 
-                _graphs.Open(workspace, repository, saved.SubmodulePath);
+                _graphs.Open(workspace, repository, saved.Path);
                 return null;
 
             default:
@@ -203,19 +203,19 @@ public sealed class WorkspaceTabRestorer : IDisposable
     private IMainAreaTab? Find(string workspaceId, SavedTab saved) => saved.Kind switch
     {
         SavedTab.AgentKind => _agents.For(workspaceId).FirstOrDefault(agent => string.Equals(
-            agent.Agent.SessionId, saved.SessionId, StringComparison.OrdinalIgnoreCase)),
+            agent.Agent.SessionId, saved.Id, StringComparison.OrdinalIgnoreCase)),
         SavedTab.GitGraphKind => _graphs.For(workspaceId).FirstOrDefault(graph =>
-            graph.Repository.FolderName == saved.Repository && graph.SubmodulePath == saved.SubmodulePath),
+            graph.Repository.FolderName == saved.Id && graph.SubmodulePath == saved.Path),
         _ => null,
     };
 
     private static SavedTab? ToSaved(IMainAreaTab? tab) => tab switch
     {
-        WorkspaceAgent { Agent.SessionId: { } id } => new SavedTab(SavedTab.AgentKind, SessionId: id),
+        WorkspaceAgent { Agent.SessionId: { } id } => new SavedTab(SavedTab.AgentKind, Id: id),
         WorkspaceGitGraph graph => new SavedTab(
             SavedTab.GitGraphKind,
-            Repository: graph.Repository.FolderName,
-            SubmodulePath: graph.SubmodulePath),
+            Id: graph.Repository.FolderName,
+            Path: graph.SubmodulePath),
         _ => null,
     };
 
@@ -275,11 +275,11 @@ public sealed class WorkspaceTabRestorer : IDisposable
 
             var tabs = _agents.For(workspaceId)
                 .Where(agent => agent.Agent.SessionId is not null)
-                .Select(agent => (agent.StartOrder, Tab: new SavedTab(SavedTab.AgentKind, SessionId: agent.Agent.SessionId)))
+                .Select(agent => (agent.StartOrder, Tab: new SavedTab(SavedTab.AgentKind, Id: agent.Agent.SessionId)))
                 .Concat(_graphs.For(workspaceId).Select(graph => (graph.StartOrder, Tab: new SavedTab(
                     SavedTab.GitGraphKind,
-                    Repository: graph.Repository.FolderName,
-                    SubmodulePath: graph.SubmodulePath))))
+                    Id: graph.Repository.FolderName,
+                    Path: graph.SubmodulePath))))
                 .OrderBy(entry => entry.StartOrder)
                 .Select(entry => entry.Tab)
                 .ToArray();

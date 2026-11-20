@@ -45,6 +45,22 @@ env:
     ]
 
 jobs:
+  install-scripts:
+    name: Attach install scripts
+    runs-on: ubuntu-latest
+    # Only releases (or manual runs with a tag) have something to attach to.
+    if: github.event_name == 'release' || inputs.tag_name != ''
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name || inputs.tag_name }}
+          files: |
+            scripts/install.sh
+            scripts/install.ps1
+
   targets:
     name: Resolve targets
     runs-on: ubuntu-latest

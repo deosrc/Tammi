@@ -45,7 +45,7 @@ public static class PredefinedTools
     {
         Id = "devcontainer",
         Kind = ToolKind.File,
-        Name = "Dev Container",
+        Name = "Dev Container - " + ToolPlaceholders.Format(ToolPlaceholders.MatchFolderName),
         FilePatterns = [".devcontainer/devcontainer.json", ".devcontainer.json"],
         Executable = "devcontainer",
         Arguments =
