@@ -698,7 +698,7 @@ are left to other tools for now.
   `{PreferredFolder}` (the folder the tool should open: see below), `{LaunchFolder}` (the Workspace Folder or
   repository the entry is offered for), `{WorkspaceFolder}`,
   `{RepositoryFolder}` (the repository the entry is offered for, or that the file is in), and, for file tools only,
-  `{FileDirectory}`, `{FileName}`, `{FileNameWithoutExtension}`, `{FilePath}` and `{MatchFolder}` (the folder the
+  `{FileDirectory}`, `{FileName}`, `{FileNameWithoutExtension}`, `{FilePath}`, `{MatchFolderName}` (the name of the `{MatchFolder}`) and `{MatchFolder}` (the folder the
   pattern matched from: the file's folder for a file name pattern, or where a path pattern starts, e.g. the folder
   holding `.devcontainer/`). A file tool starts in its `{MatchFolder}`. An entry is left out where a placeholder it
   uses has no value (e.g. `{RepositoryFolder}` for the Workspace Folder). Other text in braces is left as it is, and
@@ -738,7 +738,7 @@ are left to other tools for now.
     no executable and is always enabled: Settings has no switch for it. It's always first, in Settings and in the
     tools lists.
   - **VS Code:** `code {PreferredFolder}`.
-  - **Dev Container:** a file tool for `.devcontainer/devcontainer.json` and `.devcontainer.json`, running
+  - **Dev Container:** a file tool, named `Dev Container - {MatchFolderName}` (e.g. `Dev Container - Alpha`), for `.devcontainer/devcontainer.json` and `.devcontainer.json`, running
     `devcontainer open {MatchFolder} --config {FilePath}`. It opens the folder the configuration belongs to (the one
     holding `.devcontainer.json`, or the parent of the `.devcontainer` folder) in the container the file describes, so
     each project of a monorepo with its own configuration has its own entry. It needs the `devcontainer` CLI that VS Code's Dev Containers extension installs (its
