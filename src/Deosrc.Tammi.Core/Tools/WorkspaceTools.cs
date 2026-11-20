@@ -195,6 +195,8 @@ public sealed class WorkspaceTools
             values[ToolPlaceholders.FileNameWithoutExtension] = Path.GetFileNameWithoutExtension(path);
             values[ToolPlaceholders.FilePath] = path;
             values[ToolPlaceholders.MatchFolder] = file.MatchFolder;
+            values[ToolPlaceholders.MatchFolderName] =
+                Path.GetFileName(Path.TrimEndingDirectorySeparator(file.MatchFolder));
         }
 
         return values;

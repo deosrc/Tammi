@@ -69,6 +69,7 @@ public static class ToolText
         ToolPlaceholders.MatchFolder =>
             "the folder the file pattern matched from: the file's folder for a file name, or where a path pattern "
             + "starts, e.g. the folder holding .devcontainer/",
+        ToolPlaceholders.MatchFolderName => "the name of the {MatchFolder}, e.g. Alpha for ~/Alpha/.devcontainer",
         _ => placeholder,
     };
 
