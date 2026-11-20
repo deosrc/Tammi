@@ -8,6 +8,7 @@
 @inject WorkspaceAgents Agents
 @inject ISettingsStore SettingsStore
 @inject WorkspaceViewState ViewState
+@inject WorkspaceTabsKeeper TabsKeeper
 
 @* A Local Repository's primary tab, opened from the Repositories page without a workspace. Like a workspace's, it has
    secondary tabs: the repository's own git graph, which is always there and can't be closed, then the graphs of its
@@ -194,8 +195,18 @@
                 .OrderBy(tab => tab.StartOrder),
         ];
 
+        // The secondary graph that was shown when Tammi last closed, once it has been opened again, unless the view has
+        // shown something since.
+        if (ViewState.GetShown(_id) is null
+            && TabsKeeper.TakeRestoredShownGraph(_path) is { } restored
+            && _tabs.OfType<WorkspaceGitGraph>().FirstOrDefault(graph => graph.Path == restored) is { } restoredGraph)
+        {
+            ViewState.SetShown(_id, restoredGraph);
+        }
+
         // The tab the view was showing, or the repository's graph if it wasn't showing one or it has been closed.
         _shown = ViewState.GetShown(_id) is { } shown && _tabs.Contains(shown) ? shown : _tabs.FirstOrDefault();
+        TabsKeeper.SetShownGraph(_path, _shown is WorkspaceGitGraph { IsPrimary: false } shownGraph ? shownGraph.Path : null);
     }
 
     private void ShowTab(IMainAreaTab tab)
