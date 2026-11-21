@@ -94,11 +94,11 @@
                     {
                         var state = agent.State;
                         <li class="agent-card card-action @AgentStateText.ToneClass(state)" @key="agent"
-                            title="Show @agent.Name" @onclick="() => OnShowAgent.InvokeAsync(agent)">
+                            title="Show @agent.DisplayName" @onclick="() => OnShowAgent.InvokeAsync(agent)">
                             <div class="agent-card-heading">
                                 <AgentIcon Definition="agent.Agent.Definition" />
                                 <button type="button" class="agent-card-name card-action-name" title="@agent.WorkingDirectory">
-                                    @agent.Name
+                                    @agent.DisplayName
                                 </button>
                                 <span class="agent-state-badge">
                                     @if (state == AgentState.Working)

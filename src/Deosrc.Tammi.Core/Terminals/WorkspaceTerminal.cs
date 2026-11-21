@@ -30,6 +30,9 @@ public sealed class WorkspaceTerminal : IWorkspaceProcess
     /// </summary>
     public string Name { get; }
 
+    /// <inheritdoc />
+    public string DisplayName => Session.Title ?? Name;
+
     /// <summary>
     /// The folder the shell was started in.
     /// </summary>

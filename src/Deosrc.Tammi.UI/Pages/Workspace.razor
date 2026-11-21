@@ -301,7 +301,7 @@ else
                                         @GitGraphIconPaths
                                     </svg>
                                 }
-                                <span class="tab-label-text">@tab.Name</span>
+                                <span class="tab-label-text">@tab.DisplayName</span>
                                 @if (tab is IWorkspaceProcess { HasExited: true })
                                 {
                                     <span class="session-tab-status">
@@ -314,8 +314,8 @@ else
                                     <AgentStateIndicator State="agent.State" />
                                 }
                             </button>
-                            <button type="button" class="tab-close" title="Close @tab.Name"
-                                    aria-label="Close @tab.Name" @onclick="() => CloseTabAsync(tab)">
+                            <button type="button" class="tab-close" title="Close @tab.DisplayName"
+                                    aria-label="Close @tab.DisplayName" @onclick="() => CloseTabAsync(tab)">
                                 &times;
                             </button>
                         </div>

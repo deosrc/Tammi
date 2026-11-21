@@ -30,6 +30,9 @@ public sealed class WorkspaceAgent : IWorkspaceProcess
     /// </summary>
     public string Name { get; }
 
+    /// <inheritdoc />
+    public string DisplayName => Session.Title ?? Name;
+
     /// <summary>
     /// The running agent, with its definition, state and Agent Session ID.
     /// </summary>

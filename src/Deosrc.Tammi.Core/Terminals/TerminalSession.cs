@@ -28,6 +28,8 @@ public sealed class TerminalSession
     private long _start;
     private long _end;
     private bool _ended;
+    private readonly TerminalTitleParser _titleParser = new();
+    private volatile string? _title;
 
     /// <summary>
     /// Starts reading a session's output. Nothing else may read it.
@@ -50,6 +52,17 @@ public sealed class TerminalSession
     /// The pseudoterminal session, for its input, size and exit code.
     /// </summary>
     public IPtySession Pty { get; }
+
+    /// <summary>
+    /// The title the program has set for its terminal (e.g. with <c>OSC 0</c> or <c>OSC 2</c>), or <c>null</c> if it
+    /// hasn't set one, or has cleared it.
+    /// </summary>
+    public string? Title => _title;
+
+    /// <summary>
+    /// Raised when <see cref="Title"/> changes. It's raised on a background thread.
+    /// </summary>
+    public event Action? TitleChanged;
 
     /// <summary>
     /// Completes once the session's output has ended and all of it has been kept.
@@ -166,6 +179,8 @@ public sealed class TerminalSession
 
     private void Append(byte[] chunk)
     {
+        UpdateTitle(chunk);
+
         TaskCompletionSource changed;
         lock (_lock)
         {
@@ -183,5 +198,31 @@ public sealed class TerminalSession
         }
 
         changed.TrySetResult();
+    }
+
+    private void UpdateTitle(byte[] chunk)
+    {
+        var titles = _titleParser.Parse(chunk);
+        if (titles.Count == 0)
+        {
+            return;
+        }
+
+        var title = titles[^1];
+        var newTitle = title.Length == 0 ? null : title;
+        if (newTitle == _title)
+        {
+            return;
+        }
+
+        _title = newTitle;
+        try
+        {
+            TitleChanged?.Invoke();
+        }
+        catch (Exception)
+        {
+            // A handler's failure mustn't stop the output being kept.
+        }
     }
 }
