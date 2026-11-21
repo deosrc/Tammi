@@ -64,7 +64,8 @@ public class ClaudeCodeHooksTests
         Assert.Equal(
             [
                 "Elicitation", "ElicitationResult", "Notification", "PermissionDenied", "PermissionRequest",
-                "PostToolUse", "PostToolUseFailure", "PreToolUse", "Stop", "StopFailure", "UserPromptSubmit",
+                "PostToolUse", "PostToolUseFailure", "PreToolUse", "SessionStart", "Stop", "StopFailure",
+                "UserPromptSubmit",
             ],
             events.Order(StringComparer.Ordinal));
     }
@@ -74,7 +75,8 @@ public class ClaudeCodeHooksTests
     {
         using var settings = JsonDocument.Parse(ClaudeCodeHooks.Instance.CreateArguments(Endpoint)[1]);
 
-        foreach (var hookEvent in settings.RootElement.GetProperty("hooks").EnumerateObject())
+        foreach (var hookEvent in settings.RootElement.GetProperty("hooks").EnumerateObject()
+            .Where(property => property.Name != "SessionStart"))
         {
             var hook = Assert.Single(Assert.Single(hookEvent.Value.EnumerateArray()).GetProperty("hooks").EnumerateArray());
             Assert.Equal("http", hook.GetProperty("type").GetString());
@@ -87,6 +89,20 @@ public class ClaudeCodeHooksTests
                 hook.GetProperty("allowedEnvVars").EnumerateArray().Select(name => name.GetString()));
             Assert.True(hook.GetProperty("timeout").GetInt32() > 0);
         }
+    }
+
+    [Fact]
+    public void CreateArguments_SessionStartIsACommandHookThatPostsTheEvent()
+    {
+        using var settings = JsonDocument.Parse(ClaudeCodeHooks.Instance.CreateArguments(Endpoint)[1]);
+
+        var hooks = settings.RootElement.GetProperty("hooks").GetProperty("SessionStart");
+        var hook = Assert.Single(Assert.Single(hooks.EnumerateArray()).GetProperty("hooks").EnumerateArray());
+        Assert.Equal("command", hook.GetProperty("type").GetString());
+        var command = hook.GetProperty("command").GetString()!;
+        Assert.Contains("http://127.0.0.1:4567/agent-hooks", command, StringComparison.Ordinal);
+        Assert.Contains("Bearer $" + AgentHookEndpoint.TokenVariable, command, StringComparison.Ordinal);
+        Assert.Contains("--data-binary @-", command, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -120,5 +136,16 @@ public class ClaudeCodeHooksTests
 
         Assert.True(ClaudeCodeHooks.Instance.ReportsSessionId);
         Assert.Equal(expected, ClaudeCodeHooks.Instance.SessionIdFrom(hookEvent.RootElement));
+    }
+
+    [Theory]
+    [InlineData("""{"hook_event_name":"SessionStart"}""", true)]
+    [InlineData("""{"hook_event_name":"Stop"}""", false)]
+    [InlineData("""["SessionStart"]""", false)]
+    public void IsReadyForInput_IsTrueWhenTheSessionStarts(string json, bool expected)
+    {
+        using var hookEvent = System.Text.Json.JsonDocument.Parse(json);
+
+        Assert.Equal(expected, ClaudeCodeHooks.Instance.IsReadyForInput(hookEvent.RootElement));
     }
 }
