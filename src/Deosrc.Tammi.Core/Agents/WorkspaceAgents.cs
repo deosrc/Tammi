@@ -367,6 +367,7 @@ public sealed class WorkspaceAgents(
 
         var store = SessionsOf(workspace);
         agent.Agent.StateChanged += _ => Changed?.Invoke(agent.WorkspaceId);
+        agent.Session.TitleChanged += () => Changed?.Invoke(agent.WorkspaceId);
 
         // Raised when the agent's hooks report its session, or that it has moved to another one.
         agent.Agent.SessionIdChanged += changed => _ = RecordSessionAsync(agent, store);

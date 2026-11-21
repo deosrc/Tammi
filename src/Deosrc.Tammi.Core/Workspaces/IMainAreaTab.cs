@@ -17,6 +17,12 @@ public interface IMainAreaTab
     string Name { get; }
 
     /// <summary>
+    /// The name its tab shows: <see cref="Name"/>, unless the tab's program has renamed it, as a terminal or agent
+    /// does by setting its terminal's title.
+    /// </summary>
+    string DisplayName => Name;
+
+    /// <summary>
     /// Orders the tabs by when they started or opened, across terminals, agents and git graphs: a later tab has a
     /// higher number. Taken from <see cref="MainAreaTabOrder.Next"/>.
     /// </summary>

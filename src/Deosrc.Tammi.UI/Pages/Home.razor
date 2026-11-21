@@ -202,7 +202,7 @@
                         @foreach (var agent in agents)
                         {
                             <AgentStateIndicator State="agent.State"
-                                                 Title="@($"{agent.Name}: {AgentStateText.Label(agent.State)}")" />
+                                                 Title="@($"{agent.DisplayName}: {AgentStateText.Label(agent.State)}")" />
                         }
                     </div>
                 }

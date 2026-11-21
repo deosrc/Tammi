@@ -1,0 +1,25 @@
+@*
+    A tooltip for a session tab: its full name, which its tab may cut short, and below it the folder it runs in. It
+    shows when the pointer rests on the tab it's in, which must be a .session-tab. Style: .session-tab-tooltip.
+*@
+<span class="session-tab-tooltip" role="tooltip">
+    <span class="session-tab-tooltip-name">@Name</span>
+    @if (!string.IsNullOrEmpty(Detail))
+    {
+        <span class="session-tab-tooltip-detail">@Detail</span>
+    }
+</span>
+
+@code {
+    /// <summary>
+    /// The tab's full name.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// The folder the tab's process or graph is in, or <c>null</c> for none.
+    /// </summary>
+    [Parameter]
+    public string? Detail { get; set; }
+}

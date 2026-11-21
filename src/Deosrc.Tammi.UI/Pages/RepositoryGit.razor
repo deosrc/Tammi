@@ -26,7 +26,6 @@
                     <div class="session-tab @(shown ? "active" : null)" @key="tab">
                         <button type="button" class="session-tab-label" role="tab"
                                 aria-selected="@(shown ? "true" : "false")"
-                                title="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })"
                                 @onclick="() => ShowTab(tab)">
                             @if (tab is WorkspaceTerminal)
                             {
@@ -50,7 +49,7 @@
                                     <path d="M18 11c0 4-6 4-10.5 6.5" />
                                 </svg>
                             }
-                            <span class="tab-label-text">@tab.Name</span>
+                            <span class="tab-label-text">@tab.DisplayName</span>
                             @if (tab is IWorkspaceProcess { HasExited: true })
                             {
                                 <span class="session-tab-status">
@@ -63,10 +62,12 @@
                                 <AgentStateIndicator State="agent.State" />
                             }
                         </button>
+                        <SessionTabTooltip Name="@tab.DisplayName"
+                                           Detail="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })" />
                         @if (!primary)
                         {
-                            <button type="button" class="tab-close" title="Close @tab.Name"
-                                    aria-label="Close @tab.Name" @onclick="() => CloseTabAsync(tab)">
+                            <button type="button" class="tab-close" title="Close @tab.DisplayName"
+                                    aria-label="Close @tab.DisplayName" @onclick="() => CloseTabAsync(tab)">
                                 &times;
                             </button>
                         }

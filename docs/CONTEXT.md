@@ -514,6 +514,10 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   changed in Settings.
   - A terminal is named "Terminal" when it's in the Workspace Folder, or after the repository's folder (e.g. `api`).
     A name already used by one of the workspace's open terminals gets the first free number (e.g. "Terminal 2").
+  - A program can rename its own tab by setting its terminal's title (the `OSC 0` and `OSC 2` escape sequences, e.g.
+    `printf '\e]0;My title\a'`). The tab, and an agent's card on the dashboard, in the agents list and on Home, then
+    show that title instead of the name, until the program clears it (an empty title). The name stays unique and is
+    used for nothing else. Titles are plain text with control characters removed.
   - Closing a terminal's tab ends its shell, and shows the next tab (or the previous one, or else the dashboard).
     A terminal whose shell has exited stays, marked as exited, until its tab
     is closed.
