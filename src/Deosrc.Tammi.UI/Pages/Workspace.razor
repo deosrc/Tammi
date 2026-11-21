@@ -281,7 +281,6 @@ else
                         <div class="session-tab @(shown ? "active" : null)" @key="tab">
                             <button type="button" class="session-tab-label" role="tab"
                                     aria-selected="@(shown ? "true" : "false")"
-                                    title="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })"
                                     @onclick="() => ShowTab(tab)">
                                 @if (tab is WorkspaceAgent iconAgent)
                                 {
@@ -314,6 +313,8 @@ else
                                     <AgentStateIndicator State="agent.State" />
                                 }
                             </button>
+                        <SessionTabTooltip Name="@tab.DisplayName"
+                                           Detail="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })" />
                             <button type="button" class="tab-close" title="Close @tab.DisplayName"
                                     aria-label="Close @tab.DisplayName" @onclick="() => CloseTabAsync(tab)">
                                 &times;
