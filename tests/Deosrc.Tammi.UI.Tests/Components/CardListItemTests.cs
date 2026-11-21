@@ -5,9 +5,9 @@ using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Deosrc.Tammi.UI.Tests.Components;
 
-public sealed class SettingsListItemTests : BunitContext
+public sealed class CardListItemTests : BunitContext
 {
-    public SettingsListItemTests()
+    public CardListItemTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddFluentUIComponents();
@@ -16,10 +16,10 @@ public sealed class SettingsListItemTests : BunitContext
     [Fact]
     public void ShowsItsContentInARowInsideAListItemCard()
     {
-        var item = Render<SettingsListItem>(parameters => parameters
+        var item = Render<CardListItem>(parameters => parameters
             .AddChildContent("<span class=\"test-text\">A folder</span><button class=\"test-button\">Remove</button>"));
 
-        var row = item.Find("li .fluent-card .settings-list-item-row");
+        var row = item.Find("li .fluent-card .card-list-item-row");
 
         Assert.Equal("A folder", row.QuerySelector(".test-text")!.TextContent);
         Assert.NotNull(row.QuerySelector(".test-button"));

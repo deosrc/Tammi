@@ -28,7 +28,7 @@
             <ul class="settings-list">
                 @foreach (var folder in Current.MonitoredFolders)
                 {
-                    <SettingsListItem @key="folder">
+                    <CardListItem @key="folder">
                         <span class="settings-list-path">@folder</span>
                         @if (ProblemWith(folder) is { } problem)
                         {
@@ -39,7 +39,7 @@
                             <span class="settings-list-status">@RepositoryCount(CountIn(folder))</span>
                         }
                         <FluentButton OnClick="() => RemoveMonitoredFolderAsync(folder)">Remove</FluentButton>
-                    </SettingsListItem>
+                    </CardListItem>
                 }
             </ul>
         }
@@ -92,14 +92,14 @@
             <ul class="settings-list">
                 @foreach (var repository in Current.LocalRepositories)
                 {
-                    <SettingsListItem @key="repository">
+                    <CardListItem @key="repository">
                         <span class="settings-list-path">@repository</span>
                         @if (ProblemWith(repository) is { } problem)
                         {
                             <span class="error">@problem</span>
                         }
                         <FluentButton OnClick="() => RemoveLocalRepositoryAsync(repository)">Remove</FluentButton>
-                    </SettingsListItem>
+                    </CardListItem>
                 }
             </ul>
         }
