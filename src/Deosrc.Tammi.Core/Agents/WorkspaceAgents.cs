@@ -167,6 +167,13 @@ public sealed class WorkspaceAgents(
     {
         try
         {
+            // An agent whose hooks say when it's ready (e.g. after the user answers a trust prompt) is waited for, as
+            // typing before then goes to the prompt instead of the input.
+            if (agent.Ready is { } ready)
+            {
+                await Task.WhenAny(ready, agent.Ended).ConfigureAwait(false);
+            }
+
             await Task.Delay(PrefillDelay, timeProvider).ConfigureAwait(false);
             if (agent.Ended.IsCompleted || IsDisposed)
             {

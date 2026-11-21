@@ -63,10 +63,23 @@ public sealed class ClaudeCodeHooks : AgentHooks
             return new JsonArray(entry);
         }
 
+        // Claude Code only runs command hooks for SessionStart, so this one posts the event with curl.
+        JsonArray SessionStartHook() => new(new JsonObject
+        {
+            ["hooks"] = new JsonArray(new JsonObject
+            {
+                ["type"] = "command",
+                ["command"] = $"curl -s -m {TimeoutSeconds} -X POST -H \"Authorization: Bearer ${AgentHookEndpoint.TokenVariable}\" "
+                    + $"-H \"Content-Type: application/json\" --data-binary @- \"{endpoint.Url.AbsoluteUri}\"",
+                ["timeout"] = TimeoutSeconds,
+            }),
+        });
+
         var settings = new JsonObject
         {
             ["hooks"] = new JsonObject
             {
+                ["SessionStart"] = SessionStartHook(),
                 ["UserPromptSubmit"] = Hook(),
                 ["PreToolUse"] = Hook(QuestionTools),
                 ["PostToolUse"] = Hook(),
@@ -110,6 +123,14 @@ public sealed class ClaudeCodeHooks : AgentHooks
             _ => null,
         };
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Claude Code starts the session once any trust prompt for an untrusted workspace has been answered, so the
+    /// session starting means it's ready for input.
+    /// </remarks>
+    public override bool IsReadyForInput(JsonElement hookEvent) =>
+        hookEvent.ValueKind == JsonValueKind.Object && GetString(hookEvent, "hook_event_name") == "SessionStart";
 
     /// <inheritdoc />
     /// <remarks>Every event Claude Code sends has the session's ID.</remarks>
