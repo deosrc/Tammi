@@ -125,6 +125,12 @@
                             <pre class="git-graph-sync-details">@syncProblem.Details</pre>
                         </details>
                     }
+                    @if (syncProblem.Failure == GitSyncFailure.ForcePushRequired)
+                    {
+                        <p>
+                            <button type="button" class="button button-danger" @onclick="Graph.ForcePushAsync">Force push</button>
+                        </p>
+                    }
                 </div>
                 <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
                         title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissSyncProblem">
