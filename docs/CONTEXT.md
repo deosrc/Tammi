@@ -671,6 +671,9 @@ credentials (a git that would need a terminal prompt fails instead).
   conflicts show in the working changes to resolve.
 - **Push** pushes the checked-out branch. A branch with no upstream is pushed to `origin` (or the only remote) and
   starts tracking it.
+- When a push is rejected as non-fast-forward (e.g. after a rebase or amend), the error offers **Force push**. Only
+  clicking it force pushes, with `--force-with-lease` so it still refuses if the remote branch has moved since the last
+  fetch. A rejection that says to fetch first just says to pull.
 - Pull and push need a branch, so they fail with a clear message on a detached HEAD (as submodules usually are).
 - While one runs, git's progress is shown under the toolbar and the buttons are disabled. A failure is shown there
   too, worded for what went wrong (authentication, unreachable remote, conflicts, uncommitted changes that would be

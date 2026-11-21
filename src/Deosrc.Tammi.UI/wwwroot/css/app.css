@@ -2992,8 +2992,22 @@ label.task-choice {
   margin: 0;
 }
 
-.git-graph-sync-error-close {
+.git-graph-sync-error-body p.git-graph-sync-error-actions {
+  margin-top: var(--space-3);
+}
+
+/* Just the close icon, with no button border or background. */
+.button.git-graph-sync-error-close {
   flex: none;
+  padding: var(--space-1);
+  border: none;
+  background: none;
+  color: var(--color-text);
+}
+
+.button.git-graph-sync-error-close:hover:not(:disabled) {
+  background: none;
+  opacity: 0.7;
 }
 
 .git-graph-sync-details {

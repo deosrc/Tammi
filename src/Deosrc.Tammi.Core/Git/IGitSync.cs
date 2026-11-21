@@ -35,6 +35,12 @@ public interface IGitSync
     /// <param name="path">The repository's (or submodule's) working directory.</param>
     /// <param name="progress">Told what git reports as it goes.</param>
     /// <param name="cancellationToken">Cancelling kills the git process.</param>
-    /// <exception cref="GitSyncException">The push failed, e.g. with <see cref="GitSyncFailure.PushRejected"/>.</exception>
-    Task PushAsync(string path, IProgress<string>? progress = null, CancellationToken cancellationToken = default);
+    /// <param name="force">
+    /// Replaces the remote branch even though it isn't an ancestor of the local one. It uses
+    /// <c>--force-with-lease</c>, so it still refuses if the remote branch has moved since it was last fetched.
+    /// </param>
+    /// <exception cref="GitSyncException">
+    /// The push failed, e.g. with <see cref="GitSyncFailure.PushRejected"/> or <see cref="GitSyncFailure.ForcePushRequired"/>.
+    /// </exception>
+    Task PushAsync(string path, IProgress<string>? progress = null, CancellationToken cancellationToken = default, bool force = false);
 }
