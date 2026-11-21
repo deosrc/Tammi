@@ -6,32 +6,28 @@
 @inject IntegrationRegistry Registry
 @inject IProcessLauncher ProcessLauncher
 
-<li class="workspace-task @CategoryClass @(WorkspaceTask.Task is null ? null : "card-action")"
-    title="@(WorkspaceTask.Task is { } titled ? $"Open {titled.Key} in the browser" : null)" @onclick="OpenInBrowser">
-    <div class="workspace-task-heading">
+<SidePanelCard Tone="Tone" Hint="@(WorkspaceTask.Task is { } titled ? $"Open {titled.Key} in the browser" : null)"
+               Badge="@WorkspaceTask.Task?.Status" BadgeHint="@CategoryText"
+               OnClick="OpenInBrowser">
+    <Heading>
         <TaskSourceIcon Source="Registry.Find(WorkspaceTask.Reference.Source)" />
         <span class="workspace-task-key" title="@WorkspaceTask.Key">@TaskReference.ShortKey(WorkspaceTask.Key)</span>
-        @if (WorkspaceTask.Task?.Status is { } status)
+    </Heading>
+    <ChildContent>
+        @if (WorkspaceTask.Task is { } info)
         {
-            <span class="workspace-task-status" title="@CategoryText">@status</span>
+            <button type="button" class="workspace-task-title">@info.Title</button>
         }
-    </div>
-
-    @if (WorkspaceTask.Task is { } info)
-    {
-        <button type="button" class="workspace-task-title card-action-name">
-            @info.Title
-        </button>
-    }
-    else if (!WorkspaceTask.IsLoaded)
-    {
-        <p class="placeholder">Reading task…</p>
-    }
-    else
-    {
-        <p class="workspace-task-problem" title="@WorkspaceTask.ProblemDetail">@ProblemText</p>
-    }
-</li>
+        else if (!WorkspaceTask.IsLoaded)
+        {
+            <p class="workspace-task-note">Reading task…</p>
+        }
+        else
+        {
+            <p class="workspace-task-note workspace-task-problem" title="@WorkspaceTask.ProblemDetail">@ProblemText</p>
+        }
+    </ChildContent>
+</SidePanelCard>
 
 @code {
     [Parameter, EditorRequired]
@@ -45,12 +41,11 @@
         }
     }
 
-    private string? CategoryClass => WorkspaceTask.Task?.StatusCategory switch
+    private SidePanelCardTone Tone => WorkspaceTask.Task?.StatusCategory switch
     {
-        TaskStatusCategory.ToDo => "workspace-task-todo",
-        TaskStatusCategory.InProgress => "workspace-task-in-progress",
-        TaskStatusCategory.Done => "workspace-task-done",
-        _ => null,
+        TaskStatusCategory.InProgress => SidePanelCardTone.Info,
+        TaskStatusCategory.Done => SidePanelCardTone.Success,
+        _ => SidePanelCardTone.Neutral,
     };
 
     private string? CategoryText => WorkspaceTask.Task?.StatusCategory switch

@@ -1268,42 +1268,13 @@ a {
   gap: var(--space-2);
 }
 
-.git-status-card {
-  --git-status-tone: var(--color-text-muted);
-  /* Text on a solid fill of the tone. The surface colour contrasts with every tone in both themes, except warning,
-     which has its own. */
-  --git-status-tone-text: var(--color-surface);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-left: 4px solid var(--git-status-tone);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-
-.git-status-card-warning {
-  --git-status-tone: var(--color-warning);
-  --git-status-tone-text: var(--color-warning-text);
-  border-color: var(--color-warning-border);
-  border-left-color: var(--color-warning);
-  background: var(--color-warning-bg);
-}
-
-.git-status-card-danger {
-  --git-status-tone: var(--color-error);
-  border-color: var(--color-error);
-  background: var(--color-error-bg);
-}
-
 .git-status-submodules {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   margin-top: var(--space-1);
   padding-left: var(--space-3);
-  border-left: 2px solid color-mix(in srgb, var(--git-status-tone) 40%, transparent);
+  border-left: 2px solid var(--color-border);
 }
 
 .git-status-heading,
@@ -1330,8 +1301,8 @@ a {
   margin-left: auto;
   padding: 0 var(--space-2);
   border-radius: 999px;
-  background: var(--git-status-tone);
-  color: var(--git-status-tone-text);
+  background: var(--color-warning);
+  color: var(--color-warning-text);
   font-size: var(--font-size-small);
   font-weight: 700;
   line-height: 1.6;
@@ -1345,11 +1316,12 @@ a {
 
 .git-status-head,
 .git-status-summary,
-.git-status-card .placeholder {
+.git-status-submodules .placeholder {
   font-size: var(--font-size-small);
 }
 
-.git-status-card p {
+.git-status-submodules p,
+.git-status-problem {
   margin: 0;
 }
 
@@ -1486,14 +1458,14 @@ a {
 }
 
 .git-status-summary {
-  color: var(--git-status-tone);
+  color: var(--color-warning);
 }
 
 .git-status-problem {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  color: var(--git-status-tone);
+  color: var(--colorStatusDangerForeground1);
   font-size: var(--font-size-small);
 }
 
@@ -1512,70 +1484,6 @@ a {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.workspace-task {
-  --workspace-task-tone: var(--color-text-muted);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-left: 4px solid var(--workspace-task-tone);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-
-.workspace-task-in-progress {
-  --workspace-task-tone: var(--color-focus);
-}
-
-.workspace-task-done {
-  --workspace-task-tone: var(--color-success);
-}
-
-.workspace-task-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.workspace-task-key {
-  overflow: hidden;
-  color: var(--color-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  font-size: var(--font-size-small);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.workspace-task-status {
-  flex: none;
-  max-width: 50%;
-  margin-left: auto;
-  overflow: hidden;
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  background: var(--workspace-task-tone);
-  /* The surface colour contrasts with the muted, blue and green tones in both themes. */
-  color: var(--color-surface);
-  font-size: var(--font-size-small);
-  font-weight: 700;
-  line-height: 1.6;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The summary opens the task's page, so it's a button that reads as text. Long summaries wrap. */
-/* Looks like other card names (.card-action-name), wrapping however long it is. */
-.workspace-task-title {
-  overflow-wrap: anywhere;
-}
-
-.workspace-task p {
-  margin: 0;
-  font-size: var(--font-size-small);
 }
 
 .workspace-task-problem {
@@ -1639,7 +1547,7 @@ a {
   --agent-state-tone-text: var(--color-warning-text);
 }
 
-/* Needs input and Error also tint the card like a repository card with changes or a problem (.git-status-card-warning
+/* Needs input and Error also tint the card like a repository card with changes or a problem (SidePanelCard warning
    and -danger): border and background. */
 .agent-card.agent-state-warning {
   border-color: var(--color-warning-border);
@@ -3303,16 +3211,8 @@ a {
   border-color: var(--card-action-tone, var(--color-border));
 }
 
-.git-status-card.card-action {
-  --card-action-tone: var(--git-status-tone);
-}
-
 .agent-card.card-action {
   --card-action-tone: var(--agent-state-tone, var(--color-text-muted));
-}
-
-.workspace-task.card-action {
-  --card-action-tone: var(--workspace-task-tone);
 }
 
 /* A submodule in a repository's card opens its own git graph. Its hover is drawn inside its parent's, so the part that

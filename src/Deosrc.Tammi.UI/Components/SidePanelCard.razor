@@ -1,0 +1,78 @@
+@* A card in a side panel section's list, e.g. a task or a repository. Its left edge and its badge take the card's tone, which
+   says whether it needs attention. When it has an OnClick the whole card is clickable. A control inside it that does the
+   same thing should be a button, so the keyboard reaches it, and its click reaches the card. Put it in a <ul>. *@
+<li class="side-panel-card side-panel-card-@ToneName.ToLowerInvariant() @(OnClick.HasDelegate ? "side-panel-card-clickable" : null)"
+    title="@Hint" @oncontextmenu="OnContextMenu" @oncontextmenu:preventDefault="@OnContextMenu.HasDelegate">
+    <FluentCard OnClick="OnClick">
+        <div class="side-panel-card-heading">
+            @Heading
+            @if (Badge is not null)
+            {
+                <FluentBadge Class="side-panel-card-badge" Appearance="BadgeAppearance.Filled" Color="ColorOf(Tone)"
+                             title="@BadgeHint">@Badge</FluentBadge>
+            }
+        </div>
+        @ChildContent
+    </FluentCard>
+</li>
+
+@code {
+    /// <summary>
+    /// How the card looks: neutral by default, or what its content says about it.
+    /// </summary>
+    [Parameter]
+    public SidePanelCardTone Tone { get; set; }
+
+    /// <summary>
+    /// What the card's heading shows, before its badge.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Heading { get; set; }
+
+    /// <summary>
+    /// The text of the badge at the end of the heading, or <see langword="null"/> for none.
+    /// </summary>
+    [Parameter]
+    public string? Badge { get; set; }
+
+    /// <summary>
+    /// The badge's tooltip.
+    /// </summary>
+    [Parameter]
+    public string? BadgeHint { get; set; }
+
+    /// <summary>
+    /// The card's tooltip.
+    /// </summary>
+    [Parameter]
+    public string? Hint { get; set; }
+
+    /// <summary>
+    /// What the card shows under its heading.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Raised when the card is clicked. Without one, the card isn't clickable.
+    /// </summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    /// <summary>
+    /// Raised when the card is right-clicked, which then doesn't open the browser's own menu.
+    /// </summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
+
+    private string ToneName => Tone.ToString();
+
+    private static BadgeColor ColorOf(SidePanelCardTone tone) => tone switch
+    {
+        SidePanelCardTone.Info => BadgeColor.Informative,
+        SidePanelCardTone.Success => BadgeColor.Success,
+        SidePanelCardTone.Warning => BadgeColor.Warning,
+        SidePanelCardTone.Danger => BadgeColor.Danger,
+        _ => BadgeColor.Subtle,
+    };
+}
