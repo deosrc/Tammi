@@ -61,7 +61,16 @@ internal static class GitSyncErrors
         }
 
         if (operation == GitSyncOperation.Push
-            && Contains(text, "non-fast-forward", "[rejected]", "failed to push some refs", "fetch first", "tip of your current branch is behind"))
+            && Contains(text, "non-fast-forward")
+            && !Contains(text, "fetch first"))
+        {
+            return (
+                GitSyncFailure.ForcePushRequired,
+                "The push was rejected because the remote branch has commits that aren't in yours (for example after a rebase or amend). You can pull first, or force push to replace them.");
+        }
+
+        if (operation == GitSyncOperation.Push
+            && Contains(text, "[rejected]", "failed to push some refs", "fetch first", "tip of your current branch is behind"))
         {
             return (
                 GitSyncFailure.PushRejected,

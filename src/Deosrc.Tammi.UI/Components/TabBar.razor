@@ -165,7 +165,7 @@
             @if (closable)
             {
                 <FluentButton Class="tab-bar-close" Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small"
-                              IconOnly="true" Title="@($"Close {item.Title}")" aria-label="@($"Close {item.Title}")"
+                              IconOnly="true" Title="@($"Close {item.Label ?? item.Title}")" aria-label="@($"Close {item.Label ?? item.Title}")"
                               IconStart="@(new Icons.Regular.Size16.Dismiss())" OnClick="() => OnClose.InvokeAsync(item)" />
             }
         </div>;

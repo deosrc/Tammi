@@ -6,7 +6,7 @@
    opens the submodule's graph instead. A badge for each Pull Request from the workspace branch sits under its name,
    and opens the Pull Request in the browser. *@
 
-<SidePanelCard Tone="Tone" Hint="@($"Open the git graph of {Repository.Repository.FolderName}")" Badge="Label"
+<SidePanelCard Tone="Tone" Hint="@($"Open the git graph of {Repository.Repository.FolderName}")" Badge="@Label"
                OnClick="() => OnOpenGraph.InvokeAsync(null)" OnContextMenu="OnContextMenu">
     <Heading>
         <button type="button" class="git-status-name card-action-name" title="@Repository.WorktreePath">

@@ -17,6 +17,7 @@ public sealed class Agent : IAsyncDisposable
     private readonly TaskCompletionSource<AgentState> _ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Lock _lock = new();
     private readonly AgentHookRegistration? _hooks;
+    private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private Task? _stopped;
     private bool _stopRequested;
     private AgentState _state = AgentState.Running;
@@ -59,6 +60,12 @@ public sealed class Agent : IAsyncDisposable
 
         _ = FollowProcessAsync();
     }
+
+    /// <summary>
+    /// Completes when the agent's hooks report that it's ready for input (e.g. after the user trusts the workspace), or
+    /// <c>null</c> if the agent has no hooks to say so.
+    /// </summary>
+    public Task? Ready => _hooks is null ? null : _ready.Task;
 
     /// <summary>
     /// Raised when <see cref="State"/> changes, on a background thread.
@@ -234,6 +241,11 @@ public sealed class Agent : IAsyncDisposable
     private void OnHookEvent(JsonElement hookEvent)
     {
         UpdateSessionId(hookEvent);
+        if (Definition.Hooks?.IsReadyForInput(hookEvent) == true)
+        {
+            _ready.TrySetResult();
+        }
+
         if (Definition.Hooks?.StateAfter(hookEvent) is not { } next || !next.IsRunning())
         {
             return;

@@ -2,12 +2,12 @@
 
 @* One open agent's card, in the side panel's Agents section and on the dashboard: its icon, name and state. Clicking the
    card shows the agent's tab. Its name is a button for the keyboard, whose click reaches the card. *@
-<SidePanelCard Tone="AgentStateText.CardTone(Agent.State)" Chosen="Shown" Hint="@($"Show {Agent.Name}")"
+<SidePanelCard Tone="AgentStateText.CardTone(Agent.State)" Chosen="Shown" Hint="@($"Show {Agent.DisplayName}")"
                Badge="@(ShowStateLabel ? AgentStateText.Label(Agent.State) : null)" OnClick="() => OnShow.InvokeAsync(Agent)">
     <Heading>
         <AgentIcon Definition="Agent.Agent.Definition" />
         <button type="button" class="agent-card-name" title="@Agent.WorkingDirectory"
-                aria-current="@(Shown ? "true" : null)">@Agent.Name</button>
+                aria-current="@(Shown ? "true" : null)">@Agent.DisplayName</button>
         <AgentStateIndicator State="Agent.State" />
     </Heading>
     <ChildContent>

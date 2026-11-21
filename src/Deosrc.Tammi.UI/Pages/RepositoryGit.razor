@@ -191,8 +191,13 @@
     private TabBarItem ToItem(IMainAreaTab tab) => new(
         tab.Id,
         RouteOf(tab),
-        tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => tab.Name },
-        tab.Name,
+        tab switch
+        {
+            IWorkspaceProcess process => $"{tab.DisplayName}\n{process.WorkingDirectory}",
+            WorkspaceGitGraph graph => $"{tab.DisplayName}\n{graph.Path}",
+            _ => tab.DisplayName,
+        },
+        tab.DisplayName,
         tab switch
         {
             WorkspaceTerminal => IconOf(new Icons.Regular.Size20.WindowConsole()),

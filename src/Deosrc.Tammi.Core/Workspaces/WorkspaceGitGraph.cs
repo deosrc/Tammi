@@ -621,7 +621,16 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
     /// left in <see cref="SyncProblem"/>.
     /// </summary>
     /// <returns>Whether it worked.</returns>
-    public async Task<bool> SyncAsync(GitSyncOperation operation)
+    public Task<bool> SyncAsync(GitSyncOperation operation) => SyncAsync(operation, force: false);
+
+    /// <summary>
+    /// Force pushes the checked-out branch with <c>--force-with-lease</c>, for when <see cref="SyncProblem"/> says
+    /// <see cref="GitSyncFailure.ForcePushRequired"/> and the user has agreed. Otherwise as <see cref="SyncAsync(GitSyncOperation)"/>.
+    /// </summary>
+    /// <returns>Whether it worked.</returns>
+    public Task<bool> ForcePushAsync() => SyncAsync(GitSyncOperation.Push, force: true);
+
+    private async Task<bool> SyncAsync(GitSyncOperation operation, bool force)
     {
         if (_disposed || Interlocked.CompareExchange(ref _syncing, 1, 0) == 1)
         {
@@ -639,7 +648,7 @@ public sealed class WorkspaceGitGraph : IMainAreaTab, IDisposable
             {
                 GitSyncOperation.Fetch => _sync.FetchAsync(Path),
                 GitSyncOperation.Pull => _sync.PullAsync(Path),
-                _ => _sync.PushAsync(Path),
+                _ => _sync.PushAsync(Path, force: force),
             };
             await task.ConfigureAwait(false);
             worked = true;
