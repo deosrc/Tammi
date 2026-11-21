@@ -38,7 +38,7 @@
                         {
                             <span class="settings-list-status">@RepositoryCount(CountIn(folder))</span>
                         }
-                        <FluentButton OnClick="() => RemoveMonitoredFolderAsync(folder)">Remove</FluentButton>
+                        <FluentButton Class="danger-button" OnClick="() => RemoveMonitoredFolderAsync(folder)">Remove</FluentButton>
                     </CardListItem>
                 }
             </ul>
@@ -98,7 +98,7 @@
                         {
                             <span class="error">@problem</span>
                         }
-                        <FluentButton OnClick="() => RemoveLocalRepositoryAsync(repository)">Remove</FluentButton>
+                        <FluentButton Class="danger-button" OnClick="() => RemoveLocalRepositoryAsync(repository)">Remove</FluentButton>
                     </CardListItem>
                 }
             </ul>

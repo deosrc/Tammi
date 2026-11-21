@@ -48,7 +48,7 @@ else
                                 <FluentButton Disabled="@IsBusy(integration.Id)" OnClick="() => StartAuthenticating(integration)">
                                     Authenticate…
                                 </FluentButton>
-                                <FluentButton Disabled="@IsBusy(integration.Id)" OnClick="() => StartRemoving(integration.Id)">
+                                <FluentButton Class="danger-button" Disabled="@IsBusy(integration.Id)" OnClick="() => StartRemoving(integration.Id)">
                                     Remove
                                 </FluentButton>
                             </div>
@@ -78,7 +78,7 @@ else
                                     Its token is deleted from the credential store.
                                 </ChildContent>
                                 <ActionsTemplate>
-                                    <FluentButton Appearance="ButtonAppearance.Primary" Disabled="_busy"
+                                    <FluentButton Class="danger-button" Appearance="ButtonAppearance.Primary" Disabled="_busy"
                                                   OnClick="() => RemoveAsync(integration.Id)">
                                         Remove
                                     </FluentButton>

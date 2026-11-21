@@ -214,7 +214,7 @@
                 @if (entry.Status == WorkspaceStatus.Done && available)
                 {
                     <div class="workspace-card-actions">
-                        <FluentButton StopPropagation="true" OnClick="() => Delete(workspace)">Delete workspace…</FluentButton>
+                        <FluentButton Class="danger-button" StopPropagation="true" OnClick="() => Delete(workspace)">Delete workspace…</FluentButton>
                     </div>
                 }
             </FluentCard>

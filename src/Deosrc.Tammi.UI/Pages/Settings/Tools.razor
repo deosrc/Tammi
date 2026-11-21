@@ -179,7 +179,7 @@
                         <FluentBadge Appearance="BadgeAppearance.Tint">@ToolText.Label(tool.Kind)</FluentBadge>
                         @FoundBadge(executable)
                     }
-                    <FluentButton Size="ButtonSize.Small" StopPropagation="true" OnClick="() => RemoveAsync(index)">Remove</FluentButton>
+                    <FluentButton Class="danger-button" Size="ButtonSize.Small" StopPropagation="true" OnClick="() => RemoveAsync(index)">Remove</FluentButton>
                 </div>
 
                 @if (!expanded && !string.IsNullOrWhiteSpace(tool.Executable))

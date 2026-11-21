@@ -224,10 +224,6 @@ a {
   margin: 0;
 }
 
-.alert .settings-list {
-  margin: 0;
-}
-
 .alert-title {
   display: flex;
   align-items: center;
@@ -620,6 +616,11 @@ a {
   margin: 0;
 }
 
+/* Room between what the warning says and the list of work that would be lost. */
+.delete-workspace p.delete-workspace-lost {
+  margin-bottom: var(--space-3);
+}
+
 /* ---------------------------------------------------------------------------------------------------------------
    Create Workspace flow: numbered steps above the current step, with Back and Next below it
    --------------------------------------------------------------------------------------------------------------- */
@@ -820,6 +821,24 @@ a {
 .task-list fluent-field {
   margin-top: 0;
   margin-bottom: 0;
+}
+
+/* A danger button: a Fluent button for something destructive, e.g. deleting. Fluent's buttons have no danger look, so the
+   colours they read from the theme are changed for this one. With the primary appearance it's a red button, and with the
+   default one it has red text and outline. */
+.danger-button {
+  /* White on red in both themes: the theme's text on its own primary colour is dark in the dark theme. */
+  --colorNeutralForegroundOnBrand: #ffffff;
+  --colorBrandBackground: var(--colorPaletteRedBackground3);
+  --colorBrandBackgroundHover: color-mix(in srgb, var(--colorPaletteRedBackground3) 85%, black);
+  --colorBrandBackgroundPressed: color-mix(in srgb, var(--colorPaletteRedBackground3) 70%, black);
+  --colorBrandBackgroundSelected: color-mix(in srgb, var(--colorPaletteRedBackground3) 70%, black);
+  --colorNeutralForeground1: var(--colorPaletteRedForeground1);
+  --colorNeutralForeground1Hover: var(--colorPaletteRedForeground1);
+  --colorNeutralForeground1Pressed: var(--colorPaletteRedForeground1);
+  --colorNeutralStroke1: var(--colorPaletteRedBorderActive);
+  --colorNeutralStroke1Hover: var(--colorPaletteRedBorderActive);
+  --colorNeutralStroke1Pressed: var(--colorPaletteRedBorderActive);
 }
 
 /* A card's remove button is a close icon at its top right, over the card, so the card's content leaves room for it. */
@@ -2011,16 +2030,6 @@ a {
   margin: var(--space-2) 0;
   padding: 0;
   list-style: none;
-}
-
-.settings-list-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
 }
 
 .settings-list-name {

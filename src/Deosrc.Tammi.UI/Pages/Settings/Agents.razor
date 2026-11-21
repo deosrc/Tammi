@@ -51,7 +51,7 @@
                                   aria-label="@($"{(collapsed ? "Expand" : "Collapse")} {definition.Name}")"
                                   aria-expanded="@(collapsed ? "false" : "true")" />
                     <span class="agent-definition-name">@(string.IsNullOrWhiteSpace(definition.Name) ? "Unnamed agent" : definition.Name)</span>
-                    <FluentButton Size="ButtonSize.Small" StopPropagation="true" OnClick="() => RemoveAsync(index)">Remove</FluentButton>
+                    <FluentButton Class="danger-button" Size="ButtonSize.Small" StopPropagation="true" OnClick="() => RemoveAsync(index)">Remove</FluentButton>
                 </div>
 
                 @if (collapsed)

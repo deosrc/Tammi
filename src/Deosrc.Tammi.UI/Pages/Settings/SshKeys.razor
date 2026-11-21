@@ -46,7 +46,7 @@
                             </div>
                             <div class="settings-field-row">
                                 <FluentButton OnClick="() => CopyAsync(key)">Copy public key</FluentButton>
-                                <FluentButton Disabled="_busy" OnClick="() => StartRemoving(key)">Remove</FluentButton>
+                                <FluentButton Class="danger-button" Disabled="_busy" OnClick="() => StartRemoving(key)">Remove</FluentButton>
                             </div>
 
                             @foreach (var integration in SshKeyIntegrations)
@@ -128,7 +128,7 @@
                                         any more, unless it has another key they know. Remove it from those services too.
                                     </ChildContent>
                                     <ActionsTemplate>
-                                        <FluentButton Appearance="ButtonAppearance.Primary" Disabled="_busy"
+                                        <FluentButton Class="danger-button" Appearance="ButtonAppearance.Primary" Disabled="_busy"
                                                       OnClick="() => RemoveAsync(key)">
                                             Remove
                                         </FluentButton>
