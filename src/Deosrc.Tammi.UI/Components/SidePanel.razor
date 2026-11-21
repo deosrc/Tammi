@@ -1,0 +1,27 @@
+@* A side panel: sections that scroll, with an optional footer that stays at the bottom of the panel. Put SidePanelSections
+   in it. *@
+<aside class="side-panel">
+    <div class="side-panel-sections">
+        @ChildContent
+    </div>
+    @if (Footer is not null)
+    {
+        <div class="side-panel-footer">
+            @Footer
+        </div>
+    }
+</aside>
+
+@code {
+    /// <summary>
+    /// The sections.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// What's at the bottom of the panel, below the sections. The panel has no footer without it.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Footer { get; set; }
+}

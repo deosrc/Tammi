@@ -841,6 +841,15 @@ a {
   --colorNeutralStroke1Pressed: var(--colorPaletteRedBorderActive);
 }
 
+/* A menu item for something destructive: its text is red, as a danger button's is. */
+.danger-menu-item {
+  --colorNeutralForeground1: var(--colorPaletteRedForeground1);
+  --colorNeutralForeground1Hover: var(--colorPaletteRedForeground1);
+  --colorNeutralForeground1Pressed: var(--colorPaletteRedForeground1);
+  --colorNeutralForeground2: var(--colorPaletteRedForeground1);
+  color: var(--colorPaletteRedForeground1);
+}
+
 /* A card's remove button is a close icon at its top right, over the card, so the card's content leaves room for it. */
 .task-list .fluent-card,
 .chosen-repositories .fluent-card {
@@ -1016,56 +1025,38 @@ a {
 }
 
 .side-panel-footer {
+  display: flex;
   flex: none;
+  flex-direction: column;
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--color-border);
 }
 
+/* A button in the footer has no margin of its own, and as the footer is a flex column, no line height below it either, so
+   the room above and below it is the footer's padding. */
+.side-panel-footer > fluent-button {
+  margin: 0;
+}
+
 .side-panel-section {
+  position: relative;
   border-bottom: 1px solid var(--color-border);
 }
 
-.side-panel-section-header {
+/* The title, and what's after it, in a row with their middles lined up, whatever sizes they are. */
+.side-panel-section-heading {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--font-size-small);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
 }
 
-/* Hide the default disclosure triangle (WebKit needs its own selector) and draw a chevron instead. */
-.side-panel-section-header::-webkit-details-marker {
-  display: none;
-}
-
-.side-panel-section-header::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform 0.15s;
-}
-
-.side-panel-section[open] > .side-panel-section-header::before {
-  transform: rotate(45deg);
-}
-
-.side-panel-section-header:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
-}
-
+/* The section's heading, in its accordion header. */
 .side-panel-section-title {
   min-width: 0;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 /* A chip for each state agents are in, holding their count, in the state's colours. It follows the Agents section's
@@ -1083,33 +1074,13 @@ a {
   text-align: center;
 }
 
+/* The buttons at the end of a section's header sit over it, so they aren't inside the header, which is a button. */
 .side-panel-section-actions {
+  position: absolute;
+  top: 4px;
+  right: var(--space-2);
   display: flex;
-  flex: none;
-  margin-left: auto;
   gap: var(--space-1);
-}
-
-/* A small icon button in a section's header, e.g. to refresh it. */
-.side-panel-section-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-  border: none;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-}
-
-.side-panel-section-action:hover:not(:disabled) {
-  background: var(--color-chrome);
-  color: var(--color-text);
-}
-
-.side-panel-section-action:disabled {
-  cursor: default;
 }
 
 .icon-spin {

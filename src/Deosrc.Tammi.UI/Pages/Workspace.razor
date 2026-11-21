@@ -98,20 +98,16 @@ else
 {
     @* Keyed by workspace, so switching tabs doesn't carry one workspace's collapsed sections over to another. *@
     <div class="workspace-view" @key="_tab.WorkspaceId">
-        <aside class="side-panel">
-            <div class="side-panel-sections">
-                <SidePanelSection Title="Tasks">
+        <SidePanel>
+            <ChildContent>
+                <SidePanelSection Title="Tasks" Count="@(_tasks?.Tasks.Count ?? 0)">
                     <Actions>
                         @if (_tasks is { Tasks.Count: > 0 } tasks)
                         {
-                            <button type="button" class="side-panel-section-action" title="Read the tasks again"
-                                    aria-label="Refresh tasks" disabled="@tasks.IsRefreshing" @onclick="tasks.Refresh">
-                                <svg class="icon icon-small @(tasks.IsRefreshing ? "icon-spin" : null)"
-                                     viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" />
-                                    <path d="M21 3v5h-5" />
-                                </svg>
-                            </button>
+                            <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small" IconOnly="true"
+                                          Loading="@tasks.IsRefreshing" IconStart="@(new Icons.Regular.Size16.ArrowSync())"
+                                          Title="Read the tasks again" aria-label="Refresh tasks"
+                                          OnClick="tasks.Refresh" />
                         }
                     </Actions>
                     <ChildContent>
@@ -139,17 +135,13 @@ else
                         <WorkspaceAgentCounts WorkspaceId="@WorkspaceId" />
                     </HeaderContent>
                     <Actions>
-                        <button type="button" class="side-panel-section-action" title="Past sessions" aria-label="History"
-                                @onclick="OpenHistory">
-                            @HistoryIcon
-                        </button>
-                        <button type="button" class="side-panel-section-action" title="Start a new agent"
-                                aria-label="New agent" aria-haspopup="menu" disabled="@(AgentDefinitions.Count == 0)"
-                                @onclick="OpenNewAgentMenu">
-                            <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M12 5v14M5 12h14" />
-                            </svg>
-                        </button>
+                        <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small" IconOnly="true"
+                                      IconStart="@(new Icons.Regular.Size16.History())" Title="Past sessions"
+                                      aria-label="History" OnClick="OpenHistory" />
+                        <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small" IconOnly="true"
+                                      Disabled="@(AgentDefinitions.Count == 0)" IconStart="@(new Icons.Regular.Size16.Add())"
+                                      Title="Start a new agent" aria-label="New agent" aria-haspopup="menu"
+                                      OnClick="OpenNewAgentMenu" />
                     </Actions>
                     <ChildContent>
                         @if (_listing?.Workspace is { } agentsWorkspace)
@@ -158,20 +150,14 @@ else
                         }
                     </ChildContent>
                 </SidePanelSection>
-                <SidePanelSection Title="Repositories">
+                <SidePanelSection Title="Repositories" Count="@(_gitStatus?.Repositories.Count ?? 0)">
                     <Actions>
                         @if (_gitStatus is { Repositories.Count: > 0 })
                         {
-                            <button type="button" class="side-panel-section-action"
-                                    title="Read the repositories' git status and pull requests again"
-                                    aria-label="Refresh repositories" disabled="@_refreshingRepositories"
-                                    @onclick="RefreshRepositoriesAsync">
-                                <svg class="icon icon-small @(_refreshingRepositories ? "icon-spin" : null)"
-                                     viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" />
-                                    <path d="M21 3v5h-5" />
-                                </svg>
-                            </button>
+                            <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small" IconOnly="true"
+                                          Loading="@_refreshingRepositories" IconStart="@(new Icons.Regular.Size16.ArrowSync())"
+                                          Title="Read the repositories' git status and pull requests again"
+                                          aria-label="Refresh repositories" OnClick="RefreshRepositoriesAsync" />
                         }
                     </Actions>
                     <ChildContent>
@@ -194,12 +180,12 @@ else
                         }
                     </ChildContent>
                 </SidePanelSection>
-                <SidePanelSection Title="Tools">
+                <SidePanelSection Title="Tools" Count="@_toolItems.Count">
                     @if (_toolItems.Count == 0)
                     {
                         <p class="placeholder">
                             No tools to open the workspace in. Add or enable them in
-                            <a href="@AppRoutes.SettingsTools">Settings</a>.
+                            <FluentLink Href="@AppRoutes.SettingsTools">Settings</FluentLink>.
                         </p>
                     }
                     else
@@ -223,43 +209,20 @@ else
                         </ul>
                     }
                 </SidePanelSection>
-            </div>
-            <div class="side-panel-footer">
-                @* Closes on Escape, or on a click anywhere outside the menu. *@
-                <div class="menu-anchor menu-anchor-wide" @onkeydown="OnManageMenuKeyDown">
-                    <button type="button" class="button button-secondary button-icon" aria-haspopup="menu"
-                            aria-expanded="@(_manageMenuOpen ? "true" : "false")"
-                            @onclick="ToggleManageMenu">
-                        Manage Workspace
-                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <polyline points="6 15 12 9 18 15"></polyline>
-                        </svg>
-                    </button>
-                    @if (_manageMenuOpen)
-                    {
-                        <div class="menu-backdrop" @onclick="() => _manageMenuOpen = false"></div>
-                        <ul class="menu menu-up" role="menu" aria-label="Manage Workspace">
-                            <li role="none">
-                                <button type="button" class="menu-item" role="menuitem" @onclick="StartEdit">
-                                    Edit tasks and repositories…
-                                </button>
-                            </li>
-                            <li role="none">
-                                <button type="button" class="menu-item" role="menuitem" @onclick="StartRename">
-                                    Rename…
-                                </button>
-                            </li>
-                            <li role="none">
-                                <button type="button" class="menu-item menu-item-danger" role="menuitem"
-                                        @onclick="() => StartDelete(_tab.Name)">
-                                    Delete workspace…
-                                </button>
-                            </li>
-                        </ul>
-                    }
-                </div>
-            </div>
-        </aside>
+            </ChildContent>
+            <Footer>
+                <FluentButton Id="manage-workspace" Style="width: 100%;" IconEnd="@(new Icons.Regular.Size16.ChevronUp())">
+                    Manage Workspace
+                </FluentButton>
+                <FluentMenu Trigger="manage-workspace">
+                    <FluentMenuList>
+                        <FluentMenuItem OnClick="StartEdit">Edit tasks and repositories…</FluentMenuItem>
+                        <FluentMenuItem OnClick="StartRename">Rename…</FluentMenuItem>
+                        <FluentMenuItem Class="danger-menu-item" OnClick="() => StartDelete(_tab.Name)">Delete workspace…</FluentMenuItem>
+                    </FluentMenuList>
+                </FluentMenu>
+            </Footer>
+        </SidePanel>
         <div class="workspace-main">
             @* The first tab is the dashboard and the last opens the New menu, so they're always there. *@
             <TabBar Class="session-tabs" AriaLabel="Workspace" FixedItems="DashboardItems" Items="TabItems"
@@ -349,7 +312,6 @@ else
     private string _newName = "";
     private string? _renameError;
     private ElementReference _newNameInput;
-    private bool _manageMenuOpen;
     private const string TerminalSubmenu = "terminal";
     private const string GitSubmenu = "git";
 
@@ -440,8 +402,7 @@ else
             // Another tab is shown in this page, so the flow and menu for the previous one are closed.
             _deleting = false;
             _renaming = false;
-            _manageMenuOpen = false;
-            CloseNewMenu();
+                CloseNewMenu();
             _startError = null;
         }
 
@@ -703,7 +664,6 @@ else
     // Opens a right-click menu at the pointer. Only one menu is open at a time.
     private void OpenContextMenu(MouseEventArgs e, string label, RenderFragment items)
     {
-        _manageMenuOpen = false;
         CloseNewMenu();
         _contextSubmenuOpen = false;
         _contextMenu = new ContextMenuState(e.ClientX, e.ClientY, label, items);
@@ -1249,23 +1209,8 @@ else
         StateHasChanged();
     });
 
-    private void ToggleManageMenu()
-    {
-        CloseContextMenu();
-        _manageMenuOpen = !_manageMenuOpen;
-    }
-
-    private void OnManageMenuKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-        {
-            _manageMenuOpen = false;
-        }
-    }
-
     private void StartDelete(string name)
     {
-        _manageMenuOpen = false;
         _deletingName = name;
         _deleting = true;
         SetGitStatus(null);
@@ -1276,13 +1221,11 @@ else
 
     private void StartEdit()
     {
-        _manageMenuOpen = false;
         Navigation.NavigateTo(AppRoutes.EditWorkspace(WorkspaceId));
     }
 
     private void StartRename()
     {
-        _manageMenuOpen = false;
         _newName = _listing?.Workspace?.Name ?? _tab?.Name ?? "";
         _renameError = null;
         _renaming = true;

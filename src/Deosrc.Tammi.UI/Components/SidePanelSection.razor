@@ -1,0 +1,73 @@
+@* A collapsible section of a side panel: a heading with a count of what's in it, and optional content after the title,
+   when it's collapsed, and icon buttons at the end of its header, then its content. Sections start expanded. The buttons are beside the
+   header, not in it, as a header is itself a button, so they can be pressed without collapsing the section. *@
+<div class="side-panel-section">
+    <FluentAccordion Block="true">
+        <FluentAccordionItem Block="true" Expanded="Expanded" ExpandedChanged="OnExpandedChanged"
+                             MarkerPosition="AccordionItemMarkerPosition.Start">
+            <HeaderTemplate>
+                <span class="side-panel-section-heading">
+                    <span class="side-panel-section-title">@Title</span>
+                    @if (!Expanded)
+                    {
+                        @HeaderContent
+                    }
+                    @if (!Expanded && Count is { } count)
+                    {
+                        <FluentCounterBadge Count="count" ShowZero="true" title="@($"{count} in {Title}")" />
+                    }
+                </span>
+            </HeaderTemplate>
+            <ChildContent>
+                <div class="side-panel-section-body">
+                    @ChildContent
+                </div>
+            </ChildContent>
+        </FluentAccordionItem>
+    </FluentAccordion>
+    @if (Actions is not null)
+    {
+        <div class="side-panel-section-actions">@Actions</div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Whether the section is expanded. Sections start expanded.
+    /// </summary>
+    [Parameter]
+    public bool Expanded { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<bool> ExpandedChanged { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    /// <summary>
+    /// How many things the section holds, shown in its header while it's collapsed. Nothing is shown without one.
+    /// </summary>
+    [Parameter]
+    public int? Count { get; set; }
+
+    /// <summary>
+    /// Buttons shown at the end of the section's header, e.g. to refresh it.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    /// <summary>
+    /// Shown in the section's header after its title while it's collapsed, e.g. a summary of what's in it.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? HeaderContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private Task OnExpandedChanged(bool expanded)
+    {
+        Expanded = expanded;
+        return ExpandedChanged.InvokeAsync(expanded);
+    }
+}

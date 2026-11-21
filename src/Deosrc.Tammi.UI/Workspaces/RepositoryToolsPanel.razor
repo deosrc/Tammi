@@ -14,27 +14,24 @@
 
 @* The side panel of a git tab opened outside any workspace, laid out like the Workspace View's: the workspaces that use
    the repository, its other worktrees and submodules, and what it can be opened in. *@
-<aside class="side-panel">
-    <div class="side-panel-sections">
+<SidePanel>
+    <ChildContent>
         <SidePanelSection Title="Agents">
             <HeaderContent>
                 <WorkspaceAgentCounts WorkspaceId="@StandaloneRepository.IdFor(RepositoryPath)" />
             </HeaderContent>
             <Actions>
-                <button type="button" class="side-panel-section-action" title="Start a new agent"
-                        aria-label="New agent" aria-haspopup="menu" disabled="@(AgentDefinitions.Count == 0)"
-                        @onclick="OpenNewAgentMenu">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M12 5v14M5 12h14" />
-                    </svg>
-                </button>
+                <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small" IconOnly="true"
+                              Disabled="@(AgentDefinitions.Count == 0)" IconStart="@(new Icons.Regular.Size16.Add())"
+                              Title="Start a new agent" aria-label="New agent" aria-haspopup="menu"
+                              OnClick="OpenNewAgentMenu" />
             </Actions>
             <ChildContent>
                 <WorkspaceAgentsSection Workspace="StandaloneRepository.WorkspaceOf(RepositoryPath)" Shown="Shown"
                                         OnShow="agent => OnShowAgent.InvokeAsync(agent)" />
             </ChildContent>
         </SidePanelSection>
-        <SidePanelSection Title="Workspaces">
+        <SidePanelSection Title="Workspaces" Count="@(_related.IsLoaded ? _related.Workspaces.Count : null)">
             @if (!_related.IsLoaded)
             {
                 <p class="placeholder">Reading…</p>
@@ -61,7 +58,7 @@
                 </ul>
             }
         </SidePanelSection>
-        <SidePanelSection Title="Other Worktrees">
+        <SidePanelSection Title="Other Worktrees" Count="@(_related.IsLoaded ? _related.Worktrees.Count : null)">
             @if (!_related.IsLoaded)
             {
                 <p class="placeholder">Reading…</p>
@@ -91,7 +88,7 @@
                 </ul>
             }
         </SidePanelSection>
-        <SidePanelSection Title="Submodules">
+        <SidePanelSection Title="Submodules" Count="@(_related.IsLoaded ? _related.Submodules.Count : null)">
             @if (!_related.IsLoaded)
             {
                 <p class="placeholder">Reading…</p>
@@ -120,7 +117,7 @@
                 </ul>
             }
         </SidePanelSection>
-        <SidePanelSection Title="Tools">
+        <SidePanelSection Title="Tools" Count="@(_toolsLoaded ? _entries.Count : null)">
             @if (!_toolsLoaded)
             {
                 <p class="placeholder">Finding tools…</p>
@@ -129,7 +126,7 @@
             {
                 <p class="placeholder">
                     No tools to open the repository in. Add or enable them in
-                    <a href="@AppRoutes.SettingsTools">Settings</a>.
+                    <FluentLink Href="@AppRoutes.SettingsTools">Settings</FluentLink>.
                 </p>
             }
             else
@@ -151,8 +148,8 @@
                 <p class="error">@_error</p>
             }
         </SidePanelSection>
-    </div>
-</aside>
+    </ChildContent>
+</SidePanel>
 @if (_agentMenu is { } agentMenu)
 {
     @* A context menu, as the side panel scrolls and would clip a drop-down. *@
