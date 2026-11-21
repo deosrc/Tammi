@@ -1,0 +1,5 @@
+.agent-state-indicator {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+}

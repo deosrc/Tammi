@@ -1,9 +1,10 @@
 using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.UI.Components;
 
 namespace Deosrc.Tammi.UI.Workspaces;
 
 /// <summary>
-/// Wording and colours for agent states, as the Workspace View shows them.
+/// Wording and tones for agent states, as the Workspace View shows them.
 /// </summary>
 internal static class AgentStateText
 {
@@ -21,15 +22,14 @@ internal static class AgentStateText
     };
 
     /// <summary>
-    /// The CSS class that colours the state: warning (orange) when the agent needs the user, danger (red) when it went
-    /// wrong, idle (grey) when it's waiting for its next prompt, and active (blue) while it works. Running (no finer detail available) looks like idle.
+    /// How a card for an agent in the state looks: warning when the agent needs the user, danger when it went wrong,
+    /// info while it works, and neutral otherwise.
     /// </summary>
-    public static string ToneClass(AgentState state) => state switch
+    public static SidePanelCardTone CardTone(AgentState state) => state switch
     {
-        AgentState.NeedsInput => "agent-state-warning",
-        AgentState.Error => "agent-state-danger",
-        AgentState.Idle or AgentState.Running => "agent-state-idle",
-        AgentState.Working => "agent-state-active",
-        _ => "agent-state-ended",
+        AgentState.NeedsInput => SidePanelCardTone.Warning,
+        AgentState.Error => SidePanelCardTone.Danger,
+        AgentState.Working => SidePanelCardTone.Info,
+        _ => SidePanelCardTone.Neutral,
     };
 }

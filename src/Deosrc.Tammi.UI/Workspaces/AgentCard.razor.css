@@ -1,0 +1,31 @@
+/* Looks like other card names, in one line. */
+.agent-card-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-weight: var(--fontWeightSemibold);
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.agent-card-name:hover {
+    color: var(--colorBrandForegroundLink);
+    text-decoration: underline;
+}
+
+.agent-card-detail {
+    margin: 0;
+    color: var(--colorNeutralForeground3);
+    font-size: var(--fontSizeBase200);
+}
+
+.agent-card-warning {
+    color: var(--colorStatusWarningForeground1);
+}

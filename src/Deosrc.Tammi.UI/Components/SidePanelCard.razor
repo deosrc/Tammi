@@ -3,12 +3,12 @@
    same thing should be a button, so the keyboard reaches it, and its click reaches the card. Put it in a <ul>. *@
 <li class="side-panel-card side-panel-card-@ToneName.ToLowerInvariant() @(OnClick.HasDelegate ? "side-panel-card-clickable" : null)"
     title="@Hint" @oncontextmenu="OnContextMenu" @oncontextmenu:preventDefault="@OnContextMenu.HasDelegate">
-    <FluentCard OnClick="OnClick">
+    <FluentCard Appearance="@(Chosen ? CardAppearance.Filled : null)" OnClick="OnClick">
         <div class="side-panel-card-heading">
             @Heading
             @if (Badge is not null)
             {
-                <FluentBadge Class="side-panel-card-badge" Appearance="BadgeAppearance.Filled" Color="ColorOf(Tone)"
+                <FluentBadge Class="side-panel-card-badge" Appearance="BadgeAppearance.Filled" Color="Tone.ToBadgeColor()"
                              title="@BadgeHint">@Badge</FluentBadge>
             }
         </div>
@@ -28,6 +28,12 @@
     /// </summary>
     [Parameter]
     public RenderFragment? Heading { get; set; }
+
+    /// <summary>
+    /// Whether the card is the one being shown, which shows it filled.
+    /// </summary>
+    [Parameter]
+    public bool Chosen { get; set; }
 
     /// <summary>
     /// The text of the badge at the end of the heading, or <see langword="null"/> for none.
@@ -66,13 +72,4 @@
     public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
 
     private string ToneName => Tone.ToString();
-
-    private static BadgeColor ColorOf(SidePanelCardTone tone) => tone switch
-    {
-        SidePanelCardTone.Info => BadgeColor.Informative,
-        SidePanelCardTone.Success => BadgeColor.Success,
-        SidePanelCardTone.Warning => BadgeColor.Warning,
-        SidePanelCardTone.Danger => BadgeColor.Danger,
-        _ => BadgeColor.Subtle,
-    };
 }

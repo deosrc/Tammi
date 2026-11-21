@@ -1059,21 +1059,6 @@ a {
   text-transform: uppercase;
 }
 
-/* A chip for each state agents are in, holding their count, in the state's colours. It follows the Agents section's
-   title. */
-.agent-count {
-  flex: none;
-  min-width: 1.6em;
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  background: var(--agent-state-tone);
-  color: var(--agent-state-tone-text);
-  font-size: var(--font-size-small);
-  font-weight: 700;
-  line-height: 1.6;
-  text-align: center;
-}
-
 /* The buttons at the end of a section's header sit over it, so they aren't inside the header, which is a button. */
 .side-panel-section-actions {
   position: absolute;
@@ -1135,51 +1120,6 @@ a {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.agent-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-left: 4px solid var(--agent-state-tone, var(--color-border));
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-
-.agent-card-shown {
-  background: var(--color-surface-hover);
-}
-
-.agent-card-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-/* Looks like other card names (.card-action-name), in one line. */
-.agent-card-name {
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The card's state icon sits at the end of its heading. */
-.agent-card-heading .agent-tab-state {
-  margin-left: auto;
-}
-
-.side-panel-section-body .agent-card-detail,
-.agent-session-time {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-}
-
-.side-panel-section-body .agent-card-detail.warning {
-  color: var(--color-warning);
 }
 
 .agent-card-actions {
@@ -1528,67 +1468,6 @@ a {
   flex: none;
   align-items: center;
   padding: 0 var(--space-1);
-}
-
-/* An agent's state, as an icon on its tab and on its card in the side panel. Each state sets the tone
-   both use: blue while working, warning (as a repository with changes) when it needs input, grey when idle, red on error. */
-.agent-state-active {
-  --agent-state-tone: var(--color-info);
-  --agent-state-tone-text: var(--color-info-text);
-}
-
-.agent-state-idle {
-  --agent-state-tone: var(--color-text-muted);
-  --agent-state-tone-text: var(--color-surface);
-}
-
-.agent-state-warning {
-  --agent-state-tone: var(--color-warning);
-  --agent-state-tone-text: var(--color-warning-text);
-}
-
-/* Needs input and Error also tint the card like a repository card with changes or a problem (SidePanelCard warning
-   and -danger): border and background. */
-.agent-card.agent-state-warning {
-  border-color: var(--color-warning-border);
-  border-left-color: var(--color-warning);
-  background: var(--color-warning-bg);
-}
-
-.agent-card.agent-state-danger {
-  border-color: var(--color-error);
-  background: var(--color-error-bg);
-}
-
-.agent-state-danger {
-  --agent-state-tone: var(--color-error);
-  --agent-state-tone-text: var(--color-surface);
-}
-
-.agent-state-ended {
-  --agent-state-tone: var(--color-text-muted);
-  --agent-state-tone-text: var(--color-surface);
-}
-
-/* An agent's state icon, in the state's tone: a spinner, an icon or a dot. */
-.agent-tab-state {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  color: var(--agent-state-tone);
-}
-
-.agent-tab-state .spinner {
-  border-color: color-mix(in srgb, currentColor 30%, transparent);
-  border-top-color: currentColor;
-}
-
-.agent-state-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--agent-state-tone);
 }
 
 /* The shown terminal fills the rest of the main area, with a small gap around it. */
@@ -3209,10 +3088,6 @@ a {
 
 .card-action:hover {
   border-color: var(--card-action-tone, var(--color-border));
-}
-
-.agent-card.card-action {
-  --card-action-tone: var(--agent-state-tone, var(--color-text-muted));
 }
 
 /* A submodule in a repository's card opens its own git graph. Its hover is drawn inside its parent's, so the part that
