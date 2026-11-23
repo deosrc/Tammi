@@ -65,7 +65,7 @@
             {
                 await _module.DisposeAsync();
             }
-            catch (JSDisconnectedException)
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException)
             {
                 // The window has closed.
             }

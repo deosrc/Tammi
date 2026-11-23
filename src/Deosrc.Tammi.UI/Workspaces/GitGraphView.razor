@@ -839,9 +839,9 @@
                 await _module.DisposeAsync();
             }
         }
-        catch (JSDisconnectedException)
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException)
         {
-            // The web view has gone, and the list with it.
+            // The web view has gone, or the page was replaced, and the list with it. Its script objects no longer exist.
         }
 
         _self?.Dispose();
