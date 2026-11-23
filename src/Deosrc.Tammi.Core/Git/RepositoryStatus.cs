@@ -50,6 +50,12 @@ public sealed record RepositoryStatus
     public int UnpushedCommitCount { get; init; }
 
     /// <summary>
+    /// Commits on HEAD that aren't on the merge target, whether or not they've been pushed, or
+    /// <see langword="null"/> when it wasn't asked for or the target can't be found.
+    /// </summary>
+    public int? CommitsOnBranch { get; init; }
+
+    /// <summary>
     /// Changed files, excluding ignored files and submodules.
     /// </summary>
     public IReadOnlyList<FileChange> Changes { get; init; } = [];
@@ -70,6 +76,11 @@ public sealed record RepositoryStatus
     /// Whether this repository has commits that exist only locally.
     /// </summary>
     public bool HasUnpushedCommits => UnpushedCommitCount > 0;
+
+    /// <summary>
+    /// Whether the branch has commits of its own, pushed or not.
+    /// </summary>
+    public bool HasCommitsOnBranch => CommitsOnBranch > 0;
 
     /// <summary>
     /// Whether the repository or any of its submodules holds work that could be lost.
