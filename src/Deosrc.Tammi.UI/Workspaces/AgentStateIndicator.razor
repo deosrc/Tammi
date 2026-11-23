@@ -1,12 +1,12 @@
 @using Deosrc.Tammi.Core.Agents
 
-@* An agent's state as an icon: a progress spinner while it works, and an icon for each other state (a dot while it's
+@* An agent's state as an icon: a spinning ring while it works, and an icon for each other state (a dot while it's
    idle, or runs without finer detail). Needs input is in the warning colour, and Error in the danger colour. Shown on the
    agent's tab and its card in the side panel. *@
 <span class="agent-state-indicator" title="@(Title ?? AgentStateText.Label(State))">
     @if (State == AgentState.Working)
     {
-        <FluentSpinner Size="SpinnerSize.Tiny" role="progressbar" aria-label="Working" />
+        <span class="spinner" role="progressbar" aria-label="Working"></span>
     }
     else if (State == AgentState.NeedsInput)
     {

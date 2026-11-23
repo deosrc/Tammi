@@ -5,12 +5,16 @@
     min-width: 0;
 }
 
-/* The tabs that can be closed scroll, and the bar's other content stays put. */
+/* The tabs that can be closed. The ones that don't fit are hidden (by the script), and the bar's other content stays
+   put. */
 .tab-bar-scroll {
     display: flex;
     min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: thin;
+    overflow: hidden;
+}
+
+.tab-bar-tab[hidden] {
+    display: none;
 }
 
 /* At the far end of the bar, set apart from the tabs before it by a border on their start side. */
@@ -70,7 +74,7 @@
     align-items: center;
 }
 
-/* An item of the menu of the tabs that scroll: the tab's icon and name. */
+/* An item of the menu of the tabs: the tab's icon and name. */
 .tab-bar-menu-item {
     display: flex;
     align-items: center;
@@ -101,4 +105,14 @@
 
 .tab-bar ::deep .tab-bar-overflow {
     margin: 0 var(--space-1);
+}
+
+/* The menu opens with its right edge at the button's, so it stays on screen at the end of the bar. */
+.tab-bar ::deep .tab-bar-overflow-list {
+    inset-inline-start: unset;
+    inset-inline-end: anchor(self-end);
+    /* As wide as its items, with no horizontal scrollbar. */
+    width: max-content;
+    max-width: 90vw;
+    overflow-x: hidden;
 }
