@@ -24,14 +24,14 @@
             @* A checked-out submodule opens its own git graph, and the click stops here, so the repository's card doesn't
                open the repository's. Its name is a button for the keyboard, whose click reaches it. *@
             var path = PathOf(submodule);
-            <li class="git-status-submodule @(submodule.IsInitialized ? "card-action" : null)" @key="submodule.Path"
+            <li class="git-status-submodule @(submodule.IsInitialized ? "git-status-submodule-clickable" : null)" @key="submodule.Path"
                 title="@(submodule.IsInitialized ? $"Open the git graph of {path}" : null)"
                 @onclick="() => OpenSubmoduleGraph(submodule, path)"
                 @onclick:stopPropagation="submodule.IsInitialized">
                 <div class="git-status-heading">
                     @if (submodule.IsInitialized)
                     {
-                        <button type="button" class="git-status-name card-action-name" title="@submodule.Name">
+                        <button type="button" class="git-status-name git-status-name-button" title="@submodule.Name">
                             @submodule.Path
                         </button>
                     }
@@ -41,7 +41,9 @@
                     }
                     @if (submodule.Status is { } inner && GitStatusText.NeedsAttention(inner))
                     {
-                        <span class="git-status-badge">@(inner.IsChanged ? "Changed" : "Out of sync")</span>
+                        <FluentBadge Class="git-status-badge" Appearance="BadgeAppearance.Filled" Color="BadgeColor.Warning">
+                            @(inner.IsChanged ? "Changed" : "Out of sync")
+                        </FluentBadge>
                     }
                 </div>
                 @if (submodule.CommitChange != SubmoduleCommitChange.None)
@@ -54,7 +56,7 @@
                 }
                 else
                 {
-                    <div class="placeholder">Not checked out</div>
+                    <div class="git-status-placeholder">Not checked out</div>
                 }
             </li>
         }

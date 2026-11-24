@@ -1195,82 +1195,13 @@ a {
 
 /* The side panel's git status section: a card for each repository, with its submodules nested inside it. The card's
    colour says whether the repository needs attention. */
-.git-status-list,
-.git-status-submodules {
+.git-status-list {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.git-status-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-
-.git-status-submodules {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-1);
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--color-border);
-}
-
-.git-status-heading,
-.git-status-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.git-status-name {
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.git-status-submodule .git-status-name {
-  font-weight: normal;
-}
-
-.git-status-badge {
-  flex: none;
-  margin-left: auto;
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  background: var(--color-warning);
-  color: var(--color-warning-text);
-  font-size: var(--font-size-small);
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-/* A submodule's badge only appears when it needs attention, so it's always a warning, whatever the card's colour. */
-.git-status-submodule .git-status-badge {
-  background: var(--color-warning);
-  color: var(--color-warning-text);
-}
-
-.git-status-head,
-.git-status-summary,
-.git-status-submodules .placeholder {
-  font-size: var(--font-size-small);
-}
-
-.git-status-submodules p,
-.git-status-problem {
-  margin: 0;
-}
-
-.git-status-branch {
-  overflow: hidden;
-  color: var(--color-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* A repository's Pull Requests: a filled badge for each, coloured by its state, with its number and an icon for its
@@ -1395,24 +1326,6 @@ a {
   background: var(--color-focus);
   /* The surface colour contrasts with the blue in both light and dark themes. */
   color: var(--color-surface);
-}
-
-.git-status-summary {
-  color: var(--color-warning);
-}
-
-.git-status-problem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--colorStatusDangerForeground1);
-  font-size: var(--font-size-small);
-}
-
-.git-status-problem .icon {
-  flex: none;
-  width: 14px;
-  height: 14px;
 }
 
 /* The side panel's Tasks section: a card for each task, with its status as a chip coloured by its category (to do,
@@ -3102,18 +3015,6 @@ a {
 
 .card-action:hover {
   border-color: var(--card-action-tone, var(--color-border));
-}
-
-/* A submodule in a repository's card opens its own git graph. Its hover is drawn inside its parent's, so the part that
-   opens is clear. */
-.git-status-submodule.card-action {
-  margin: 0 calc(-1 * var(--space-1));
-  padding: 0 var(--space-1);
-  border-radius: var(--radius);
-}
-
-.git-status-submodule.card-action:hover {
-  background: var(--color-surface-hover);
 }
 
 .card-action-name {

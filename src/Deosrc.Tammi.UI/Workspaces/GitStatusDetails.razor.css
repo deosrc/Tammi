@@ -1,0 +1,80 @@
+.git-status-head,
+.git-status-heading {
+    display: flex;
+    align-items: center;
+    gap: var(--spacingHorizontalS);
+    min-width: 0;
+}
+
+.git-status-head,
+.git-status-summary,
+.git-status-placeholder {
+    font-size: var(--fontSizeBase200);
+}
+
+.git-status-branch {
+    overflow: hidden;
+    color: var(--colorNeutralForeground3);
+    font-family: var(--fontFamilyMonospace);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.git-status-summary {
+    color: var(--colorStatusWarningForeground1);
+}
+
+.git-status-placeholder {
+    color: var(--colorNeutralForeground3);
+}
+
+/* A submodule nests inside its repository's card, under a rule. */
+.git-status-submodules {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacingVerticalS);
+    margin: var(--spacingVerticalXS) 0 0;
+    padding: 0 0 0 var(--spacingHorizontalM);
+    border-left: 2px solid var(--colorNeutralStroke2);
+    list-style: none;
+}
+
+/* A checked-out submodule opens its own git graph. Its hover is drawn inside its parent's, so the part that opens is
+   clear. */
+.git-status-submodule-clickable {
+    margin: 0 calc(-1 * var(--spacingHorizontalXS));
+    padding: 0 var(--spacingHorizontalXS);
+    border-radius: var(--borderRadiusMedium);
+    cursor: pointer;
+}
+
+.git-status-submodule-clickable:hover {
+    background: var(--colorSubtleBackgroundHover);
+}
+
+.git-status-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The name is a button, for the keyboard, that reads as text. Its click reaches the row. */
+.git-status-name-button {
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.git-status-name-button:hover {
+    color: var(--colorBrandForegroundLink);
+    text-decoration: underline;
+}
+
+.git-status-heading ::deep .git-status-badge {
+    flex: none;
+    margin-left: auto;
+}

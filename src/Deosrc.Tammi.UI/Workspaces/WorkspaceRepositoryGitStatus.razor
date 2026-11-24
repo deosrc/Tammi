@@ -9,7 +9,7 @@
 <SidePanelCard Tone="Tone" Hint="@($"Open the git graph of {Repository.Repository.FolderName}")" Badge="@Label"
                OnClick="() => OnOpenGraph.InvokeAsync(null)" OnContextMenu="OnContextMenu">
     <Heading>
-        <button type="button" class="git-status-name card-action-name" title="@Repository.WorktreePath">
+        <button type="button" class="git-status-name" title="@Repository.WorktreePath">
             @Repository.Repository.FolderName
         </button>
     </Heading>
@@ -21,7 +21,7 @@
 
         @if (!Repository.IsLoaded)
         {
-            <p class="placeholder">Reading status…</p>
+            <p class="git-status-note">Reading status…</p>
         }
         else if (Repository.IsBroken)
         {
