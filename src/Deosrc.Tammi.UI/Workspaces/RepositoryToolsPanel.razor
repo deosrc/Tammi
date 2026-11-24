@@ -132,20 +132,10 @@
 </SidePanel>
 @if (_agentMenu is { } agentMenu)
 {
-    @* A context menu, as the side panel scrolls and would clip a drop-down. *@
-    <ContextMenu @key="agentMenu" X="agentMenu.X" Y="agentMenu.Y" Label="New agent" OnClose="() => _agentMenu = null">
-        @for (var i = 0; i < AgentDefinitions.Count; i++)
-        {
-            var definition = AgentDefinitions[i];
-            var name = string.IsNullOrWhiteSpace(definition.Name) ? WorkspaceAgents.DefaultName : definition.Name;
-            <li role="none" @key="i">
-                <button type="button" class="menu-item" role="menuitem" @onclick="() => StartAgentAsync(definition)">
-                    <AgentIcon Definition="definition" />
-                    @name
-                </button>
-            </li>
-        }
-    </ContextMenu>
+    @* A menu at the pointer, as the side panel scrolls and would clip a drop-down. *@
+    <PointMenu @key="agentMenu" X="agentMenu.X" Y="agentMenu.Y" Label="New agent" OnClose="() => _agentMenu = null">
+        <AgentMenuItems AgentDefinitions="AgentDefinitions" OnStart="request => StartAgentAsync(request.Definition)" />
+    </PointMenu>
 }
 
 @code {

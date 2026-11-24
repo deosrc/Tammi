@@ -1,5 +1,4 @@
 @using Deosrc.Tammi.Core.Agents
-@inject IJSRuntime JS
 
 @* The + button at the end of a tab bar and the menu it opens, to start a terminal, a git graph or an agent in a new tab.
    With Repositories, the terminal and each agent have a submenu of where to start it: the Workspace Folder or one of
@@ -19,7 +18,7 @@
             else
             {
                 <FluentMenuItem IconStart="@(new Icons.Regular.Size20.WindowConsole())" Label="Terminal">
-                    <MenuItems>@Places(repository => OnTerminal.InvokeAsync(repository))</MenuItems>
+                    <MenuItems><PlaceMenuItems Repositories="Repositories" OnStart="OnTerminal" /></MenuItems>
                 </FluentMenuItem>
             }
             @if (GitTargets is { Count: > 0 })
@@ -44,35 +43,7 @@
             {
                 <FluentDivider />
             }
-            @foreach (var definition in AgentDefinitions)
-            {
-                var agent = definition;
-                var name = string.IsNullOrWhiteSpace(agent.Name) ? WorkspaceAgents.DefaultName : agent.Name;
-                @* An agent's icon is a component, not a Fluent icon, so it's put in the item's start slot by hand, where
-                   the menu keeps the room for an item's icon. *@
-                var content = (RenderFragment)(builder =>
-                {
-                    builder.OpenElement(0, "span");
-                    builder.AddAttribute(1, "slot", "start");
-                    builder.AddAttribute(2, "class", "new-tab-menu-agent-icon");
-                    builder.OpenComponent<AgentIcon>(3);
-                    builder.AddAttribute(4, "Definition", agent);
-                    builder.CloseComponent();
-                    builder.CloseElement();
-                    builder.AddContent(5, name);
-                });
-                @if (Repositories is null)
-                {
-                    <FluentMenuItem @key="agent" OnClick="() => OnAgent.InvokeAsync((agent, null))">@content</FluentMenuItem>
-                }
-                else
-                {
-                    <FluentMenuItem @key="agent">
-                        <ChildContent>@content</ChildContent>
-                        <MenuItems>@Places(repository => OnAgent.InvokeAsync((agent, repository)))</MenuItems>
-                    </FluentMenuItem>
-                }
-            }
+            <AgentMenuItems AgentDefinitions="AgentDefinitions" Repositories="Repositories" OnStart="OnAgent" />
         </FluentMenuList>
     </FluentMenu>
 </div>
@@ -118,24 +89,4 @@
     /// </summary>
     [Parameter]
     public EventCallback<(WorkspaceRepository Repository, string? SubmodulePath)> OnGit { get; set; }
-
-    // A submenu of where to start something: the Workspace Folder, then each repository.
-    private RenderFragment Places(Func<WorkspaceRepository?, Task> start) => builder =>
-    {
-        builder.OpenComponent<FluentMenuItem>(0);
-        builder.AddAttribute(1, "IconStart", new Icons.Regular.Size20.Folder());
-        builder.AddAttribute(2, "OnClick", EventCallback.Factory.Create<MenuItemEventArgs>(this, () => start(null)));
-        builder.AddAttribute(3, "ChildContent", (RenderFragment)(b => b.AddContent(0, "Workspace")));
-        builder.CloseComponent();
-        foreach (var repository in Repositories ?? [])
-        {
-            var target = repository;
-            builder.OpenComponent<FluentMenuItem>(4);
-            builder.SetKey(target.FolderName);
-            builder.AddAttribute(5, "IconStart", new Icons.Regular.Size20.BranchFork());
-            builder.AddAttribute(6, "OnClick", EventCallback.Factory.Create<MenuItemEventArgs>(this, () => start(target)));
-            builder.AddAttribute(7, "ChildContent", (RenderFragment)(b => b.AddContent(0, $"Repository: {target.FolderName}")));
-            builder.CloseComponent();
-        }
-    };
 }

@@ -263,10 +263,10 @@ else
         </div>
         @if (_contextMenu is { } contextMenu)
         {
-            <ContextMenu @key="contextMenu" X="contextMenu.X" Y="contextMenu.Y" Label="@contextMenu.Label"
-                         OnClose="CloseContextMenu">
+            <PointMenu @key="contextMenu" X="contextMenu.X" Y="contextMenu.Y" Label="@contextMenu.Label"
+                       OnClose="CloseContextMenu">
                 @contextMenu.Items
-            </ContextMenu>
+            </PointMenu>
         }
     </div>
 }
@@ -285,8 +285,6 @@ else
     private ElementReference _newNameInput;
 
 
-    // The context menu's open submenu: "agent-<index>" for an Agent Definition.
-    private string? _openSubmenu;
     private string? _startError;
 
     // The workspace's main area tabs after the dashboard, in the order they started.
@@ -324,7 +322,6 @@ else
 
     // The open right-click menu, if any, and whether its Tools submenu is open.
     private ContextMenuState? _contextMenu;
-    private bool _contextSubmenuOpen;
 
     // Counts updates of the tools, so a slow one doesn't replace a newer one's result.
 
@@ -370,8 +367,7 @@ else
             // Another tab is shown in this page, so the flow and menu for the previous one are closed.
             _deleting = false;
             _renaming = false;
-                CloseNewMenu();
-            _startError = null;
+                    _startError = null;
         }
 
         _tab = WorkspaceTabs.Find(WorkspaceId);
@@ -561,18 +557,16 @@ else
     {
         foreach (var entry in item.Places)
         {
+            var target = entry;
             var workspace = ReferenceEquals(entry, item.WorkspaceEntry);
-            <li role="none">
-                <button type="button" class="menu-item" role="menuitem" title="@entry.Path"
-                        @onclick="() => OpenTool(item, entry)">
-                    @(workspace ? WorkspaceFolderIcon : RepositoryIcon)
-                    @(item.Tool.Kind == ToolKind.File
-                        ? (item.Tool.MenuLabel == ToolMenuLabel.FullPath
-                            ? entry.MenuLabel
-                            : $"{entry.MenuLabel} ({entry.Repository?.FolderName})")
-                        : workspace ? "Workspace" : $"Repository: {entry.Repository?.FolderName}")
-                </button>
-            </li>
+            var label = item.Tool.Kind == ToolKind.File
+                ? (item.Tool.MenuLabel == ToolMenuLabel.FullPath
+                    ? entry.MenuLabel
+                    : $"{entry.MenuLabel} ({entry.Repository?.FolderName})")
+                : workspace ? "Workspace" : $"Repository: {entry.Repository?.FolderName}";
+            <FluentMenuItem @key="target.Path" Title="@target.Path" Label="@label"
+                            IconStart="@(workspace ? new Icons.Regular.Size20.Folder() : new Icons.Regular.Size20.BranchFork())"
+                            OnClick="() => OpenTool(item, target)" />
         }
     };
 
@@ -583,71 +577,44 @@ else
     private RenderFragment RepositoryMenuItems(WorkspaceRepository repository) => __builder =>
     {
         var tools = RepositoryTools(repository);
-        <li role="none" class="menu-submenu-anchor" @onmouseenter="() => _contextSubmenuOpen = true">
-            <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
-                    aria-expanded="@(_contextSubmenuOpen ? "true" : "false")"
-                    @onclick="() => _contextSubmenuOpen = !_contextSubmenuOpen">
-                <span class="tab-label-text">Tools</span>
-                <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <polyline points="9 6 15 12 9 18"></polyline>
-                </svg>
-            </button>
-            @if (_contextSubmenuOpen)
-            {
-                <ul class="menu menu-submenu" role="menu" aria-label="Tools">
-                    @if (tools.Count == 0)
-                    {
-                        <li role="none">
-                            <button type="button" class="menu-item" role="menuitem" disabled>No tools</button>
-                        </li>
-                    }
-                    @foreach (var entry in tools)
-                    {
-                        <li role="none">
-                            <button type="button" class="menu-item" role="menuitem" title="@entry.Path"
-                                    @onclick="() => OpenTool(entry)">
-                                <ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" />
-                                <span class="tab-label-text">@entry.Label</span>
-                            </button>
-                        </li>
-                    }
-                </ul>
-            }
-        </li>
+        <FluentMenuItem Label="Tools" IconStart="@(new Icons.Regular.Size20.Wrench())">
+            <MenuItems>
+                @if (tools.Count == 0)
+                {
+                    <FluentMenuItem Disabled="true" Label="No tools" />
+                }
+                @foreach (var entry in tools)
+                {
+                    var target = entry;
+                    @* A tool's icon is an image, not a Fluent icon, so it's put in the item's start slot by hand. *@
+                    <FluentMenuItem @key="@($"{target.Tool.Name}\0{target.Path}")" Title="@target.Path"
+                                    OnClick="() => OpenTool(target)">
+                        <span slot="start" class="side-panel-menu-icon">
+                            <ToolImageView Image="target.Image" Fallback="target.Tool.Icon.Generic" />
+                        </span>
+                        @target.Label
+                    </FluentMenuItem>
+                }
+            </MenuItems>
+        </FluentMenuItem>
     };
 
-    // The Agents section's New Agent menu: each Agent Definition, with a submenu of where to start it. It's a context
-    // menu, as the side panel scrolls and would clip a drop-down.
+    // The Agents section's New Agent menu: each Agent Definition, with a submenu of where to start it. It's a menu at the
+    // pointer, as the side panel scrolls and would clip a drop-down.
     private void OpenNewAgentMenu(MouseEventArgs e) =>
         OpenContextMenu(e, "New agent", NewAgentMenuItems());
 
     private RenderFragment NewAgentMenuItems() => __builder =>
     {
-        for (var i = 0; i < AgentDefinitions.Count; i++)
-        {
-            var definition = AgentDefinitions[i];
-            var name = string.IsNullOrWhiteSpace(definition.Name) ? WorkspaceAgents.DefaultName : definition.Name;
-            @NewMenuItem(
-                $"agent-{i}",
-                name,
-                @<AgentIcon Definition="definition" />,
-                repository => StartAgentAsync(definition, repository))
-        }
+        <AgentMenuItems AgentDefinitions="AgentDefinitions" Repositories="_listing?.Workspace?.Repositories ?? []"
+                        OnStart="request => StartAgentAsync(request.Definition, request.Repository)" />
     };
 
     // Opens a right-click menu at the pointer. Only one menu is open at a time.
-    private void OpenContextMenu(MouseEventArgs e, string label, RenderFragment items)
-    {
-        CloseNewMenu();
-        _contextSubmenuOpen = false;
+    private void OpenContextMenu(MouseEventArgs e, string label, RenderFragment items) =>
         _contextMenu = new ContextMenuState(e.ClientX, e.ClientY, label, items);
-    }
 
-    private void CloseContextMenu()
-    {
-        _contextMenu = null;
-        _contextSubmenuOpen = false;
-    }
+    private void CloseContextMenu() => _contextMenu = null;
 
     // Opens a tool from the Tools section, and pulses its item once to show it's launching.
     private void OpenTool(ToolItem item, ToolEntry entry)
@@ -901,7 +868,6 @@ else
 
     private void StartTerminal(WorkspaceRepository? repository)
     {
-        CloseNewMenu();
         _startError = null;
         if (_listing?.Workspace is not { } workspace)
         {
@@ -922,7 +888,6 @@ else
 
     private async Task StartAgentAsync(AgentDefinition definition, WorkspaceRepository? repository)
     {
-        CloseNewMenu();
         CloseContextMenu();
         _startError = null;
         if (_listing?.Workspace is not { } workspace)
@@ -990,7 +955,6 @@ else
     // Opens the git graph of a repository, or of one of its submodules by its path in the repository, and shows it.
     private void OpenGraph(WorkspaceRepository repository, string? submodulePath)
     {
-        CloseNewMenu();
         if (_listing?.Workspace is { } workspace)
         {
             ShowTab(GitGraphs.Open(workspace, repository, submodulePath));
@@ -1030,83 +994,6 @@ else
             }
         }
     }
-
-    // The icons of the menus that are still custom: what each item starts, and where.
-    // A clock with its hands turned back: past sessions.
-    private static readonly RenderFragment HistoryIcon =
-        @<svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" />
-            <path d="M3 3v5h5" />
-            <path d="M12 7v5l3 2" />
-        </svg>;
-
-    private static readonly RenderFragment WorkspaceFolderIcon =
-        @<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-        </svg>;
-
-    private static readonly RenderFragment RepositoryIcon =
-        @<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <circle cx="6" cy="5" r="2" />
-            <circle cx="6" cy="19" r="2" />
-            <circle cx="18" cy="7" r="2" />
-            <path d="M6 7v10M18 9a5 5 0 0 1-5 5h-2a5 5 0 0 0-5 3" />
-        </svg>;
-
-    // An item of the New menu with a submenu of where to start it: the Workspace Folder or one of its repositories.
-    private RenderFragment NewMenuItem(
-        string key,
-        string label,
-        RenderFragment icon,
-        Func<WorkspaceRepository?, Task> start) => __builder =>
-    {
-        var open = _openSubmenu == key;
-        <li role="none" class="menu-submenu-anchor" @key="key" @onmouseenter="() => _openSubmenu = key">
-            <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
-                    aria-expanded="@(open ? "true" : "false")" @onclick="() => _openSubmenu = open ? null : key">
-                @icon
-                <span class="tab-label-text">@label</span>
-                <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <polyline points="9 6 15 12 9 18"></polyline>
-                </svg>
-            </button>
-            @if (open)
-            {
-                <ul class="menu menu-submenu" role="menu" aria-label="@label">
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem" @onclick="() => start(null)">
-                            @WorkspaceFolderIcon
-                            Workspace
-                        </button>
-                    </li>
-                    @foreach (var repository in _listing?.Workspace?.Repositories ?? [])
-                    {
-                        <li role="none" @key="repository.FolderName">
-                            <button type="button" class="menu-item" role="menuitem"
-                                    @onclick="() => start(repository)">
-                                @RepositoryIcon
-                                Repository: @repository.FolderName
-                            </button>
-                        </li>
-                    }
-                </ul>
-            }
-        </li>
-    };
-
-    private RenderFragment NewMenuItem(
-        string key,
-        string label,
-        RenderFragment icon,
-        Action<WorkspaceRepository?> start) =>
-        NewMenuItem(key, label, icon, repository =>
-        {
-            start(repository);
-            return Task.CompletedTask;
-        });
-
-    // The context menu's agent submenus are custom still.
-    private void CloseNewMenu() => _openSubmenu = null;
 
     private void OnMainAreaTabsChanged(string workspaceId) => InvokeAsync(() =>
     {

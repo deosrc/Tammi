@@ -3820,3 +3820,12 @@ a {
   height: 64px;
   margin-bottom: 1rem;
 }
+
+/* A tool's icon image in a Fluent menu item's start slot, at the size of the item's Fluent icons. */
+.side-panel-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}

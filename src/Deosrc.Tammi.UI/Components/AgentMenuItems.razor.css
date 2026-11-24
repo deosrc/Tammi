@@ -1,5 +1,5 @@
 /* An agent's icon, in the item's start slot like the other items' Fluent icons, at their size. */
-.new-tab-menu-agent-icon {
+.agent-menu-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -7,7 +7,7 @@
     height: 20px;
 }
 
-.new-tab-menu-agent-icon ::deep svg {
+.agent-menu-icon ::deep svg {
     width: 20px;
     height: 20px;
 }
