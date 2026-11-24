@@ -99,12 +99,12 @@
                 </ul>
             }
         </SidePanelSection>
-        <SidePanelSection Flush="true" Title="Tools" Count="@(_toolsLoaded ? _entries.Count : null)">
+        <SidePanelSection Flush="true" Title="Tools" Count="@(_toolsLoaded ? _items.Count : null)">
             @if (!_toolsLoaded)
             {
                 <p class="placeholder">Finding tools…</p>
             }
-            else if (_entries.Count == 0)
+            else if (_items.Count == 0)
             {
                 <p class="placeholder">
                     No tools to open the repository in. Add or enable them in
@@ -113,12 +113,18 @@
             }
             else
             {
+                @* Clicking a tool opens the repository in it, or, for a file tool with several files, offers them. The same
+                   menu opens from the ⋮ button and a right-click, as in a workspace. *@
                 <ul class="side-panel-list">
-                    @foreach (var entry in _entries)
+                    @foreach (var item in _items)
                     {
-                        <SidePanelListItem @key="@($"{entry.Tool.Name}\0{entry.Path}")" Hint="@entry.Path" OnClick="() => OpenTool(entry)">
-                            <Icon><ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" /></Icon>
-                            <ChildContent>@entry.Label</ChildContent>
+                        <SidePanelListItem @key="item.Tool" Hint="@(item.Tool.Kind == ToolKind.File && item.DefaultEntry is { } only ? only.Path : item.Label)"
+                                           HasMenu="item.DefaultEntry is null" Pulse="PulseOf(item)"
+                                           OnClick="e => OnToolClicked(item, e)"
+                                           OnContextMenu="e => OpenToolMenu(item, e)"
+                                           OnMenu="e => OpenToolMenu(item, e)" MenuHint="@($"More ways to open with {item.Label}")">
+                            <Icon><ToolImageView Image="item.Entries[0].Image" Fallback="item.Tool.Icon.Generic" /></Icon>
+                            <ChildContent>@item.Label</ChildContent>
                         </SidePanelListItem>
                     }
                 </ul>
@@ -130,6 +136,19 @@
         </SidePanelSection>
     </ChildContent>
 </SidePanel>
+@if (_toolMenu is { } toolMenu)
+{
+    <PointMenu @key="toolMenu" X="toolMenu.X" Y="toolMenu.Y" Label="@toolMenu.Item.Label" OnClose="() => _toolMenu = null">
+        @foreach (var entry in toolMenu.Item.Places)
+        {
+            var target = entry;
+            <FluentMenuItem @key="target.Path" Title="@target.Path"
+                            Label="@(toolMenu.Item.Tool.Kind == ToolKind.File ? target.MenuLabel : $"Repository: {target.Repository?.FolderName}")"
+                            IconStart="@(toolMenu.Item.Tool.Kind == ToolKind.File ? new Icons.Regular.Size20.Document() : new Icons.Regular.Size20.BranchFork())"
+                            OnClick="() => OpenTool(toolMenu.Item, target)" />
+        }
+    </PointMenu>
+}
 @if (_agentMenu is { } agentMenu)
 {
     @* A menu at the pointer, as the side panel scrolls and would clip a drop-down. *@
@@ -154,10 +173,17 @@
 
     private sealed record AgentMenu(double X, double Y);
 
+    private sealed record ToolMenu(double X, double Y, ToolItem Item);
+
+    private ToolMenu? _toolMenu;
+    private IReadOnlyList<ToolItem> _items = [];
+    private ToolItem? _pulsing;
+    private int _pulseCount;
+    private static readonly TimeSpan PulseDuration = TimeSpan.FromMilliseconds(600);
+
     private AgentMenu? _agentMenu;
     private IReadOnlyList<AgentDefinition> AgentDefinitions => SettingsStore.Current.Agents.Definitions;
     private Related _related = Related.Loading;
-    private IReadOnlyList<ToolEntry> _entries = [];
     private string? _error;
     private string? _loadedPath;
     private bool _toolsLoaded;
@@ -317,7 +343,7 @@
             return;
         }
 
-        _entries = entries;
+        UpdateItems(entries);
         _toolsLoaded = true;
         StateHasChanged();
 
@@ -330,9 +356,15 @@
 
         if (update == _toolUpdates && !_disposed)
         {
-            _entries = withImages;
+            UpdateItems(withImages);
             StateHasChanged();
         }
+    }
+
+    // Each tool is one item, as in a workspace: with the files it found, if it's a file tool.
+    private void UpdateItems(IReadOnlyList<ToolEntry> entries)
+    {
+        _items = WorkspaceTools.GroupByTool(SettingsStore.Current.Tools.Tools, [], [entries]);
     }
 
     private void OpenNewAgentMenu(MouseEventArgs e) => _agentMenu = new AgentMenu(e.ClientX, e.ClientY);
@@ -348,6 +380,42 @@
         WorkspaceTabs.Open(workspace.Id, workspace.Name);
         Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id));
     }
+
+    private async Task OnToolClicked(ToolItem item, MouseEventArgs e)
+    {
+        if (item.DefaultEntry is { } entry)
+        {
+            await OpenTool(item, entry);
+        }
+        else
+        {
+            // A file tool with several files offers them.
+            OpenToolMenu(item, e);
+        }
+    }
+
+    private void OpenToolMenu(ToolItem item, MouseEventArgs e) => _toolMenu = new ToolMenu(e.ClientX, e.ClientY, item);
+
+    // Opens a tool, and pulses its item once to show it's launching.
+    private async Task OpenTool(ToolItem item, ToolEntry entry)
+    {
+        var pulse = ++_pulseCount;
+        _pulsing = item;
+        await OpenTool(entry);
+        _ = EndPulseAsync(pulse);
+    }
+
+    private async Task EndPulseAsync(int pulse)
+    {
+        await Task.Delay(PulseDuration);
+        if (pulse == _pulseCount && !_disposed)
+        {
+            _pulsing = null;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private int? PulseOf(ToolItem item) => Equals(item, _pulsing) ? _pulseCount : null;
 
     private async Task OpenTool(ToolEntry entry)
     {
