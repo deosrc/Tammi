@@ -584,10 +584,10 @@ else
 
     private void OpenToolMenu(ToolItem item, MouseEventArgs e) => OpenContextMenu(e, item.Label, ToolMenuItems(item));
 
-    // A tool's right-click menu: each folder it can be launched in.
+    // A tool's right-click menu: every folder it can be launched in, even those that start the same command as another.
     private RenderFragment ToolMenuItems(ToolItem item) => __builder =>
     {
-        foreach (var entry in item.Launches)
+        foreach (var entry in item.Entries)
         {
             var workspace = ReferenceEquals(entry, item.WorkspaceEntry);
             <li role="none">
