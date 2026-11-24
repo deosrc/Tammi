@@ -1111,6 +1111,15 @@ a {
   margin: 0;
 }
 
+/* A flush section's rows fill the panel's width, and its text keeps the padding. */
+.side-panel-section-body-flush {
+  padding-inline: 0;
+}
+
+.side-panel-section-body-flush > p {
+  padding-inline: var(--space-4);
+}
+
 /* The side panel's Agents section: a card for each open agent. */
 .agent-list,
 .agent-session-list {
@@ -2821,8 +2830,8 @@ a {
   list-style: none;
 }
 
-/* The Workspace View's Tools section: a button for each tool that opens the Workspace Folder. */
-.tool-list {
+/* A side panel section's list of rows (SidePanelListItem). */
+.side-panel-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -3036,52 +3045,6 @@ a {
 .git-graph-view-menu {
   position: fixed;
   min-width: 160px;
-}
-
-.tool-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  min-width: 0;
-  padding: var(--space-1) var(--space-2);
-  border: none;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-/* A tool that was just launched: its background pulses once, so the click is seen while the tool starts. */
-.tool-item-pulse {
-  animation: tool-item-pulse 0.6s ease-out;
-}
-
-.tool-item-pulse-again {
-  animation: tool-item-pulse-again 0.6s ease-out;
-}
-
-@keyframes tool-item-pulse {
-  from {
-    background: color-mix(in srgb, var(--color-accent) 30%, transparent);
-  }
-}
-
-@keyframes tool-item-pulse-again {
-  from {
-    background: color-mix(in srgb, var(--color-accent) 30%, transparent);
-  }
-}
-
-.tool-item .icon {
-  flex: none;
-}
-
-.tool-item:hover,
-.tool-item:focus-visible {
-  background: var(--color-surface-hover);
 }
 
 .agent-definition-collapsed .agent-definition-name {

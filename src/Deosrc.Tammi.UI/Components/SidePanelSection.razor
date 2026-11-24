@@ -19,7 +19,7 @@
                 </span>
             </HeaderTemplate>
             <ChildContent>
-                <div class="side-panel-section-body">
+                <div class="side-panel-section-body @(Flush ? "side-panel-section-body-flush" : null)">
                     @ChildContent
                 </div>
             </ChildContent>
@@ -61,6 +61,13 @@
     /// </summary>
     [Parameter]
     public RenderFragment? HeaderContent { get; set; }
+
+    /// <summary>
+    /// Whether the content runs the full width of the panel, with no padding at the sides, e.g. a list of rows that
+    /// bring their own. Text in it keeps the padding.
+    /// </summary>
+    [Parameter]
+    public bool Flush { get; set; }
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }

@@ -1,0 +1,65 @@
+@* A row in a side panel section's list that does something when it's clicked, e.g. a tool that opens a folder: an icon and
+   a name. Put it in a <ul class="side-panel-list">. It can also be right-clicked, and can pulse once to show that what it
+   started is under way. *@
+<li class="side-panel-list-item" @oncontextmenu="OnContextMenu" @oncontextmenu:preventDefault="@OnContextMenu.HasDelegate">
+    <FluentButton Class="@($"side-panel-list-button {PulseClass}")" Style="width: 100%;" Appearance="ButtonAppearance.Subtle"
+                  Disabled="Disabled" Title="@Hint" aria-haspopup="@(HasMenu ? "menu" : null)" OnClick="OnClick">
+        <span class="side-panel-list-content">
+            @if (Icon is not null)
+            {
+                <span class="side-panel-list-icon">@Icon</span>
+            }
+            <span class="side-panel-list-text">@ChildContent</span>
+        </span>
+    </FluentButton>
+</li>
+
+@code {
+    /// <summary>
+    /// The icon before the name.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Icon { get; set; }
+
+    /// <summary>
+    /// The name.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// The row's tooltip.
+    /// </summary>
+    [Parameter]
+    public string? Hint { get; set; }
+
+    /// <summary>
+    /// Whether the row can't be clicked.
+    /// </summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Whether clicking the row opens a menu, for assistive technology.
+    /// </summary>
+    [Parameter]
+    public bool HasMenu { get; set; }
+
+    /// <summary>
+    /// Pulses the row once when it changes to a new number, e.g. each time a tool starts. <see langword="null"/> for none.
+    /// </summary>
+    [Parameter]
+    public int? Pulse { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    /// <summary>
+    /// Raised when the row is right-clicked, which then doesn't open the browser's own menu.
+    /// </summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
+
+    // Two animations with the same effect, so changing from one to the other plays it again.
+    private string? PulseClass => Pulse is { } pulse ? (pulse % 2 == 0 ? "side-panel-list-pulse" : "side-panel-list-pulse-again") : null;
+}

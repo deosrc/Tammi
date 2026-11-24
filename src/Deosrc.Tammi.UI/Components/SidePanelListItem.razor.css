@@ -1,0 +1,65 @@
+/* The button fills the row's width, with its content at the start. Its border radius is dropped, so the rows meet the
+   panel's edges. The button is a Fluent component, so it is styled from outside it. */
+.side-panel-list-item ::deep fluent-button {
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    border-radius: 0;
+}
+
+/* The button is its own box, centring a content part that is only as wide as what's in it. The part fills the button, so
+   its content starts at the button's start. */
+.side-panel-list-item ::deep fluent-button::part(content) {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+}
+
+/* The content fills the button and starts at its start, whatever the button does with its own content. */
+.side-panel-list-content {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+}
+
+.side-panel-list-icon {
+    display: flex;
+    flex: none;
+    align-items: center;
+    margin-right: var(--spacingHorizontalS);
+}
+
+.side-panel-list-text {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A row that was just clicked: its background pulses once, so the click is seen while what it started gets going. */
+.side-panel-list-pulse {
+    animation: side-panel-list-pulse 0.6s ease-out;
+}
+
+.side-panel-list-pulse-again {
+    animation: side-panel-list-pulse-again 0.6s ease-out;
+}
+
+@keyframes side-panel-list-pulse {
+    from {
+        background: var(--colorBrandBackground2Hover);
+    }
+}
+
+@keyframes side-panel-list-pulse-again {
+    from {
+        background: var(--colorBrandBackground2Hover);
+    }
+}

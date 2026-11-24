@@ -180,7 +180,7 @@ else
                         }
                     </ChildContent>
                 </SidePanelSection>
-                <SidePanelSection Title="Tools" Count="@_toolItems.Count">
+                <SidePanelSection Flush="true" Title="Tools" Count="@_toolItems.Count">
                     @if (_toolItems.Count == 0)
                     {
                         <p class="placeholder">
@@ -192,19 +192,16 @@ else
                     {
                         @* Clicking a tool opens the Workspace Folder in it. Right-clicking it offers every folder it can
                            open. *@
-                        <ul class="tool-list">
+                        <ul class="side-panel-list">
                             @foreach (var item in _toolItems)
                             {
-                                <li @key="item">
-                                    <button type="button" class="tool-item @PulseClass(item)"
-                                            title="@(item.FilePath ?? item.Label)"
-                                            aria-haspopup="@(item.DefaultEntry is null ? "menu" : null)"
-                                            @onclick="e => OnToolClicked(item, e)"
-                                            @oncontextmenu="e => OpenToolMenu(item, e)" @oncontextmenu:preventDefault>
-                                        <ToolImageView Image="item.Entries[0].Image" Fallback="item.Tool.Icon.Generic" />
-                                        <span class="tab-label-text">@item.Label</span>
-                                    </button>
-                                </li>
+                                <SidePanelListItem @key="item" Hint="@(item.FilePath ?? item.Label)"
+                                                   HasMenu="item.DefaultEntry is null" Pulse="PulseOf(item)"
+                                                   OnClick="e => OnToolClicked(item, e)"
+                                                   OnContextMenu="e => OpenToolMenu(item, e)">
+                                    <Icon><ToolImageView Image="item.Entries[0].Image" Fallback="item.Tool.Icon.Generic" /></Icon>
+                                    <ChildContent>@item.Label</ChildContent>
+                                </SidePanelListItem>
                             }
                         </ul>
                     }
@@ -695,8 +692,7 @@ else
     }
 
     // Two classes with the same animation, so clicking the item again while it's pulsing starts the pulse again.
-    private string? PulseClass(ToolItem item) =>
-        Equals(item, _pulsing) ? (_pulseCount % 2 == 0 ? "tool-item-pulse" : "tool-item-pulse-again") : null;
+    private int? PulseOf(ToolItem item) => Equals(item, _pulsing) ? _pulseCount : null;
 
     private void OpenTool(ToolEntry entry)
     {

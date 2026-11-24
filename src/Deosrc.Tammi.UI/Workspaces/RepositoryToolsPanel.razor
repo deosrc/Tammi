@@ -31,7 +31,7 @@
                                         OnShow="agent => OnShowAgent.InvokeAsync(agent)" />
             </ChildContent>
         </SidePanelSection>
-        <SidePanelSection Title="Workspaces" Count="@(_related.IsLoaded ? _related.Workspaces.Count : null)">
+        <SidePanelSection Flush="true" Title="Workspaces" Count="@(_related.IsLoaded ? _related.Workspaces.Count : null)">
             @if (!_related.IsLoaded)
             {
                 <p class="placeholder">Reading…</p>
@@ -42,23 +42,18 @@
             }
             else
             {
-                <ul class="tool-list">
+                <ul class="side-panel-list">
                     @foreach (var workspace in _related.Workspaces)
                     {
-                        <li @key="workspace.Id">
-                            <button type="button" class="tool-item" title="@workspace.Folder"
-                                    @onclick="() => OpenWorkspace(workspace)">
-                                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
-                                </svg>
-                                <span class="tab-label-text">@workspace.Name</span>
-                            </button>
-                        </li>
+                        <SidePanelListItem @key="workspace.Id" Hint="@workspace.Folder" OnClick="() => OpenWorkspace(workspace)">
+                            <Icon><FluentIcon Value="@(new Icons.Regular.Size16.Folder())" /></Icon>
+                            <ChildContent>@workspace.Name</ChildContent>
+                        </SidePanelListItem>
                     }
                 </ul>
             }
         </SidePanelSection>
-        <SidePanelSection Title="Other Worktrees" Count="@(_related.IsLoaded ? _related.Worktrees.Count : null)">
+        <SidePanelSection Flush="true" Title="Other Worktrees" Count="@(_related.IsLoaded ? _related.Worktrees.Count : null)">
             @if (!_related.IsLoaded)
             {
                 <p class="placeholder">Reading…</p>
@@ -69,26 +64,18 @@
             }
             else
             {
-                <ul class="tool-list">
+                <ul class="side-panel-list">
                     @foreach (var worktree in _related.Worktrees)
                     {
-                        <li @key="worktree.Path">
-                            <button type="button" class="tool-item" title="@worktree.Path"
-                                    @onclick="() => OnOpenGit.InvokeAsync(worktree.Path)">
-                                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <circle cx="6" cy="5" r="2" />
-                                    <circle cx="6" cy="19" r="2" />
-                                    <circle cx="18" cy="9" r="2" />
-                                    <path d="M6 7v10M18 11c0 4-12 2-12 6" />
-                                </svg>
-                                <span class="tab-label-text">@(worktree.Branch ?? System.IO.Path.GetFileName(worktree.Path))</span>
-                            </button>
-                        </li>
+                        <SidePanelListItem @key="worktree.Path" Hint="@worktree.Path" OnClick="() => OnOpenGit.InvokeAsync(worktree.Path)">
+                            <Icon><FluentIcon Value="@(new Icons.Regular.Size16.BranchFork())" /></Icon>
+                            <ChildContent>@(worktree.Branch ?? System.IO.Path.GetFileName(worktree.Path))</ChildContent>
+                        </SidePanelListItem>
                     }
                 </ul>
             }
         </SidePanelSection>
-        <SidePanelSection Title="Submodules" Count="@(_related.IsLoaded ? _related.Submodules.Count : null)">
+        <SidePanelSection Flush="true" Title="Submodules" Count="@(_related.IsLoaded ? _related.Submodules.Count : null)">
             @if (!_related.IsLoaded)
             {
                 <p class="placeholder">Reading…</p>
@@ -99,25 +86,20 @@
             }
             else
             {
-                <ul class="tool-list">
+                <ul class="side-panel-list">
                     @foreach (var submodule in _related.Submodules)
                     {
-                        <li @key="submodule.Path">
-                            <button type="button" class="tool-item" disabled="@(!submodule.IsInitialized)"
-                                    title="@(submodule.IsInitialized ? submodule.Path : "Not checked out")"
-                                    @onclick="() => OnOpenGit.InvokeAsync(submodule.Path)">
-                                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M21 8 12 3 3 8v8l9 5 9-5Z" />
-                                    <path d="m3 8 9 5 9-5M12 13v8" />
-                                </svg>
-                                <span class="tab-label-text">@submodule.Name</span>
-                            </button>
-                        </li>
+                        <SidePanelListItem @key="submodule.Path" Disabled="!submodule.IsInitialized"
+                                           Hint="@(submodule.IsInitialized ? submodule.Path : "Not checked out")"
+                                           OnClick="() => OnOpenGit.InvokeAsync(submodule.Path)">
+                            <Icon><FluentIcon Value="@(new Icons.Regular.Size16.Box())" /></Icon>
+                            <ChildContent>@submodule.Name</ChildContent>
+                        </SidePanelListItem>
                     }
                 </ul>
             }
         </SidePanelSection>
-        <SidePanelSection Title="Tools" Count="@(_toolsLoaded ? _entries.Count : null)">
+        <SidePanelSection Flush="true" Title="Tools" Count="@(_toolsLoaded ? _entries.Count : null)">
             @if (!_toolsLoaded)
             {
                 <p class="placeholder">Finding tools…</p>
@@ -131,15 +113,13 @@
             }
             else
             {
-                <ul class="tool-list">
+                <ul class="side-panel-list">
                     @foreach (var entry in _entries)
                     {
-                        <li @key="@($"{entry.Tool.Name}\0{entry.Path}")">
-                            <button type="button" class="tool-item" title="@entry.Path" @onclick="() => OpenTool(entry)">
-                                <ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" />
-                                <span class="tab-label-text">@entry.Label</span>
-                            </button>
-                        </li>
+                        <SidePanelListItem @key="@($"{entry.Tool.Name}\0{entry.Path}")" Hint="@entry.Path" OnClick="() => OpenTool(entry)">
+                            <Icon><ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" /></Icon>
+                            <ChildContent>@entry.Label</ChildContent>
+                        </SidePanelListItem>
                     }
                 </ul>
             }
