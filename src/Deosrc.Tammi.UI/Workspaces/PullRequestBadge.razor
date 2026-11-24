@@ -6,36 +6,46 @@
 @using Deosrc.Tammi.Core.Platform
 @inject IProcessLauncher ProcessLauncher
 
-<button type="button" class="pull-request-badge @StateClass" title="@PullRequestText.Title(PullRequest)"
+<button type="button" class="pull-request-badge" title="@PullRequestText.Title(PullRequest)"
         aria-label="@PullRequestText.Title(PullRequest)"
         @onclick="OpenInBrowser" @onclick:stopPropagation>
-    <PullRequestStateIcon State="PullRequest.State" />
-    <span class="pull-request-number">#@PullRequest.Number</span>
-    @if (ChecksClass is { } checksClass)
-    {
-        <span class="pull-request-checks @checksClass" aria-hidden="true"></span>
-    }
+    <FluentBadge Appearance="BadgeAppearance.Filled" Color="ColorOf(PullRequest.State)"
+                 IconStart="@IconOf(PullRequest.State)">
+        #@PullRequest.Number
+        @if (ChecksTone is { } tone)
+        {
+            <span class="pull-request-checks pull-request-checks-@tone" aria-hidden="true"></span>
+        }
+    </FluentBadge>
 </button>
 
 @code {
     [Parameter, EditorRequired]
     public PullRequestInfo PullRequest { get; set; } = null!;
 
-    private string StateClass => PullRequest.State switch
+    private static BadgeColor ColorOf(PullRequestState state) => state switch
     {
-        PullRequestState.Draft => "pull-request-draft",
-        PullRequestState.Open => "pull-request-open",
-        PullRequestState.Merged => "pull-request-merged",
-        _ => "pull-request-closed",
+        PullRequestState.Draft => BadgeColor.Subtle,
+        PullRequestState.Open => BadgeColor.Informative,
+        PullRequestState.Merged => BadgeColor.Success,
+        _ => BadgeColor.Danger,
+    };
+
+    private static Icon IconOf(PullRequestState state) => state switch
+    {
+        PullRequestState.Draft => new Icons.Regular.Size16.BranchRequestDraft(),
+        PullRequestState.Open => new Icons.Regular.Size16.BranchRequest(),
+        PullRequestState.Merged => new Icons.Regular.Size16.Branch(),
+        _ => new Icons.Regular.Size16.BranchRequestClosed(),
     };
 
     // Checks only matter while the Pull Request can still change: not once it's merged or closed.
-    private string? ChecksClass => PullRequest is { State: PullRequestState.Draft or PullRequestState.Open, Checks: { } checks }
+    private string? ChecksTone => PullRequest is { State: PullRequestState.Draft or PullRequestState.Open, Checks: { } checks }
         ? checks switch
         {
-            PullRequestChecks.Failed => "pull-request-checks-failed",
-            PullRequestChecks.InProgress => "pull-request-checks-running",
-            _ => "pull-request-checks-passed",
+            PullRequestChecks.Failed => "error",
+            PullRequestChecks.InProgress => "warning",
+            _ => "ok",
         }
         : null;
 

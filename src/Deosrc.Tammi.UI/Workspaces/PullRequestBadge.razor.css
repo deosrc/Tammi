@@ -1,0 +1,43 @@
+/* The badge is a button, for the keyboard, that has no look of its own. */
+.pull-request-badge {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--spacingHorizontalXXS);
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.pull-request-badge:focus-visible {
+    outline: 2px solid var(--colorStrokeFocus2);
+    outline-offset: 1px;
+}
+
+/* The checks dot, at the end of the badge's content: ringed in the page's background, so it stands out on the badge's
+   fill. */
+.pull-request-checks {
+    display: inline-block;
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-left: var(--spacingHorizontalXS);
+    border-radius: 50%;
+    background: var(--pull-request-checks-tone);
+    box-shadow: 0 0 0 1.5px var(--colorNeutralBackground1);
+}
+
+.pull-request-checks-error {
+    --pull-request-checks-tone: var(--colorPaletteRedBackground3);
+}
+
+.pull-request-checks-warning {
+    --pull-request-checks-tone: var(--colorPaletteDarkOrangeBackground3);
+}
+
+.pull-request-checks-ok {
+    --pull-request-checks-tone: var(--colorPaletteGreenBackground3);
+}
