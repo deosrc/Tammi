@@ -23,43 +23,8 @@
         <TabBar Class="session-tabs" AriaLabel="Repository" FixedItems="PrimaryItems" Items="TabItems"
                 OnClose="CloseTabItemAsync">
             <EndContent>
-                <div class="menu-anchor session-tab-new" @onkeydown="OnNewMenuKeyDown">
-                    <FluentButton Appearance="ButtonAppearance.Transparent" IconOnly="true" Title="New…" aria-label="New…"
-                                  aria-haspopup="menu" aria-expanded="@(_newMenuOpen ? "true" : "false")"
-                                  IconStart="@(new Icons.Regular.Size20.Add())" OnClick="() => _newMenuOpen = !_newMenuOpen" />
-                    @if (_newMenuOpen)
-                    {
-                        <div class="menu-backdrop" @onclick="() => _newMenuOpen = false"></div>
-                        <ul class="menu" role="menu" aria-label="New">
-                            <li role="none">
-                                <button type="button" class="menu-item" role="menuitem" @onclick="StartTerminal">
-                                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        <rect x="3" y="4" width="18" height="16" rx="2" />
-                                        <polyline points="7 9 10 12 7 15" />
-                                        <path d="M12 15h5" />
-                                    </svg>
-                                    Terminal
-                                </button>
-                            </li>
-                            @if (AgentDefinitions.Count > 0)
-                            {
-                                <li role="separator" class="menu-separator"></li>
-                            }
-                            @for (var i = 0; i < AgentDefinitions.Count; i++)
-                            {
-                                var definition = AgentDefinitions[i];
-                                var name = string.IsNullOrWhiteSpace(definition.Name) ? WorkspaceAgents.DefaultName : definition.Name;
-                                <li role="none" @key="i">
-                                    <button type="button" class="menu-item" role="menuitem"
-                                            @onclick="() => StartAgentAsync(definition)">
-                                        <AgentIcon Definition="definition" />
-                                        @name
-                                    </button>
-                                </li>
-                            }
-                        </ul>
-                    }
-                </div>
+                <NewTabMenu AgentDefinitions="AgentDefinitions" OnTerminal="_ => StartTerminal()"
+                            OnAgent="request => StartAgentAsync(request.Definition)" />
             </EndContent>
         </TabBar>
         @if (_startError is not null)
@@ -83,7 +48,6 @@
     private IReadOnlyList<IMainAreaTab> _tabs = [];
     private IMainAreaTab? _shown;
     private string? _startError;
-    private bool _newMenuOpen;
 
     private IReadOnlyList<AgentDefinition> AgentDefinitions => SettingsStore.Current.Agents.Definitions;
 
@@ -239,7 +203,6 @@
 
     private void StartTerminal()
     {
-        _newMenuOpen = false;
         _startError = null;
         try
         {
@@ -254,7 +217,6 @@
 
     private async Task StartAgentAsync(AgentDefinition definition)
     {
-        _newMenuOpen = false;
         _startError = null;
         try
         {
@@ -272,8 +234,7 @@
     {
         if (e.Key == "Escape")
         {
-            _newMenuOpen = false;
-        }
+            }
     }
 
     private async Task CloseTabAsync(IMainAreaTab tab)

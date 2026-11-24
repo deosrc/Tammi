@@ -1,0 +1,141 @@
+@using Deosrc.Tammi.Core.Agents
+@inject IJSRuntime JS
+
+@* The + button at the end of a tab bar and the menu it opens, to start a terminal, a git graph or an agent in a new tab.
+   With Repositories, the terminal and each agent have a submenu of where to start it: the Workspace Folder or one of
+   the repositories. Without them (a tab bar for one repository), they start straight away. With GitTargets, a Git item
+   has a submenu of the repositories and submodules whose graph it opens. *@
+<div class="session-tab-new">
+    <FluentButton Id="@_buttonId" Appearance="ButtonAppearance.Transparent" IconOnly="true" Title="New…"
+                  aria-label="New…" IconStart="@(new Icons.Regular.Size20.Add())" />
+    <FluentMenu Trigger="@_buttonId">
+        <FluentMenuList>
+            @if (Repositories is null)
+            {
+                <FluentMenuItem IconStart="@(new Icons.Regular.Size20.WindowConsole())" OnClick="() => OnTerminal.InvokeAsync(null)">
+                    Terminal
+                </FluentMenuItem>
+            }
+            else
+            {
+                <FluentMenuItem IconStart="@(new Icons.Regular.Size20.WindowConsole())" Label="Terminal">
+                    <MenuItems>@Places(repository => OnTerminal.InvokeAsync(repository))</MenuItems>
+                </FluentMenuItem>
+            }
+            @if (GitTargets is { Count: > 0 })
+            {
+                <FluentMenuItem IconStart="@(new Icons.Regular.Size20.BranchFork())" Label="Git">
+                    <MenuItems>
+                        @foreach (var (repository, submodulePath) in GitTargets)
+                        {
+                            var target = (repository, submodulePath);
+                            <FluentMenuItem @key="@($"{repository.FolderName}\0{submodulePath}")"
+                                            IconStart="@(new Icons.Regular.Size20.BranchFork())"
+                                            OnClick="() => OnGit.InvokeAsync(target)">
+                                @(submodulePath is null
+                                    ? $"Repository: {repository.FolderName}"
+                                    : $"Submodule: {repository.FolderName}/{submodulePath}")
+                            </FluentMenuItem>
+                        }
+                    </MenuItems>
+                </FluentMenuItem>
+            }
+            @if (AgentDefinitions.Count > 0)
+            {
+                <FluentDivider />
+            }
+            @foreach (var definition in AgentDefinitions)
+            {
+                var agent = definition;
+                var name = string.IsNullOrWhiteSpace(agent.Name) ? WorkspaceAgents.DefaultName : agent.Name;
+                @* An agent's icon is a component, not a Fluent icon, so it's put in the item's start slot by hand, where
+                   the menu keeps the room for an item's icon. *@
+                var content = (RenderFragment)(builder =>
+                {
+                    builder.OpenElement(0, "span");
+                    builder.AddAttribute(1, "slot", "start");
+                    builder.AddAttribute(2, "class", "new-tab-menu-agent-icon");
+                    builder.OpenComponent<AgentIcon>(3);
+                    builder.AddAttribute(4, "Definition", agent);
+                    builder.CloseComponent();
+                    builder.CloseElement();
+                    builder.AddContent(5, name);
+                });
+                @if (Repositories is null)
+                {
+                    <FluentMenuItem @key="agent" OnClick="() => OnAgent.InvokeAsync((agent, null))">@content</FluentMenuItem>
+                }
+                else
+                {
+                    <FluentMenuItem @key="agent">
+                        <ChildContent>@content</ChildContent>
+                        <MenuItems>@Places(repository => OnAgent.InvokeAsync((agent, repository)))</MenuItems>
+                    </FluentMenuItem>
+                }
+            }
+        </FluentMenuList>
+    </FluentMenu>
+</div>
+
+@code {
+    private static int _count;
+
+    private readonly string _buttonId = $"new-tab-menu-{Interlocked.Increment(ref _count)}";
+
+    /// <summary>
+    /// The agents that can be started, in the order they're listed.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<AgentDefinition> AgentDefinitions { get; set; } = [];
+
+    /// <summary>
+    /// The workspace's repositories, when a terminal or an agent is started in the Workspace Folder or a repository.
+    /// <see langword="null"/> when they start straight away.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<WorkspaceRepository>? Repositories { get; set; }
+
+    /// <summary>
+    /// The repositories and submodules whose git graph can be opened, or none for no Git item.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<(WorkspaceRepository Repository, string? SubmodulePath)>? GitTargets { get; set; }
+
+    /// <summary>
+    /// Raised to start a terminal, in a repository or, with <see langword="null"/>, the Workspace Folder.
+    /// </summary>
+    [Parameter]
+    public EventCallback<WorkspaceRepository?> OnTerminal { get; set; }
+
+    /// <summary>
+    /// Raised to start an agent, in a repository or, with <see langword="null"/>, the Workspace Folder.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(AgentDefinition Definition, WorkspaceRepository? Repository)> OnAgent { get; set; }
+
+    /// <summary>
+    /// Raised to open a git graph.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(WorkspaceRepository Repository, string? SubmodulePath)> OnGit { get; set; }
+
+    // A submenu of where to start something: the Workspace Folder, then each repository.
+    private RenderFragment Places(Func<WorkspaceRepository?, Task> start) => builder =>
+    {
+        builder.OpenComponent<FluentMenuItem>(0);
+        builder.AddAttribute(1, "IconStart", new Icons.Regular.Size20.Folder());
+        builder.AddAttribute(2, "OnClick", EventCallback.Factory.Create<MenuItemEventArgs>(this, () => start(null)));
+        builder.AddAttribute(3, "ChildContent", (RenderFragment)(b => b.AddContent(0, "Workspace")));
+        builder.CloseComponent();
+        foreach (var repository in Repositories ?? [])
+        {
+            var target = repository;
+            builder.OpenComponent<FluentMenuItem>(4);
+            builder.SetKey(target.FolderName);
+            builder.AddAttribute(5, "IconStart", new Icons.Regular.Size20.BranchFork());
+            builder.AddAttribute(6, "OnClick", EventCallback.Factory.Create<MenuItemEventArgs>(this, () => start(target)));
+            builder.AddAttribute(7, "ChildContent", (RenderFragment)(b => b.AddContent(0, $"Repository: {target.FolderName}")));
+            builder.CloseComponent();
+        }
+    };
+}

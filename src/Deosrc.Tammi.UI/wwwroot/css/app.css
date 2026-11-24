@@ -1383,8 +1383,7 @@ a {
   background: var(--color-surface);
 }
 
-/* The New menu after the tabs. More specific than .menu-anchor, which comes later and would make it inline-block, so
-   the button is centred in the bar's height. */
+/* The New menu after the tabs (NewTabMenu), with its button centred in the bar's height. */
 .session-tabs > .session-tab-new {
   display: flex;
   flex: none;

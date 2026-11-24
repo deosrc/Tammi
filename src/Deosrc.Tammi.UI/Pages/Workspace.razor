@@ -226,38 +226,11 @@ else
             <TabBar Class="session-tabs" AriaLabel="Workspace" FixedItems="DashboardItems" Items="TabItems"
                     OnClose="CloseTabItemAsync">
                 <EndContent>
-                    <div class="menu-anchor session-tab-new" @onkeydown="OnNewMenuKeyDown">
-                        <FluentButton Appearance="ButtonAppearance.Transparent" IconOnly="true" Title="New…" aria-label="New…"
-                                      aria-haspopup="menu" aria-expanded="@(_newMenuOpen ? "true" : "false")"
-                                      IconStart="@(new Icons.Regular.Size20.Add())" OnClick="ToggleNewMenu" />
-                        @if (_newMenuOpen)
-                        {
-                            <div class="menu-backdrop" @onclick="CloseNewMenu"></div>
-                            <ul class="menu" role="menu" aria-label="New">
-                                @NewMenuItem(TerminalSubmenu, "Terminal", TerminalIcon, StartTerminal)
-                                @if (_listing?.Workspace?.Repositories.Count > 0)
-                                {
-                                    @GitMenuItem()
-                                }
-                                @if (AgentDefinitions.Count > 0)
-                                {
-                                    <li role="separator" class="menu-separator"></li>
-                                }
-                                @for (var i = 0; i < AgentDefinitions.Count; i++)
-                                {
-                                    var definition = AgentDefinitions[i];
-                                    var name = string.IsNullOrWhiteSpace(definition.Name)
-                                        ? WorkspaceAgents.DefaultName
-                                        : definition.Name;
-                                    @NewMenuItem(
-                                        $"agent-{i}",
-                                        name,
-                                        @<AgentIcon Definition="definition" />,
-                                        repository => StartAgentAsync(definition, repository))
-                                }
-                            </ul>
-                        }
-                    </div>
+                    <NewTabMenu AgentDefinitions="AgentDefinitions" Repositories="_listing?.Workspace?.Repositories ?? []"
+                                GitTargets="@(_listing?.Workspace?.Repositories.Count > 0 ? GraphTargets().ToList() : null)"
+                                OnTerminal="repository => StartTerminal(repository)"
+                                OnAgent="request => StartAgentAsync(request.Definition, request.Repository)"
+                                OnGit="target => OpenGraph(target.Repository, target.SubmodulePath)" />
                 </EndContent>
             </TabBar>
             @if (_startError is not null)
@@ -310,12 +283,9 @@ else
     private string _newName = "";
     private string? _renameError;
     private ElementReference _newNameInput;
-    private const string TerminalSubmenu = "terminal";
-    private const string GitSubmenu = "git";
 
-    private bool _newMenuOpen;
 
-    // The New menu's open submenu: TerminalSubmenu, or "agent-<index>" for an Agent Definition.
+    // The context menu's open submenu: "agent-<index>" for an Agent Definition.
     private string? _openSubmenu;
     private string? _startError;
 
@@ -1061,57 +1031,7 @@ else
         }
     }
 
-    // The New menu's Git item, with a submenu of the repositories and submodules whose graph it opens.
-    private RenderFragment GitMenuItem() => __builder =>
-    {
-        var open = _openSubmenu == GitSubmenu;
-        <li role="none" class="menu-submenu-anchor" @key="GitSubmenu" @onmouseenter="() => _openSubmenu = GitSubmenu">
-            <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
-                    aria-expanded="@(open ? "true" : "false")" @onclick="() => _openSubmenu = open ? null : GitSubmenu">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">@GitGraphIconPaths</svg>
-                <span class="tab-label-text">Git</span>
-                <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <polyline points="9 6 15 12 9 18"></polyline>
-                </svg>
-            </button>
-            @if (open)
-            {
-                <ul class="menu menu-submenu" role="menu" aria-label="Git">
-                    @foreach (var (repository, submodulePath) in GraphTargets())
-                    {
-                        <li role="none" @key="WorkspaceGitGraph.NameFor(repository, submodulePath)">
-                            <button type="button" class="menu-item" role="menuitem"
-                                    @onclick="() => OpenGraph(repository, submodulePath)">
-                                @RepositoryIcon
-                                @(submodulePath is null
-                                    ? $"Repository: {repository.FolderName}"
-                                    : $"Submodule: {repository.FolderName}/{submodulePath}")
-                            </button>
-                        </li>
-                    }
-                </ul>
-            }
-        </li>
-    };
-
-    // A git graph: a branch leaving one lane and merging back into it.
-    private static readonly RenderFragment GitGraphIconPaths =
-        @<g>
-            <circle cx="6" cy="5" r="2" />
-            <circle cx="6" cy="19" r="2" />
-            <circle cx="18" cy="9" r="2" />
-            <path d="M6 7v10" />
-            <path d="M18 11c0 4-6 4-10.5 6.5" />
-        </g>;
-
-    // The New menu's icons: what each item starts, and where. Agents have theirs from AgentIcon.
-    private static readonly RenderFragment TerminalIcon =
-        @<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <rect x="3" y="4" width="18" height="16" rx="2" />
-            <polyline points="7 9 10 12 7 15" />
-            <path d="M12 15h5" />
-        </svg>;
-
+    // The icons of the menus that are still custom: what each item starts, and where.
     // A clock with its hands turned back: past sessions.
     private static readonly RenderFragment HistoryIcon =
         @<svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -1185,26 +1105,8 @@ else
             return Task.CompletedTask;
         });
 
-    private void ToggleNewMenu()
-    {
-        CloseContextMenu();
-        _newMenuOpen = !_newMenuOpen;
-        _openSubmenu = null;
-    }
-
-    private void CloseNewMenu()
-    {
-        _newMenuOpen = false;
-        _openSubmenu = null;
-    }
-
-    private void OnNewMenuKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-        {
-            CloseNewMenu();
-        }
-    }
+    // The context menu's agent submenus are custom still.
+    private void CloseNewMenu() => _openSubmenu = null;
 
     private void OnMainAreaTabsChanged(string workspaceId) => InvokeAsync(() =>
     {
