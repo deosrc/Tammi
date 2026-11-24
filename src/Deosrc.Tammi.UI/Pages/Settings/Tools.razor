@@ -25,8 +25,8 @@
                       OptionText="@(target => SingleRepositoryTargetText(target))" Value="tools.SingleRepositoryTarget"
                       ValueChanged="@((SingleRepositoryTarget target) => UpdateToolsAsync(t => t with { SingleRepositoryTarget = target }))" />
         <p class="settings-help">
-            What Terminal and the tools that open <code>{PreferredFolder}</code> open when they're launched for a
-            workspace that has only one repository. With several repositories, they open the Workspace Folder.
+            What a folder tool, such as Terminal or VS Code, opens when you click it in a workspace that has only one
+            repository. Its menu still offers both. With several repositories, clicking it opens its menu.
         </p>
     </div>
 </div>
@@ -195,13 +195,17 @@
                     <div class="settings-field-group" id="@($"tool-{index}-settings")">
                         <FluentTextInput Label="Name" Width="100%" Value="@tool.Name"
                                          ValueChanged="value => UpdateCustomAsync(index, t => t with { Name = Text(value) })" />
-                        <p class="settings-help">
-                            Shown for each of the tool's entries. It can have placeholders, e.g.
-                            <code>Visual Studio - {FileNameWithoutExtension}</code>.
-                        </p>
+                        <p class="settings-help">Shown in the Tools section.</p>
 
                         @if (tool.Kind == ToolKind.File)
                         {
+                            <FluentSelect Label="Menu item name" Items="ToolText.MenuLabels"
+                                          OptionText="@(label => ToolText.Label(label))" Value="tool.MenuLabel"
+                                          ValueChanged="@((ToolMenuLabel label) => UpdateCustomAsync(index, t => t with { MenuLabel = label }))" />
+                            <p class="settings-help">
+                                What the tool's menu calls each file it found, so they can be told apart. The launch
+                                folder is the folder the tool starts in.
+                            </p>
                             <FluentTextArea Label="File patterns" Width="100%" Height="96px"
                                             Value="@ArgumentLines.Format(tool.FilePatterns)"
                                             ValueChanged="value => UpdateCustomAsync(index, t => t with { FilePatterns = ArgumentLines.Parse(Text(value)) })" />
@@ -255,7 +259,7 @@
                             }
                         </dl>
                         <p class="settings-help">
-                            Filled in in the name and arguments for each entry. An entry is left out where a placeholder
+                            Filled in in the arguments for each entry. An entry is left out where a placeholder
                             it uses has no value, e.g. <code>{RepositoryFolder}</code> for the Workspace Folder.
                         </p>
                         @if (unavailable.Count > 0)
@@ -488,7 +492,7 @@
                 ? new ToolDefinition
                 {
                     Kind = ToolKind.File,
-                    Name = "New tool - " + ToolPlaceholders.Format(ToolPlaceholders.FileName),
+                    Name = "New tool",
                     Arguments = [ToolPlaceholders.Format(ToolPlaceholders.FilePath)],
                 }
                 : new ToolDefinition

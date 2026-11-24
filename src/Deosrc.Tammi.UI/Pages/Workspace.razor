@@ -195,7 +195,7 @@ else
                         <ul class="side-panel-list">
                             @foreach (var item in _toolItems)
                             {
-                                <SidePanelListItem @key="item" Hint="@(item.FilePath ?? item.Label)"
+                                <SidePanelListItem @key="item" Hint="@(item.Tool.Kind == ToolKind.File && item.DefaultEntry is { } only ? only.Path : item.Label)"
                                                    HasMenu="item.DefaultEntry is null" Pulse="PulseOf(item)"
                                                    OnClick="e => OnToolClicked(item, e)"
                                                    OnContextMenu="e => OpenToolMenu(item, e)"
@@ -554,7 +554,8 @@ else
         _toolItems = WorkspaceTools.GroupByTool(
             tools,
             _workspaceTools,
-            (_listing?.Workspace?.Repositories ?? []).Select(RepositoryTools));
+            (_listing?.Workspace?.Repositories ?? []).Select(RepositoryTools),
+            SettingsStore.Current.Tools.SingleRepositoryTarget);
 
     private async Task<IReadOnlyList<ToolEntry>> WithImagesAsync(IReadOnlyList<ToolEntry> entries)
     {
@@ -584,17 +585,22 @@ else
 
     private void OpenToolMenu(ToolItem item, MouseEventArgs e) => OpenContextMenu(e, item.Label, ToolMenuItems(item));
 
-    // A tool's right-click menu: every folder it can be launched in, even those that start the same command as another.
+    // A tool's right-click menu: each place it can be launched, even those that start the same command as another. A
+    // folder tool's are the Workspace Folder and each repository, and a file tool's are the files it found.
     private RenderFragment ToolMenuItems(ToolItem item) => __builder =>
     {
-        foreach (var entry in item.Entries)
+        foreach (var entry in item.Places)
         {
             var workspace = ReferenceEquals(entry, item.WorkspaceEntry);
             <li role="none">
                 <button type="button" class="menu-item" role="menuitem" title="@entry.Path"
                         @onclick="() => OpenTool(item, entry)">
                     @(workspace ? WorkspaceFolderIcon : RepositoryIcon)
-                    @(workspace ? "Workspace" : $"Repository: {entry.Repository?.FolderName}")
+                    @(item.Tool.Kind == ToolKind.File
+                        ? (item.Tool.MenuLabel == ToolMenuLabel.FullPath
+                            ? entry.MenuLabel
+                            : $"{entry.MenuLabel} ({entry.Repository?.FolderName})")
+                        : workspace ? "Workspace" : $"Repository: {entry.Repository?.FolderName}")
                 </button>
             </li>
         }

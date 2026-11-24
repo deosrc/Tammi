@@ -691,7 +691,7 @@ are left to other tools for now.
 
 - A **tool** opens the Workspace Folder, a repository or a file in another app. There are two kinds:
   - **Folder tools** open a folder, e.g. VS Code or the file manager. Each has one entry for each folder its scope
-    includes.
+    includes (the Workspace Folder, and each repository).
   - **File tools** open files found in the repositories by their **file patterns**, e.g. Visual Studio for `*.sln`,
     `*.slnf` and `*.slnx`. Each has an entry for each file found, and none where there aren't any. For the Workspace
     Folder, every repository is searched. Patterns are looked for in a repository and its subfolders, ten folders
@@ -700,11 +700,17 @@ are left to other tools for now.
     path from each of them, and can name hidden folders. A leading `/` keeps a pattern to the repository's own folder
     (e.g. `/global.json`). `*` and `?` are wildcards, and case is ignored. A file that several patterns match is found
     once, matched by the first of them.
-- Each tool has: **kind**, **name**, **file patterns** (file tools only), **executable**, **arguments**, **scope**
-  (folder tools only), **icon** and **enabled/disabled**. The executable is a name on the search path or a full path,
-  with environment variables (`%NAME%`) filled in. Arguments are passed as-is, without a shell, so a path with spaces
-  needs no quoting.
-- The name and arguments can have **placeholders**, filled in for each entry (matched ignoring case):
+- Each tool has: **kind**, **name**, **menu item name** (file tools only), **file patterns** (file tools only),
+  **executable**, **arguments**, **scope** (folder tools only), **icon** and **enabled/disabled**. The executable is a
+  name on the search path or a full path, with environment variables (`%NAME%`) filled in. Arguments are passed
+  as-is, without a shell, so a path with spaces needs no quoting.
+- A file tool's **menu item name** says what its menu calls each file it found: the **file name** (the default), the
+  **file name without extension**, the **launch folder** (the name of the folder the tool starts in, e.g. the folder
+  holding `.devcontainer/`) or the **full path**. The menu adds the file's repository, unless it's the full path. The
+  predefined Dev Container tool uses the launch folder, and Visual Studio the file name.
+- The arguments can have **placeholders**, filled in for each entry (matched ignoring case). The name has none: a
+  placeholder in a name written by an older version is left out of it.
+  The placeholders are:
   `{PreferredFolder}` (the folder the tool should open: see below), `{LaunchFolder}` (the Workspace Folder or
   repository the entry is offered for), `{WorkspaceFolder}`,
   `{RepositoryFolder}` (the repository the entry is offered for, or that the file is in), and, for file tools only,
@@ -713,22 +719,20 @@ are left to other tools for now.
   holding `.devcontainer/`). A file tool starts in its `{MatchFolder}`. An entry is left out where a placeholder it
   uses has no value (e.g. `{RepositoryFolder}` for the Workspace Folder). Other text in braces is left as it is, and
   Settings warns about it.
-- **Workspaces with one repository:** a setting says what tools open when they're launched at workspace level in a
-  workspace with only one repository: **the repository** (the default) or **the Workspace Folder**. It decides
-  `{PreferredFolder}`: for the Workspace Folder of such a workspace it's the repository, unless the setting says the
-  Workspace Folder; everywhere else it's the same as `{LaunchFolder}`. A folder tool that uses `{PreferredFolder}`
-  opens, starts in and shows that folder. Terminal and the predefined folder tools use it, and new custom folder tools
-  start with it as their argument.
+- **Workspaces with one repository:** a setting says what launching a folder tool (Terminal included) from the Tools
+  section opens in a workspace with only one repository: **the repository** (the default) or **the Workspace Folder**.
+  The tool's menu still lists both. `{PreferredFolder}` is the same as `{LaunchFolder}`: the entry's own folder. The
+  predefined folder tools open it, and new custom folder tools start with it as their argument.
 - **Scope** sets what a folder tool is offered for: the Workspace Folder, the repositories, or both (the default).
   File tools have no scope: they open the files they find, wherever they find them, so they're offered for both.
-- The side panel's **Tools section** lists each tool once (a file tool once per file it found), in the order tools
-  are offered. Right-clicking a tool opens a menu of each folder it can open: **Workspace**, then
-  **Repository: `<name>`** for each repository (for a file tool, the file's repository). Levels that would start the
-  same command (e.g. a file tool whose arguments only use the file, or Terminal in a workspace with one repository)
-  are one item, the first. Clicking a tool opens its Workspace Folder entry, or its only launch if it has just one;
-  only a tool with several repository launches and none for the Workspace Folder shows the menu instead. Right-clicking a repository's card opens a menu with a
-  **Tools** submenu of every tool that can open that repository. Menus close on Escape or a click outside them, and
-  stay inside the window.
+- The side panel's **Tools section** lists each tool once, whatever its kind, in the order tools are offered. Each
+  tool has **places** it can be launched, which its menu lists (right-click it, or use its ⋮ button), even where
+  several start the same command: for a folder tool, **Workspace** and then **Repository: `<name>`** for each
+  repository; for a file tool, each file it found, with its repository. Clicking a tool launches it directly when it
+  has one place; for a folder tool in a workspace with one repository, it launches the one the single-repository
+  setting prefers. Otherwise, a click opens the menu to pick from. Right-clicking a repository's card opens a menu
+  with a **Tools** submenu of every tool that can open that repository. Menus close on Escape or a click outside
+  them, and stay inside the window.
 - Launching a tool from the Tools section (by clicking it, or from its menu) pulses its background once, briefly, to
   show the click was seen while the tool starts.
 - A tool is only offered when it's enabled and its executable is found (except Terminal, which has none).

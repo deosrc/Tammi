@@ -58,8 +58,8 @@ public sealed class WorkspaceTools
 
             if (tool.OpensTerminal)
             {
-                var (folder, folderRepository) = PreferredFolder(workspace, repository, settings);
-                entries.Add(new ToolEntry(tool, tool.Name, folder, folderRepository, null));
+                var folder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
+                entries.Add(new ToolEntry(tool, tool.Name, folder, repository, null));
                 continue;
             }
 
@@ -69,8 +69,8 @@ public sealed class WorkspaceTools
             }
 
             entries.AddRange(tool.Kind == ToolKind.File
-                ? FileEntries(tool, executable, workspace, repository, settings)
-                : FolderEntries(tool, executable, workspace, repository, settings));
+                ? FileEntries(tool, executable, workspace, repository)
+                : FolderEntries(tool, executable, workspace, repository));
         }
 
         return entries;
@@ -94,63 +94,81 @@ public sealed class WorkspaceTools
     }
 
     /// <summary>
-    /// Groups the entries of the Workspace Folder and its repositories by tool, so each tool is listed once with the
-    /// levels it can be launched at.
+    /// Groups the entries of the Workspace Folder and its repositories by tool, so each tool is listed once, whatever its
+    /// kind, with the places it can be launched.
     /// </summary>
     /// <param name="tools">The tools, in the order they're offered (see <see cref="ToolSettings.Tools"/>).</param>
     /// <param name="workspaceEntries">The Workspace Folder's entries (see <see cref="GetEntries"/>).</param>
     /// <param name="repositoryEntries">Each repository's entries, in the workspace's repository order.</param>
-    /// <returns>
-    /// An item for each folder tool, and for each file a file tool opens, ordered as <paramref name="tools"/> and then
-    /// by file. A file's entries for the Workspace Folder and for its repository are matched by the file's path.
-    /// </returns>
+    /// <param name="singleRepositoryTarget">
+    /// What a folder tool's launch opens in a workspace with one repository (see <see cref="ToolItem.DefaultEntry"/>).
+    /// </param>
+    /// <returns>An item for each tool that has an entry, ordered as <paramref name="tools"/>.</returns>
     public static IReadOnlyList<ToolItem> GroupByTool(
         IReadOnlyList<ToolDefinition> tools,
         IReadOnlyList<ToolEntry> workspaceEntries,
-        IEnumerable<IReadOnlyList<ToolEntry>> repositoryEntries)
+        IEnumerable<IReadOnlyList<ToolEntry>> repositoryEntries,
+        SingleRepositoryTarget singleRepositoryTarget = SingleRepositoryTarget.Repository)
     {
         ArgumentNullException.ThrowIfNull(tools);
         ArgumentNullException.ThrowIfNull(workspaceEntries);
         ArgumentNullException.ThrowIfNull(repositoryEntries);
 
-        var groups = new Dictionary<(int Tool, string? File), (ToolEntry? Workspace, List<ToolEntry> Repositories)>();
-        (int, string?) Key(ToolEntry entry)
+        // A file tool's Workspace Folder entries are for the files of every repository, so they aren't a place of their
+        // own: they're the same files as the repositories' entries.
+        var groups = new Dictionary<int, (List<ToolEntry> Workspace, List<ToolEntry> Repositories)>();
+        (List<ToolEntry> Workspace, List<ToolEntry> Repositories) GroupOf(ToolEntry entry)
         {
             var index = IndexOf(tools, entry.Tool);
-            return (index < 0 ? int.MaxValue : index, entry.Tool.Kind == ToolKind.File ? entry.Path : null);
+            var key = index < 0 ? int.MaxValue : index;
+            if (!groups.TryGetValue(key, out var group))
+            {
+                group = ([], []);
+                groups[key] = group;
+            }
+
+            return group;
         }
 
         foreach (var entry in workspaceEntries)
         {
-            var key = Key(entry);
-            if (!groups.ContainsKey(key))
-            {
-                groups[key] = (entry, []);
-            }
+            GroupOf(entry).Workspace.Add(entry);
         }
 
         foreach (var entry in repositoryEntries.SelectMany(entries => entries))
         {
-            var key = Key(entry);
-            if (!groups.TryGetValue(key, out var group))
-            {
-                group = (null, []);
-                groups[key] = group;
-            }
-
-            group.Repositories.Add(entry);
+            GroupOf(entry).Repositories.Add(entry);
         }
 
         return groups
-            .OrderBy(group => group.Key.Tool)
-            .ThenBy(group => group.Key.File, StringComparer.OrdinalIgnoreCase)
-            .Select(group =>
-            {
-                var (workspace, repositories) = group.Value;
-                var first = workspace ?? repositories[0];
-                return new ToolItem(first.Tool, first.Label, group.Key.File, workspace, repositories);
-            })
+            .OrderBy(group => group.Key)
+            .Select(group => CreateItem(group.Value.Workspace, group.Value.Repositories, singleRepositoryTarget))
             .ToArray();
+    }
+
+    private static ToolItem CreateItem(
+        List<ToolEntry> workspace,
+        List<ToolEntry> repositories,
+        SingleRepositoryTarget singleRepositoryTarget)
+    {
+        var first = workspace.Count > 0 ? workspace[0] : repositories[0];
+        var isFile = first.Tool.Kind == ToolKind.File;
+
+        // A file tool's entries are for the files found, whichever repository they're in, so none is the Workspace
+        // Folder's: the entries from the Workspace Folder, which cover every repository, are used if there are any.
+        var item = isFile
+            ? new ToolItem(first.Tool, first.Label, null, workspace.Count > 0 ? workspace : repositories)
+            : new ToolItem(first.Tool, first.Label, workspace.Count > 0 ? first : null, repositories);
+
+        var places = item.Places;
+        var entry = places switch
+        {
+            [var only] => only,
+            _ when !isFile && item.WorkspaceEntry is { } workspaceEntry && item.RepositoryEntries is [var repositoryEntry]
+                => singleRepositoryTarget == SingleRepositoryTarget.Repository ? repositoryEntry : workspaceEntry,
+            _ => null,
+        };
+        return item with { DefaultEntry = entry };
     }
 
     /// <summary>
@@ -228,61 +246,27 @@ public sealed class WorkspaceTools
         });
     }
 
-    /// <summary>
-    /// The folder a tool should open when it's launched for <paramref name="repository"/> or the Workspace Folder (see
-    /// <see cref="ToolPlaceholders.PreferredFolder"/>), and the repository it is, if any.
-    /// </summary>
-    public static (string Folder, WorkspaceRepository? Repository) PreferredFolder(
-        Workspace workspace,
-        WorkspaceRepository? repository,
-        ToolSettings settings)
-    {
-        ArgumentNullException.ThrowIfNull(workspace);
-        ArgumentNullException.ThrowIfNull(settings);
-
-        if (repository is not null)
-        {
-            return (workspace.GetWorktreePath(repository), repository);
-        }
-
-        return workspace.Repositories is [var only] && settings.SingleRepositoryTarget == SingleRepositoryTarget.Repository
-            ? (workspace.GetWorktreePath(only), only)
-            : (workspace.Folder, null);
-    }
-
     private static IEnumerable<ToolEntry> FolderEntries(
         ToolDefinition tool,
         string executable,
         Workspace workspace,
-        WorkspaceRepository? repository,
-        ToolSettings settings)
+        WorkspaceRepository? repository)
     {
         var launchFolder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
-        var (preferred, preferredRepository) = PreferredFolder(workspace, repository, settings);
-
-        // A tool that opens the preferred folder is offered for it, and starts in it.
-        var opensPreferred = Uses(tool, ToolPlaceholders.PreferredFolder);
-        var folder = opensPreferred ? preferred : launchFolder;
-        var values = PlaceholderValues(workspace, repository, launchFolder, null, preferred);
-        if (CreateEntry(tool, executable, folder, opensPreferred ? preferredRepository : repository, values, folder)
-            is { } entry)
+        var values = PlaceholderValues(workspace, repository, launchFolder, null);
+        if (CreateEntry(tool, executable, launchFolder, repository, values, launchFolder) is { } entry)
         {
             yield return entry;
         }
     }
 
-    private static bool Uses(ToolDefinition tool, string placeholder) =>
-        tool.Arguments.Append(tool.Name).SelectMany(ToolPlaceholders.FindUsed).Contains(placeholder);
-
     private static IEnumerable<ToolEntry> FileEntries(
         ToolDefinition tool,
         string executable,
         Workspace workspace,
-        WorkspaceRepository? repository,
-        ToolSettings settings)
+        WorkspaceRepository? repository)
     {
         var launchFolder = repository is null ? workspace.Folder : workspace.GetWorktreePath(repository);
-        var preferred = PreferredFolder(workspace, repository, settings).Folder;
         IEnumerable<WorkspaceRepository> searched = repository is null ? workspace.Repositories : [repository];
         foreach (var fileRepository in searched)
         {
@@ -290,8 +274,8 @@ public sealed class WorkspaceTools
             {
                 // It starts in the folder its pattern matched from: the file's folder, or e.g. the project folder that
                 // holds .devcontainer/.
-                var values = PlaceholderValues(workspace, fileRepository, launchFolder, file, preferred);
-                if (CreateEntry(tool, executable, file.FilePath, fileRepository, values, file.MatchFolder) is { } entry)
+                var values = PlaceholderValues(workspace, fileRepository, launchFolder, file);
+                if (CreateEntry(tool, executable, file.FilePath, fileRepository, values, file.MatchFolder, file) is { } entry)
                 {
                     yield return entry;
                 }
@@ -305,19 +289,29 @@ public sealed class WorkspaceTools
         string path,
         WorkspaceRepository? repository,
         IReadOnlyDictionary<string, string> values,
-        string? workingDirectory)
+        string? workingDirectory,
+        ToolFileMatch? file = null)
     {
-        var name = string.IsNullOrWhiteSpace(tool.Name) ? "Unnamed tool" : tool.Name.Trim();
-        var label = ToolPlaceholders.Expand(name, values);
         var arguments = tool.Arguments.Select(argument => ToolPlaceholders.Expand(argument, values)).ToArray();
-        if (label is null || arguments.Any(argument => argument is null))
+        if (arguments.Any(argument => argument is null))
         {
             return null;
         }
 
-        return new ToolEntry(tool, label, path, repository,
-            new ProcessRequest(executable, arguments!) { WorkingDirectory = workingDirectory });
+        return new ToolEntry(tool, tool.DisplayName, path, repository,
+            new ProcessRequest(executable, arguments!) { WorkingDirectory = workingDirectory })
+        {
+            MenuLabel = file is null ? null : MenuLabelOf(tool.MenuLabel, file),
+        };
     }
+
+    private static string MenuLabelOf(ToolMenuLabel label, ToolFileMatch file) => label switch
+    {
+        ToolMenuLabel.FileNameWithoutExtension => Path.GetFileNameWithoutExtension(file.FilePath),
+        ToolMenuLabel.LaunchFolder => Path.GetFileName(Path.TrimEndingDirectorySeparator(file.MatchFolder)),
+        ToolMenuLabel.FullPath => file.FilePath,
+        _ => Path.GetFileName(file.FilePath),
+    };
 
     private static int IndexOf(IReadOnlyList<ToolDefinition> tools, ToolDefinition tool)
     {

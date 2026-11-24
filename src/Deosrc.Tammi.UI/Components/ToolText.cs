@@ -19,6 +19,22 @@ public static class ToolText
     public static IReadOnlyList<ToolScope> Scopes { get; } = Enum.GetValues<ToolScope>();
 
     /// <summary>
+    /// What a file tool's menu items can be called, in the order they're offered.
+    /// </summary>
+    public static IReadOnlyList<ToolMenuLabel> MenuLabels { get; } = Enum.GetValues<ToolMenuLabel>();
+
+    /// <summary>
+    /// What a menu item for a file is called.
+    /// </summary>
+    public static string Label(ToolMenuLabel label) => label switch
+    {
+        ToolMenuLabel.FileNameWithoutExtension => "File name without extension",
+        ToolMenuLabel.LaunchFolder => "Launch folder",
+        ToolMenuLabel.FullPath => "Full path",
+        _ => "File name",
+    };
+
+    /// <summary>
     /// A generic icon's name.
     /// </summary>
     public static string Label(ToolIcon icon) => icon switch
@@ -56,8 +72,7 @@ public static class ToolText
     public static string Description(string placeholder) => placeholder switch
     {
         ToolPlaceholders.PreferredFolder =>
-            "the folder the tool should open: as {LaunchFolder}, but the repository for a workspace with only one "
-            + "repository, if that's chosen above",
+            "the folder the tool should open: the same as {LaunchFolder}",
         ToolPlaceholders.LaunchFolder => "the folder the tool is offered for: the Workspace Folder or the repository",
         ToolPlaceholders.WorkspaceFolder => "the Workspace Folder",
         ToolPlaceholders.RepositoryFolder =>
@@ -74,7 +89,7 @@ public static class ToolText
     };
 
     /// <summary>
-    /// The placeholders in a tool's name and arguments that it can't use, because they're only for file tools.
+    /// The placeholders in a tool's arguments that it can't use, because they're only for file tools.
     /// </summary>
     public static IReadOnlyList<string> UnavailablePlaceholders(ToolDefinition tool) =>
         Templates(tool).SelectMany(ToolPlaceholders.FindUsed)
@@ -83,10 +98,10 @@ public static class ToolText
             .ToArray();
 
     /// <summary>
-    /// The text in braces in a tool's name and arguments that isn't a placeholder.
+    /// The text in braces in a tool's arguments that isn't a placeholder.
     /// </summary>
     public static IReadOnlyList<string> UnknownPlaceholders(ToolDefinition tool) =>
         Templates(tool).SelectMany(ToolPlaceholders.FindUnknown).Distinct().ToArray();
 
-    private static IEnumerable<string> Templates(ToolDefinition tool) => [tool.Name, .. tool.Arguments];
+    private static IEnumerable<string> Templates(ToolDefinition tool) => tool.Arguments;
 }
