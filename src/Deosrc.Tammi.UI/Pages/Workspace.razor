@@ -198,7 +198,8 @@ else
                                 <SidePanelListItem @key="item" Hint="@(item.FilePath ?? item.Label)"
                                                    HasMenu="item.DefaultEntry is null" Pulse="PulseOf(item)"
                                                    OnClick="e => OnToolClicked(item, e)"
-                                                   OnContextMenu="e => OpenToolMenu(item, e)">
+                                                   OnContextMenu="e => OpenToolMenu(item, e)"
+                                                   OnMenu="e => OpenToolMenu(item, e)" MenuHint="@($"More ways to open with {item.Label}")">
                                     <Icon><ToolImageView Image="item.Entries[0].Image" Fallback="item.Tool.Icon.Generic" /></Icon>
                                     <ChildContent>@item.Label</ChildContent>
                                 </SidePanelListItem>

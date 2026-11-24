@@ -1,5 +1,17 @@
 /* The button fills the row's width, with its content at the start. Its border radius is dropped, so the rows meet the
    panel's edges. The button is a Fluent component, so it is styled from outside it. */
+.side-panel-list-item {
+    display: flex;
+    align-items: center;
+}
+
+.side-panel-list-item ::deep .side-panel-list-more {
+    flex: none;
+    width: auto;
+    min-width: 0;
+    padding-inline: var(--spacingHorizontalXXS);
+}
+
 .side-panel-list-item ::deep fluent-button {
     display: flex;
     justify-content: flex-start;

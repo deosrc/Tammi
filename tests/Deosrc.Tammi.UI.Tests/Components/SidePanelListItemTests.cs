@@ -49,4 +49,21 @@ public sealed class SidePanelListItemTests : BunitContext
         Assert.DoesNotContain("side-panel-list-pulse-again", even.Find("fluent-button").ClassList);
         Assert.Contains("side-panel-list-pulse-again", odd.Find("fluent-button").ClassList);
     }
+
+    [Fact]
+    public void HasAMoreButtonOnlyWithAnOnMenu_WhichRaisesOnMenuNotOnClick()
+    {
+        Assert.Empty(Render<SidePanelListItem>().FindAll(".side-panel-list-more"));
+
+        var menu = false;
+        var clicked = false;
+        var item = Render<SidePanelListItem>(parameters => parameters
+            .Add(p => p.OnClick, (MouseEventArgs _) => clicked = true)
+            .Add(p => p.OnMenu, (MouseEventArgs _) => menu = true));
+
+        item.Find(".side-panel-list-more").Click();
+
+        Assert.True(menu);
+        Assert.False(clicked);
+    }
 }

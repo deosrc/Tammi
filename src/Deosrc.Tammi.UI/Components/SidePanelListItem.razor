@@ -1,5 +1,5 @@
 @* A row in a side panel section's list that does something when it's clicked, e.g. a tool that opens a folder: an icon and
-   a name. Put it in a <ul class="side-panel-list">. It can also be right-clicked, and can pulse once to show that what it
+   a name. Put it in a <ul class="side-panel-list">. It can also be right-clicked, or have a ⋮ button after it, and can pulse once to show that what it
    started is under way. *@
 <li class="side-panel-list-item" @oncontextmenu="OnContextMenu" @oncontextmenu:preventDefault="@OnContextMenu.HasDelegate">
     <FluentButton Class="@($"side-panel-list-button {PulseClass}")" Style="width: 100%;" Appearance="ButtonAppearance.Subtle"
@@ -12,6 +12,12 @@
             <span class="side-panel-list-text">@ChildContent</span>
         </span>
     </FluentButton>
+    @if (OnMenu.HasDelegate)
+    {
+        <FluentButton Class="side-panel-list-more" Appearance="ButtonAppearance.Subtle" IconOnly="true"
+                      Title="@MenuHint" aria-label="@MenuHint" aria-haspopup="menu"
+                      IconStart="@(new Icons.Regular.Size16.MoreVertical())" OnClick="OnMenu" />
+    }
 </li>
 
 @code {
@@ -59,6 +65,19 @@
     /// </summary>
     [Parameter]
     public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
+
+    /// <summary>
+    /// Raised when the ⋮ button after the row is clicked, to open the same menu as a right-click. Without one, the row
+    /// has no ⋮ button.
+    /// </summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnMenu { get; set; }
+
+    /// <summary>
+    /// The ⋮ button's tooltip.
+    /// </summary>
+    [Parameter]
+    public string MenuHint { get; set; } = "More options";
 
     // Two animations with the same effect, so changing from one to the other plays it again.
     private string? PulseClass => Pulse is { } pulse ? (pulse % 2 == 0 ? "side-panel-list-pulse" : "side-panel-list-pulse-again") : null;
