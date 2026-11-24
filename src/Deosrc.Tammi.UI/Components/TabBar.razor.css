@@ -61,6 +61,11 @@
     text-decoration: none;
 }
 
+/* A tab with no close button (a fixed or trailing one) has the same room after its content as before it. */
+.tab-bar-tab:not(.closable) .tab-bar-label:not(.icon-only) {
+    padding-right: var(--space-4);
+}
+
 /* A tab of only an icon. */
 .tab-bar-label.icon-only {
     padding: 0 var(--space-3);
