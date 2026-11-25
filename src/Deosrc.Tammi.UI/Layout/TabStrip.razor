@@ -7,6 +7,7 @@
 @inject NewWorkspaceTabState NewWorkspaceTabState
 @inject WorkspaceGitGraphs GitGraphs
 @inject Deosrc.Tammi.Core.Terminals.WorkspaceTerminals Terminals
+@inject MainTabOrder TabOrder
 @inject NavigationManager Navigation
 
 <nav class="tab-strip" aria-label="Main">
@@ -31,9 +32,9 @@
     @* Tabs are in the order they were opened, whatever they are: a new one is always added at the end. *@
     @foreach (var key in OrderedKeys())
     {
-        @if (key.StartsWith(WorkspaceKey, StringComparison.Ordinal))
+        @if (MainTabOrder.IsWorkspaceKey(key))
         {
-            var tab = WorkspaceTabs.Tabs.First(t => WorkspaceKey + t.WorkspaceId == key);
+            var tab = WorkspaceTabs.Tabs.First(t => MainTabOrder.WorkspaceKey(t.WorkspaceId) == key);
             // Returns to the edit flow if the workspace has one in progress.
             var route = EditSessions.Find(tab.WorkspaceId) is null
                 ? AppRoutes.Workspace(tab.WorkspaceId)
@@ -57,9 +58,9 @@
                 </button>
             </div>
         }
-        else if (key.StartsWith(GraphKey, StringComparison.Ordinal))
+        else if (MainTabOrder.IsRepositoryKey(key))
         {
-            var graph = GitGraphs.StandaloneGraphs().First(g => GraphKey + g.Path == key);
+            var graph = GitGraphs.StandaloneGraphs().First(g => MainTabOrder.RepositoryKey(g.Path) == key);
             var graphRoute = AppRoutes.RepositoryGit(graph.Path);
             <div class="tab workspace-tab @ActiveClass(graphRoute)" @key="key">
                 <a class="tab-label" href="@graphRoute" title="@graph.Path" aria-current="@AriaCurrent(graphRoute)">
@@ -82,7 +83,7 @@
                 </button>
             </div>
         }
-        else if (key == NewWorkspaceKey)
+        else if (key == MainTabOrder.NewWorkspaceKey)
         {
             <div class="tab workspace-tab @ActiveClass(AppRoutes.NewWorkspace)" @key="key">
                 <a class="tab-label" href="@AppRoutes.NewWorkspace" title="New workspace"
@@ -95,7 +96,7 @@
                 </button>
             </div>
         }
-        else if (key == UsageKey)
+        else if (key == MainTabOrder.UsageKey)
         {
             <div class="tab workspace-tab @ActiveClass(AppRoutes.Usage)" @key="key">
                 <a class="tab-label" href="@AppRoutes.Usage" title="AI usage" aria-current="@AriaCurrent(AppRoutes.Usage)">
@@ -155,24 +156,15 @@
         }
     }
 
-    private const string WorkspaceKey = "workspace:";
-    private const string GraphKey = "git:";
-    private const string NewWorkspaceKey = "new-workspace";
-    private const string UsageKey = "usage";
-
-    // The open tabs' keys, in the order they were opened.
-    private readonly List<string> _order = [];
-
-    private List<string> OrderedKeys()
+    // The open tabs' keys, in the order they were opened (or, after a restart, the order they were saved in).
+    private IReadOnlyList<string> OrderedKeys()
     {
-        var open = WorkspaceTabs.Tabs.Select(tab => WorkspaceKey + tab.WorkspaceId)
-            .Concat(GitGraphs.StandaloneGraphs().Select(graph => GraphKey + graph.Path))
-            .Concat(NewWorkspaceTabState.IsOpen ? [NewWorkspaceKey] : [])
-            .Concat(UsageTabState.IsOpen ? [UsageKey] : [])
+        var open = WorkspaceTabs.Tabs.Select(tab => MainTabOrder.WorkspaceKey(tab.WorkspaceId))
+            .Concat(GitGraphs.StandaloneGraphs().Select(graph => MainTabOrder.RepositoryKey(graph.Path)))
+            .Concat(NewWorkspaceTabState.IsOpen ? [MainTabOrder.NewWorkspaceKey] : [])
+            .Concat(UsageTabState.IsOpen ? [MainTabOrder.UsageKey] : [])
             .ToList();
-        _order.RemoveAll(key => !open.Contains(key));
-        _order.AddRange(open.Where(key => !_order.Contains(key)));
-        return [.. _order];
+        return TabOrder.Sync(open);
     }
 
     private void CloseRepositoryGraph(WorkspaceGitGraph graph)

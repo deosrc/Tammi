@@ -26,6 +26,12 @@ public enum GitSyncFailure
     /// <summary>The remote has commits the branch doesn't, so it refused the push. Pull first.</summary>
     PushRejected,
 
+    /// <summary>
+    /// The remote has the branch at a commit that isn't an ancestor of the local one (e.g. after a rebase or amend), so
+    /// the push was rejected as non-fast-forward. A force push would replace the remote's commits.
+    /// </summary>
+    ForcePushRequired,
+
     /// <summary>No branch is checked out (HEAD is detached), so there's nothing to pull into or push.</summary>
     DetachedHead,
 

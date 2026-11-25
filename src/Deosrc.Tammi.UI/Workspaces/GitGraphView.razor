@@ -118,12 +118,18 @@
             <div class="error git-graph-sync-error" role="alert">
                 <div class="git-graph-sync-error-body">
                     <p>@syncProblem.Message</p>
-                    @if (syncProblem.Details.Length > 0)
+                    @if (syncProblem.Details.Length > 0 && syncProblem.Failure != GitSyncFailure.ForcePushRequired)
                     {
                         <details>
                             <summary>Git's output</summary>
                             <pre class="git-graph-sync-details">@syncProblem.Details</pre>
                         </details>
+                    }
+                    @if (syncProblem.Failure == GitSyncFailure.ForcePushRequired)
+                    {
+                        <p class="git-graph-sync-error-actions">
+                            <button type="button" class="button button-danger" @onclick="Graph.ForcePushAsync">Force push</button>
+                        </p>
                     }
                 </div>
                 <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"

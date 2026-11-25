@@ -516,6 +516,10 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   changed in Settings.
   - A terminal is named "Terminal" when it's in the Workspace Folder, or after the repository's folder (e.g. `api`).
     A name already used by one of the workspace's open terminals gets the first free number (e.g. "Terminal 2").
+  - A program can rename its own tab by setting its terminal's title (the `OSC 0` and `OSC 2` escape sequences, e.g.
+    `printf '\e]0;My title\a'`). The tab, and an agent's card on the dashboard, in the agents list and on Home, then
+    show that title instead of the name, until the program clears it (an empty title). The name stays unique and is
+    used for nothing else. Titles are plain text with control characters removed.
   - Closing a terminal's tab ends its shell, and shows the next tab (or the previous one, or else the dashboard).
     A terminal whose shell has exited stays, marked as exited, until its tab
     is closed.
@@ -730,6 +734,9 @@ credentials (a git that would need a terminal prompt fails instead).
   conflicts show in the working changes to resolve.
 - **Push** pushes the checked-out branch. A branch with no upstream is pushed to `origin` (or the only remote) and
   starts tracking it.
+- When a push is rejected as non-fast-forward (e.g. after a rebase or amend), the error offers **Force push**. Only
+  clicking it force pushes, with `--force-with-lease` so it still refuses if the remote branch has moved since the last
+  fetch. A rejection that says to fetch first just says to pull.
 - Pull and push need a branch, so they fail with a clear message on a detached HEAD (as submodules usually are).
 - While one runs, git's progress is shown under the toolbar and the buttons are disabled. A failure is shown there
   too, worded for what went wrong (authentication, unreachable remote, conflicts, uncommitted changes that would be
@@ -761,7 +768,7 @@ are left to other tools for now.
   `{PreferredFolder}` (the folder the tool should open: see below), `{LaunchFolder}` (the Workspace Folder or
   repository the entry is offered for), `{WorkspaceFolder}`,
   `{RepositoryFolder}` (the repository the entry is offered for, or that the file is in), and, for file tools only,
-  `{FileDirectory}`, `{FileName}`, `{FileNameWithoutExtension}`, `{FilePath}` and `{MatchFolder}` (the folder the
+  `{FileDirectory}`, `{FileName}`, `{FileNameWithoutExtension}`, `{FilePath}`, `{MatchFolderName}` (the name of the `{MatchFolder}`) and `{MatchFolder}` (the folder the
   pattern matched from: the file's folder for a file name pattern, or where a path pattern starts, e.g. the folder
   holding `.devcontainer/`). A file tool starts in its `{MatchFolder}`. An entry is left out where a placeholder it
   uses has no value (e.g. `{RepositoryFolder}` for the Workspace Folder). Other text in braces is left as it is, and
@@ -801,7 +808,7 @@ are left to other tools for now.
     no executable and is always enabled: Settings has no switch for it. It's always first, in Settings and in the
     tools lists.
   - **VS Code:** `code {PreferredFolder}`.
-  - **Dev Container:** a file tool for `.devcontainer/devcontainer.json` and `.devcontainer.json`, running
+  - **Dev Container:** a file tool, named `Dev Container - {MatchFolderName}` (e.g. `Dev Container - Alpha`), for `.devcontainer/devcontainer.json` and `.devcontainer.json`, running
     `devcontainer open {MatchFolder} --config {FilePath}`. It opens the folder the configuration belongs to (the one
     holding `.devcontainer.json`, or the parent of the `.devcontainer` folder) in the container the file describes, so
     each project of a monorepo with its own configuration has its own entry. It needs the `devcontainer` CLI that VS Code's Dev Containers extension installs (its
@@ -937,6 +944,15 @@ are left to other tools for now.
     Sessions and its Git Graphs are opened, in their old order. The tab that was shown is shown again (the dashboard if it was the dashboard or a terminal). An agent whose session can't be resumed, or a graph
     whose repository is no longer in the workspace, isn't reopened, and the view says so. Agents without a recorded
     session aren't kept. Terminals are left out, as keeping them would depend on the terminal supporting it.
+  - **A repository's tab reopens its Git Graphs after a restart.** A Local Repository's tab (opened from the Repositories
+    page) keeps the Git Graphs of its submodules and other worktrees, and which of them was shown. They reopen in their
+    old order the next time Tammi starts, and the one that was shown is shown again. One whose folder is gone isn't
+    reopened. Terminals and agents in a repository's tab aren't kept: terminals as for workspaces, and agents as they
+    have no stored session there.
+  - **The order of the main tabs is kept.** Workspace and repository tabs reopen in the order they were in, mixed
+    together as they were. Every tab control keeps its tabs the same way, in `open-workspace-tabs.json` (app data) and
+    each workspace's `.tammi/open-tabs.json`: `tabs`, in tab order, and `active`, the one that was shown, each tab being
+    `{ kind, id, path, tabs, active }` with the parts that don't apply left out.
 
 ## Integrations
 

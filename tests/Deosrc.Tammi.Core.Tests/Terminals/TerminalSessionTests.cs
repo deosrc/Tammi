@@ -10,6 +10,32 @@ public class TerminalSessionTests
     private readonly ScriptedPtySession _pty = new();
 
     [Fact]
+    public async Task Title_SetByTheProgram_IsKeptAndRaised()
+    {
+        var session = new TerminalSession(_pty);
+        var raised = new TaskCompletionSource();
+        session.TitleChanged += () => raised.TrySetResult();
+        Assert.Null(session.Title);
+
+        _pty.Output("\x1b]0;Build api\a");
+        await raised.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+        Assert.Equal("Build api", session.Title);
+    }
+
+    [Fact]
+    public async Task Title_Cleared_GoesBackToNull()
+    {
+        var session = new TerminalSession(_pty);
+        _pty.Output("\x1b]0;Build api\a");
+        await WaitForOutputAsync(session, "Build api\a");
+        _pty.Output("\x1b]0;\a");
+        await WaitForOutputAsync(session, "\x1b]0;\a");
+
+        Assert.Null(session.Title);
+    }
+
+    [Fact]
     public async Task Reader_GetsOutputAsItArrives()
     {
         var session = new TerminalSession(_pty);

@@ -8,6 +8,7 @@
 @inject WorkspaceAgents Agents
 @inject ISettingsStore SettingsStore
 @inject WorkspaceViewState ViewState
+@inject WorkspaceTabsKeeper TabsKeeper
 
 @* A Local Repository's primary tab, opened from the Repositories page without a workspace. Like a workspace's, it has
    secondary tabs: the repository's own git graph, which is always there and can't be closed, then the graphs of its
@@ -25,7 +26,6 @@
                     <div class="session-tab @(shown ? "active" : null)" @key="tab">
                         <button type="button" class="session-tab-label" role="tab"
                                 aria-selected="@(shown ? "true" : "false")"
-                                title="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })"
                                 @onclick="() => ShowTab(tab)">
                             @if (tab is WorkspaceTerminal)
                             {
@@ -49,7 +49,7 @@
                                     <path d="M18 11c0 4-6 4-10.5 6.5" />
                                 </svg>
                             }
-                            <span class="tab-label-text">@tab.Name</span>
+                            <span class="tab-label-text">@tab.DisplayName</span>
                             @if (tab is IWorkspaceProcess { HasExited: true })
                             {
                                 <span class="session-tab-status">
@@ -62,10 +62,12 @@
                                 <AgentStateIndicator State="agent.State" />
                             }
                         </button>
+                        <SessionTabTooltip Name="@tab.DisplayName"
+                                           Detail="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })" />
                         @if (!primary)
                         {
-                            <button type="button" class="tab-close" title="Close @tab.Name"
-                                    aria-label="Close @tab.Name" @onclick="() => CloseTabAsync(tab)">
+                            <button type="button" class="tab-close" title="Close @tab.DisplayName"
+                                    aria-label="Close @tab.DisplayName" @onclick="() => CloseTabAsync(tab)">
                                 &times;
                             </button>
                         }
@@ -194,8 +196,18 @@
                 .OrderBy(tab => tab.StartOrder),
         ];
 
+        // The secondary graph that was shown when Tammi last closed, once it has been opened again, unless the view has
+        // shown something since.
+        if (ViewState.GetShown(_id) is null
+            && TabsKeeper.TakeRestoredShownGraph(_path) is { } restored
+            && _tabs.OfType<WorkspaceGitGraph>().FirstOrDefault(graph => graph.Path == restored) is { } restoredGraph)
+        {
+            ViewState.SetShown(_id, restoredGraph);
+        }
+
         // The tab the view was showing, or the repository's graph if it wasn't showing one or it has been closed.
         _shown = ViewState.GetShown(_id) is { } shown && _tabs.Contains(shown) ? shown : _tabs.FirstOrDefault();
+        TabsKeeper.SetShownGraph(_path, _shown is WorkspaceGitGraph { IsPrimary: false } shownGraph ? shownGraph.Path : null);
     }
 
     private void ShowTab(IMainAreaTab tab)

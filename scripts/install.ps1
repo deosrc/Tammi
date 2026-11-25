@@ -42,7 +42,7 @@ try {
     Expand-Archive -Path $archive -DestinationPath (Join-Path $work 'unpacked')
     New-Item -ItemType Directory -Path $destination -Force | Out-Null
     Copy-Item -Path (Join-Path $work 'unpacked\*') -Destination $destination -Recurse -Force
-    & (Join-Path $destination 'Deosrc.Tammi.Windows.exe')
+    Start-Process -FilePath (Join-Path $destination 'Deosrc.Tammi.Windows.exe')
 } finally {
     Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
 }

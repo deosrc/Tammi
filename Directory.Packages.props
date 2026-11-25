@@ -6,11 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup Label="Blazor">
-    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.15" />
   </ItemGroup>
 
   <ItemGroup Label="Markdown">
@@ -18,8 +18,8 @@
   </ItemGroup>
 
   <ItemGroup Label="Windows host">
-    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.120" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.120" />
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.130" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.130" />
   </ItemGroup>
 
   <ItemGroup Label="Linux host">
@@ -39,7 +39,7 @@
 
   <ItemGroup Label="Tests">
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
-    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>
 
 </Project>
