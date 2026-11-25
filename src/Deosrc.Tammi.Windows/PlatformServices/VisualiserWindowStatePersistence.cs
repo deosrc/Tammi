@@ -28,11 +28,16 @@ internal static class VisualiserWindowStatePersistence
 
         // It's been created at its default size, in physical pixels.
         var defaultSize = appWindow.Size;
-        ScreenRect[] screens =
-        [
-            .. DisplayArea.FindAll().Select(area => new ScreenRect(
-                area.WorkArea.X, area.WorkArea.Y, area.WorkArea.Width, area.WorkArea.Height)),
-        ];
+
+        // FindAll returns a WinRT collection, which throws an InvalidCastException when it's enumerated, so it's indexed.
+        var areas = DisplayArea.FindAll();
+        var screens = new ScreenRect[areas.Count];
+        for (var i = 0; i < screens.Length; i++)
+        {
+            var workArea = areas[i].WorkArea;
+            screens[i] = new ScreenRect(workArea.X, workArea.Y, workArea.Width, workArea.Height);
+        }
+
         var main = mainWindow?.AppWindow;
         var mainBounds = main is null
             ? (screens.Length > 0 ? screens[0] : new ScreenRect(0, 0, defaultSize.Width, defaultSize.Height))
