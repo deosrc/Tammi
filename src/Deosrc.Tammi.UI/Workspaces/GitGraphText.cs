@@ -69,16 +69,6 @@ public static class GitGraphText
     };
 
     /// <summary>
-    /// The CSS class of a branch or tag label.
-    /// </summary>
-    public static string ReferenceClass(GitReferenceKind kind) => kind switch
-    {
-        GitReferenceKind.LocalBranch => "git-graph-ref-local",
-        GitReferenceKind.RemoteBranch => "git-graph-ref-remote",
-        _ => "git-graph-ref-tag",
-    };
-
-    /// <summary>
     /// Groups a commit's labels so a local branch and its remote-tracking branch (e.g. <c>main</c> and
     /// <c>origin/main</c>) share one badge. Other labels stay on their own. Order follows the first label of each group.
     /// </summary>

@@ -47,3 +47,207 @@
     display: flex;
     gap: var(--spacingHorizontalS);
 }
+
+/* The header and every row share the columns shown (--git-graph-columns), set by GitGraphView. The user's widths
+   (--git-graph-col-*) are set by dragging the header's handles (GitGraphView.razor.js). Until then, the graph fits its
+   lanes (wide enough for its heading) and the others have their defaults. Description takes the space left, down to
+   its minimum, after which the list scrolls sideways. */
+.git-graph-list {
+  --git-graph-graph-column: var(--git-graph-col-graph, max(var(--git-graph-width), 48px));
+
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  background: var(--colorNeutralBackground1);
+}
+
+.git-graph-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--git-graph-columns);
+  align-items: center;
+  gap: var(--space-3);
+  min-width: var(--git-graph-columns-min-width);
+  height: 28px;
+  padding: 0 var(--space-3) 0 var(--space-2);
+  border-bottom: 1px solid var(--colorNeutralStroke2);
+  background: var(--colorNeutralBackground1);
+  color: var(--colorNeutralForeground3);
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
+  white-space: nowrap;
+}
+
+/* The heading itself doesn't clip, so its handle can reach into the gap. Its label does. */
+.git-graph-heading {
+  position: relative;
+  min-width: 0;
+}
+
+.git-graph-heading-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A column's resize handle: a thin line in the gap between two headings, with a wider area to grab. */
+.git-graph-column-handle {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.git-graph-column-handle::before {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 3px;
+  width: 1px;
+  background: var(--colorNeutralStroke2);
+  content: "";
+}
+
+.git-graph-column-handle-end {
+  right: calc(var(--space-3) / -2 - 3px);
+}
+
+.git-graph-column-handle-start {
+  left: calc(var(--space-3) / -2 - 4px);
+}
+
+.git-graph-column-handle:hover::before,
+.git-graph-column-handle.dragging::before,
+.git-graph-column-handle:focus-visible::before {
+  left: 2px;
+  width: 3px;
+  background: var(--colorBrandStroke1);
+}
+
+.git-graph-column-handle:focus-visible {
+  outline: none;
+}
+
+.git-graph-list:focus-visible {
+  outline: 2px solid var(--colorBrandStroke1);
+  outline-offset: -2px;
+}
+
+/* Every row is exactly as high as GitGraphRowView.RowHeight, so the list knows where each one is. */
+.git-graph-row {
+  display: grid;
+  grid-template-columns: var(--git-graph-columns);
+  align-items: center;
+  gap: var(--space-3);
+  min-width: var(--git-graph-columns-min-width);
+  height: 26px;
+  padding: 0 var(--space-3) 0 var(--space-2);
+  cursor: default;
+  white-space: nowrap;
+}
+
+.git-graph-row:hover {
+  background: var(--colorSubtleBackgroundHover);
+}
+
+.git-graph-row.selected {
+  background: var(--colorBrandBackground2);
+}
+
+.git-graph-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.git-graph-subject,
+.git-graph-author,
+.git-graph-date,
+.git-graph-row .git-graph-sha {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.git-graph-author,
+.git-graph-date {
+  color: var(--colorNeutralForeground3);
+  font-size: var(--fontSizeBase200);
+}
+
+.git-graph-sha {
+  font-family: var(--fontFamilyMonospace);
+  font-size: var(--fontSizeBase200);
+}
+
+.git-graph-row .git-graph-sha {
+  color: var(--colorNeutralForeground3);
+}
+
+
+/* Branch and tag labels: a rounded outline as wide as its icons and full name need, one line. The branch HEAD is on, and
+   a detached HEAD, are filled. */
+.git-graph-ref {
+  --git-graph-ref-colour: var(--colorBrandForeground1);
+
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--git-graph-ref-colour);
+  border-radius: 999px;
+  color: var(--git-graph-ref-colour);
+  font-size: var(--fontSizeBase200);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* A label that starts with its icons has less room before them than after its name. */
+.git-graph-ref-icon-first {
+  padding-inline-start: var(--space-1);
+}
+
+.git-graph-ref-remote {
+  --git-graph-ref-colour: var(--colorNeutralForeground3);
+}
+
+.git-graph-ref-tag {
+  --git-graph-ref-colour: var(--colorStatusWarningForeground1);
+}
+
+.git-graph-ref-current {
+  border-color: var(--colorBrandBackground);
+  background: var(--colorBrandBackground);
+  color: var(--colorNeutralForegroundOnBrand);
+  font-weight: var(--fontWeightSemibold);
+}
+
+/* The icons are close together, closer than to the name. */
+.git-graph-ref-icons {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Each icon's own element is as big as the icon, not the 16px it was made at, so none of that room is left between them. */
+.git-graph-ref-icons > * {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.git-graph-ref-icons > * + * {
+  margin-inline-start: -1px;
+}
+
+.git-graph-ref ::deep svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
