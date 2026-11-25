@@ -15,16 +15,19 @@ public sealed class TabBarTests : BunitContext
         Services.AddFluentUIComponents();
     }
 
-    private static TabBarItem Item(string key, string? label = null, bool active = false, RenderFragment? indicator = null) =>
-        new(key, "/" + key, key + " tooltip", label, Indicator: indicator, Active: active);
+    private static TabBarItem Item(
+        string key, string? label = null, bool active = false, RenderFragment? indicator = null, bool pinned = false) =>
+        new(key, "/" + key, key + " tooltip", label, Indicator: indicator, Active: active, PinnedLast: pinned);
 
     private IRenderedComponent<TabBar> Render(
         IReadOnlyList<TabBarItem>? fixedItems = null,
         IReadOnlyList<TabBarItem>? items = null,
         Action<TabBarItem>? onClose = null,
         RenderFragment? end = null,
-        IReadOnlyList<TabBarItem>? trailing = null) =>
+        IReadOnlyList<TabBarItem>? trailing = null,
+        Action<TabBarMove>? onMove = null) =>
         Render<TabBar>(parameters => parameters
+            .Add(bar => bar.OnMove, onMove is null ? default : EventCallback.Factory.Create(this, onMove))
             .Add(bar => bar.AriaLabel, "Main")
             .Add(bar => bar.FixedItems, fixedItems ?? [])
             .Add(bar => bar.Items, items ?? [])
@@ -166,5 +169,61 @@ public sealed class TabBarTests : BunitContext
         var menuItems = bar.FindAll(".tab-bar-menu-item");
         Assert.Single(menuItems[0].QuerySelectorAll(".test-icon"));
         Assert.Empty(menuItems[1].QuerySelectorAll(".test-icon"));
+    }
+
+    [Fact]
+    public void OnlyTheClosableTabsThatArentPinned_CanBeMoved()
+    {
+        var bar = Render(
+            fixedItems: [Item("home", "Home")],
+            items: [Item("one", "One"), Item("usage", "Usage", pinned: true)],
+            trailing: [Item("settings", "Settings")],
+            onMove: _ => { });
+
+        Assert.Equal(["one"], bar.FindAll(".tab-bar-tab.movable").Select(tab => tab.GetAttribute("data-key")));
+    }
+
+    [Fact]
+    public void WithoutOnMove_NoTabCanBeMoved()
+    {
+        var bar = Render(items: [Item("one", "One"), Item("two", "Two")]);
+
+        Assert.Empty(bar.FindAll(".tab-bar-tab.movable"));
+    }
+
+    [Theory]
+    [InlineData("one", "three", true, 2)]
+    [InlineData("three", "one", false, 0)]
+    [InlineData("one", "two", true, 1)]
+    // Never after the pinned tab.
+    [InlineData("one", "usage", true, 2)]
+    public async Task MovingATabNextToAnother_RaisesOnMoveWithItsNewPlace(string key, string other, bool after, int index)
+    {
+        TabBarMove? moved = null;
+        var bar = Render(
+            items: [Item("one", "One"), Item("two", "Two"), Item("three", "Three"), Item("usage", "Usage", pinned: true)],
+            onMove: move => moved = move);
+
+        await bar.InvokeAsync(() => bar.Instance.MoveTab(key, other, after));
+
+        Assert.Equal(key, moved?.Item.Key);
+        Assert.Equal(index, moved?.Index);
+    }
+
+    [Theory]
+    // Already there.
+    [InlineData("two", "one", true)]
+    [InlineData("usage", "one", false)]
+    [InlineData("one", "missing", true)]
+    public async Task MovingATabWhereItCantGo_RaisesNothing(string key, string other, bool after)
+    {
+        TabBarMove? moved = null;
+        var bar = Render(
+            items: [Item("one", "One"), Item("two", "Two"), Item("usage", "Usage", pinned: true)],
+            onMove: move => moved = move);
+
+        await bar.InvokeAsync(() => bar.Instance.MoveTab(key, other, after));
+
+        Assert.Null(moved);
     }
 }

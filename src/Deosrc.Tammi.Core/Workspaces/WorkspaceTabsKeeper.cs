@@ -9,9 +9,11 @@ public sealed class WorkspaceTabsKeeper(
     IWorkspaceStore workspaces,
     OpenWorkspaceTabsStore store,
     WorkspaceGitGraphs? gitGraphs = null,
-    MainTabOrder? tabOrder = null) : IDisposable
+    MainTabOrder? tabOrder = null,
+    MainAreaTabArrangement? arrangement = null) : IDisposable
 {
     private readonly MainTabOrder _order = tabOrder ?? new MainTabOrder();
+    private readonly MainAreaTabArrangement _arrangement = arrangement ?? new MainAreaTabArrangement();
     private readonly SemaphoreSlim _saving = new(1, 1);
     private string? _active;
     private string? _activeRepository;
@@ -76,6 +78,7 @@ public sealed class WorkspaceTabsKeeper(
             }
 
             gitGraphs.Changed += OnGraphsChanged;
+            _arrangement.Changed += OnGraphsChanged;
         }
 
         var listed = saved.Tabs.Any(tab => tab.Kind == SavedTab.WorkspaceKind)
@@ -191,6 +194,7 @@ public sealed class WorkspaceTabsKeeper(
         if (gitGraphs is not null)
         {
             gitGraphs.Changed -= OnGraphsChanged;
+            _arrangement.Changed -= OnGraphsChanged;
         }
 
         _order.Changed -= OnOrderChanged;
@@ -225,9 +229,10 @@ public sealed class WorkspaceTabsKeeper(
 
             foreach (var graph in gitGraphs?.StandaloneGraphs() ?? [])
             {
-                var others = (gitGraphs?.For(graph.WorkspaceId) ?? [])
-                    .Where(other => !other.IsPrimary)
-                    .OrderBy(other => other.StartOrder)
+                // In the order of the repository's tabs.
+                var others = _arrangement.Arrange(
+                        graph.WorkspaceId,
+                        (gitGraphs?.For(graph.WorkspaceId) ?? []).Where(other => !other.IsPrimary))
                     .Select(other => new SavedTab(SavedTab.GitGraphKind, Path: other.Path))
                     .ToList();
                 SavedTab? shownGraph = null;

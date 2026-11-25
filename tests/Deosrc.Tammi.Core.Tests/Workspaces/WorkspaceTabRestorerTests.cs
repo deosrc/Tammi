@@ -62,6 +62,26 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task MovedTabs_AreOpenedAgainInTheirNewOrder()
+    {
+        var firstRun = NewRun();
+        await firstRun.Restorer.RestoreAsync(_workspace);
+        var agent = await firstRun.Agents.StartAsync(_workspace, Resumable);
+        var graph = firstRun.Graphs.Open(_workspace, _workspace.Repositories[0]);
+        firstRun.Arrangement.Move(_workspace.Id, [agent, graph], ((IMainAreaTab)graph).Id, 0);
+        await firstRun.Restorer.WhenSavedAsync();
+        await firstRun.DisposeAsync();
+
+        var secondRun = NewRun();
+        await secondRun.Restorer.RestoreAsync(_workspace);
+
+        var restoredGraph = Assert.Single(secondRun.Graphs.For(_workspace.Id));
+        var restoredAgent = Assert.Single(secondRun.Agents.For(_workspace.Id));
+        Assert.True(restoredGraph.StartOrder < restoredAgent.StartOrder);
+        await secondRun.DisposeAsync();
+    }
+
+    [Fact]
     public async Task RestoreAsync_OnlyTheFirstTimeForAWorkspace()
     {
         var run = NewRun();
@@ -174,10 +194,15 @@ public sealed class WorkspaceTabRestorerTests : IAsyncDisposable
             _settings,
             new FakeTimeProvider(new DateTimeOffset(2026, 11, 4, 12, 0, 0, TimeSpan.Zero)));
         var graphs = new WorkspaceGitGraphs(new GitRepositoryReader(), new GitWorkingTree(new GitCli()), new GitSync(new GitCli()), new GitTags(new GitCli()), new GitBranches(new GitCli()), new GitStash(new GitCli()), new GitDiffs(new GitRepositoryReader(), new GitCli()), _settings);
-        return new Run(agents, graphs, new WorkspaceTabRestorer(agents, graphs));
+        var arrangement = new MainAreaTabArrangement();
+        return new Run(agents, graphs, arrangement, new WorkspaceTabRestorer(agents, graphs, arrangement: arrangement));
     }
 
-    private sealed record Run(WorkspaceAgents Agents, WorkspaceGitGraphs Graphs, WorkspaceTabRestorer Restorer)
+    private sealed record Run(
+        WorkspaceAgents Agents,
+        WorkspaceGitGraphs Graphs,
+        MainAreaTabArrangement Arrangement,
+        WorkspaceTabRestorer Restorer)
         : IAsyncDisposable
     {
         public async ValueTask DisposeAsync()

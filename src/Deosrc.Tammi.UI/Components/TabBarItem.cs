@@ -12,6 +12,10 @@ namespace Deosrc.Tammi.UI.Components;
 /// <param name="Icon">The icon before the label.</param>
 /// <param name="Indicator">The status indicator after the label, if the tab has one: a dot, a progress spinner or nothing.</param>
 /// <param name="Active">Whether the tab is the one shown.</param>
+/// <param name="PinnedLast">
+/// Whether the tab stays at the end of the tabs that can be closed (e.g. AI Usage): it can't be moved, and no tab can
+/// be moved after it. Only the last of a bar's tabs can be pinned.
+/// </param>
 public sealed record TabBarItem(
     string Key,
     string Href,
@@ -19,4 +23,5 @@ public sealed record TabBarItem(
     string? Label = null,
     RenderFragment? Icon = null,
     RenderFragment? Indicator = null,
-    bool Active = false);
+    bool Active = false,
+    bool PinnedLast = false);
