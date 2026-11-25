@@ -138,7 +138,7 @@
 @code {
     // A count, in a badge. In a tab, a status gives it the status's colour.
     private static RenderFragment Count(int count, WorkspaceStatus? status) =>
-        @<FluentBadge Appearance="BadgeAppearance.Filled" Color="@StatusColor(status)">@count</FluentBadge>;
+        @<FluentBadge Class="home-count" Appearance="BadgeAppearance.Filled" Color="@StatusColor(status)">@count</FluentBadge>;
 
     private static BadgeColor StatusColor(WorkspaceStatus? status) => status switch
     {

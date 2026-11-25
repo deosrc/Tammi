@@ -2029,6 +2029,11 @@ a {
   margin-bottom: var(--space-4);
 }
 
+/* The count after a tab's or a group's name. */
+.home-count {
+  margin-left: var(--spacingHorizontalS);
+}
+
 .home-group {
   margin-bottom: var(--space-4);
 }
