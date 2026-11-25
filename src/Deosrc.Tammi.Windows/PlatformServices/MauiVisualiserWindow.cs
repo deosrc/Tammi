@@ -91,8 +91,29 @@ internal sealed class MauiVisualiserWindow(
             }
         };
         webView.Navigated += (_, _) => Push();
+
+        // MAUI on Windows keeps the app running while any window is open, so closing the main window has to close the
+        // visualiser too, as on Linux.
+        var mainWindow = application.Windows.FirstOrDefault();
+        void CloseWithMain(object? sender, EventArgs e) => MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (_window is { } open)
+            {
+                application.CloseWindow(open);
+            }
+        });
+        if (mainWindow is not null)
+        {
+            mainWindow.Destroying += CloseWithMain;
+        }
+
         window.Destroying += (_, _) =>
         {
+            if (mainWindow is not null)
+            {
+                mainWindow.Destroying -= CloseWithMain;
+            }
+
             feed.Changed -= Push;
             refreshing.Dispose();
             settings.Changed -= ApplyAlwaysOnTop;
