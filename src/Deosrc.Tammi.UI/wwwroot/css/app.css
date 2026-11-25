@@ -1927,41 +1927,6 @@ a {
   margin: var(--space-2) var(--space-3) 0;
 }
 
-/* Two buttons joined into one control, the pressed one highlighted. */
-.segmented {
-  display: inline-flex;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.segmented-option {
-  padding: var(--space-1) var(--space-3);
-  border: none;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  cursor: pointer;
-}
-
-.segmented-option + .segmented-option {
-  border-left: 1px solid var(--color-border);
-}
-
-.segmented-option:hover {
-  background: var(--color-surface-hover);
-}
-
-.segmented-option[aria-pressed="true"] {
-  background: var(--color-accent);
-  color: var(--color-accent-text);
-}
-
-.segmented-option:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: -2px;
-}
-
 .git-graph-body {
   display: flex;
   flex: 1;
@@ -2063,12 +2028,6 @@ a {
   stroke-width: 2.25;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-.segmented-small .segmented-option {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px var(--space-2);
 }
 
 .git-commit-files,
@@ -2266,112 +2225,6 @@ a {
 
 .git-commit-file-openable.selected {
   background: var(--colorBrandBackground2);
-}
-
-/* A file's diff, in place of the graph. */
-.git-diff {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  background: var(--color-surface);
-}
-
-.git-diff-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.git-diff-title {
-  min-width: 0;
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.git-diff-source {
-  flex: 1;
-  color: var(--color-text-muted);
-}
-
-.git-diff-body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  container-type: inline-size;
-  /* Swiping sideways at the edge mustn't go back or forward in the web view's history. */
-  overscroll-behavior-x: none;
-}
-
-.git-diff-settings {
-  position: relative;
-}
-
-/* Catches a click anywhere else, to close the popover. */
-.git-diff-settings-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-}
-
-.git-diff-settings-popover {
-  position: absolute;
-  top: calc(100% + var(--space-1));
-  right: 0;
-  z-index: 11;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  width: 20rem;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
-}
-
-.git-diff-settings-popover label {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.git-diff-settings-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-/* A number with a minus button before it and a plus button after it, instead of the browser's up and down arrows. */
-.git-diff-stepper {
-  display: flex;
-  align-items: stretch;
-  gap: var(--space-1);
-}
-
-.git-diff-stepper input {
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-.git-diff-stepper input::-webkit-inner-spin-button,
-.git-diff-stepper input::-webkit-outer-spin-button {
-  margin: 0;
-  -webkit-appearance: none;
-}
-
-.git-diff-settings-popover .git-diff-settings-check {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 /* Two columns need room: below this width a side by side diff shows as unified. */
