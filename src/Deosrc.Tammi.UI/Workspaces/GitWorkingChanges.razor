@@ -482,7 +482,7 @@
     private static string DiscardSubject(DiscardRequest request) => request.Files switch
     {
         null => "all unstaged changes",
-        { Count: 1 } files => $"the changes to {files[0].Path}",
+        { Count: 1 } files => $"the changes to {CommitFileTree.NameOf(files[0].Path)}",
         var files => $"the changes to {files.Count} files",
     };
 

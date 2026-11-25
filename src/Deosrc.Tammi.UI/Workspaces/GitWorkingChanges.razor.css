@@ -9,6 +9,11 @@
   overflow: auto;
 }
 
+/* The panel has its own side padding, so its messages don't need the margin they have elsewhere. */
+.git-working ::deep .panel-message {
+  margin-inline: 0;
+}
+
 /* The unstaged and staged files share the space above the message evenly, each scrolling on its own. */
 .git-working-section {
   display: flex;
