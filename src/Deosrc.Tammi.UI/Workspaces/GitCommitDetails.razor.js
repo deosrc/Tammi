@@ -11,6 +11,11 @@ const minLowerHeight = 120;
 // at `savedHeight` (the default when it's null), and `dotNet.OnMessageHeightChanged` is told the height the user
 // chooses. When the panel is too short for it, the body is shown shorter (but never less than three lines).
 export function attachMessageSplitter(root, message, bar, savedHeight, dotNet) {
+  // Null when the panel has left the page before this ran; it's attached again on its next render.
+  if (!root || !message || !bar) {
+    return null;
+  }
+
   const linesHeight = (lines) => {
     const style = getComputedStyle(message);
     const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.4;
@@ -39,6 +44,10 @@ export function attachMessageSplitter(root, message, bar, savedHeight, dotNet) {
       // The panel has gone: the height is lost, which only means the body opens at its old height next time.
     }),
   });
+
+  if (!script) {
+    return null;
+  }
 
   return {
     dispose() {

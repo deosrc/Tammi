@@ -138,6 +138,11 @@ const minListWidth = 320;
 // Makes `bar`, the Splitter between the commit list and the details panel in `body`, resize the panel. The panel starts
 // at `savedWidth` (the default when it's null), and `dotNet.OnDetailsWidthChanged` is told the width the user chooses.
 export function attachSplitter(body, bar, savedWidth, dotNet) {
+  // Null when the graph has left the page before this ran.
+  if (!body || !bar) {
+    return null;
+  }
+
   const details = bar.nextElementSibling;
   return attachSplitterBar({
     bar,

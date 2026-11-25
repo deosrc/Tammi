@@ -9,6 +9,11 @@ import { attach } from "../Components/Splitter.razor.js";
 // The body starts at `savedHeight`, the height the user chose in pixels (its natural height when it's null), and
 // `dotNet.OnMessageHeightChanged` is told the height the user chooses.
 export function attachSplitter(root, body, bar, savedHeight, dotNet) {
+  // Null when the panel has left the page before this ran.
+  if (!root || !body || !bar) {
+    return null;
+  }
+
   const frameHeight = () => {
     const style = getComputedStyle(body);
     return parseFloat(style.paddingTop) + parseFloat(style.paddingBottom)

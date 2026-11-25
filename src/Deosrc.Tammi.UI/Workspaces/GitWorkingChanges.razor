@@ -200,9 +200,9 @@
                 LayoutStore.Current.GitWorkingMessageHeight,
                 _self ??= DotNetObjectReference.Create(this));
         }
-        catch (JSDisconnectedException)
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException)
         {
-            // The web view has gone.
+            // The web view has gone, or the panel left the page while its script was loading.
         }
     }
 
