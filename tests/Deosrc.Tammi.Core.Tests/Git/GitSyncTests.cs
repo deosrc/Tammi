@@ -221,6 +221,32 @@ public sealed class GitSyncTests : IDisposable
     }
 
     [Fact]
+    public async Task PushAsync_RewrittenHistory_ThrowsForcePushRequired()
+    {
+        var (_, mine, _) = await TwoClonesAsync();
+        await _repos.CommitFileAsync(mine, "a.txt", "a", "Add a");
+        await _sync.PushAsync(mine, cancellationToken: Token);
+        await _repos.RunAsync(mine, "commit", "--amend", "-m", "Add a again");
+
+        GitSyncException ex = await Assert.ThrowsAsync<GitSyncException>(() => _sync.PushAsync(mine, cancellationToken: Token));
+
+        Assert.Equal(GitSyncFailure.ForcePushRequired, ex.Failure);
+    }
+
+    [Fact]
+    public async Task PushAsync_Force_ReplacesRewrittenHistory()
+    {
+        var (_, mine, _) = await TwoClonesAsync();
+        await _repos.CommitFileAsync(mine, "a.txt", "a", "Add a");
+        await _sync.PushAsync(mine, cancellationToken: Token);
+        await _repos.RunAsync(mine, "commit", "--amend", "-m", "Add a again");
+
+        await _sync.PushAsync(mine, cancellationToken: Token, force: true);
+
+        Assert.Equal(0, _reader.ReadStatus(mine).UnpushedCommitCount);
+    }
+
+    [Fact]
     public async Task PushAsync_NoRemote_ThrowsNoRemote()
     {
         string repo = _repos.PathTo("local");

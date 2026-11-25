@@ -30,6 +30,12 @@ public abstract class AgentHooks
     public abstract AgentState? StateAfter(JsonElement hookEvent);
 
     /// <summary>
+    /// Whether a hook event means the agent is ready for input, e.g. once the user has trusted the workspace.
+    /// </summary>
+    /// <param name="hookEvent">The event, as the hook sent it.</param>
+    public virtual bool IsReadyForInput(JsonElement hookEvent) => false;
+
+    /// <summary>
     /// Whether the hooks report the Agent Session's ID (see <see cref="SessionIdFrom"/>), so Tammi can resume the
     /// session without setting its ID at launch.
     /// </summary>

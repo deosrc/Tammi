@@ -167,6 +167,13 @@ public sealed class WorkspaceAgents(
     {
         try
         {
+            // An agent whose hooks say when it's ready (e.g. after the user answers a trust prompt) is waited for, as
+            // typing before then goes to the prompt instead of the input.
+            if (agent.Ready is { } ready)
+            {
+                await Task.WhenAny(ready, agent.Ended).ConfigureAwait(false);
+            }
+
             await Task.Delay(PrefillDelay, timeProvider).ConfigureAwait(false);
             if (agent.Ended.IsCompleted || IsDisposed)
             {
@@ -360,6 +367,7 @@ public sealed class WorkspaceAgents(
 
         var store = SessionsOf(workspace);
         agent.Agent.StateChanged += _ => Changed?.Invoke(agent.WorkspaceId);
+        agent.Session.TitleChanged += () => Changed?.Invoke(agent.WorkspaceId);
 
         // Raised when the agent's hooks report its session, or that it has moved to another one.
         agent.Agent.SessionIdChanged += changed => _ = RecordSessionAsync(agent, store);

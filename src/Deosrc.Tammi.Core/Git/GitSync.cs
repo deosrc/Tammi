@@ -28,7 +28,7 @@ public sealed class GitSync(IGitCli git) : IGitSync
     }
 
     /// <inheritdoc />
-    public async Task PushAsync(string path, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
+    public async Task PushAsync(string path, IProgress<string>? progress = null, CancellationToken cancellationToken = default, bool force = false)
     {
         await RequireBranchAsync(GitSyncOperation.Push, path, cancellationToken).ConfigureAwait(false);
 
@@ -39,6 +39,11 @@ public sealed class GitSync(IGitCli git) : IGitSync
             cancellationToken).ConfigureAwait(false);
 
         List<string> arguments = ["push", "--progress"];
+        if (force)
+        {
+            arguments.Add("--force-with-lease");
+        }
+
         if (!upstream.Succeeded)
         {
             string remote = await ChooseRemoteAsync(path, cancellationToken).ConfigureAwait(false);

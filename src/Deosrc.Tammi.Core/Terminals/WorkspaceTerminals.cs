@@ -85,6 +85,7 @@ public sealed class WorkspaceTerminals(TerminalLauncher launcher, ILogger<Worksp
             terminal.Name,
             terminal.Session.Pty.ProcessId,
             folder);
+        terminal.Session.TitleChanged += () => Changed?.Invoke(terminal.WorkspaceId);
         _ = terminal.Session.Pty.Exited.ContinueWith(
             exited =>
             {
