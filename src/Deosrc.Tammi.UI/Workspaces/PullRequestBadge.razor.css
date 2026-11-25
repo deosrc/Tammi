@@ -12,6 +12,12 @@
     cursor: pointer;
 }
 
+/* The state icon, the badge's first child: a little room before it, and more between it and the number. The badge is
+   large, 24px high, so the 16px icon has room above and below it. */
+.pull-request-badge ::deep fluent-badge > svg {
+    margin-inline: var(--spacingHorizontalXXS) var(--spacingHorizontalXS);
+}
+
 .pull-request-badge:focus-visible {
     outline: 2px solid var(--colorStrokeFocus2);
     outline-offset: 1px;

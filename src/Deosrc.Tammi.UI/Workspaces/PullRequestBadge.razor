@@ -9,7 +9,7 @@
 <button type="button" class="pull-request-badge" title="@PullRequestText.Title(PullRequest)"
         aria-label="@PullRequestText.Title(PullRequest)"
         @onclick="OpenInBrowser" @onclick:stopPropagation>
-    <FluentBadge Appearance="BadgeAppearance.Tint" Color="ColorOf(PullRequest.State)"
+    <FluentBadge Appearance="BadgeAppearance.Tint" Size="BadgeSize.Large" Color="ColorOf(PullRequest.State)"
                  IconStart="@IconOf(PullRequest.State)">
         #@PullRequest.Number
         @if (ChecksTone is { } tone)
