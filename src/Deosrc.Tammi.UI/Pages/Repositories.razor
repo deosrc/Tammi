@@ -64,7 +64,7 @@
                 else if (context.Problem is null && context.Status is { } status
                          && GitStatusText.UncommittedChangeCount(status) > 0)
                 {
-                    <FluentBadge Appearance="BadgeAppearance.Filled" Color="BadgeColor.Warning">Local changes</FluentBadge>
+                    <FluentBadge Appearance="BadgeAppearance.Tint" Color="BadgeColor.Warning">Local changes</FluentBadge>
                 }
             </TemplateColumn>
             <TemplateColumn Title="Ahead">

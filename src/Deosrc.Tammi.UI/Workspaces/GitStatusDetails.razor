@@ -41,7 +41,7 @@
                     }
                     @if (submodule.Status is { } inner && GitStatusText.NeedsAttention(inner))
                     {
-                        <FluentBadge Class="git-status-badge" Appearance="BadgeAppearance.Filled" Color="BadgeColor.Warning">
+                        <FluentBadge Class="git-status-badge" Appearance="BadgeAppearance.Tint" Color="BadgeColor.Warning">
                             @(inner.IsChanged ? "Changed" : "Out of sync")
                         </FluentBadge>
                     }

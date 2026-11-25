@@ -185,7 +185,7 @@
                             <div class="workspace-badges">
                                 @if (summary.LocalChanges.Count > 0)
                                 {
-                                    <FluentBadge Appearance="BadgeAppearance.Filled" Color="BadgeColor.Warning">Local changes</FluentBadge>
+                                    <FluentBadge Appearance="BadgeAppearance.Tint" Color="BadgeColor.Warning">Local changes</FluentBadge>
                                 }
                                 <GitSyncChips Ahead="@summary.Repositories.Sum(repository => repository.Git.Status?.AheadBy ?? 0)"
                                               Behind="@summary.Repositories.Sum(repository => repository.Git.Status?.BehindBy ?? 0)"

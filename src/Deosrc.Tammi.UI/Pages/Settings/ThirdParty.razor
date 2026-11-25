@@ -20,7 +20,7 @@
                         <span class="third-party-name">@component.Name</span>
                         @if (component.Platforms != ThirdPartyPlatforms.All)
                         {
-                            <FluentBadge Appearance="BadgeAppearance.Outline">@component.Platforms</FluentBadge>
+                            <FluentBadge Appearance="BadgeAppearance.Tint">@component.Platforms</FluentBadge>
                         }
                         <FluentButton Class="third-party-website" Size="ButtonSize.Small"
                                       OnClick="() => OpenExternal(component.ProjectUrl)">
