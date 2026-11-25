@@ -428,7 +428,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
       modified, added, deleted and renamed, each as a coloured icon (a pencil, a plus, a trash can and an arrow) and a
       number, leaving out any with none. A toggle shows them as a list (each file's name in bold, then its folder) or
       as a tree of folders, each with a folder icon and, after its name, the same counts for the files in it, which
-      start closed and open and close, with folders holding only one folder joined (e.g. `src/app`). Each file keeps
+      start open and can be closed and opened, with folders holding only one folder joined (e.g. `src/app`). Each file keeps
       its A, M, D or R.
     - Every graph shows files the same way, and the list or tree choice is kept in the settings, so it's the same
       after a restart. Like the columns, whether Authors is collapsed is shared by every graph until the app closes.

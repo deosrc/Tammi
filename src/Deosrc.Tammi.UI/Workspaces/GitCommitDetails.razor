@@ -150,8 +150,8 @@
 
 @code {
     private readonly string _id = $"git-commit-{Guid.NewGuid():N}";
-    // The tree's open folders, by path. Folders start closed.
-    private readonly HashSet<string> _expanded = [];
+    // The tree's closed folders, by path. Folders start open.
+    private readonly HashSet<string> _collapsed = [];
     private ElementReference _root;
     private ElementReference _message;
     private Splitter? _messageSplitter;
@@ -190,12 +190,12 @@
 
     protected override void OnParametersSet()
     {
-        // Another commit's folders all start closed.
+        // Another commit's folders all start open.
         string? shown = Graph.Selected?.Commit.Sha ?? Graph.SelectedStash?.Sha;
         if (shown != _shownSha)
         {
             _shownSha = shown;
-            _expanded.Clear();
+            _collapsed.Clear();
         }
     }
 
@@ -310,9 +310,9 @@
 
     private void ToggleFolder(string path)
     {
-        if (!_expanded.Remove(path))
+        if (!_collapsed.Remove(path))
         {
-            _expanded.Add(path);
+            _collapsed.Add(path);
         }
     }
 
@@ -344,7 +344,7 @@
             var indent = $"--git-commit-tree-depth: {depth}";
             if (node.IsFolder)
             {
-                var open = _expanded.Contains(node.Path);
+                var open = !_collapsed.Contains(node.Path);
                 <li role="treeitem" aria-expanded="@(open ? "true" : "false")" @key="node.Path">
                     <button type="button" class="git-commit-file git-commit-folder" style="@indent" title="@node.Path"
                             @onclick="() => ToggleFolder(node.Path)">
