@@ -2,22 +2,32 @@ using System.Runtime.InteropServices;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.UI.Windowing;
 using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Settings;
 
 namespace Deosrc.Tammi.Windows.PlatformServices;
 
 /// <summary>
-/// The frame of the main window, which has its title bar removed but keeps its border, so Windows still resizes it,
-/// snaps it and draws its shadow. The app bar takes the title bar's place.
+/// The frame of the main window. With the Slim Window setting on, the window has its title bar removed but keeps its
+/// border, so Windows still resizes it, snaps it and draws its shadow. The app bar takes the title bar's place.
 /// </summary>
 internal sealed class WindowsWindowFrame : IWindowFrame
 {
     private const uint WmNcLButtonDown = 0x00A1;
     private const nint HtCaption = 2;
 
+    private readonly ISettingsStore _settings;
     private Microsoft.UI.Xaml.Window? _window;
+    private bool _isSlim;
     private bool _isMaximized;
 
-    public bool HasTitleBar => false;
+    public WindowsWindowFrame(ISettingsStore settings)
+    {
+        _settings = settings;
+        _isSlim = settings.Current.General.SlimWindow;
+        settings.Changed += OnSettingsChanged;
+    }
+
+    public bool HasTitleBar => !_isSlim;
 
     // The window keeps its border, which Windows resizes it by.
     public bool NeedsResizeEdges => false;
@@ -27,18 +37,17 @@ internal sealed class WindowsWindowFrame : IWindowFrame
     public event Action? Changed;
 
     /// <summary>
-    /// Removes the window's title bar and follows its state. Call it when the window is created.
+    /// Removes the window's title bar if the Slim Window setting is on, and follows the window's state. Call it when
+    /// the window is created.
     /// </summary>
     public void Attach(Microsoft.UI.Xaml.Window window)
     {
         _window = window;
 
-        // MAUI extends its page into the title bar and draws a title there; with no title bar there's nothing to
-        // extend into.
-        window.ExtendsContentIntoTitleBar = false;
-        if (window.AppWindow.Presenter is OverlappedPresenter presenter)
+        // Otherwise the window is left as MAUI made it.
+        if (_isSlim)
         {
-            presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: false);
+            ApplyTitleBar();
         }
 
         _isMaximized = Presenter?.State == OverlappedPresenterState.Maximized;
@@ -54,6 +63,36 @@ internal sealed class WindowsWindowFrame : IWindowFrame
                 }
             }
         };
+    }
+
+    // Removes or restores the title bar when the setting is changed.
+    private void OnSettingsChanged()
+    {
+        var slim = _settings.Current.General.SlimWindow;
+        if (slim == _isSlim)
+        {
+            return;
+        }
+
+        _isSlim = slim;
+        MainThread.BeginInvokeOnMainThread(ApplyTitleBar);
+        Changed?.Invoke();
+    }
+
+    // MAUI extends its page into the title bar and draws a title there; with no title bar there's nothing to extend
+    // into. Without the setting, the title bar comes back as MAUI has it.
+    private void ApplyTitleBar()
+    {
+        if (_window is null)
+        {
+            return;
+        }
+
+        _window.ExtendsContentIntoTitleBar = !_isSlim;
+        if (_window.AppWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: !_isSlim);
+        }
     }
 
     public void Minimize() => MainThread.BeginInvokeOnMainThread(() => Presenter?.Minimize());

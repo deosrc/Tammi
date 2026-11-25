@@ -7,7 +7,8 @@ namespace Deosrc.Tammi.Core.Platform;
 public interface IWindowFrame
 {
     /// <summary>
-    /// Whether the platform's title bar is removed, so the app bar takes over its controls and dragging.
+    /// Whether the window has the platform's title bar. When it doesn't, the app bar takes over its controls and
+    /// dragging. It follows the Slim Window setting, so it can change while the app runs.
     /// </summary>
     bool HasTitleBar { get; }
 
@@ -23,7 +24,7 @@ public interface IWindowFrame
     bool IsMaximized { get; }
 
     /// <summary>
-    /// Raised after <see cref="IsMaximized"/> changes. It can be raised on any thread.
+    /// Raised after <see cref="HasTitleBar"/> or <see cref="IsMaximized"/> changes. It can be raised on any thread.
     /// </summary>
     event Action? Changed;
 

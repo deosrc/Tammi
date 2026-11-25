@@ -1,5 +1,5 @@
 // Makes the app bar's empty space act as the window's title bar: dragging it moves the window, and double-clicking it
-// maximises or restores the window.
+// maximises or restores the window. Only while the bar has the window-title-bar class: the window has no title bar.
 
 // Anything that does something of its own when clicked, so isn't empty space. The tabs are whole, not only their links,
 // so the room around a tab's close button isn't either.
@@ -24,10 +24,11 @@ const interactive = [
 // How far the pointer has to move with the button held before the window moves, so a click or a double-click doesn't.
 const threshold = 4;
 
-const isEmptySpace = (event) => event.button === 0 && !event.target.closest(interactive);
-
 // Watches the bar. Returns an object to dispose when the bar goes.
 export function attach(bar, dotNet) {
+    const isEmptySpace = (event) =>
+        bar.classList.contains("window-title-bar") && event.button === 0 && !event.target.closest(interactive);
+
     let pressed = null;
 
     const down = (event) => {

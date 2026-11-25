@@ -48,7 +48,9 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || Frame.HasTitleBar)
+        // Attached whatever the window has, as the title bar can be removed while the app runs. The script only acts
+        // while the bar is the title bar.
+        if (!firstRender)
         {
             return;
         }

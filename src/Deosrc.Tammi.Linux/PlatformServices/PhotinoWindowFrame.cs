@@ -2,12 +2,14 @@ using System.Runtime.InteropServices;
 using Photino.NET;
 using Deosrc.Tammi.Core;
 using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Settings;
 
 namespace Deosrc.Tammi.Linux.PlatformServices;
 
 /// <summary>
-/// The frame of the Photino main window, which is chromeless: it has no title bar and no resize borders, so the page
-/// offers both. Moving and resizing are handed to the window manager through GTK, which works on Wayland as well as X11.
+/// The frame of the Photino main window. With the Slim Window setting on, the window is undecorated: it has no title bar
+/// and no resize borders, so the page offers both. Moving and resizing are handed to the window manager through GTK,
+/// which works on Wayland as well as X11.
 /// </summary>
 /// <remarks>
 /// Photino doesn't give out its GTK window, so it's found among the app's top-level windows by its title.
@@ -21,12 +23,21 @@ internal sealed partial class PhotinoWindowFrame : IWindowFrame
     private const int PrimaryButton = 1;
 
     private readonly PhotinoWindow _window;
+    private readonly ISettingsStore _settings;
+    private bool _isSlim;
     private bool _isMaximized;
 
-    public PhotinoWindowFrame(PhotinoWindow window)
+    /// <summary>
+    /// Follows the window, which is already undecorated if the Slim Window setting is on (see
+    /// <see cref="IsSlim"/>).
+    /// </summary>
+    public PhotinoWindowFrame(PhotinoWindow window, ISettingsStore settings)
     {
         _window = window;
+        _settings = settings;
+        _isSlim = IsSlim(settings);
         _isMaximized = window.Maximized;
+        settings.Changed += OnSettingsChanged;
 
         // The window manager can maximise and restore the window too (e.g. from a keyboard shortcut).
         window
@@ -35,7 +46,7 @@ internal sealed partial class PhotinoWindowFrame : IWindowFrame
             .RegisterSizeChangedHandler((_, _) => Update());
     }
 
-    public bool HasTitleBar => false;
+    public bool HasTitleBar => !_isSlim;
 
     public bool NeedsResizeEdges => true;
 
@@ -66,6 +77,31 @@ internal sealed partial class PhotinoWindowFrame : IWindowFrame
             gtk_window_begin_resize_drag(gtkWindow, (int)edge, PrimaryButton, screenX, screenY, 0);
         }
     });
+
+    /// <summary>
+    /// Whether the window is to have no title bar: whether the Slim Window setting is on.
+    /// </summary>
+    public static bool IsSlim(ISettingsStore settings) => settings.Current.General.SlimWindow;
+
+    // Adds or removes the window's decorations when the setting is changed.
+    private void OnSettingsChanged()
+    {
+        var slim = IsSlim(_settings);
+        if (slim == _isSlim)
+        {
+            return;
+        }
+
+        _isSlim = slim;
+        _window.Invoke(() =>
+        {
+            if (FindGtkWindow() is var gtkWindow && gtkWindow != IntPtr.Zero)
+            {
+                gtk_window_set_decorated(gtkWindow, !slim);
+            }
+        });
+        Changed?.Invoke();
+    }
 
     private void Update()
     {
@@ -117,6 +153,9 @@ internal sealed partial class PhotinoWindowFrame : IWindowFrame
     // Owned by the window, so not freed.
     [LibraryImport(Gtk)]
     private static partial IntPtr gtk_window_get_title(IntPtr window);
+
+    [LibraryImport(Gtk)]
+    private static partial void gtk_window_set_decorated(IntPtr window, [MarshalAs(UnmanagedType.Bool)] bool decorated);
 
     [LibraryImport(Gtk)]
     private static partial void gtk_window_begin_move_drag(IntPtr window, int button, int rootX, int rootY, uint timestamp);
