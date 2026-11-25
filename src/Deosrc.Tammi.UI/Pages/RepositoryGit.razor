@@ -1,4 +1,6 @@
 @page "/repositories/git/{EncodedPath}"
+@page "/repositories/git/{EncodedPath}/tabs/{TabId}"
+@inject NavigationManager Navigation
 @implements IDisposable
 @using Deosrc.Tammi.Core.Agents
 @using Deosrc.Tammi.Core.Settings
@@ -17,114 +19,21 @@
     <RepositoryToolsPanel RepositoryPath="@_path" Shown="_shown" OnShowAgent="ShowTab" OnStartAgent="StartAgentAsync" OnOpenGit="OpenGit"
                           OnOpenTerminal="StartTerminal" />
     <div class="workspace-main">
-        <div class="session-tabs">
-            <div class="session-tab-list" role="tablist" aria-label="Repository">
-                @foreach (var tab in _tabs)
-                {
-                    var shown = ReferenceEquals(tab, _shown);
-                    var primary = tab is WorkspaceGitGraph { IsPrimary: true };
-                    <div class="session-tab @(shown ? "active" : null)" @key="tab">
-                        <button type="button" class="session-tab-label" role="tab"
-                                aria-selected="@(shown ? "true" : "false")"
-                                @onclick="() => ShowTab(tab)">
-                            @if (tab is WorkspaceTerminal)
-                            {
-                                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <rect x="3" y="4" width="18" height="16" rx="2" />
-                                    <polyline points="7 9 10 12 7 15" />
-                                    <path d="M12 15h5" />
-                                </svg>
-                            }
-                            else if (tab is WorkspaceAgent iconAgent)
-                            {
-                                <AgentIcon Definition="iconAgent.Agent.Definition" />
-                            }
-                            else if (tab is WorkspaceGitGraph)
-                            {
-                                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <circle cx="6" cy="5" r="2" />
-                                    <circle cx="6" cy="19" r="2" />
-                                    <circle cx="18" cy="9" r="2" />
-                                    <path d="M6 7v10" />
-                                    <path d="M18 11c0 4-6 4-10.5 6.5" />
-                                </svg>
-                            }
-                            <span class="tab-label-text">@tab.DisplayName</span>
-                            @if (tab is IWorkspaceProcess { HasExited: true })
-                            {
-                                <span class="session-tab-status">
-                                    @(tab is WorkspaceAgent { State: AgentState.Error } ? "Error" : "Exited")
-                                </span>
-                            }
-                            @if (tab is WorkspaceAgent agent)
-                            {
-                                @* Agents' tabs show their state at the end, next to the close button. *@
-                                <AgentStateIndicator State="agent.State" />
-                            }
-                        </button>
-                        <SessionTabTooltip Name="@tab.DisplayName"
-                                           Detail="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })" />
-                        @if (!primary)
-                        {
-                            <button type="button" class="tab-close" title="Close @tab.DisplayName"
-                                    aria-label="Close @tab.DisplayName" @onclick="() => CloseTabAsync(tab)">
-                                &times;
-                            </button>
-                        }
-                    </div>
-                }
-            </div>
-            @* Outside the tab list, which scrolls and would clip the menu. Closes on Escape, or on a click anywhere
-               outside the menu. *@
-            <div class="menu-anchor session-tab-new" @onkeydown="OnNewMenuKeyDown">
-                <button type="button" class="session-tab-label session-tab-icon" title="New…" aria-label="New…"
-                        aria-haspopup="menu" aria-expanded="@(_newMenuOpen ? "true" : "false")"
-                        @onclick="() => _newMenuOpen = !_newMenuOpen">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M12 5v14M5 12h14" />
-                    </svg>
-                </button>
-                @if (_newMenuOpen)
-                {
-                    <div class="menu-backdrop" @onclick="() => _newMenuOpen = false"></div>
-                    <ul class="menu" role="menu" aria-label="New">
-                        <li role="none">
-                            <button type="button" class="menu-item" role="menuitem" @onclick="StartTerminal">
-                                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <rect x="3" y="4" width="18" height="16" rx="2" />
-                                    <polyline points="7 9 10 12 7 15" />
-                                    <path d="M12 15h5" />
-                                </svg>
-                                Terminal
-                            </button>
-                        </li>
-                        @if (AgentDefinitions.Count > 0)
-                        {
-                            <li role="separator" class="menu-separator"></li>
-                        }
-                        @for (var i = 0; i < AgentDefinitions.Count; i++)
-                        {
-                            var definition = AgentDefinitions[i];
-                            var name = string.IsNullOrWhiteSpace(definition.Name) ? WorkspaceAgents.DefaultName : definition.Name;
-                            <li role="none" @key="i">
-                                <button type="button" class="menu-item" role="menuitem"
-                                        @onclick="() => StartAgentAsync(definition)">
-                                    <AgentIcon Definition="definition" />
-                                    @name
-                                </button>
-                            </li>
-                        }
-                    </ul>
-                }
-            </div>
-        </div>
+        @* The repository's own git graph is always the first tab, and the last opens the New menu. *@
+        <TabBar Class="session-tabs" AriaLabel="Repository" FixedItems="PrimaryItems" Items="TabItems"
+                OnClose="CloseTabItemAsync">
+            <EndContent>
+                <NewTabMenu AgentDefinitions="AgentDefinitions" OnTerminal="_ => StartTerminal()"
+                            OnAgent="request => StartAgentAsync(request.Definition)" />
+            </EndContent>
+        </TabBar>
         @if (_startError is not null)
         {
-            <p class="error workspace-main-error">@_startError</p>
+            <PanelMessage OnDismiss="DismissStartError">@_startError</PanelMessage>
         }
         @if (_shown is IWorkspaceProcess shownProcess)
         {
-            <Terminal @key="shownProcess" Session="shownProcess.Session" Class="workspace-terminal" />
+            <Terminal @key="shownProcess" Session="shownProcess.Session" />
         }
         else if (_shown is WorkspaceGitGraph shownGraph)
         {
@@ -139,12 +48,19 @@
     private IReadOnlyList<IMainAreaTab> _tabs = [];
     private IMainAreaTab? _shown;
     private string? _startError;
-    private bool _newMenuOpen;
+
+    private void DismissStartError() => _startError = null;
 
     private IReadOnlyList<AgentDefinition> AgentDefinitions => SettingsStore.Current.Agents.Definitions;
 
     [Parameter]
     public string EncodedPath { get; set; } = "";
+
+    /// <summary>
+    /// The ID of the secondary tab shown, or <see langword="null"/> for the repository's own git graph.
+    /// </summary>
+    [Parameter]
+    public string? TabId { get; set; }
 
     protected override void OnInitialized()
     {
@@ -167,6 +83,29 @@
         // Opens the repository's own graph, which is always the first tab.
         GitGraphs.OpenRepository(path);
         UpdateTabs();
+
+        // The tab was closed, or isn't there (e.g. an old address): show the repository's own graph.
+        if (TabId is not null && _shown is null)
+        {
+            Navigation.NavigateTo(AppRoutes.RepositoryGit(_path), replace: true);
+            return;
+        }
+
+        // The secondary graph that was shown when Tammi last closed, once it has been opened again, unless the view has
+        // shown something since: go to it.
+        if (TabId is null
+            && ViewState.GetShown(_id) is null
+            && TabsKeeper.TakeRestoredShownGraph(_path) is { } restored
+            && _tabs.OfType<WorkspaceGitGraph>().FirstOrDefault(graph => graph.Path == restored) is { } restoredGraph)
+        {
+            Navigation.NavigateTo(RouteOf(restoredGraph), replace: true);
+            return;
+        }
+
+        // Remembers what the view shows, so it shows the same again when the user comes back to it, and the keeper what
+        // was shown, for the next time Tammi starts.
+        ViewState.SetShown(_id, _shown is WorkspaceGitGraph { IsPrimary: true } ? null : _shown);
+        TabsKeeper.SetShownGraph(_path, _shown is WorkspaceGitGraph { IsPrimary: false } shownGraph ? shownGraph.Path : null);
     }
 
     public void Dispose()
@@ -196,25 +135,67 @@
                 .OrderBy(tab => tab.StartOrder),
         ];
 
-        // The secondary graph that was shown when Tammi last closed, once it has been opened again, unless the view has
-        // shown something since.
-        if (ViewState.GetShown(_id) is null
-            && TabsKeeper.TakeRestoredShownGraph(_path) is { } restored
-            && _tabs.OfType<WorkspaceGitGraph>().FirstOrDefault(graph => graph.Path == restored) is { } restoredGraph)
+        // The tab the address names, or the repository's graph if it names none. Null if the tab isn't open.
+        _shown = TabId is null ? _tabs.FirstOrDefault() : _tabs.FirstOrDefault(tab => tab.Id == TabId);
+    }
+
+    private static RenderFragment IconOf(Microsoft.FluentUI.AspNetCore.Components.Icon icon) =>
+        builder =>
         {
-            ViewState.SetShown(_id, restoredGraph);
-        }
+            builder.OpenComponent<FluentIcon<Microsoft.FluentUI.AspNetCore.Components.Icon>>(0);
+            builder.AddAttribute(1, "Value", icon);
+            builder.CloseComponent();
+        };
 
-        // The tab the view was showing, or the repository's graph if it wasn't showing one or it has been closed.
-        _shown = ViewState.GetShown(_id) is { } shown && _tabs.Contains(shown) ? shown : _tabs.FirstOrDefault();
-        TabsKeeper.SetShownGraph(_path, _shown is WorkspaceGitGraph { IsPrimary: false } shownGraph ? shownGraph.Path : null);
-    }
+    // The repository's own git graph, which can't be closed.
+    private IReadOnlyList<TabBarItem> PrimaryItems => [.. _tabs.Where(IsPrimary).Select(ToItem)];
 
-    private void ShowTab(IMainAreaTab tab)
-    {
-        ViewState.SetShown(_id, tab is WorkspaceGitGraph { IsPrimary: true } ? null : tab);
-        UpdateTabs();
-    }
+    private IReadOnlyList<TabBarItem> TabItems => [.. _tabs.Where(tab => !IsPrimary(tab)).Select(ToItem)];
+
+    private static bool IsPrimary(IMainAreaTab tab) => tab is WorkspaceGitGraph { IsPrimary: true };
+
+    private TabBarItem ToItem(IMainAreaTab tab) => new(
+        tab.Id,
+        RouteOf(tab),
+        tab switch
+        {
+            IWorkspaceProcess process => $"{tab.DisplayName}\n{process.WorkingDirectory}",
+            WorkspaceGitGraph graph => $"{tab.DisplayName}\n{graph.Path}",
+            _ => tab.DisplayName,
+        },
+        tab.DisplayName,
+        tab switch
+        {
+            WorkspaceTerminal => IconOf(new Icons.Regular.Size20.WindowConsole()),
+            WorkspaceAgent agent => builder =>
+            {
+                builder.OpenComponent<AgentIcon>(0);
+                builder.AddAttribute(1, "Definition", agent.Agent.Definition);
+                builder.CloseComponent();
+            },
+            WorkspaceGitGraph => IconOf(new Icons.Regular.Size16.BranchFork()),
+            _ => null,
+        },
+        // Agents' tabs show their state at the end, next to the close button.
+        tab is WorkspaceAgent stateAgent
+            ? builder =>
+            {
+                builder.OpenComponent<AgentStateIndicator>(0);
+                builder.AddAttribute(1, "State", stateAgent.State);
+                builder.CloseComponent();
+            }
+            : null,
+        ReferenceEquals(tab, _shown));
+
+    private Task CloseTabItemAsync(TabBarItem item) =>
+        _tabs.FirstOrDefault(tab => tab.Id == item.Key) is { } tab ? CloseTabAsync(tab) : Task.CompletedTask;
+
+    // The address of a tab: the repository's own graph is at the repository's address.
+    private string RouteOf(IMainAreaTab tab) =>
+        tab is WorkspaceGitGraph { IsPrimary: true } ? AppRoutes.RepositoryGit(_path) : AppRoutes.RepositoryGitTab(_path, tab.Id);
+
+    // Shows a tab by going to its address, which is what changes the tab shown.
+    private void ShowTab(IMainAreaTab tab) => Navigation.NavigateTo(RouteOf(tab));
 
     // Opens a submodule's or another worktree's graph as a new secondary tab.
     private void OpenGit(string path)
@@ -224,7 +205,6 @@
 
     private void StartTerminal()
     {
-        _newMenuOpen = false;
         _startError = null;
         try
         {
@@ -239,7 +219,6 @@
 
     private async Task StartAgentAsync(AgentDefinition definition)
     {
-        _newMenuOpen = false;
         _startError = null;
         try
         {
@@ -257,8 +236,7 @@
     {
         if (e.Key == "Escape")
         {
-            _newMenuOpen = false;
-        }
+            }
     }
 
     private async Task CloseTabAsync(IMainAreaTab tab)
@@ -267,7 +245,7 @@
         {
             // Show the next tab, or the previous one if it was the last.
             var index = _tabs.ToList().IndexOf(tab);
-            ViewState.SetShown(_id, index + 1 < _tabs.Count ? _tabs[index + 1] : _tabs[index - 1]);
+            Navigation.NavigateTo(RouteOf(index + 1 < _tabs.Count ? _tabs[index + 1] : _tabs[index - 1]));
         }
 
         var closing = tab switch

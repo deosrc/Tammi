@@ -1,0 +1,29 @@
+/* The Workspace View's dashboard: its sections side by side, as many as fit. */
+.dashboard-title {
+    margin: 0 0 var(--spacingVerticalL);
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--spacingHorizontalL);
+    align-items: start;
+}
+
+/* Each heading has its count beside it, like the side panel's section headers. */
+.dashboard-section h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--spacingHorizontalS);
+    margin: 0 0 var(--spacingVerticalS);
+    font-size: var(--fontSizeBase300);
+}
+
+.dashboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacingVerticalS);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}

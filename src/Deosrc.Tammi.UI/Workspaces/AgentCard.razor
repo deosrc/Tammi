@@ -1,0 +1,40 @@
+@using Deosrc.Tammi.Core.Agents
+
+@* One open agent's card, in the side panel's Agents section and on the dashboard: its icon, name and state. Clicking the
+   card shows the agent's tab. Its name is a button for the keyboard, whose click reaches the card. *@
+<SidePanelCard Tone="AgentStateText.CardTone(Agent.State)" Chosen="Shown" Hint="@($"Show {Agent.DisplayName}")"
+               OnClick="() => OnShow.InvokeAsync(Agent)">
+    <Heading>
+        <AgentIcon Definition="Agent.Agent.Definition" />
+        <button type="button" class="agent-card-name" title="@Agent.WorkingDirectory"
+                aria-current="@(Shown ? "true" : null)">@Agent.DisplayName</button>
+        <AgentStateIndicator State="Agent.State" />
+    </Heading>
+    <ChildContent>
+        @if (Agent.State == AgentState.Error && Agent.Agent.ExitCode is { } exitCode)
+        {
+            <p class="agent-card-detail">Exit code @exitCode</p>
+        }
+        @if (Agent.SessionProblem is { } problem)
+        {
+            <p class="agent-card-detail agent-card-warning" title="@problem">Its session can't be resumed later.</p>
+        }
+    </ChildContent>
+</SidePanelCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public WorkspaceAgent Agent { get; set; } = null!;
+
+    /// <summary>
+    /// Whether the agent's tab is the one being shown.
+    /// </summary>
+    [Parameter]
+    public bool Shown { get; set; }
+
+    /// <summary>
+    /// Called with the agent to show its tab, when the card is clicked.
+    /// </summary>
+    [Parameter]
+    public EventCallback<WorkspaceAgent> OnShow { get; set; }
+}

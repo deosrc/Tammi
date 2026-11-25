@@ -15,108 +15,48 @@
         <div class="git-graph-toolbar">
             @if (!Graph.IsStandalone)
             {
-                <div class="segmented" role="group" aria-label="Commits shown">
-                    @* Icons, with the text as the tooltip. *@
-                    <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.WorkspaceBranch)"
-                            aria-label="Workspace branch"
-                            title="Workspace branch: HEAD, the workspace branch, its upstream and its merge target"
-                            @onclick="() => Graph.SetScopeAsync(GitGraphScope.WorkspaceBranch)">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <circle cx="12" cy="5" r="2" />
-                            <circle cx="12" cy="12" r="2" />
-                            <circle cx="12" cy="19" r="2" />
-                            <path d="M12 7v3M12 14v3" />
-                        </svg>
-                    </button>
-                    <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.Everything)"
-                            aria-label="Everything" title="Everything: every branch and tag"
-                            @onclick="() => Graph.SetScopeAsync(GitGraphScope.Everything)">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <circle cx="6" cy="5" r="2" />
-                            <circle cx="6" cy="19" r="2" />
-                            <circle cx="18" cy="9" r="2" />
-                            <path d="M6 7v10M18 11c0 4-12 2-12 6" />
-                        </svg>
-                    </button>
-                </div>
+                @* Icons, with the text as the tooltip. *@
+                <ToggleButtonGroup TValue="GitGraphScope" Options="_scopes" Value="Graph.Scope"
+                                   ValueChanged="scope => Graph.SetScopeAsync(scope)" AriaLabel="Commits shown" />
             }
             <div class="git-graph-actions">
                 <div class="git-graph-sync" role="group" aria-label="Sync with the remote">
-                    <button type="button" class="button button-secondary git-graph-action" title="Download new commits from the remotes"
-                            disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Fetch)">
-                        @if (Graph.Syncing == GitSyncOperation.Fetch)
-                        {
-                            <span class="spinner git-graph-action-spinner" role="progressbar" aria-label="Fetching"></span>
-                        }
-                        else
-                        {
-                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
-                            </svg>
-                        }
-                        <span class="git-graph-action-label">Fetch</span>
-                    </button>
-                    <button type="button" class="button button-secondary git-graph-action"
-                            title="Fetch the upstream branch and bring this branch up to date with it"
-                            disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Pull)">
-                        @if (Graph.Syncing == GitSyncOperation.Pull)
-                        {
-                            <span class="spinner git-graph-action-spinner" role="progressbar" aria-label="Pulling"></span>
-                        }
-                        else
-                        {
-                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M12 5v14M19 12l-7 7-7-7" />
-                            </svg>
-                        }
-                        <span class="git-graph-action-label">Pull</span>
-                    </button>
-                    <button type="button" class="button button-secondary git-graph-action" title="Upload this branch's commits to the remote"
-                            disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Push)">
-                        @if (Graph.Syncing == GitSyncOperation.Push)
-                        {
-                            <span class="spinner git-graph-action-spinner" role="progressbar" aria-label="Pushing"></span>
-                        }
-                        else
-                        {
-                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M12 19V5M5 12l7-7 7 7" />
-                            </svg>
-                        }
-                        <span class="git-graph-action-label">Push</span>
-                    </button>
+                    <FluentButton Appearance="ButtonAppearance.Subtle" Title="Download new commits from the remotes"
+                                  IconStart="@(new Icons.Regular.Size20.ArrowSync())"
+                                  Loading="@(Graph.Syncing == GitSyncOperation.Fetch)"
+                                  Disabled="@(Graph.Syncing is not null)"
+                                  OnClick="() => Graph.SyncAsync(GitSyncOperation.Fetch)">Fetch</FluentButton>
+                    <FluentButton Appearance="ButtonAppearance.Subtle"
+                                  Title="Fetch the upstream branch and bring this branch up to date with it"
+                                  IconStart="@(new Icons.Regular.Size20.ArrowDown())"
+                                  Loading="@(Graph.Syncing == GitSyncOperation.Pull)"
+                                  Disabled="@(Graph.Syncing is not null)"
+                                  OnClick="() => Graph.SyncAsync(GitSyncOperation.Pull)">Pull</FluentButton>
+                    <FluentButton Appearance="ButtonAppearance.Subtle" Title="Upload this branch's commits to the remote"
+                                  IconStart="@(new Icons.Regular.Size20.ArrowUp())"
+                                  Loading="@(Graph.Syncing == GitSyncOperation.Push)"
+                                  Disabled="@(Graph.Syncing is not null)"
+                                  OnClick="() => Graph.SyncAsync(GitSyncOperation.Push)">Push</FluentButton>
                 </div>
-                <span class="git-graph-divider" role="separator" aria-orientation="vertical"></span>
+                <FluentDivider Vertical="true" />
                 <div class="git-graph-sync" role="group" aria-label="Stash">
-                    <button type="button" class="button button-secondary git-graph-action"
-                            title="Stash every change, including new files"
-                            disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
-                            @onclick="() => RunStashAsync(Graph.StashAsync())">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M12 3v11M8 10l4 4 4-4" />
-                            <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
-                        </svg>
-                        <span class="git-graph-action-label">Stash</span>
-                    </button>
-                    <button type="button" class="button button-secondary git-graph-action"
-                            title="Apply the newest stash and drop it"
-                            disabled="@(Graph.Stashes.Count == 0 || _stashing)"
-                            @onclick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M12 14V3M8 7l4-4 4 4" />
-                            <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
-                        </svg>
-                        <span class="git-graph-action-label">Pop</span>
-                    </button>
+                    <FluentButton Appearance="ButtonAppearance.Subtle" Title="Stash every change, including new files"
+                                  IconStart="@(new Icons.Regular.Size20.ArrowDownload())"
+                                  Disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
+                                  OnClick="() => RunStashAsync(Graph.StashAsync())">Stash</FluentButton>
+                    <FluentButton Appearance="ButtonAppearance.Subtle" Title="Apply the newest stash and drop it"
+                                  IconStart="@(new Icons.Regular.Size20.ArrowUpload())"
+                                  Disabled="@(Graph.Stashes.Count == 0 || _stashing)"
+                                  OnClick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">Pop</FluentButton>
                 </div>
             </div>
         </div>
 
         @* Only a failed fetch, pull or push is shown: the buttons' spinner says one is running. *@
-        @if (Graph.Syncing is null && Graph.SyncProblem is { } syncProblem)
+        @if (Graph.SyncProblem is { } syncProblem)
         {
-            <div class="error git-graph-sync-error" role="alert">
-                <div class="git-graph-sync-error-body">
+            <PanelMessage OnDismiss="Graph.DismissSyncProblem">
+                <ChildContent>
                     <p>@syncProblem.Message</p>
                     @if (syncProblem.Details.Length > 0 && syncProblem.Failure != GitSyncFailure.ForcePushRequired)
                     {
@@ -125,20 +65,15 @@
                             <pre class="git-graph-sync-details">@syncProblem.Details</pre>
                         </details>
                     }
+                </ChildContent>
+                <Actions>
                     @if (syncProblem.Failure == GitSyncFailure.ForcePushRequired)
                     {
-                        <p class="git-graph-sync-error-actions">
-                            <button type="button" class="button button-danger" @onclick="Graph.ForcePushAsync">Force push</button>
-                        </p>
+                        <FluentButton Appearance="ButtonAppearance.Primary" Class="danger-button" Size="ButtonSize.Small"
+                                      OnClick="Graph.ForcePushAsync">Force push</FluentButton>
                     }
-                </div>
-                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissSyncProblem">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M6 6l12 12M18 6 6 18" />
-                    </svg>
-                </button>
-            </div>
+                </Actions>
+            </PanelMessage>
         }
 
         @if (Graph.Problem is { } problem)
@@ -148,345 +83,219 @@
 
         @if (Graph.TagProblem is { } tagProblem)
         {
-            <div class="error git-graph-sync-error" role="alert">
-                <div class="git-graph-sync-error-body">
-                    <p>@tagProblem</p>
-                </div>
-                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissTagProblem">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M6 6l12 12M18 6 6 18" />
-                    </svg>
-                </button>
-            </div>
+            <PanelMessage OnDismiss="Graph.DismissTagProblem">@tagProblem</PanelMessage>
         }
 
         @if (Graph.BranchProblem is { } branchProblem)
         {
-            <div class="error git-graph-sync-error" role="alert">
-                <div class="git-graph-sync-error-body">
-                    <p>@branchProblem</p>
-                </div>
-                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissBranchProblem">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M6 6l12 12M18 6 6 18" />
-                    </svg>
-                </button>
-            </div>
+            <PanelMessage OnDismiss="Graph.DismissBranchProblem">@branchProblem</PanelMessage>
         }
 
         @if (Graph.DropRequest is { } dropRequest)
         {
-            <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-drop-stash-title">
-                <h3 id="confirm-drop-stash-title" class="alert-title">Drop @dropRequest.Name?</h3>
-                <p>
+            <PanelMessage Intent="MessageBarIntent.Warning" Role="alertdialog" Title="@($"Drop {dropRequest.Name}?")">
+                <ChildContent>
                     "@dropRequest.Message" is deleted without being applied, and Tammi can't bring it back.
-                </p>
-                <div class="settings-field-row">
-                    <button type="button" class="button button-danger" disabled="@_stashing"
-                            @onclick="() => RunStashAsync(Graph.ConfirmDropStashAsync())">Drop stash</button>
-                    <button type="button" class="button button-secondary" disabled="@_stashing"
-                            @onclick="Graph.CancelDropStash">Cancel</button>
-                </div>
-            </div>
+                </ChildContent>
+                <Actions>
+                    <FluentButton Appearance="ButtonAppearance.Primary" Class="danger-button" Size="ButtonSize.Small"
+                                  Disabled="@_stashing" OnClick="() => RunStashAsync(Graph.ConfirmDropStashAsync())">Drop stash</FluentButton>
+                    <FluentButton Size="ButtonSize.Small" Disabled="@_stashing" OnClick="Graph.CancelDropStash">Cancel</FluentButton>
+                </Actions>
+            </PanelMessage>
         }
 
         @if (Graph.PendingReset is { } reset)
         {
-            <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-reset-title">
-                <h3 id="confirm-reset-title" class="alert-title">
-                    @ResetTitle(reset.Mode) @(Graph.Refs.HeadBranch ?? "HEAD") to @reset.Sha[..Math.Min(7, reset.Sha.Length)]?
-                </h3>
-                <p>@ResetText(reset.Mode)</p>
-                <div class="settings-field-row">
-                    <button type="button" class="button @(reset.Mode == GitResetMode.Hard ? "button-danger" : null)"
-                            @onclick="Graph.ConfirmResetAsync">@ResetTitle(reset.Mode)</button>
-                    <button type="button" class="button button-secondary" @onclick="Graph.CancelReset">Cancel</button>
-                </div>
-            </div>
+            <PanelMessage Intent="MessageBarIntent.Warning" Role="alertdialog"
+                             Title="@($"{ResetTitle(reset.Mode)} {Graph.Refs.HeadBranch ?? "HEAD"} to {reset.Sha[..Math.Min(7, reset.Sha.Length)]}?")">
+                <ChildContent>@ResetText(reset.Mode)</ChildContent>
+                <Actions>
+                    <FluentButton Appearance="ButtonAppearance.Primary" Size="ButtonSize.Small"
+                                  Class="@(reset.Mode == GitResetMode.Hard ? "danger-button" : null)"
+                                  OnClick="Graph.ConfirmResetAsync">@ResetTitle(reset.Mode)</FluentButton>
+                    <FluentButton Size="ButtonSize.Small" OnClick="Graph.CancelReset">Cancel</FluentButton>
+                </Actions>
+            </PanelMessage>
         }
 
         @if (Graph.StashProblem is { } stashProblem)
         {
-            <div class="error git-graph-sync-error" role="alert">
-                <div class="git-graph-sync-error-body">
-                    <p>@stashProblem</p>
-                </div>
-                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissStashProblem">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M6 6l12 12M18 6 6 18" />
-                    </svg>
-                </button>
-            </div>
+            <PanelMessage OnDismiss="Graph.DismissStashProblem">@stashProblem</PanelMessage>
         }
 
         @if (_branchPrompt is { } branchPrompt)
         {
-            <form class="git-graph-tag-prompt" @onsubmit="SubmitBranchPromptAsync" @onsubmit:preventDefault="true">
-                <label>
-                    @(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")
-                    <input type="text" class="input" @bind="_branchName" @bind:event="oninput" @ref="_branchInput"
-                           spellcheck="false" />
-                </label>
-                <div class="git-graph-tag-prompt-actions">
-                    <button type="submit" class="button" disabled="@(!CanSubmitBranchPrompt)">
+            <form class="git-graph-prompt" @onsubmit="SubmitBranchPromptAsync" @onsubmit:preventDefault="true">
+                <FluentTextInput Label="@(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")"
+                                 Value="@_branchName" ValueChanged="name => _branchName = name ?? string.Empty" Immediate="true"
+                                 Autofocus="true" Spellcheck="false" Width="100%" />
+                <div class="git-graph-prompt-actions">
+                    <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Disabled="@(!CanSubmitBranchPrompt)">
                         @(branchPrompt.Kind == BranchPromptKind.Create ? "Create and checkout" : "Rename branch")
-                    </button>
+                    </FluentButton>
                     @if (branchPrompt.Kind == BranchPromptKind.Create)
                     {
-                        <button type="button" class="button button-secondary" disabled="@(!CanSubmitBranchPrompt)"
-                                @onclick="() => SubmitBranchPromptAsync(checkout: false)">
+                        <FluentButton Disabled="@(!CanSubmitBranchPrompt)" OnClick="() => SubmitBranchPromptAsync(checkout: false)">
                             Create branch
-                        </button>
+                        </FluentButton>
                     }
-                    <button type="button" class="button button-secondary" @onclick="() => _branchPrompt = null">Cancel</button>
+                    <FluentButton OnClick="() => _branchPrompt = null">Cancel</FluentButton>
                 </div>
             </form>
         }
 
         @if (_confirm is { } confirm)
         {
-            <form class="git-graph-tag-prompt" role="alertdialog" aria-label="Confirm delete"
+            <form class="git-graph-prompt" role="alertdialog" aria-label="Confirm delete"
                   @onsubmit="ConfirmAsync" @onsubmit:preventDefault="true">
                 <p>@confirm.Message</p>
-                <div class="git-graph-tag-prompt-actions">
-                    <button type="submit" class="button button-danger" @ref="_confirmButton">Delete</button>
-                    <button type="button" class="button button-secondary" @onclick="() => _confirm = null">Cancel</button>
+                <div class="git-graph-prompt-actions">
+                    <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Class="danger-button"
+                                  Autofocus="true">Delete</FluentButton>
+                    <FluentButton OnClick="() => _confirm = null">Cancel</FluentButton>
                 </div>
             </form>
         }
 
         @if (_tagPrompt is { } prompt)
         {
-            <form class="git-graph-tag-prompt" @onsubmit="() => SubmitTagPromptAsync(push: false)" @onsubmit:preventDefault="true">
-                <label>
-                    Tag name
-                    <input type="text" class="input" @bind="_tagName" @bind:event="oninput" autofocus
-                           spellcheck="false" />
-                </label>
-                <div class="git-graph-tag-prompt-actions">
-                    <button type="submit" class="button" disabled="@(!CanSubmitTagPrompt)">
+            <form class="git-graph-prompt" @onsubmit="() => SubmitTagPromptAsync(push: false)" @onsubmit:preventDefault="true">
+                <FluentTextInput Label="Tag name" Value="@_tagName" ValueChanged="name => _tagName = name ?? string.Empty"
+                                 Immediate="true" Autofocus="true" Spellcheck="false" Width="100%" />
+                <div class="git-graph-prompt-actions">
+                    <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Disabled="@(!CanSubmitTagPrompt)">
                         Create tag
-                    </button>
-                    <button type="button" class="button button-secondary" disabled="@(!CanSubmitTagPrompt)"
-                            @onclick="() => SubmitTagPromptAsync(push: true)">
+                    </FluentButton>
+                    <FluentButton Disabled="@(!CanSubmitTagPrompt)" OnClick="() => SubmitTagPromptAsync(push: true)">
                         Create and push tag
-                    </button>
-                    <button type="button" class="button button-secondary" @onclick="() => _tagPrompt = null">Cancel</button>
+                    </FluentButton>
+                    <FluentButton OnClick="() => _tagPrompt = null">Cancel</FluentButton>
                 </div>
             </form>
         }
 
         @if (_stashMenu is { } stashMenu)
         {
-            <ContextMenu @key="stashMenu" X="stashMenu.X" Y="stashMenu.Y" Label="Stash" OnClose="() => _stashMenu = null">
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
-                            @onclick="() => RunStashMenuAsync(Graph.PopStashAsync(stashMenu.Stash))">Pop stash</button>
-                </li>
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
-                            @onclick="() => RunStashMenuAsync(Graph.ApplyStashAsync(stashMenu.Stash))">Apply stash</button>
-                </li>
-                <li role="none">
-                    <button type="button" class="menu-item menu-item-danger" role="menuitem" disabled="@_stashing"
-                            @onclick="() => ConfirmDrop(stashMenu.Stash)">Drop stash</button>
-                </li>
-            </ContextMenu>
+            <PointMenu @key="stashMenu" X="stashMenu.X" Y="stashMenu.Y" Label="Stash" OnClose="() => _stashMenu = null">
+                <FluentMenuItem Disabled="@_stashing" OnClick="() => RunStashMenuAsync(Graph.PopStashAsync(stashMenu.Stash))">Pop stash</FluentMenuItem>
+                <FluentMenuItem Disabled="@_stashing" OnClick="() => RunStashMenuAsync(Graph.ApplyStashAsync(stashMenu.Stash))">Apply stash</FluentMenuItem>
+                <FluentMenuItem Class="danger-menu-item" Disabled="@_stashing" OnClick="() => ConfirmDrop(stashMenu.Stash)">Drop stash</FluentMenuItem>
+            </PointMenu>
         }
 
         @if (_commitMenu is { } commitMenu)
         {
-            <ContextMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
+            @* The menu is drawn again as what it waits for (each branch's upstream, whether the remote has each tag) is
+               found. *@
+            <PointMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
                 @if (Graph.Refs.HeadBranch is not null && commitMenu.Sha != Graph.Refs.HeadSha)
                 {
                     var mergeable = commitMenu.Branches.Where(b => b != Graph.Refs.HeadBranch).Concat(commitMenu.RemoteBranches).ToList();
                     @foreach (var branch in mergeable)
                     {
-                        <li role="none">
-                            <button type="button" class="menu-item" role="menuitem"
-                                    @onclick="() => RunBranchAsync(() => Graph.MergeBranchAsync(branch))">
-                                Merge @branch
-                            </button>
-                        </li>
-                        <li role="none">
-                            <button type="button" class="menu-item" role="menuitem"
-                                    @onclick="() => RunBranchAsync(() => Graph.RebaseBranchAsync(branch))">
-                                Rebase onto @branch
-                            </button>
-                        </li>
+                        <FluentMenuItem @key="@($"merge:{branch}")" OnClick="() => RunBranchAsync(() => Graph.MergeBranchAsync(branch))">Merge @branch</FluentMenuItem>
+                        <FluentMenuItem @key="@($"rebase:{branch}")" OnClick="() => RunBranchAsync(() => Graph.RebaseBranchAsync(branch))">Rebase onto @branch</FluentMenuItem>
                     }
                     @if (mergeable.Count > 0)
                     {
-                        <li role="separator" class="menu-separator"></li>
+                        <FluentDivider />
                     }
                 }
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateBranch(commitMenu)">
-                        Create branch…
-                    </button>
-                </li>
+                <FluentMenuItem OnClick="() => StartCreateBranch(commitMenu)">Create branch…</FluentMenuItem>
                 @foreach (var branch in commitMenu.Branches)
                 {
                     var isCurrent = branch == Graph.Refs.HeadBranch;
                     var isWorkspace = Graph.IsWorkspaceBranch(branch);
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem" disabled="@isCurrent"
-                                @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
-                            Checkout @branch@(isCurrent ? " (current)" : null)
-                        </button>
-                    </li>
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem" disabled="@isWorkspace"
-                                title="@(isWorkspace ? "The workspace branch can't be renamed here" : null)"
-                                @onclick="() => StartRenameBranch(branch)">
-                            Rename branch @branch…
-                        </button>
-                    </li>
-                    var deleteKey = DeleteBranchSubmenu + branch;
                     var hasUpstream = commitMenu.Upstreams.TryGetValue(branch, out var upstream);
-                    <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = deleteKey">
-                        <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu" disabled="@isWorkspace"
-                                title="@(isWorkspace ? "The workspace branch can't be deleted here" : null)"
-                                aria-expanded="@(commitMenu.OpenSubmenu == deleteKey ? "true" : "false")"
-                                @onclick="() => ToggleSubmenu(commitMenu, deleteKey)">
-                            <span class="tab-label-text">Delete branch @branch…</span>
-                            <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <polyline points="9 6 15 12 9 18"></polyline>
-                            </svg>
-                        </button>
-                        @if (commitMenu.OpenSubmenu == deleteKey && !isWorkspace)
-                        {
-                            <ul class="menu menu-submenu" role="menu" aria-label="Delete branch">
-                                <li role="none">
-                                    <button type="button" class="menu-item" role="menuitem" disabled="@isCurrent"
-                                            title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
-                                            @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: false, upstream)">
-                                        Local branch
-                                    </button>
-                                </li>
-                                <li role="none">
-                                    <button type="button" class="menu-item" role="menuitem" disabled="@(upstream is null)"
-                                            @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: false, deleteRemote: true, upstream)">
-                                        Remote branch@(!hasUpstream ? " (checking...)" : upstream is null ? " (none)" : $" ({upstream.Remote}/{upstream.Branch})")
-                                    </button>
-                                </li>
-                                <li role="none">
-                                    <button type="button" class="menu-item" role="menuitem" disabled="@(isCurrent || upstream is null)"
-                                            title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
-                                            @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: true, upstream)">
-                                        Local and remote branch
-                                    </button>
-                                </li>
-                            </ul>
-                        }
-                    </li>
+                    <FluentMenuItem @key="@($"checkout:{branch}")" Disabled="@isCurrent"
+                                    OnClick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
+                        Checkout @branch@(isCurrent ? " (current)" : null)
+                    </FluentMenuItem>
+                    <FluentMenuItem @key="@($"rename:{branch}")" Disabled="@isWorkspace"
+                                    Title="@(isWorkspace ? "The workspace branch can't be renamed here" : null)"
+                                    OnClick="() => StartRenameBranch(branch)">
+                        Rename branch @branch…
+                    </FluentMenuItem>
+                    <FluentMenuItem @key="@($"delete:{branch}")" Class="danger-menu-item" Disabled="@isWorkspace"
+                                    Title="@(isWorkspace ? "The workspace branch can't be deleted here" : null)">
+                        <ChildContent>Delete branch @branch…</ChildContent>
+                        <MenuItems>
+                            <FluentMenuItem Disabled="@isCurrent"
+                                            Title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
+                                            OnClick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: false, upstream)">
+                                Local branch
+                            </FluentMenuItem>
+                            <FluentMenuItem Disabled="@(upstream is null)"
+                                            OnClick="() => ConfirmDeleteBranch(branch, deleteLocal: false, deleteRemote: true, upstream)">
+                                Remote branch@(!hasUpstream ? " (checking...)" : upstream is null ? " (none)" : $" ({upstream.Remote}/{upstream.Branch})")
+                            </FluentMenuItem>
+                            <FluentMenuItem Disabled="@(isCurrent || upstream is null)"
+                                            Title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
+                                            OnClick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: true, upstream)">
+                                Local and remote branch
+                            </FluentMenuItem>
+                        </MenuItems>
+                    </FluentMenuItem>
                 }
                 @foreach (var branch in commitMenu.RemoteBranches)
                 {
-                    <li role="separator" class="menu-separator"></li>
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem"
-                                @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
-                            Checkout @branch
-                        </button>
-                    </li>
-                    <li role="none">
-                        <button type="button" class="menu-item menu-item-danger" role="menuitem"
-                                @onclick="() => ConfirmDeleteRemoteBranch(branch)">
-                            Delete remote branch @branch…
-                        </button>
-                    </li>
+                    <FluentDivider @key="@($"remote-divider:{branch}")" />
+                    <FluentMenuItem @key="@($"remote-checkout:{branch}")"
+                                    OnClick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">Checkout @branch</FluentMenuItem>
+                    <FluentMenuItem @key="@($"remote-delete:{branch}")" Class="danger-menu-item"
+                                    OnClick="() => ConfirmDeleteRemoteBranch(branch)">Delete remote branch @branch…</FluentMenuItem>
                 }
-                <li role="separator" class="menu-separator"></li>
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateTag(commitMenu)">
-                        Create tag…
-                    </button>
-                </li>
+                <FluentDivider />
+                <FluentMenuItem OnClick="() => StartCreateTag(commitMenu)">Create tag…</FluentMenuItem>
                 @if (commitMenu.Tags.Count == 1)
                 {
                     var tag = commitMenu.Tags[0];
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem"
-                                disabled="@(PushState(commitMenu, tag) is not false)"
-                                @onclick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
-                            Push tag @tag@(PushState(commitMenu, tag) is null ? " (checking...)" : PushState(commitMenu, tag) is true ? $" (already on {commitMenu.Remote})" : null)
-                        </button>
-                    </li>
-                    <li role="none">
-                        <button type="button" class="menu-item menu-item-danger" role="menuitem"
-                                @onclick="() => ConfirmDeleteTag(commitMenu, tag)">
-                            Delete tag @tag@DeleteSuffix(commitMenu, tag)
-                        </button>
-                    </li>
+                    <FluentMenuItem Disabled="@(PushState(commitMenu, tag) is not false)"
+                                    OnClick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
+                        Push tag @tag@(PushState(commitMenu, tag) is null ? " (checking...)" : PushState(commitMenu, tag) is true ? $" (already on {commitMenu.Remote})" : null)
+                    </FluentMenuItem>
+                    <FluentMenuItem Class="danger-menu-item" OnClick="() => ConfirmDeleteTag(commitMenu, tag)">
+                        Delete tag @tag@DeleteSuffix(commitMenu, tag)
+                    </FluentMenuItem>
                 }
                 else if (commitMenu.Tags.Count > 1)
                 {
-                    <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = PushSubmenu">
-                        <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
-                                aria-expanded="@(commitMenu.OpenSubmenu == PushSubmenu ? "true" : "false")"
-                                @onclick="() => ToggleSubmenu(commitMenu, PushSubmenu)">
-                            <span class="tab-label-text">Push tag…</span>
-                            <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <polyline points="9 6 15 12 9 18"></polyline>
-                            </svg>
-                        </button>
-                        @if (commitMenu.OpenSubmenu == PushSubmenu)
-                        {
-                            <ul class="menu menu-submenu" role="menu" aria-label="Push tag">
-                                @foreach (var tag in commitMenu.Tags)
-                                {
-                                    var state = PushState(commitMenu, tag);
-                                    <li role="none">
-                                        <button type="button" class="menu-item" role="menuitem" disabled="@(state is not false)"
-                                                @onclick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
-                                            @tag@(state is null ? " (checking...)" : state is true ? $" (already on {commitMenu.Remote})" : null)
-                                        </button>
-                                    </li>
-                                }
-                            </ul>
-                        }
-                    </li>
-                    <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = DeleteSubmenu">
-                        <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu"
-                                aria-expanded="@(commitMenu.OpenSubmenu == DeleteSubmenu ? "true" : "false")"
-                                @onclick="() => ToggleSubmenu(commitMenu, DeleteSubmenu)">
-                            <span class="tab-label-text">Delete tag…</span>
-                            <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <polyline points="9 6 15 12 9 18"></polyline>
-                            </svg>
-                        </button>
-                        @if (commitMenu.OpenSubmenu == DeleteSubmenu)
-                        {
-                            <ul class="menu menu-submenu" role="menu" aria-label="Delete tag">
-                                @foreach (var tag in commitMenu.Tags)
-                                {
-                                    <li role="none">
-                                        <button type="button" class="menu-item" role="menuitem"
-                                                @onclick="() => ConfirmDeleteTag(commitMenu, tag)">
-                                            @tag@DeleteSuffix(commitMenu, tag)
-                                        </button>
-                                    </li>
-                                }
-                            </ul>
-                        }
-                    </li>
+                    <FluentMenuItem>
+                        <ChildContent>Push tag…</ChildContent>
+                        <MenuItems>
+                            @foreach (var tag in commitMenu.Tags)
+                            {
+                                var state = PushState(commitMenu, tag);
+                                <FluentMenuItem @key="@($"push:{tag}")" Disabled="@(state is not false)"
+                                                OnClick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
+                                    @tag@(state is null ? " (checking...)" : state is true ? $" (already on {commitMenu.Remote})" : null)
+                                </FluentMenuItem>
+                            }
+                        </MenuItems>
+                    </FluentMenuItem>
+                    <FluentMenuItem Class="danger-menu-item">
+                        <ChildContent>Delete tag…</ChildContent>
+                        <MenuItems>
+                            @foreach (var tag in commitMenu.Tags)
+                            {
+                                <FluentMenuItem @key="@($"delete-tag:{tag}")" OnClick="() => ConfirmDeleteTag(commitMenu, tag)">
+                                    @tag@DeleteSuffix(commitMenu, tag)
+                                </FluentMenuItem>
+                            }
+                        </MenuItems>
+                    </FluentMenuItem>
                 }
-                <li role="separator" class="menu-separator"></li>
+                <FluentDivider />
                 @foreach (var mode in new[] { GitResetMode.Soft, GitResetMode.Mixed, GitResetMode.Hard })
                 {
-                    <li role="none">
-                        <button type="button" class="menu-item @(mode == GitResetMode.Hard ? "menu-item-danger" : null)"
-                                role="menuitem" disabled="@(Graph.Refs.HeadBranch is null)"
-                                title="@ResetText(mode)" @onclick="() => StartReset(commitMenu, mode)">
-                            @ResetTitle(mode)…
-                        </button>
-                    </li>
+                    <FluentMenuItem @key="@($"reset:{mode}")" Class="@(mode == GitResetMode.Hard ? "danger-menu-item" : null)"
+                                    Disabled="@(Graph.Refs.HeadBranch is null)" Title="@ResetText(mode)"
+                                    OnClick="() => StartReset(commitMenu, mode)">
+                        @ResetTitle(mode)…
+                    </FluentMenuItem>
                 }
-            </ContextMenu>
+            </PointMenu>
         }
 
         <div class="git-graph-body">
@@ -521,24 +330,22 @@
                 </div>
                 @if (_viewMenu is { } menuAt)
                 {
-                    <div class="menu-backdrop" @onclick="CloseViewMenu"
-                         @oncontextmenu="CloseViewMenu" @oncontextmenu:preventDefault="true"></div>
-                    <ul class="menu git-graph-view-menu" role="menu" aria-label="View" @onkeydown="OnViewMenuKeyDown"
-                        style="@FormattableString.Invariant($"left: {menuAt.X}px; top: {menuAt.Y}px")">
-                        @* The columns, then the rows' labels. Graph is always shown, so it isn't offered. Description is,
-                           greyed out, as the column the others give their space to. *@
+                    @* The columns, then the rows' labels. Graph is always shown, so it isn't offered. Description is,
+                       greyed out, as the column the others give their space to. *@
+                    <PointMenu @key="menuAt" X="menuAt.X" Y="menuAt.Y" Label="View" OnClose="CloseViewMenu">
                         @foreach (var column in Enum.GetValues<GitGraphColumn>().Where(column => column != GitGraphColumn.Graph))
                         {
-                            @MenuCheckbox(
-                                column.ToString(),
-                                Options.IsVisible(column),
-                                GitGraphViewOptions.CanHide(column),
-                                () => Options.ToggleColumn(column))
+                            var shown = column;
+                            <FluentMenuItem @key="@shown" Role="MenuItemRole.Checkbox" Checked="@Options.IsVisible(shown)"
+                                            Disabled="@(!GitGraphViewOptions.CanHide(shown))"
+                                            CheckedChanged="_ => Options.ToggleColumn(shown)">@shown</FluentMenuItem>
                         }
-                        <li role="separator" class="menu-separator"></li>
-                        @MenuCheckbox("Tags", Options.ShowTags, enabled: true, Options.ToggleTags)
-                        @MenuCheckbox("Remote branches", Options.ShowRemoteBranches, enabled: true, Options.ToggleRemoteBranches)
-                    </ul>
+                        <FluentDivider />
+                        <FluentMenuItem Role="MenuItemRole.Checkbox" Checked="@Options.ShowTags"
+                                        CheckedChanged="_ => Options.ToggleTags()">Tags</FluentMenuItem>
+                        <FluentMenuItem Role="MenuItemRole.Checkbox" Checked="@Options.ShowRemoteBranches"
+                                        CheckedChanged="_ => Options.ToggleRemoteBranches()">Remote branches</FluentMenuItem>
+                    </PointMenu>
                 }
                 @* The changes not yet committed, as a row above the commits, with a dashed line down to HEAD. There
                    is no row while there are none. *@
@@ -633,9 +440,7 @@
     </div>
 
     @* Resizes the details panel: drag it, or focus it and use Left and Right. *@
-    <div class="git-graph-splitter" role="separator" aria-orientation="vertical" aria-label="Resize commit details"
-         aria-controls="@_detailsId" tabindex="0" title="Drag to resize. Double-click to reset." @ref="_splitter">
-    </div>
+    <Splitter Vertical="true" AriaLabel="Resize commit details" ControlsId="@_detailsId" @ref="_splitter" />
 
     <aside class="git-graph-details" id="@_detailsId" aria-label="Commit details">
         @if (Graph.IsWorkingChangesSelected)
@@ -655,19 +460,17 @@
 
     private WorkspaceGitGraph? _attached;
     // Where the header's right-click menu is open, in the window, or null when it's closed.
-    private (double X, double Y)? _viewMenu;
+    private ViewMenuAt? _viewMenu;
+
+    private sealed record ViewMenuAt(double X, double Y);
     private IReadOnlyList<GitGraphColumn> _visibleColumns = [];
     private readonly string _detailsId = $"git-graph-details-{Guid.NewGuid():N}";
     private ElementReference _list;
     private ElementReference _header;
     private ElementReference _body;
-    private ElementReference _splitter;
-    private ElementReference _branchInput;
-    private ElementReference _confirmButton;
+    private Splitter? _splitter;
 
     // Set when the branch prompt or the delete confirmation opens, so the next render moves focus into it.
-    private bool _focusBranchInput;
-    private bool _focusConfirm;
     private IJSObjectReference? _splitterScript;
     private DotNetObjectReference<GitGraphView>? _self;
     private Virtualize<GitGraphItem>? _virtualize;
@@ -773,17 +576,6 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_focusBranchInput && _branchPrompt is not null)
-        {
-            _focusBranchInput = false;
-            await _branchInput.FocusAsync();
-        }
-        else if (_focusConfirm && _confirm is not null)
-        {
-            _focusConfirm = false;
-            await _confirmButton.FocusAsync();
-        }
-
         if (!firstRender)
         {
             return;
@@ -799,13 +591,13 @@
             _splitterScript = await _module.InvokeAsync<IJSObjectReference>(
                 "attachSplitter",
                 _body,
-                _splitter,
+                _splitter!.Element,
                 LayoutStore.Current.GitGraphDetailsWidth,
                 _self);
         }
-        catch (JSDisconnectedException)
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException)
         {
-            // The web view has gone.
+            // The web view has gone, or the panel left the page while its script was loading.
         }
     }
 
@@ -839,9 +631,9 @@
                 await _module.DisposeAsync();
             }
         }
-        catch (JSDisconnectedException)
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException)
         {
-            // The web view has gone, and the list with it.
+            // The web view has gone, or the page was replaced, and the list with it. Its script objects no longer exist.
         }
 
         _self?.Dispose();
@@ -862,7 +654,13 @@
         }
     }
 
-    private string Pressed(GitGraphScope scope) => Graph.Scope == scope ? "true" : "false";
+    private static readonly IReadOnlyList<ToggleButtonOption<GitGraphScope>> _scopes =
+    [
+        new(GitGraphScope.WorkspaceBranch, new Icons.Regular.Size20.BranchFork(),
+            "Workspace branch: HEAD, the workspace branch, its upstream and its merge target"),
+        new(GitGraphScope.Everything, new Icons.Regular.Size20.BranchCompare(),
+            "Everything: every branch and tag"),
+    ];
 
     // Gives the list the rows it asks for, reading more of the history when it scrolls past what's been read. Until
     // every commit is read, the list is a page longer than what's been read, so it can scroll on.
@@ -1058,9 +856,7 @@
     // tags, whether the remote has it, once that's known.
     private sealed record CommitMenu(double X, double Y, string Sha, IReadOnlyList<string> Tags, IReadOnlyList<string> Branches, IReadOnlyList<string> RemoteBranches)
     {
-        // The submenu that's open, if any, and the remote the tags are pushed to once that's known.
-        public string? OpenSubmenu { get; set; }
-
+        // The remote the tags are pushed to, once that's known.
         public string? Remote { get; set; }
 
         // Each local branch's upstream (null for none), once it's been read.
@@ -1087,7 +883,6 @@
     {
         _commitMenu = null;
         _confirm = new Confirmation(message, action);
-        _focusConfirm = true;
     }
 
     private void ConfirmDeleteBranch(string branch, bool deleteLocal, bool deleteRemote, GitUpstream? upstream)
@@ -1145,7 +940,6 @@
         _commitMenu = null;
         _branchName = "";
         _branchPrompt = new BranchPrompt(BranchPromptKind.Create, menu.Sha);
-        _focusBranchInput = true;
     }
 
     private void StartRenameBranch(string branch)
@@ -1153,7 +947,6 @@
         _commitMenu = null;
         _branchName = branch;
         _branchPrompt = new BranchPrompt(BranchPromptKind.Rename, branch);
-        _focusBranchInput = true;
     }
 
     private async Task RunBranchAsync(Func<Task<bool>> action)
@@ -1189,10 +982,6 @@
 
     // Asks for a new tag's name.
     private sealed record TagPrompt(string Sha);
-
-    private const string PushSubmenu = "push";
-    private const string DeleteSubmenu = "delete";
-    private const string DeleteBranchSubmenu = "delete-branch:";
 
     private CommitMenu? _commitMenu;
     private TagPrompt? _tagPrompt;
@@ -1260,9 +1049,6 @@
         false => " (local only)",
     };
 
-    private static void ToggleSubmenu(CommitMenu menu, string submenu) =>
-        menu.OpenSubmenu = menu.OpenSubmenu == submenu ? null : submenu;
-
     private void CloseCommitMenu() => _commitMenu = null;
 
     private void StartCreateTag(CommitMenu menu)
@@ -1294,12 +1080,12 @@
     }
 
     // A commit's labels: HEAD when it's detached here, then the branches and tags the options show. The branch HEAD is
-    // on stands out, and tags have a tag icon.
+    // on is filled, and tags have a tag icon. A branch has the icon of where it is (local, remote, or both).
     private RenderFragment References(string sha, bool isHead) => __builder =>
     {
         if (isHead && Graph.Refs.HeadBranch is null)
         {
-            <span class="git-graph-ref git-graph-ref-detached" title="Detached HEAD">HEAD</span>
+            <span class="git-graph-ref git-graph-ref-current" title="Detached HEAD">HEAD</span>
         }
 
         foreach (var badge in GitGraphText.CombineBranches(Graph.LabelsFor(sha).Where(Options.Shows)))
@@ -1317,55 +1103,34 @@
                 title += " (HEAD)";
             }
 
-            <span class="git-graph-ref @GitGraphText.ReferenceClass(reference.Kind) @(current ? "git-graph-ref-head" : null)"
-                  title="@title">
-                @if (reference.Kind == GitReferenceKind.Tag)
-                {
-                    <svg class="git-graph-ref-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9Z" />
-                        <circle cx="8" cy="8" r="1.5" />
-                    </svg>
-                    if (tagOnRemote)
+            var onRemote = reference.Kind == GitReferenceKind.RemoteBranch || combined || tagOnRemote;
+            var kind = reference.Kind switch
+            {
+                GitReferenceKind.Tag => "tag",
+                GitReferenceKind.RemoteBranch => "remote",
+                _ => "local",
+            };
+            @* Not a Fluent badge, which has a fixed height and clips what doesn't fit, so a long name or a second icon is
+               cut off. *@
+            <span class="git-graph-ref git-graph-ref-icon-first git-graph-ref-@kind @(current ? "git-graph-ref-current" : null)" title="@title">
+                @* Also on the remote: its icon sits close to the one that says what it is. *@
+                <span class="git-graph-ref-icons">
+                    <FluentIcon Value="@ReferenceIcon(reference.Kind)" />
+                    @if (onRemote && reference.Kind != GitReferenceKind.RemoteBranch)
                     {
-                        <svg class="git-graph-ref-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5 4.75 4.75 0 0 1 17 18Z" />
-                        </svg>
+                        <FluentIcon Value="@(new Icons.Regular.Size16.Cloud())" />
                     }
-                }
-                else
-                {
-                    if (reference.Kind == GitReferenceKind.LocalBranch)
-                    {
-                        <svg class="git-graph-ref-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <rect x="3" y="4" width="18" height="12" rx="1.5" />
-                            <path d="M8 20h8M12 16v4" />
-                        </svg>
-                    }
-                    if (reference.Kind == GitReferenceKind.RemoteBranch || combined)
-                    {
-                        <svg class="git-graph-ref-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5 4.75 4.75 0 0 1 17 18Z" />
-                        </svg>
-                    }
-                }
-                <span class="git-graph-ref-name">@reference.Name</span>
+                </span>
+                @reference.Name
             </span>
         }
     };
 
-    // An item of the header's menu that's ticked when its option is on.
-    private RenderFragment MenuCheckbox(string label, bool on, bool enabled, Action toggle) => __builder =>
+    private static Icon ReferenceIcon(GitReferenceKind kind) => kind switch
     {
-        <li role="none" @key="label">
-            <button type="button" class="menu-item" role="menuitemcheckbox" aria-checked="@(on ? "true" : "false")"
-                    disabled="@(!enabled)" @onclick="() => { CloseViewMenu(); toggle(); }">
-                <svg class="icon icon-small git-graph-menu-check @(on ? null : "hidden")" viewBox="0 0 24 24"
-                     aria-hidden="true" focusable="false">
-                    <polyline points="5 12 10 17 19 7" />
-                </svg>
-                @label
-            </button>
-        </li>
+        GitReferenceKind.Tag => new Icons.Regular.Size16.Tag(),
+        GitReferenceKind.RemoteBranch => new Icons.Regular.Size16.Cloud(),
+        _ => new Icons.Regular.Size16.Laptop(),
     };
 
     // A handle on a column heading's edge that resizes the column: drag it, or focus it and use Left and Right.
@@ -1409,17 +1174,9 @@
         }
     }
 
-    private void OpenViewMenu(MouseEventArgs e) => _viewMenu = (e.ClientX, e.ClientY);
+    private void OpenViewMenu(MouseEventArgs e) => _viewMenu = new ViewMenuAt(e.ClientX, e.ClientY);
 
     private void CloseViewMenu() => _viewMenu = null;
-
-    private void OnViewMenuKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-        {
-            CloseViewMenu();
-        }
-    }
 
     // This graph's menu, or another's, changed the options. Rows already shown are rendered again with them.
     private void OnOptionsChanged() => _ = InvokeAsync(async () =>

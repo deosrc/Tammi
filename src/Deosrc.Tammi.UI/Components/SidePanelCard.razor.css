@@ -1,0 +1,56 @@
+.side-panel-card {
+    --side-panel-card-tone: var(--colorNeutralStroke1);
+}
+
+.side-panel-card-info {
+    --side-panel-card-tone: var(--colorBrandBackground);
+}
+
+.side-panel-card-success {
+    --side-panel-card-tone: var(--colorStatusSuccessForeground1);
+}
+
+.side-panel-card-warning {
+    --side-panel-card-tone: var(--colorStatusWarningForeground1);
+}
+
+.side-panel-card-danger {
+    --side-panel-card-tone: var(--colorStatusDangerForeground1);
+}
+
+.side-panel-card ::deep .fluent-card {
+    width: 100%;
+    box-sizing: border-box;
+    gap: var(--spacingVerticalXS);
+    padding: var(--spacingVerticalS) var(--spacingHorizontalM);
+    border-left: 4px solid var(--side-panel-card-tone);
+}
+
+.side-panel-card-warning ::deep .fluent-card {
+    background: var(--colorStatusWarningBackground1);
+}
+
+.side-panel-card-danger ::deep .fluent-card {
+    background: var(--colorStatusDangerBackground1);
+}
+
+.side-panel-card-clickable ::deep .fluent-card {
+    cursor: pointer;
+}
+
+.side-panel-card-clickable ::deep .fluent-card:hover {
+    border-color: var(--side-panel-card-tone);
+}
+
+.side-panel-card-heading {
+    display: flex;
+    align-items: center;
+    gap: var(--spacingHorizontalS);
+    min-width: 0;
+}
+
+.side-panel-card-heading ::deep .side-panel-card-badge {
+    flex: none;
+    max-width: 50%;
+    margin-left: auto;
+}

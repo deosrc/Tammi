@@ -1,0 +1,31 @@
+/* The Fluent sortable list is made for compact rows. Its border, item height, padding and background are turned off, so
+   each item is just its card. Its variables are set from outside the component, so this is more specific than the
+   component's own rule for them. */
+.sortable-card-list ::deep .fluent-sortable-list {
+    --fluent-sortable-list-border-width: 0;
+    --fluent-sortable-list-padding: 0;
+    --fluent-sortable-list-item-height: auto;
+    --fluent-sortable-list-item-padding: 0;
+    --fluent-sortable-list-item-border-width: 0;
+    --fluent-sortable-list-item-background-color: transparent;
+    --fluent-sortable-list-item-focused-background-color: transparent;
+    --fluent-sortable-list-item-grabbed-background-color: transparent;
+    --fluent-sortable-list-item-spacing: var(--space-3);
+}
+
+.sortable-card-list ::deep .sortable-item {
+    align-items: stretch;
+    user-select: auto;
+}
+
+/* The grip, in a card's header. */
+.sortable-card-list ::deep .sortable-grab {
+    position: static;
+    display: flex;
+    align-items: center;
+    width: auto;
+    height: auto;
+    padding: 0;
+    background: none;
+    cursor: grab;
+}

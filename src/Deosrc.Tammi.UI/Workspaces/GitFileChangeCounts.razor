@@ -9,9 +9,7 @@
         if (count > 0)
         {
             <span class="git-commit-count git-graph-file-@kind.ToString().ToLowerInvariant()" title="@count @label">
-                <svg class="git-commit-count-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    @icon
-                </svg>
+                <span class="git-commit-count-icon"><FluentIcon Value="@icon" /></span>
                 <span>@count</span>
                 <span class="visually-hidden">@label</span>
             </span>
@@ -21,14 +19,12 @@
 
 @code {
     // The counts, in order, with their words and icons: a pencil, a plus, a trash can and an arrow.
-    private static readonly (FileChangeKind Kind, string Label, RenderFragment Icon)[] CountKinds =
+    private static readonly (FileChangeKind Kind, string Label, Icon Icon)[] CountKinds =
     [
-        (FileChangeKind.Modified, "modified",
-            @<g><path d="M4 20h4L19 9l-4-4L4 16Z" /><path d="m13.5 6.5 4 4" /></g>),
-        (FileChangeKind.Added, "added", @<path d="M12 5v14M5 12h14" />),
-        (FileChangeKind.Deleted, "deleted",
-            @<g><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></g>),
-        (FileChangeKind.Renamed, "renamed", @<path d="M5 12h14M13 6l6 6-6 6" />),
+        (FileChangeKind.Modified, "modified", new Icons.Regular.Size16.Edit()),
+        (FileChangeKind.Added, "added", new Icons.Regular.Size16.Add()),
+        (FileChangeKind.Deleted, "deleted", new Icons.Regular.Size16.Delete()),
+        (FileChangeKind.Renamed, "renamed", new Icons.Regular.Size16.ArrowRight()),
     ];
 
     /// <summary>

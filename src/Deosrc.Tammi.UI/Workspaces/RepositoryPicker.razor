@@ -9,8 +9,9 @@
 <div class="repository-picker">
     <section class="repository-picker-catalogue" aria-labelledby="catalogue-heading">
         <h3 id="catalogue-heading">Repository Catalogue</h3>
-        <input type="search" class="settings-text repository-filter" aria-label="Filter repositories" autocomplete="off"
-               placeholder="Filter by name or folder" @bind="_filter" @bind:event="oninput" />
+        <FluentTextInput Class="repository-filter" TextInputType="TextInputType.Search" aria-label="Filter repositories"
+                         AutoComplete="off" Immediate="true" Width="100%" Placeholder="Filter by name or folder"
+                         @bind-Value="_filter" />
 
         @if (_snapshot is null)
         {
@@ -20,7 +21,7 @@
         {
             <p class="placeholder">
                 No local repositories found. Add a Monitored Folder or a repository in
-                <a href="@AppRoutes.SettingsRepositories">Settings › Repositories</a>.
+                <FluentLink Href="@AppRoutes.SettingsRepositories">Settings › Repositories</FluentLink>.
             </p>
         }
         else if (FilteredRepositories.Count == 0)
@@ -33,18 +34,23 @@
                 @foreach (var repository in FilteredRepositories)
                 {
                     var chosen = Draft.ContainsRepository(repository);
-                    <li class="task-item @(chosen ? "task-item-chosen" : null)" @key="repository.Path">
-                        <label class="task-choice" title="@repository.Path">
-                            <input type="checkbox" checked="@chosen" disabled="@Draft.IsExistingRepository(repository)"
-                                   @onchange="() => Toggle(repository)" />
-                            <span class="repository-name">@repository.Name</span>
-                            <span class="task-title repository-path">@DisplayPath(repository)</span>
-                            @if (Draft.IsExistingRepository(repository))
-                            {
-                                <span class="badge">In the workspace</span>
-                            }
-                        </label>
-                    </li>
+                    @* The whole card toggles the repository, unless it's already in the workspace, so the checkbox ignores
+                       the mouse, which reaches the card instead. It still works with the keyboard. *@
+                    <CardListItem @key="repository.Path" Chosen="chosen"
+                                  OnClick="() => Draft.IsExistingRepository(repository) ? Task.CompletedTask : Toggle(repository)">
+                        <FluentCheckbox Class="task-checkbox" title="@repository.Path" Value="chosen"
+                                        Disabled="@Draft.IsExistingRepository(repository)"
+                                        ValueChanged="_ => Toggle(repository)">
+                            <span class="task-choice-text">
+                                <span class="repository-name">@repository.Name</span>
+                                <span class="task-title repository-path">@DisplayPath(repository)</span>
+                                @if (Draft.IsExistingRepository(repository))
+                                {
+                                    <FluentBadge Appearance="BadgeAppearance.Tint">In the workspace</FluentBadge>
+                                }
+                            </span>
+                        </FluentCheckbox>
+                    </CardListItem>
                 }
             </ul>
         }
@@ -58,29 +64,17 @@
         <h3 id="chosen-repositories-heading">
             @(Draft.IsEditing ? "Repositories to add" : "Chosen repositories") (@Draft.Repositories.Count)
         </h3>
-        <div class="settings-form">
-            <div class="settings-field">
-                <label for="workspace-branch">Default branch</label>
-                <input id="workspace-branch" class="settings-text @(BranchProblem is null ? null : "invalid")"
-                       autocomplete="off" spellcheck="false" value="@Draft.BranchName" disabled="@Draft.IsBranchFixed"
-                       @oninput="OnBranchInput" />
-                @if (BranchProblem is { } branchProblem)
-                {
-                    <p class="error">@branchProblem</p>
-                }
-                else if (Draft.IsBranchFixed)
-                {
-                    <p class="settings-help">The workspace's branch. Added repositories use it unless you change their branch.</p>
-                }
-                else
-                {
-                    <p class="settings-help">
-                        Each repository uses it, unless you change its branch. @(Draft.IsBranchNameEdited ? null : Draft.Tasks.Count == 1
-                            ? "Suggested from the task."
-                            : "Suggested from the workspace's name.")
-                    </p>
-                }
-            </div>
+        <div class="settings-field-group">
+            <FluentTextInput Label="Default branch" AutoComplete="off" Spellcheck="false" Width="100%" Immediate="true"
+                             Disabled="@Draft.IsBranchFixed" Value="@Draft.BranchName" ValueChanged="OnBranchChanged"
+                             MessageCondition="FluentFieldCondition.Always"
+                             MessageState="@(BranchProblem is null ? null : MessageState.Error)"
+                             Message="@(BranchProblem
+                                 ?? (Draft.IsBranchFixed
+                                     ? "The workspace's branch. Added repositories use it unless you change their branch."
+                                     : "Each repository uses it, unless you change its branch. " + (Draft.IsBranchNameEdited ? null : Draft.Tasks.Count == 1
+                                         ? "Suggested from the task."
+                                         : "Suggested from the workspace's name.")))" />
         </div>
         @if (Draft.ExistingRepositories.Count > 0)
         {
@@ -101,101 +95,79 @@
             <ul class="chosen-repositories">
                 @foreach (var (repository, index) in Draft.Repositories.Select((repository, index) => (repository, index)))
                 {
-                    var folderId = $"repository-folder-{index}";
                     var mergeTargetId = $"repository-base-{index}";
                     var branchId = $"repository-branch-{index}";
-                    <li class="chosen-repository" @key="repository.Repository.Path">
-                        <div class="chosen-repository-heading">
-                            <span class="repository-name">@repository.Repository.Name</span>
-                            <span class="task-title repository-path" title="@repository.Repository.Path">
-                                @DisplayPath(repository.Repository)
-                            </span>
-                            @if (repository.ChosenForTasks.Count > 0)
-                            {
-                                <span class="badge" title="Chosen because the task belongs to this repository">
-                                    For @string.Join(", ", repository.ChosenForTasks.Select(task => task.Key))
-                                </span>
-                            }
-                            <button type="button" class="button button-secondary button-small"
-                                    @onclick="() => Draft.RemoveRepository(repository.Repository)">Remove</button>
-                        </div>
-
-                        <div class="chosen-repository-fields">
-                            <div class="settings-field">
-                                <label for="@folderId">Folder</label>
-                                <input id="@folderId"
-                                       class="settings-text @(repository.FolderNameProblem is null ? null : "invalid")"
-                                       autocomplete="off" spellcheck="false"
-                                       @bind="repository.FolderName" @bind:event="oninput" />
-                                @if (repository.FolderNameProblem is { } folderProblem)
-                                {
-                                    <p class="error">@folderProblem</p>
-                                }
-                            </div>
-
-                            <div class="settings-field">
-                                <label for="@mergeTargetId">Merge target</label>
-                                <input id="@mergeTargetId" list="@($"{mergeTargetId}-options")"
-                                       class="settings-text @(BaseProblem(repository) is null ? null : "invalid")"
-                                       autocomplete="off" spellcheck="false"
-                                       placeholder="@(repository.IsLoading ? "Fetching…" : null)"
-                                       @bind="repository.MergeTarget" @bind:event="oninput" />
-                                <datalist id="@($"{mergeTargetId}-options")">
-                                    @foreach (var branch in repository.Branches)
+                    var baseProblem = BaseProblem(repository);
+                    <li @key="repository.Repository.Path">
+                        <FluentCard>
+                            <div class="chosen-repository">
+                                <div class="chosen-repository-heading">
+                                    <span class="repository-name">@repository.Repository.Name</span>
+                                    <span class="task-title repository-path" title="@repository.Repository.Path">
+                                        @DisplayPath(repository.Repository)
+                                    </span>
+                                    @if (repository.ChosenForTasks.Count > 0)
                                     {
-                                        <option value="@branch"></option>
+                                        <FluentBadge Appearance="BadgeAppearance.Tint"
+                                                     title="Chosen because the task belongs to this repository">
+                                            For @string.Join(", ", repository.ChosenForTasks.Select(task => task.Key))
+                                        </FluentBadge>
                                     }
-                                </datalist>
-                                @if (repository.IsLoading)
-                                {
-                                    <p class="settings-help">Fetching @(repository.Remote?.Name)…</p>
-                                }
-                                else if (BaseProblem(repository) is { } baseProblem)
-                                {
-                                    <p class="error">@baseProblem</p>
-                                }
-                                else if (repository.MergeTarget.Trim() == repository.DefaultBranch)
-                                {
-                                    <p class="settings-help">The remote's default branch.</p>
-                                }
-                                @if (repository.FetchProblem is { } fetchProblem)
-                                {
-                                    <p class="warning">@fetchProblem</p>
-                                }
-                            </div>
+                                    <FluentButton Class="card-remove" Appearance="ButtonAppearance.Transparent"
+                                                  Size="ButtonSize.Small" IconOnly="true"
+                                                  IconStart="@(new Icons.Regular.Size16.Dismiss())"
+                                                  Title="@($"Remove {repository.Repository.Name}")"
+                                                  aria-label="@($"Remove {repository.Repository.Name}")"
+                                                  OnClick="() => Draft.RemoveRepository(repository.Repository)" />
+                                </div>
 
-                            <div class="settings-field">
-                                <label for="@branchId">Branch</label>
-                                <input id="@branchId" list="@($"{branchId}-options")"
-                                       class="settings-text @(repository.BranchNameProblem is null ? null : "invalid")"
-                                       autocomplete="off" spellcheck="false"
-                                       @bind="repository.BranchName" @bind:event="oninput" />
-                                <datalist id="@($"{branchId}-options")">
-                                    @foreach (var branch in repository.ExistingBranches)
-                                    {
-                                        <option value="@branch"></option>
-                                    }
-                                </datalist>
-                                @if (repository.BranchNameProblem is { } branchNameProblem)
-                                {
-                                    <p class="error">@branchNameProblem</p>
-                                }
-                                else if (!repository.IsLoaded)
-                                {
-                                    <p class="settings-help">Checking the existing branches…</p>
-                                }
-                                else if (repository.BranchExists)
-                                {
-                                    <p class="settings-help">The branch exists, so it will be reused.</p>
-                                }
-                                else
-                                {
-                                    <p class="settings-help">
-                                        The branch doesn't exist, so it will be created from the merge target.
-                                    </p>
-                                }
+                                <div class="chosen-repository-fields">
+                                    <FluentTextInput Label="Folder" AutoComplete="off" Spellcheck="false" Width="100%"
+                                                     Immediate="true" @bind-Value="repository.FolderName"
+                                                     MessageCondition="FluentFieldCondition.Always"
+                                                     MessageState="@(repository.FolderNameProblem is null ? null : MessageState.Error)"
+                                                     Message="@repository.FolderNameProblem" />
+
+                                    <FluentTextInput Label="Merge target" DataList="@($"{mergeTargetId}-options")"
+                                                     AutoComplete="off" Spellcheck="false" Width="100%" Immediate="true"
+                                                     Placeholder="@(repository.IsLoading ? "Fetching…" : null)"
+                                                     @bind-Value="repository.MergeTarget"
+                                                     MessageCondition="FluentFieldCondition.Always"
+                                                     MessageState="@(baseProblem is not null ? MessageState.Error : repository.FetchProblem is not null ? MessageState.Warning : null)"
+                                                     Message="@(baseProblem
+                                                         ?? repository.FetchProblem
+                                                         ?? (repository.IsLoading
+                                                             ? $"Fetching {repository.Remote?.Name}…"
+                                                             : repository.MergeTarget.Trim() == repository.DefaultBranch
+                                                                 ? "The remote's default branch."
+                                                                 : null))" />
+                                    <datalist id="@($"{mergeTargetId}-options")">
+                                        @foreach (var branch in repository.Branches)
+                                        {
+                                            <option value="@branch"></option>
+                                        }
+                                    </datalist>
+
+                                    <FluentTextInput Label="Branch" DataList="@($"{branchId}-options")" AutoComplete="off"
+                                                     Spellcheck="false" Width="100%" Immediate="true"
+                                                     @bind-Value="repository.BranchName"
+                                                     MessageCondition="FluentFieldCondition.Always"
+                                                     MessageState="@(repository.BranchNameProblem is null ? null : MessageState.Error)"
+                                                     Message="@(repository.BranchNameProblem
+                                                         ?? (!repository.IsLoaded
+                                                             ? "Checking the existing branches…"
+                                                             : repository.BranchExists
+                                                                 ? "The branch exists, so it will be reused."
+                                                                 : "The branch doesn't exist, so it will be created from the merge target."))" />
+                                    <datalist id="@($"{branchId}-options")">
+                                        @foreach (var branch in repository.ExistingBranches)
+                                        {
+                                            <option value="@branch"></option>
+                                        }
+                                    </datalist>
+                                </div>
                             </div>
-                        </div>
+                        </FluentCard>
                     </li>
                 }
             </ul>
@@ -329,9 +301,9 @@
         await Changed.InvokeAsync();
     }
 
-    private async Task OnBranchInput(ChangeEventArgs e)
+    private async Task OnBranchChanged(string? branch)
     {
-        Draft.BranchName = e.Value?.ToString() ?? "";
+        Draft.BranchName = branch ?? "";
         await CheckBranchAsync();
     }
 

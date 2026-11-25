@@ -5,51 +5,57 @@
 @inject IProcessLauncher ProcessLauncher
 
 @* A Supported Agent on the Agents settings page: whether its CLI is installed and runs, and why not if it doesn't. *@
-<li class="agent-definition">
-    <div class="agent-definition-header">
-        <AgentIcon Definition="Agent.Definition" />
-        <span class="agent-definition-name">@Agent.Name</span>
-        @if (_status is null)
-        {
-            <span class="badge">Checking…</span>
-        }
-        else if (_status.IsAvailable)
-        {
-            <span class="badge badge-success">✓ Ready</span>
-        }
-        else
-        {
-            <span class="badge badge-error">✗ Not available</span>
-        }
-        <button type="button" class="button button-secondary" disabled="@(_status is null)" @onclick="CheckAsync">
-            Check again
-        </button>
-    </div>
+<li>
+    <FluentCard>
+        <div class="agent-settings-card">
+            <div class="agent-definition-header">
+                <AgentIcon Definition="Agent.Definition" />
+                <span class="agent-definition-name">@Agent.Name</span>
+                @if (_status is null)
+                {
+                    <FluentBadge Appearance="BadgeAppearance.Tint">Checking…</FluentBadge>
+                }
+                else if (_status.IsAvailable)
+                {
+                    <FluentBadge Appearance="BadgeAppearance.Tint" Color="BadgeColor.Success">✓ Ready</FluentBadge>
+                }
+                else
+                {
+                    <FluentBadge Appearance="BadgeAppearance.Tint" Color="BadgeColor.Danger">✗ Not available</FluentBadge>
+                }
+                <FluentButton Size="ButtonSize.Small" Disabled="@(_status is null)" OnClick="CheckAsync">
+                    Check again
+                </FluentButton>
+            </div>
 
-    <dl class="settings-values agent-status">
-        <dt>Command</dt>
-        <dd><code>@Agent.Definition.Command</code>@(_status?.ExecutablePath is { } path ? $" ({path})" : null)</dd>
-        @if (_status?.Version is { } version)
-        {
-            <dt>Version</dt>
-            <dd>@version</dd>
-        }
-    </dl>
+            <dl class="settings-values agent-status">
+                <dt>Command</dt>
+                <dd><code>@Agent.Definition.Command</code>@(_status?.ExecutablePath is { } path ? $" ({path})" : null)</dd>
+                @if (_status?.Version is { } version)
+                {
+                    <dt>Version</dt>
+                    <dd>@version</dd>
+                }
+            </dl>
 
-    @if (_status is { IsAvailable: false } status)
-    {
-        <p class="error" role="alert">@status.Problem</p>
-        <p>
-            <a href="@Agent.InstallUrl" @onclick="OpenInstallGuide" @onclick:preventDefault>
-                How to install @Agent.Name
-            </a>
-        </p>
-    }
+            @if (_status is { IsAvailable: false } status)
+            {
+                <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+                    @status.Problem
+                </FluentMessageBar>
+                <p>
+                    <FluentLink OnClick="OpenInstallGuide">How to install @Agent.Name</FluentLink>
+                </p>
+            }
 
-    @if (_openError is not null)
-    {
-        <p class="error">@_openError</p>
-    }
+            @if (_openError is not null)
+            {
+                <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+                    @_openError
+                </FluentMessageBar>
+            }
+        </div>
+    </FluentCard>
 </li>
 
 @code {

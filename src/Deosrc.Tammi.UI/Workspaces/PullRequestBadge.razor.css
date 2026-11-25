@@ -1,0 +1,53 @@
+/* The badge is a button, for the keyboard, that has no look of its own. */
+.pull-request-badge {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--spacingHorizontalXXS);
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+/* The state icon, the badge's first child: a little room before it, and more between it and the number. The badge is
+   large, 24px high, so the 16px icon has room above and below it. */
+.pull-request-badge ::deep fluent-badge > svg {
+    margin-inline: var(--spacingHorizontalXXS) var(--spacingHorizontalXS);
+    /* FluentBadge colours its icon white, for a filled badge. On a tinted one that's lost on the light background (a
+       closed Pull Request's is the palest), so the icon takes the badge's text colour. Its inline fill needs
+       !important. */
+    fill: currentColor !important;
+}
+
+.pull-request-badge:focus-visible {
+    outline: 2px solid var(--colorStrokeFocus2);
+    outline-offset: 1px;
+}
+
+/* The checks dot, at the end of the badge's content: ringed in the page's background, so it stands out on the badge's
+   fill. */
+.pull-request-checks {
+    display: inline-block;
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-left: var(--spacingHorizontalXS);
+    border-radius: 50%;
+    background: var(--pull-request-checks-tone);
+    box-shadow: 0 0 0 1.5px var(--colorNeutralBackground1);
+}
+
+.pull-request-checks-error {
+    --pull-request-checks-tone: var(--colorPaletteRedBackground3);
+}
+
+.pull-request-checks-warning {
+    --pull-request-checks-tone: var(--colorPaletteMarigoldBackground3);
+}
+
+.pull-request-checks-ok {
+    --pull-request-checks-tone: var(--colorPaletteGreenBackground3);
+}

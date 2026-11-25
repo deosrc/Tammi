@@ -1,0 +1,5 @@
+@* The grip that a card in a SortableCardList is dragged by, for its header. Clicking it doesn't reach the header, so it
+   doesn't toggle a header that toggles its card. *@
+<div class="sortable-grab" title="Drag to reorder" @onclick:stopPropagation="true">
+    <FluentIcon Value="@(new Icons.Regular.Size16.ReOrderDotsVertical())" />
+</div>

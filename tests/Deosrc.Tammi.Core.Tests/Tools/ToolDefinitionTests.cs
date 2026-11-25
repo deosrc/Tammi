@@ -93,9 +93,10 @@ public class ToolDefinitionTests
         {
             Assert.True(tool.IsPredefined);
             Assert.All(
-                tool.Arguments.Append(tool.Name).SelectMany(ToolPlaceholders.FindUsed),
+                tool.Arguments.SelectMany(ToolPlaceholders.FindUsed),
                 placeholder => Assert.Contains(placeholder, ToolPlaceholders.For(tool.Kind)));
-            Assert.Empty(tool.Arguments.Append(tool.Name).SelectMany(ToolPlaceholders.FindUnknown));
+            Assert.Empty(tool.Arguments.SelectMany(ToolPlaceholders.FindUnknown));
+            Assert.Empty(ToolPlaceholders.FindUsed(tool.Name));
             Assert.Equal(tool.Kind == ToolKind.File, tool.FilePatterns.Count > 0);
         });
     }
@@ -104,5 +105,22 @@ public class ToolDefinitionTests
     public void VisualStudio_IsOnlyPredefinedOnWindows()
     {
         Assert.Equal(OperatingSystem.IsWindows(), PredefinedTools.All.Contains(PredefinedTools.VisualStudio));
+    }
+
+    [Theory]
+    [InlineData("Visual Studio - {FileName}", "Visual Studio")]
+    [InlineData("Dev Container \u2013 {MatchFolderName}", "Dev Container")]
+    [InlineData("{FileName}", "Unnamed tool")]
+    [InlineData("Editor", "Editor")]
+    [InlineData("  ", "Unnamed tool")]
+    public void DisplayName_LeavesPlaceholdersOut(string name, string expected)
+    {
+        Assert.Equal(expected, new ToolDefinition { Name = name }.DisplayName);
+    }
+
+    [Fact]
+    public void Normalize_ReplacesAnUnknownMenuLabel()
+    {
+        Assert.Equal(ToolMenuLabel.FileName, new ToolDefinition { MenuLabel = (ToolMenuLabel)99 }.Normalize().MenuLabel);
     }
 }

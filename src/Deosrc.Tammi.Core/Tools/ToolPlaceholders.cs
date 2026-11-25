@@ -13,9 +13,9 @@ namespace Deosrc.Tammi.Core.Tools;
 public static partial class ToolPlaceholders
 {
     /// <summary>
-    /// The folder the tool should open: <see cref="LaunchFolder"/>, except for the Workspace Folder of a workspace with
-    /// only one repository, where it's that repository's Workspace Worktree unless the settings say otherwise (see
-    /// <see cref="SingleRepositoryTarget"/>). The predefined folder tools open it.
+    /// The folder the tool should open: the same as <see cref="LaunchFolder"/>. Which of a workspace's places a launch
+    /// opens is decided by the Tools section, not by the entry (see <see cref="SingleRepositoryTarget"/>). The predefined
+    /// folder tools open it.
     /// </summary>
     public const string PreferredFolder = "PreferredFolder";
 

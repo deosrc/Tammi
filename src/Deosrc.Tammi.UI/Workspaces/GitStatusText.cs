@@ -25,25 +25,11 @@ internal static class GitStatusText
             || status.Submodules.Any(submodule => submodule.Status is { } inner && NeedsAttention(inner));
 
     /// <summary>
-    /// The changes that could be lost, e.g. "3 uncommitted changes · 1 unpushed commit", or <see langword="null"/>
-    /// when there are none in the repository itself.
+    /// The changes that could be lost, e.g. "3 uncommitted changes", or <see langword="null"/> when there are none in
+    /// the repository itself. Unpushed commits aren't here: the ahead badge says them.
     /// </summary>
-    public static string? Summary(RepositoryStatus status)
-    {
-        var parts = new List<string>();
-        int changes = UncommittedChangeCount(status);
-        if (changes > 0)
-        {
-            parts.Add(Count(changes, "uncommitted change"));
-        }
-
-        if (status.UnpushedCommitCount > 0)
-        {
-            parts.Add(Count(status.UnpushedCommitCount, "unpushed commit"));
-        }
-
-        return parts.Count == 0 ? null : string.Join(" · ", parts);
-    }
+    public static string? Summary(RepositoryStatus status) =>
+        UncommittedChangeCount(status) is > 0 and var changes ? Count(changes, "uncommitted change") : null;
 
     /// <summary>
     /// What HEAD is: the branch's name, or the commit's short SHA when HEAD is detached.

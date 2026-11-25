@@ -161,7 +161,7 @@ listed once.
 - Adding a Monitored Folder that holds manually added repositories asks the user to confirm, then removes those
   repositories from the manually added ones.
 - Missing folders and repositories that can't be read are left out of the catalogue and shown on the Settings screen.
-- The catalogue is scanned when it's first needed, when the user asks (Rescan on the Settings screen), when the
+- The catalogue is scanned when it's first needed, when the user asks (Refresh on the Repositories Tab), when the
   Monitored Folders or manually added repositories change, and when folders appear in or disappear from a Monitored
   Folder. Only a Monitored Folder's own entries are watched, not its subfolders, so watching a large clone folder
   doesn't use up the platform's watch limits. A repository cloned deeper down is found by the next scan.
@@ -353,13 +353,14 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   attention: danger when the worktree is broken or its status can't be read, warning when it has work that isn't
   pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its submodules. A
   repository with no issues has no colour and no label, and looks like a card in the Tasks section. Each card has:
-  - a label: Broken, Unreadable, Changed (as on Home) or Out of sync (only behind). A clean repository has none
-  - its branch (or the commit, when HEAD is detached), and how far it's ahead of and behind its upstream, when it
-    tracks one
-  - how many uncommitted changes and unpushed commits it has
+  - a label: Broken, Unreadable or Out of sync (behind, with nothing that could be lost). A clean repository, or one
+    with uncommitted changes or unpushed commits (which its sections show), has none
+  - its branch (or the commit, when HEAD is detached), with the branch's name as its tooltip
+  - then, in sections under dividers as on Home: how far it's ahead of and behind its upstream, when it tracks one;
+    its Pull Requests; and how many uncommitted changes it has
   - its submodules, nested under it, each with the same details, or "Not checked out"
   - a broken worktree says what's wrong (e.g. "Local Repository moved or deleted") instead
-  - under its name, a badge for each [Pull Request](#github) from its workspace branch, oldest first, coloured by its
+  - in its Pull Requests section, a badge for each [Pull Request](#github) from its workspace branch, oldest first, coloured by its
     state (grey for a draft, blue for open, green for merged, red for closed), with an icon for its state and its number.
     A draft or open Pull Request with checks ends with a dot for them: red if any failed, amber if any are running,
     green if all passed. The tooltip
@@ -428,7 +429,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
       modified, added, deleted and renamed, each as a coloured icon (a pencil, a plus, a trash can and an arrow) and a
       number, leaving out any with none. A toggle shows them as a list (each file's name in bold, then its folder) or
       as a tree of folders, each with a folder icon and, after its name, the same counts for the files in it, which
-      start closed and open and close, with folders holding only one folder joined (e.g. `src/app`). Each file keeps
+      start open and can be closed and opened, with folders holding only one folder joined (e.g. `src/app`). Each file keeps
       its A, M, D or R.
     - Every graph shows files the same way, and the list or tree choice is kept in the settings, so it's the same
       after a restart. Like the columns, whether Authors is collapsed is shared by every graph until the app closes.
@@ -500,10 +501,10 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     tab, and Forget. A session whose agent can't resume it says why instead. Past sessions aren't in the side panel.
     Like terminals, it stays when the workspace's tab closes; it isn't restored after a restart.
 - **Main area tabs:** the main area has its own row of tabs, below a small divider. The first is always the
-  **dashboard** (an icon, no name), which the view shows until the user opens something else. The dashboard shows the
-  workspace's tasks with a count by status category, its Pull Requests (open ones first) with their state, checks and
-  review decision (approved, changes requested or review required; GitHub has no separate "rejected"), its agents with
-  their states, and its repositories' git status. It uses the side panel's cards, so each is clicked the same way. Then come the
+  **dashboard** (an icon, no name), which the view shows until the user opens something else. The dashboard shows, in this order,
+  the workspace's tasks, its repositories' git status, its agents with their states, and its Pull Requests (open ones
+  first) with their state, checks and review decision (approved, changes requested or review required; GitHub has no
+  separate "rejected"). It uses the side panel's cards, so each is clicked the same way. Then come the
   workspace's terminals, agents and Git Graphs, in the order they started or opened. A terminal's tab starts with a terminal icon. An agent's tab starts with the agent's icon, and ends (before its close button) with its state: a blue spinner while Working, a coloured bell icon when it Needs input, and otherwise a dot coloured by its state. The
   last is always a **+** tab, which opens a menu of things to start: **Terminal**, **Git** (see Git Graph), then each
   Agent Definition (in the order agents are offered). Terminal and each Agent Definition have a submenu of
@@ -596,7 +597,6 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 - **Repositories**
   - Monitored Folder(s), each with how many repositories were found in it
   - Manually added local repositories
-  - The Repository Catalogue's size, with a Rescan button
   - Status refresh interval for workspaces that aren't open (whole minutes from 1 to 1440, default 5)
 - **Agents**
   - **Supported Agents** are always listed, and can't be edited or removed. Each one shows whether its CLI is ready:
@@ -692,7 +692,7 @@ are left to other tools for now.
 
 - A **tool** opens the Workspace Folder, a repository or a file in another app. There are two kinds:
   - **Folder tools** open a folder, e.g. VS Code or the file manager. Each has one entry for each folder its scope
-    includes.
+    includes (the Workspace Folder, and each repository).
   - **File tools** open files found in the repositories by their **file patterns**, e.g. Visual Studio for `*.sln`,
     `*.slnf` and `*.slnx`. Each has an entry for each file found, and none where there aren't any. For the Workspace
     Folder, every repository is searched. Patterns are looked for in a repository and its subfolders, ten folders
@@ -701,11 +701,17 @@ are left to other tools for now.
     path from each of them, and can name hidden folders. A leading `/` keeps a pattern to the repository's own folder
     (e.g. `/global.json`). `*` and `?` are wildcards, and case is ignored. A file that several patterns match is found
     once, matched by the first of them.
-- Each tool has: **kind**, **name**, **file patterns** (file tools only), **executable**, **arguments**, **scope**
-  (folder tools only), **icon** and **enabled/disabled**. The executable is a name on the search path or a full path,
-  with environment variables (`%NAME%`) filled in. Arguments are passed as-is, without a shell, so a path with spaces
-  needs no quoting.
-- The name and arguments can have **placeholders**, filled in for each entry (matched ignoring case):
+- Each tool has: **kind**, **name**, **menu item name** (file tools only), **file patterns** (file tools only),
+  **executable**, **arguments**, **scope** (folder tools only), **icon** and **enabled/disabled**. The executable is a
+  name on the search path or a full path, with environment variables (`%NAME%`) filled in. Arguments are passed
+  as-is, without a shell, so a path with spaces needs no quoting.
+- A file tool's **menu item name** says what its menu calls each file it found: the **file name** (the default), the
+  **file name without extension**, the **launch folder** (the name of the folder the tool starts in, e.g. the folder
+  holding `.devcontainer/`) or the **full path**. The menu adds the file's repository, unless it's the full path. The
+  predefined Dev Container tool uses the launch folder, and Visual Studio the file name.
+- The arguments can have **placeholders**, filled in for each entry (matched ignoring case). The name has none: a
+  placeholder in a name written by an older version is left out of it.
+  The placeholders are:
   `{PreferredFolder}` (the folder the tool should open: see below), `{LaunchFolder}` (the Workspace Folder or
   repository the entry is offered for), `{WorkspaceFolder}`,
   `{RepositoryFolder}` (the repository the entry is offered for, or that the file is in), and, for file tools only,
@@ -714,22 +720,20 @@ are left to other tools for now.
   holding `.devcontainer/`). A file tool starts in its `{MatchFolder}`. An entry is left out where a placeholder it
   uses has no value (e.g. `{RepositoryFolder}` for the Workspace Folder). Other text in braces is left as it is, and
   Settings warns about it.
-- **Workspaces with one repository:** a setting says what tools open when they're launched at workspace level in a
-  workspace with only one repository: **the repository** (the default) or **the Workspace Folder**. It decides
-  `{PreferredFolder}`: for the Workspace Folder of such a workspace it's the repository, unless the setting says the
-  Workspace Folder; everywhere else it's the same as `{LaunchFolder}`. A folder tool that uses `{PreferredFolder}`
-  opens, starts in and shows that folder. Terminal and the predefined folder tools use it, and new custom folder tools
-  start with it as their argument.
+- **Workspaces with one repository:** a setting says what launching a folder tool (Terminal included) from the Tools
+  section opens in a workspace with only one repository: **the repository** (the default) or **the Workspace Folder**.
+  The tool's menu still lists both. `{PreferredFolder}` is the same as `{LaunchFolder}`: the entry's own folder. The
+  predefined folder tools open it, and new custom folder tools start with it as their argument.
 - **Scope** sets what a folder tool is offered for: the Workspace Folder, the repositories, or both (the default).
   File tools have no scope: they open the files they find, wherever they find them, so they're offered for both.
-- The side panel's **Tools section** lists each tool once (a file tool once per file it found), in the order tools
-  are offered. Right-clicking a tool opens a menu of each folder it can open: **Workspace**, then
-  **Repository: `<name>`** for each repository (for a file tool, the file's repository). Levels that would start the
-  same command (e.g. a file tool whose arguments only use the file, or Terminal in a workspace with one repository)
-  are one item, the first. Clicking a tool opens its Workspace Folder entry, or its only launch if it has just one;
-  only a tool with several repository launches and none for the Workspace Folder shows the menu instead. Right-clicking a repository's card opens a menu with a
-  **Tools** submenu of every tool that can open that repository. Menus close on Escape or a click outside them, and
-  stay inside the window.
+- The side panel's **Tools section** lists each tool once, whatever its kind, in the order tools are offered. Each
+  tool has **places** it can be launched, which its menu lists (right-click it, or use its ⋮ button), even where
+  several start the same command: for a folder tool, **Workspace** and then **Repository: `<name>`** for each
+  repository; for a file tool, each file it found, with its repository. Clicking a tool launches it directly when it
+  has one place; for a folder tool in a workspace with one repository, it launches the one the single-repository
+  setting prefers. Otherwise, a click opens the menu to pick from. Right-clicking a repository's card opens a menu
+  with a **Tools** submenu of every tool that can open that repository. Menus close on Escape or a click outside
+  them, and stay inside the window.
 - Launching a tool from the Tools section (by clicking it, or from its menu) pulses its background once, briefly, to
   show the click was seen while the tool starts.
 - A tool is only offered when it's enabled and its executable is found (except Terminal, which has none).

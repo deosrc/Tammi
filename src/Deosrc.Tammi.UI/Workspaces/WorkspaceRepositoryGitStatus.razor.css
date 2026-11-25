@@ -1,0 +1,36 @@
+/* The repository's name is a button, for the keyboard, that reads as text. Its click reaches the card. */
+.git-status-name {
+    overflow: hidden;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-weight: var(--fontWeightSemibold);
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.git-status-name:hover {
+    color: var(--colorBrandForegroundLink);
+    text-decoration: underline;
+}
+
+.git-status-note,
+.git-status-problem {
+    margin: 0;
+    font-size: var(--fontSizeBase200);
+}
+
+.git-status-note {
+    color: var(--colorNeutralForeground3);
+}
+
+.git-status-problem {
+    display: flex;
+    align-items: center;
+    gap: var(--spacingHorizontalXS);
+    color: var(--colorStatusDangerForeground1);
+}

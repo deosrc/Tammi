@@ -7,15 +7,18 @@
 @inject WorkspaceEditor Editor
 @inject EditWorkspaceSessions Sessions
 @inject NavigationManager Navigation
+@inject WorkspaceViewState ViewState
 @implements IDisposable
 
 <div class="page wizard">
     @if (_loadProblem is not null)
     {
         <h1>Edit workspace</h1>
-        <p class="error" role="alert">@_loadProblem</p>
+        <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+            @_loadProblem
+        </FluentMessageBar>
         <div class="wizard-actions">
-            <a class="button button-secondary" href="@AppRoutes.Home">Home</a>
+            <FluentAnchorButton Href="@AppRoutes.Home">Home</FluentAnchorButton>
         </div>
     }
     else if (_draft is null || _workspace is null)
@@ -27,121 +30,119 @@
     {
         <h1>Edit @_workspace.Name</h1>
 
-        <ol class="wizard-steps" aria-label="Steps">
-            @foreach (var (step, title) in Steps)
-            {
-                <li class="wizard-step @(step == _step ? "active" : null) @(step < _step ? "done" : null)"
-                    aria-current="@(step == _step ? "step" : null)">
-                    <span class="wizard-step-number">@((int)step + 1)</span>
-                    @title
-                </li>
-            }
-        </ol>
+        @* The steps are changed with the buttons below, which check each one first, so the wizard's own navigation is off. *@
+        <FluentWizard Value="@((int)_step)" StepSequence="WizardStepSequence.Linear" StepperPosition="StepperPosition.Top" Height="auto"
+                      DisplayStepNumber="@(WizardStepStatus.Current | WizardStepStatus.Next | WizardStepStatus.Previous)">
+            <Steps>
+                <FluentWizardStep Label="Tasks" DeferredLoading="true" OnChange="KeepStep">
+                    <section class="wizard-body">
+                        <h2>Change tasks</h2>
+                        <p class="settings-help settings-intro">
+                            Add tasks to the workspace, or remove the ones it no longer needs.
+                        </p>
+                        <TaskPicker Draft="_draft" />
+                    </section>
+                </FluentWizardStep>
 
-        @switch (_step)
-        {
-            case EditWorkspaceStep.Tasks:
-                <section class="wizard-body">
-                    <h2>Change tasks</h2>
-                    <p class="settings-help settings-intro">
-                        Add tasks to the workspace, or remove the ones it no longer needs.
-                    </p>
-                    <TaskPicker Draft="_draft" />
-                </section>
-                break;
-
-            case EditWorkspaceStep.Repositories:
-                <section class="wizard-body">
-                    <h2>Add repositories</h2>
-                    @if (_saving)
-                    {
-                        <div class="workspace-creation" aria-live="polite">
-                            <progress max="@(_progress?.TotalSteps ?? 1)" value="@(_progress?.CompletedSteps ?? 0)"></progress>
-                            <p>@(_progress?.Message ?? "Checking…")</p>
-                        </div>
-                    }
-                    else if (_saved is not null)
-                    {
-                        <p>The workspace <strong>@_saved.Workspace.Name</strong> was changed.</p>
-                        @foreach (var warning in _saved.Warnings)
+                <FluentWizardStep Label="Repositories" DeferredLoading="true" OnChange="KeepStep">
+                    <section class="wizard-body">
+                        <h2>Add repositories</h2>
+                        @if (_saving)
                         {
-                            <p class="warning">@warning</p>
+                            <div class="workspace-creation" aria-live="polite">
+                                <FluentProgressBar Value="@(_progress?.CompletedSteps ?? 0)" Max="@(_progress?.TotalSteps ?? 1)"
+                                                   Width="100%" />
+                                <p>@(_progress?.Message ?? "Checking…")</p>
+                            </div>
                         }
-                    }
-                    else
-                    {
-                        <RepositoryPicker Draft="_draft" Changed="StateHasChanged" />
-                    }
+                        else if (_saved is not null)
+                        {
+                            <p>The workspace <strong>@_saved.Workspace.Name</strong> was changed.</p>
+                            @foreach (var warning in _saved.Warnings)
+                            {
+                                <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
+                                                  AllowDismiss="false">
+                                    @warning
+                                </FluentMessageBar>
+                            }
+                        }
+                        else
+                        {
+                            <RepositoryPicker Draft="_draft" Changed="StateHasChanged" />
+                        }
 
-                    @if (_failure is not null)
-                    {
-                        <div class="workspace-creation-failure" role="alert">
-                            @if (_failure.Problems.Count > 0)
-                            {
-                                <p class="error">The workspace can't be changed:</p>
-                                <ul>
-                                    @foreach (var problem in _failure.Problems)
-                                    {
-                                        <li class="error">@problem</li>
-                                    }
-                                </ul>
-                            }
-                            else
-                            {
-                                <p class="error">@_failure.Message</p>
-                            }
-                            @if (_failure.CleanupProblems.Count == 0)
-                            {
-                                @if (_failure.InnerException is not null)
+                        @if (_failure is not null)
+                        {
+                            <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine"
+                                              AllowDismiss="false">
+                                @if (_failure.Problems.Count > 0)
                                 {
-                                    <p class="settings-help">Everything added for it has been removed again.</p>
+                                    <p>The workspace can't be changed:</p>
+                                    <ul>
+                                        @foreach (var problem in _failure.Problems)
+                                        {
+                                            <li>@problem</li>
+                                        }
+                                    </ul>
                                 }
-                            }
-                            else
+                                else
+                                {
+                                    <p>@_failure.Message</p>
+                                }
+                                @if (_failure.CleanupProblems.Count > 0)
+                                {
+                                    <p>Some of what was added couldn't be removed again:</p>
+                                    <ul>
+                                        @foreach (var problem in _failure.CleanupProblems)
+                                        {
+                                            <li>@problem</li>
+                                        }
+                                    </ul>
+                                }
+                            </FluentMessageBar>
+                            @if (_failure.CleanupProblems.Count == 0 && _failure.InnerException is not null)
                             {
-                                <p class="error">Some of what was added couldn't be removed again:</p>
-                                <ul>
-                                    @foreach (var problem in _failure.CleanupProblems)
-                                    {
-                                        <li class="error">@problem</li>
-                                    }
-                                </ul>
+                                <p class="settings-help">Everything added for it has been removed again.</p>
                             }
-                        </div>
-                    }
-                </section>
-                break;
-        }
+                        }
+                    </section>
+                </FluentWizardStep>
+            </Steps>
+            @* The buttons are below the wizard, across the whole page, not in its own button area. *@
+            <ButtonTemplate></ButtonTemplate>
+        </FluentWizard>
 
         <div class="wizard-actions">
             @if (_saved is not null)
             {
                 <div class="wizard-actions-end">
-                    <button type="button" class="button" @onclick="Discard">Back to workspace</button>
+                    <FluentButton Appearance="ButtonAppearance.Primary" OnClick="Discard">Back to workspace</FluentButton>
                 </div>
             }
             else if (_saving)
             {
-                <button type="button" class="button button-secondary" disabled="@_cancelling" @onclick="CancelSaving">
+                <FluentButton Disabled="_cancelling" OnClick="CancelSaving">
                     @(_cancelling ? "Cancelling…" : "Cancel")
-                </button>
+                </FluentButton>
             }
             else
             {
-                <button type="button" class="button button-secondary" @onclick="Discard">Cancel</button>
+                <FluentButton OnClick="Discard">Cancel</FluentButton>
                 <div class="wizard-actions-end">
                     @if (_step > EditWorkspaceStep.Tasks)
                     {
-                        <button type="button" class="button button-secondary" @onclick="Back">Back</button>
+                        <FluentButton OnClick="Back">Back</FluentButton>
                     }
                     @if (_step < EditWorkspaceStep.Repositories)
                     {
-                        <button type="button" class="button" @onclick="Next">Next</button>
+                        <FluentButton Appearance="ButtonAppearance.Primary" OnClick="Next">Next</FluentButton>
                     }
                     else
                     {
-                        <button type="button" class="button" disabled="@(!_draft.IsRepositoriesValid)"
-                                @onclick="SaveAsync">Save changes</button>
+                        <FluentButton Appearance="ButtonAppearance.Primary" Disabled="@(!_draft.IsRepositoriesValid)"
+                                      OnClick="SaveAsync">
+                            Save changes
+                        </FluentButton>
                     }
                 </div>
             }
@@ -150,12 +151,6 @@
 </div>
 
 @code {
-    private static readonly IReadOnlyList<(EditWorkspaceStep Step, string Title)> Steps =
-    [
-        (EditWorkspaceStep.Tasks, "Tasks"),
-        (EditWorkspaceStep.Repositories, "Repositories"),
-    ];
-
     [Parameter]
     public string WorkspaceId { get; set; } = "";
 
@@ -273,6 +268,9 @@
         return tasks;
     }
 
+    // The steps are changed with the buttons, so the wizard's own way of changing them (clicking a step) is turned off.
+    private static void KeepStep(FluentWizardStepChangeEventArgs args) => args.IsCancelled = true;
+
     private void Next() => _session!.Step++;
 
     private void Back()
@@ -303,6 +301,6 @@
     private void Discard()
     {
         Sessions.Discard(WorkspaceId);
-        Navigation.NavigateTo(AppRoutes.Workspace(WorkspaceId));
+        Navigation.NavigateTo(ViewState.RouteOf(WorkspaceId));
     }
 }

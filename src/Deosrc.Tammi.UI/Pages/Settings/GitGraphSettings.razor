@@ -2,21 +2,16 @@
 @using Deosrc.Tammi.Core.Settings
 
 @* The Git section's options for the git graph: the commit panel's counter for the subject line. *@
-<div class="settings-field">
-    <label for="git-subject-limit">Commit subject limit</label>
-    <div class="settings-field-row">
-        @* Recreated after each change, so the input shows the saved value even when an out-of-range value is replaced. *@
-        <input @key="_subjectLimitRevision"
-               id="git-subject-limit"
-               type="number"
-               class="settings-number"
-               min="@GitSettings.MinSubjectLimit"
-               max="@GitSettings.MaxSubjectLimit"
-               step="1"
-               value="@SettingsStore.Current.Git.SubjectLimit"
-               @onchange="OnSubjectLimitChanged" />
-        <span>characters</span>
-    </div>
+<div class="settings-field-group">
+    @* Recreated after each change, so the input shows the saved value even when an out-of-range value is replaced. *@
+    <FluentNumberInput @key="_subjectLimitRevision"
+                       TValue="int?"
+                       Label="Commit subject limit"
+                       Min="GitSettings.MinSubjectLimit"
+                       Max="GitSettings.MaxSubjectLimit"
+                       Step="1"
+                       Value="SettingsStore.Current.Git.SubjectLimit"
+                       ValueChanged="OnSubjectLimitChanged" />
     <p class="settings-help">
         How long a commit message's subject should be at most (@GitSettings.MinSubjectLimit to
         @GitSettings.MaxSubjectLimit characters). The commit panel counts down the characters left, as a guide: a longer
@@ -24,22 +19,26 @@
     </p>
     @if (SaveError is not null)
     {
-        <p class="error">@SaveError</p>
+        <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+            @SaveError
+        </FluentMessageBar>
     }
 </div>
 
 @code {
     private int _subjectLimitRevision;
 
-    private async Task OnSubjectLimitChanged(ChangeEventArgs e)
+    private async Task OnSubjectLimitChanged(int? value)
     {
         // A value that isn't a whole number in range is replaced by the current one.
-        if (int.TryParse(e.Value?.ToString(), out var limit)
-            && limit is >= GitSettings.MinSubjectLimit and <= GitSettings.MaxSubjectLimit)
+        if (value is { } limit && limit is >= GitSettings.MinSubjectLimit and <= GitSettings.MaxSubjectLimit)
         {
             await UpdateAsync(settings => settings with { Git = settings.Git with { SubjectLimit = limit } });
         }
-
-        _subjectLimitRevision++;
+        else
+        {
+            // Recreating the input drops its focus, so it's only done when what it shows is wrong.
+            _subjectLimitRevision++;
+        }
     }
 }

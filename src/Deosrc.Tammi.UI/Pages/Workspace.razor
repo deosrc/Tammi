@@ -1,4 +1,5 @@
 @page "/workspaces/{WorkspaceId}"
+@page "/workspaces/{WorkspaceId}/tabs/{TabId}"
 @implements IDisposable
 @using Deosrc.Tammi.Core.Agents
 @using Deosrc.Tammi.Core.Git
@@ -46,15 +47,11 @@ else if (_renaming && _listing?.Workspace is { } renamedWorkspace)
     <div class="page">
         <h1>Rename @renamedWorkspace.Name</h1>
         <form class="settings-form" @onsubmit="RenameAsync" @onsubmit:preventDefault>
-            <div class="settings-field">
-                <label for="workspace-new-name">Name</label>
-                <input id="workspace-new-name"
-                       class="settings-text @(RenameProblem is null ? null : "invalid")"
-                       autocomplete="off" @bind="_newName" @bind:event="oninput" @ref="_newNameInput" />
-                @if (RenameProblem is { } renameProblem)
-                {
-                    <p class="error">@renameProblem</p>
-                }
+            <div class="settings-field-group">
+                <FluentTextInput Label="Name" AutoComplete="off" Width="100%" Immediate="true" Autofocus="true"
+                                 @bind-Value="_newName" MessageCondition="FluentFieldCondition.Always"
+                                 MessageState="@(RenameProblem is null ? null : MessageState.Error)"
+                                 Message="@RenameProblem" />
                 <p class="settings-help">
                     Shown on Home and the workspace's tab. The Workspace Folder keeps its name:
                     <code>@renamedWorkspace.Folder</code>.
@@ -62,15 +59,14 @@ else if (_renaming && _listing?.Workspace is { } renamedWorkspace)
             </div>
             @if (_renameError is not null)
             {
-                <p class="error" role="alert">@_renameError</p>
+                <PanelMessage>@_renameError</PanelMessage>
             }
             <div class="workspace-details-actions">
-                <button type="submit" class="button" disabled="@(RenameProblem is not null || _savingName)">
+                <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary"
+                              Disabled="@(RenameProblem is not null || _savingName)">
                     @(_savingName ? "Renaming…" : "Rename")
-                </button>
-                <button type="button" class="button button-secondary" disabled="@_savingName" @onclick="CancelRename">
-                    Cancel
-                </button>
+                </FluentButton>
+                <FluentButton Disabled="@_savingName" OnClick="CancelRename">Cancel</FluentButton>
             </div>
         </form>
     </div>
@@ -87,9 +83,8 @@ else if (_listing is { Availability: not WorkspaceAvailability.Available } listi
             <dd>@listing.Folder</dd>
         </dl>
         <div class="workspace-details-actions">
-            <button type="button" class="button button-danger" @onclick="() => StartDelete(listing.Name)">
-                Delete workspace…
-            </button>
+            <FluentButton Class="danger-button" Appearance="ButtonAppearance.Primary"
+                          OnClick="() => StartDelete(listing.Name)">Delete workspace…</FluentButton>
         </div>
     </div>
 }
@@ -97,20 +92,16 @@ else
 {
     @* Keyed by workspace, so switching tabs doesn't carry one workspace's collapsed sections over to another. *@
     <div class="workspace-view" @key="_tab.WorkspaceId">
-        <aside class="side-panel">
-            <div class="side-panel-sections">
-                <SidePanelSection Title="Tasks">
+        <SidePanel>
+            <ChildContent>
+                <SidePanelSection Title="Tasks" Count="@(_tasks?.Tasks.Count ?? 0)">
                     <Actions>
                         @if (_tasks is { Tasks.Count: > 0 } tasks)
                         {
-                            <button type="button" class="side-panel-section-action" title="Read the tasks again"
-                                    aria-label="Refresh tasks" disabled="@tasks.IsRefreshing" @onclick="tasks.Refresh">
-                                <svg class="icon icon-small @(tasks.IsRefreshing ? "icon-spin" : null)"
-                                     viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" />
-                                    <path d="M21 3v5h-5" />
-                                </svg>
-                            </button>
+                            <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small" IconOnly="true"
+                                          Loading="@tasks.IsRefreshing" IconStart="@(new Icons.Regular.Size16.ArrowSync())"
+                                          Title="Read the tasks again" aria-label="Refresh tasks"
+                                          OnClick="tasks.Refresh" />
                         }
                     </Actions>
                     <ChildContent>
@@ -138,17 +129,13 @@ else
                         <WorkspaceAgentCounts WorkspaceId="@WorkspaceId" />
                     </HeaderContent>
                     <Actions>
-                        <button type="button" class="side-panel-section-action" title="Past sessions" aria-label="History"
-                                @onclick="OpenHistory">
-                            @HistoryIcon
-                        </button>
-                        <button type="button" class="side-panel-section-action" title="Start a new agent"
-                                aria-label="New agent" aria-haspopup="menu" disabled="@(AgentDefinitions.Count == 0)"
-                                @onclick="OpenNewAgentMenu">
-                            <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M12 5v14M5 12h14" />
-                            </svg>
-                        </button>
+                        <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small" IconOnly="true"
+                                      IconStart="@(new Icons.Regular.Size16.History())" Title="Past sessions"
+                                      aria-label="History" OnClick="OpenHistory" />
+                        <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small" IconOnly="true"
+                                      Disabled="@(AgentDefinitions.Count == 0)" IconStart="@(new Icons.Regular.Size16.Add())"
+                                      Title="Start a new agent" aria-label="New agent" aria-haspopup="menu"
+                                      OnClick="OpenNewAgentMenu" />
                     </Actions>
                     <ChildContent>
                         @if (_listing?.Workspace is { } agentsWorkspace)
@@ -157,20 +144,14 @@ else
                         }
                     </ChildContent>
                 </SidePanelSection>
-                <SidePanelSection Title="Repositories">
+                <SidePanelSection Title="Repositories" Count="@(_gitStatus?.Repositories.Count ?? 0)">
                     <Actions>
                         @if (_gitStatus is { Repositories.Count: > 0 })
                         {
-                            <button type="button" class="side-panel-section-action"
-                                    title="Read the repositories' git status and pull requests again"
-                                    aria-label="Refresh repositories" disabled="@_refreshingRepositories"
-                                    @onclick="RefreshRepositoriesAsync">
-                                <svg class="icon icon-small @(_refreshingRepositories ? "icon-spin" : null)"
-                                     viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" />
-                                    <path d="M21 3v5h-5" />
-                                </svg>
-                            </button>
+                            <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small" IconOnly="true"
+                                          Loading="@_refreshingRepositories" IconStart="@(new Icons.Regular.Size16.ArrowSync())"
+                                          Title="Read the repositories' git status and pull requests again"
+                                          aria-label="Refresh repositories" OnClick="RefreshRepositoriesAsync" />
                         }
                     </Actions>
                     <ChildContent>
@@ -193,181 +174,66 @@ else
                         }
                     </ChildContent>
                 </SidePanelSection>
-                <SidePanelSection Title="Tools">
+                <SidePanelSection Flush="true" Title="Tools" Count="@_toolItems.Count">
                     @if (_toolItems.Count == 0)
                     {
                         <p class="placeholder">
                             No tools to open the workspace in. Add or enable them in
-                            <a href="@AppRoutes.SettingsTools">Settings</a>.
+                            <FluentLink Href="@AppRoutes.SettingsTools">Settings</FluentLink>.
                         </p>
                     }
                     else
                     {
                         @* Clicking a tool opens the Workspace Folder in it. Right-clicking it offers every folder it can
                            open. *@
-                        <ul class="tool-list">
+                        <ul class="side-panel-list">
                             @foreach (var item in _toolItems)
                             {
-                                <li @key="item">
-                                    <button type="button" class="tool-item @PulseClass(item)"
-                                            title="@(item.FilePath ?? item.Label)"
-                                            aria-haspopup="@(item.DefaultEntry is null ? "menu" : null)"
-                                            @onclick="e => OnToolClicked(item, e)"
-                                            @oncontextmenu="e => OpenToolMenu(item, e)" @oncontextmenu:preventDefault>
-                                        <ToolImageView Image="item.Entries[0].Image" Fallback="item.Tool.Icon.Generic" />
-                                        <span class="tab-label-text">@item.Label</span>
-                                    </button>
-                                </li>
+                                <SidePanelListItem @key="item" Hint="@(item.Tool.Kind == ToolKind.File && item.DefaultEntry is { } only ? only.Path : item.Label)"
+                                                   HasMenu="item.DefaultEntry is null" Pulse="PulseOf(item)"
+                                                   OnClick="e => OnToolClicked(item, e)"
+                                                   OnContextMenu="e => OpenToolMenu(item, e)"
+                                                   OnMenu="e => OpenToolMenu(item, e)" MenuHint="@($"More ways to open with {item.Label}")">
+                                    <Icon><ToolImageView Image="item.Entries[0].Image" Fallback="item.Tool.Icon.Generic" /></Icon>
+                                    <ChildContent>@item.Label</ChildContent>
+                                </SidePanelListItem>
                             }
                         </ul>
                     }
                 </SidePanelSection>
-            </div>
-            <div class="side-panel-footer">
-                @* Closes on Escape, or on a click anywhere outside the menu. *@
-                <div class="menu-anchor menu-anchor-wide" @onkeydown="OnManageMenuKeyDown">
-                    <button type="button" class="button button-secondary button-icon" aria-haspopup="menu"
-                            aria-expanded="@(_manageMenuOpen ? "true" : "false")"
-                            @onclick="ToggleManageMenu">
-                        Manage Workspace
-                        <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <polyline points="6 15 12 9 18 15"></polyline>
-                        </svg>
-                    </button>
-                    @if (_manageMenuOpen)
-                    {
-                        <div class="menu-backdrop" @onclick="() => _manageMenuOpen = false"></div>
-                        <ul class="menu menu-up" role="menu" aria-label="Manage Workspace">
-                            <li role="none">
-                                <button type="button" class="menu-item" role="menuitem" @onclick="StartEdit">
-                                    Edit tasks and repositories…
-                                </button>
-                            </li>
-                            <li role="none">
-                                <button type="button" class="menu-item" role="menuitem" @onclick="StartRename">
-                                    Rename…
-                                </button>
-                            </li>
-                            <li role="none">
-                                <button type="button" class="menu-item menu-item-danger" role="menuitem"
-                                        @onclick="() => StartDelete(_tab.Name)">
-                                    Delete workspace…
-                                </button>
-                            </li>
-                        </ul>
-                    }
-                </div>
-            </div>
-        </aside>
+            </ChildContent>
+            <Footer>
+                <FluentButton Id="manage-workspace" Style="width: 100%;" IconEnd="@(new Icons.Regular.Size16.ChevronUp())">
+                    Manage Workspace
+                </FluentButton>
+                <FluentMenu Trigger="manage-workspace">
+                    <FluentMenuList>
+                        <FluentMenuItem OnClick="StartEdit">Edit tasks and repositories…</FluentMenuItem>
+                        <FluentMenuItem OnClick="StartRename">Rename…</FluentMenuItem>
+                        <FluentMenuItem Class="danger-menu-item" OnClick="() => StartDelete(_tab.Name)">Delete workspace…</FluentMenuItem>
+                    </FluentMenuList>
+                </FluentMenu>
+            </Footer>
+        </SidePanel>
         <div class="workspace-main">
             @* The first tab is the dashboard and the last opens the New menu, so they're always there. *@
-            <div class="session-tabs">
-                <div class="session-tab-list" role="tablist" aria-label="Workspace">
-                    <div class="session-tab session-tab-dashboard @(_shown is null ? "active" : null)">
-                        <button type="button" class="session-tab-label session-tab-icon" role="tab"
-                                aria-selected="@(_shown is null ? "true" : "false")" title="Dashboard"
-                                aria-label="Dashboard" @onclick="ShowDashboard">
-                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <rect x="3" y="3" width="7" height="9" rx="1" />
-                                <rect x="14" y="3" width="7" height="5" rx="1" />
-                                <rect x="14" y="12" width="7" height="9" rx="1" />
-                                <rect x="3" y="16" width="7" height="5" rx="1" />
-                            </svg>
-                        </button>
-                    </div>
-                    @foreach (var tab in _tabs)
-                    {
-                        var shown = ReferenceEquals(tab, _shown);
-                        <div class="session-tab @(shown ? "active" : null)" @key="tab">
-                            <button type="button" class="session-tab-label" role="tab"
-                                    aria-selected="@(shown ? "true" : "false")"
-                                    @onclick="() => ShowTab(tab)">
-                                @if (tab is WorkspaceAgent iconAgent)
-                                {
-                                    <AgentIcon Definition="iconAgent.Agent.Definition" />
-                                }
-                                else if (tab is WorkspaceTerminal)
-                                {
-                                    @TerminalIcon
-                                }
-                                else if (tab is WorkspaceHistoryTab)
-                                {
-                                    @HistoryIcon
-                                }
-                                else if (tab is WorkspaceGitGraph)
-                                {
-                                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        @GitGraphIconPaths
-                                    </svg>
-                                }
-                                <span class="tab-label-text">@tab.DisplayName</span>
-                                @if (tab is IWorkspaceProcess { HasExited: true })
-                                {
-                                    <span class="session-tab-status">
-                                        @(tab is WorkspaceAgent { State: AgentState.Error } ? "Error" : "Exited")
-                                    </span>
-                                }
-                                @if (tab is WorkspaceAgent agent)
-                                {
-                                    @* Agents' tabs show their state at the end, next to the close button. *@
-                                    <AgentStateIndicator State="agent.State" />
-                                }
-                            </button>
-                        <SessionTabTooltip Name="@tab.DisplayName"
-                                           Detail="@(tab switch { IWorkspaceProcess process => process.WorkingDirectory, WorkspaceGitGraph graph => graph.Path, _ => null })" />
-                            <button type="button" class="tab-close" title="Close @tab.DisplayName"
-                                    aria-label="Close @tab.DisplayName" @onclick="() => CloseTabAsync(tab)">
-                                &times;
-                            </button>
-                        </div>
-                    }
-                </div>
-                @* Outside the tab list, which scrolls and would clip the menu. Closes on Escape, or on a click anywhere
-                   outside the menu. *@
-                <div class="menu-anchor session-tab-new" @onkeydown="OnNewMenuKeyDown">
-                    <button type="button" class="session-tab-label session-tab-icon" title="New…" aria-label="New…"
-                            aria-haspopup="menu" aria-expanded="@(_newMenuOpen ? "true" : "false")"
-                            @onclick="ToggleNewMenu">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M12 5v14M5 12h14" />
-                        </svg>
-                    </button>
-                    @if (_newMenuOpen)
-                    {
-                        <div class="menu-backdrop" @onclick="CloseNewMenu"></div>
-                        <ul class="menu" role="menu" aria-label="New">
-                            @NewMenuItem(TerminalSubmenu, "Terminal", TerminalIcon, StartTerminal)
-                            @if (_listing?.Workspace?.Repositories.Count > 0)
-                            {
-                                @GitMenuItem()
-                            }
-                            @if (AgentDefinitions.Count > 0)
-                            {
-                                <li role="separator" class="menu-separator"></li>
-                            }
-                            @for (var i = 0; i < AgentDefinitions.Count; i++)
-                            {
-                                var definition = AgentDefinitions[i];
-                                var name = string.IsNullOrWhiteSpace(definition.Name)
-                                    ? WorkspaceAgents.DefaultName
-                                    : definition.Name;
-                                @NewMenuItem(
-                                    $"agent-{i}",
-                                    name,
-                                    @<AgentIcon Definition="definition" />,
-                                    repository => StartAgentAsync(definition, repository))
-                            }
-                        </ul>
-                    }
-                </div>
-            </div>
+            <TabBar Class="session-tabs" AriaLabel="Workspace" FixedItems="DashboardItems" Items="TabItems"
+                    OnClose="CloseTabItemAsync">
+                <EndContent>
+                    <NewTabMenu AgentDefinitions="AgentDefinitions" Repositories="_listing?.Workspace?.Repositories ?? []"
+                                GitTargets="@(_listing?.Workspace?.Repositories.Count > 0 ? GraphTargets().ToList() : null)"
+                                OnTerminal="repository => StartTerminal(repository)"
+                                OnAgent="request => StartAgentAsync(request.Definition, request.Repository)"
+                                OnGit="target => OpenGraph(target.Repository, target.SubmodulePath)" />
+                </EndContent>
+            </TabBar>
             @if (_startError is not null)
             {
-                <p class="error workspace-main-error">@_startError</p>
+                <PanelMessage OnDismiss="DismissStartError">@_startError</PanelMessage>
             }
             @if (_shown is IWorkspaceProcess shownProcess)
             {
-                <Terminal @key="shownProcess" Session="shownProcess.Session" Class="workspace-terminal" />
+                <Terminal @key="shownProcess" Session="shownProcess.Session" />
             }
             else if (_shown is WorkspaceHistoryTab && _listing?.Workspace is { } historyWorkspace)
             {
@@ -384,6 +250,7 @@ else
                     {
                         <WorkspaceDashboard Workspace="dashboardWorkspace" Tasks="_tasks" PullRequests="_pullRequests"
                                             GitStatus="_gitStatus" OnShowAgent="ShowTab"
+                                            OnRepositoryContextMenu="menu => OpenRepositoryMenu(menu.Repository, menu.Event)"
                                             OnOpenGraph="graph => OpenGraph(graph.Repository, graph.Path)" />
                     }
                 </div>
@@ -391,10 +258,10 @@ else
         </div>
         @if (_contextMenu is { } contextMenu)
         {
-            <ContextMenu @key="contextMenu" X="contextMenu.X" Y="contextMenu.Y" Label="@contextMenu.Label"
-                         OnClose="CloseContextMenu">
+            <PointMenu @key="contextMenu" X="contextMenu.X" Y="contextMenu.Y" Label="@contextMenu.Label"
+                       OnClose="CloseContextMenu">
                 @contextMenu.Items
-            </ContextMenu>
+            </PointMenu>
         }
     </div>
 }
@@ -407,23 +274,20 @@ else
     private bool _deleting;
     private bool _renaming;
     private bool _savingName;
-    private bool _focusNewName;
     private string _newName = "";
     private string? _renameError;
-    private ElementReference _newNameInput;
-    private bool _manageMenuOpen;
-    private const string TerminalSubmenu = "terminal";
-    private const string GitSubmenu = "git";
 
-    private bool _newMenuOpen;
 
-    // The New menu's open submenu: TerminalSubmenu, or "agent-<index>" for an Agent Definition.
-    private string? _openSubmenu;
     private string? _startError;
+
+    private void DismissStartError() => _startError = null;
 
     // The workspace's main area tabs after the dashboard, in the order they started.
     private IReadOnlyList<IMainAreaTab> _tabs = [];
     private IMainAreaTab? _shown;
+
+    // Set when restoring the tabs sends the view to the tab that was shown before Tammi closed.
+    private bool _restoredTabShown;
     private string _deletingName = "";
 
     // Keeps running while the tab is open, so it isn't disposed with the page.
@@ -453,7 +317,6 @@ else
 
     // The open right-click menu, if any, and whether its Tools submenu is open.
     private ContextMenuState? _contextMenu;
-    private bool _contextSubmenuOpen;
 
     // Counts updates of the tools, so a slow one doesn't replace a newer one's result.
 
@@ -464,6 +327,12 @@ else
 
     [Parameter]
     public string WorkspaceId { get; set; } = "";
+
+    /// <summary>
+    /// The ID of the main area tab shown, or <see langword="null"/> for the dashboard.
+    /// </summary>
+    [Parameter]
+    public string? TabId { get; set; }
 
     /// <summary>
     /// Starts the Delete Workspace flow when the tab is shown, e.g. from the button on Home's Done workspaces.
@@ -493,14 +362,33 @@ else
             // Another tab is shown in this page, so the flow and menu for the previous one are closed.
             _deleting = false;
             _renaming = false;
-            _manageMenuOpen = false;
-            CloseNewMenu();
-            _startError = null;
+                    _startError = null;
         }
 
         _tab = WorkspaceTabs.Find(WorkspaceId);
         UpdateTabs();
-        await LoadAsync();
+
+        // Showing another of the workspace's tabs only changes the tab, so it isn't read again.
+        _restoredTabShown = false;
+        if (!IsLoaded)
+        {
+            await LoadAsync();
+        }
+
+        // The tabs were just restored and the restored tab is being shown: this is its turn to be remembered.
+        if (IsLoaded && !_restoredTabShown)
+        {
+            // The tab was closed, or isn't there (e.g. an old address): show the dashboard.
+            if (TabId is not null && _shown is null)
+            {
+                Navigation.NavigateTo(AppRoutes.Workspace(WorkspaceId), replace: true);
+                return;
+            }
+
+            // Remembers what the view shows, here and for the next time Tammi starts, as it changes. Not before the
+            // tabs have loaded and been restored: until then a tab that hasn't opened yet looks like the dashboard.
+            SetShownTab(_shown);
+        }
 
         if (Delete && IsLoaded && _listing is not null && !_deleting)
         {
@@ -569,6 +457,13 @@ else
         }
 
         UpdateTabs();
+
+        // Shows the tab that was shown before Tammi closed, instead of the dashboard that the workspace opens at.
+        if (restoration.Restored && TabId is null && restoration.Active is { } active)
+        {
+            _restoredTabShown = true;
+            Navigation.NavigateTo(AppRoutes.WorkspaceTab(WorkspaceId, active.Id), replace: true);
+        }
     }
 
     private IReadOnlyList<ToolEntry> RepositoryTools(WorkspaceRepository repository) =>
@@ -620,7 +515,8 @@ else
         _toolItems = WorkspaceTools.GroupByTool(
             tools,
             _workspaceTools,
-            (_listing?.Workspace?.Repositories ?? []).Select(RepositoryTools));
+            (_listing?.Workspace?.Repositories ?? []).Select(RepositoryTools),
+            SettingsStore.Current.Tools.SingleRepositoryTarget);
 
     private async Task<IReadOnlyList<ToolEntry>> WithImagesAsync(IReadOnlyList<ToolEntry> entries)
     {
@@ -650,19 +546,22 @@ else
 
     private void OpenToolMenu(ToolItem item, MouseEventArgs e) => OpenContextMenu(e, item.Label, ToolMenuItems(item));
 
-    // A tool's right-click menu: each folder it can be launched in.
+    // A tool's right-click menu: each place it can be launched, even those that start the same command as another. A
+    // folder tool's are the Workspace Folder and each repository, and a file tool's are the files it found.
     private RenderFragment ToolMenuItems(ToolItem item) => __builder =>
     {
-        foreach (var entry in item.Launches)
+        foreach (var entry in item.Places)
         {
+            var target = entry;
             var workspace = ReferenceEquals(entry, item.WorkspaceEntry);
-            <li role="none">
-                <button type="button" class="menu-item" role="menuitem" title="@entry.Path"
-                        @onclick="() => OpenTool(item, entry)">
-                    @(workspace ? WorkspaceFolderIcon : RepositoryIcon)
-                    @(workspace ? "Workspace" : $"Repository: {entry.Repository?.FolderName}")
-                </button>
-            </li>
+            var label = item.Tool.Kind == ToolKind.File
+                ? (item.Tool.MenuLabel == ToolMenuLabel.FullPath
+                    ? entry.MenuLabel
+                    : $"{entry.MenuLabel} ({entry.Repository?.FolderName})")
+                : workspace ? "Workspace" : $"Repository: {entry.Repository?.FolderName}";
+            <FluentMenuItem @key="target.Path" Title="@target.Path" Label="@label"
+                            IconStart="@(workspace ? new Icons.Regular.Size20.Folder() : new Icons.Regular.Size20.BranchFork())"
+                            OnClick="() => OpenTool(item, target)" />
         }
     };
 
@@ -673,72 +572,44 @@ else
     private RenderFragment RepositoryMenuItems(WorkspaceRepository repository) => __builder =>
     {
         var tools = RepositoryTools(repository);
-        <li role="none" class="menu-submenu-anchor" @onmouseenter="() => _contextSubmenuOpen = true">
-            <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
-                    aria-expanded="@(_contextSubmenuOpen ? "true" : "false")"
-                    @onclick="() => _contextSubmenuOpen = !_contextSubmenuOpen">
-                <span class="tab-label-text">Tools</span>
-                <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <polyline points="9 6 15 12 9 18"></polyline>
-                </svg>
-            </button>
-            @if (_contextSubmenuOpen)
-            {
-                <ul class="menu menu-submenu" role="menu" aria-label="Tools">
-                    @if (tools.Count == 0)
-                    {
-                        <li role="none">
-                            <button type="button" class="menu-item" role="menuitem" disabled>No tools</button>
-                        </li>
-                    }
-                    @foreach (var entry in tools)
-                    {
-                        <li role="none">
-                            <button type="button" class="menu-item" role="menuitem" title="@entry.Path"
-                                    @onclick="() => OpenTool(entry)">
-                                <ToolImageView Image="entry.Image" Fallback="entry.Tool.Icon.Generic" />
-                                <span class="tab-label-text">@entry.Label</span>
-                            </button>
-                        </li>
-                    }
-                </ul>
-            }
-        </li>
+        <FluentMenuItem Label="Tools" IconStart="@(new Icons.Regular.Size20.Wrench())">
+            <MenuItems>
+                @if (tools.Count == 0)
+                {
+                    <FluentMenuItem Disabled="true" Label="No tools" />
+                }
+                @foreach (var entry in tools)
+                {
+                    var target = entry;
+                    @* A tool's icon is an image, not a Fluent icon, so it's put in the item's start slot by hand. *@
+                    <FluentMenuItem @key="@($"{target.Tool.Name}\0{target.Path}")" Title="@target.Path"
+                                    OnClick="() => OpenTool(target)">
+                        <span slot="start" class="side-panel-menu-icon">
+                            <ToolImageView Image="target.Image" Fallback="target.Tool.Icon.Generic" />
+                        </span>
+                        @target.Label
+                    </FluentMenuItem>
+                }
+            </MenuItems>
+        </FluentMenuItem>
     };
 
-    // The Agents section's New Agent menu: each Agent Definition, with a submenu of where to start it. It's a context
-    // menu, as the side panel scrolls and would clip a drop-down.
+    // The Agents section's New Agent menu: each Agent Definition, with a submenu of where to start it. It's a menu at the
+    // pointer, as the side panel scrolls and would clip a drop-down.
     private void OpenNewAgentMenu(MouseEventArgs e) =>
         OpenContextMenu(e, "New agent", NewAgentMenuItems());
 
     private RenderFragment NewAgentMenuItems() => __builder =>
     {
-        for (var i = 0; i < AgentDefinitions.Count; i++)
-        {
-            var definition = AgentDefinitions[i];
-            var name = string.IsNullOrWhiteSpace(definition.Name) ? WorkspaceAgents.DefaultName : definition.Name;
-            @NewMenuItem(
-                $"agent-{i}",
-                name,
-                @<AgentIcon Definition="definition" />,
-                repository => StartAgentAsync(definition, repository))
-        }
+        <AgentMenuItems AgentDefinitions="AgentDefinitions" Repositories="_listing?.Workspace?.Repositories ?? []"
+                        OnStart="request => StartAgentAsync(request.Definition, request.Repository)" />
     };
 
     // Opens a right-click menu at the pointer. Only one menu is open at a time.
-    private void OpenContextMenu(MouseEventArgs e, string label, RenderFragment items)
-    {
-        _manageMenuOpen = false;
-        CloseNewMenu();
-        _contextSubmenuOpen = false;
+    private void OpenContextMenu(MouseEventArgs e, string label, RenderFragment items) =>
         _contextMenu = new ContextMenuState(e.ClientX, e.ClientY, label, items);
-    }
 
-    private void CloseContextMenu()
-    {
-        _contextMenu = null;
-        _contextSubmenuOpen = false;
-    }
+    private void CloseContextMenu() => _contextMenu = null;
 
     // Opens a tool from the Tools section, and pulses its item once to show it's launching.
     private void OpenTool(ToolItem item, ToolEntry entry)
@@ -760,8 +631,7 @@ else
     }
 
     // Two classes with the same animation, so clicking the item again while it's pulsing starts the pulse again.
-    private string? PulseClass(ToolItem item) =>
-        Equals(item, _pulsing) ? (_pulseCount % 2 == 0 ? "tool-item-pulse" : "tool-item-pulse-again") : null;
+    private int? PulseOf(ToolItem item) => Equals(item, _pulsing) ? _pulseCount : null;
 
     private void OpenTool(ToolEntry entry)
     {
@@ -919,11 +789,8 @@ else
             .Concat(HistoryTabs.For(WorkspaceId))
             .OrderBy(tab => tab.StartOrder)];
 
-        // Show the tab the view was showing last time (in this run, or before Tammi restarted), or the dashboard if it
-        // wasn't showing one or it has been closed. This only reads: what the view shows is only remembered when the
-        // user changes it, as a tab that hasn't opened yet (while tabs are restored) isn't the dashboard.
-        _shown = (ViewState.GetShown(WorkspaceId) ?? TabRestorer.GetActive(WorkspaceId)) is { } shown
-            && _tabs.Contains(shown) ? shown : null;
+        // The tab the address names, or the dashboard if it names none or the tab isn't open.
+        _shown = TabId is null ? null : _tabs.FirstOrDefault(tab => tab.Id == TabId);
     }
 
     // Remembers the tab the view shows, here and for the next time Tammi starts.
@@ -933,22 +800,69 @@ else
         TabRestorer.SetActive(WorkspaceId, tab);
     }
 
-    private void ShowDashboard()
+    // Shows a tab by going to its address, which is what changes the tab shown.
+    private static RenderFragment IconOf(Microsoft.FluentUI.AspNetCore.Components.Icon icon) =>
+        builder =>
+        {
+            builder.OpenComponent<FluentIcon<Microsoft.FluentUI.AspNetCore.Components.Icon>>(0);
+            builder.AddAttribute(1, "Value", icon);
+            builder.CloseComponent();
+        };
+
+    // The first tab is the dashboard, which is always there.
+    private IReadOnlyList<TabBarItem> DashboardItems =>
+    [
+        new("dashboard", AppRoutes.Workspace(WorkspaceId), "Dashboard", Icon: IconOf(new Icons.Regular.Size20.Board()),
+            Active: _shown is null),
+    ];
+
+    private IReadOnlyList<TabBarItem> TabItems => [.. _tabs.Select(tab => new TabBarItem(
+        tab.Id,
+        AppRoutes.WorkspaceTab(WorkspaceId, tab.Id),
+        tab switch
+        {
+            IWorkspaceProcess process => $"{tab.DisplayName}\n{process.WorkingDirectory}",
+            WorkspaceGitGraph graph => $"{tab.DisplayName}\n{graph.Path}",
+            _ => tab.DisplayName,
+        },
+        tab.DisplayName,
+        TabIconOf(tab),
+        tab is WorkspaceAgent agent ? AgentIndicator(agent) : null,
+        ReferenceEquals(tab, _shown)))];
+
+    private static RenderFragment? TabIconOf(IMainAreaTab tab) => tab switch
     {
-        SetShownTab(null);
-        _shown = null;
-    }
+        WorkspaceAgent agent => builder =>
+        {
+            builder.OpenComponent<AgentIcon>(0);
+            builder.AddAttribute(1, "Definition", agent.Agent.Definition);
+            builder.CloseComponent();
+        },
+        WorkspaceTerminal => IconOf(new Icons.Regular.Size20.WindowConsole()),
+        WorkspaceHistoryTab => IconOf(new Icons.Regular.Size16.History()),
+        WorkspaceGitGraph => IconOf(new Icons.Regular.Size16.BranchFork()),
+        _ => null,
+    };
+
+    // Agents' tabs show their state at the end, next to the close button.
+    private static RenderFragment AgentIndicator(WorkspaceAgent agent) => builder =>
+    {
+        builder.OpenComponent<AgentStateIndicator>(0);
+        builder.AddAttribute(1, "State", agent.State);
+        builder.CloseComponent();
+    };
+
+    private Task CloseTabItemAsync(TabBarItem item) =>
+        _tabs.FirstOrDefault(tab => tab.Id == item.Key) is { } tab ? CloseTabAsync(tab) : Task.CompletedTask;
 
     private void ShowTab(IMainAreaTab tab)
     {
-        SetShownTab(tab);
-        _shown = tab;
         UpdateTabs();
+        Navigation.NavigateTo(AppRoutes.WorkspaceTab(WorkspaceId, tab.Id));
     }
 
     private void StartTerminal(WorkspaceRepository? repository)
     {
-        CloseNewMenu();
         _startError = null;
         if (_listing?.Workspace is not { } workspace)
         {
@@ -969,7 +883,6 @@ else
 
     private async Task StartAgentAsync(AgentDefinition definition, WorkspaceRepository? repository)
     {
-        CloseNewMenu();
         CloseContextMenu();
         _startError = null;
         if (_listing?.Workspace is not { } workspace)
@@ -997,7 +910,7 @@ else
             // Show the next tab, or the previous one if it was the last, or else the dashboard.
             var index = _tabs.ToList().IndexOf(tab);
             var next = index + 1 < _tabs.Count ? _tabs[index + 1] : index > 0 ? _tabs[index - 1] : null;
-            SetShownTab(next);
+            Navigation.NavigateTo(next is null ? AppRoutes.Workspace(WorkspaceId) : AppRoutes.WorkspaceTab(WorkspaceId, next.Id));
         }
 
         // Closing an agent's tab stops it. Its session can still be resumed.
@@ -1037,7 +950,6 @@ else
     // Opens the git graph of a repository, or of one of its submodules by its path in the repository, and shows it.
     private void OpenGraph(WorkspaceRepository repository, string? submodulePath)
     {
-        CloseNewMenu();
         if (_listing?.Workspace is { } workspace)
         {
             ShowTab(GitGraphs.Open(workspace, repository, submodulePath));
@@ -1078,151 +990,6 @@ else
         }
     }
 
-    // The New menu's Git item, with a submenu of the repositories and submodules whose graph it opens.
-    private RenderFragment GitMenuItem() => __builder =>
-    {
-        var open = _openSubmenu == GitSubmenu;
-        <li role="none" class="menu-submenu-anchor" @key="GitSubmenu" @onmouseenter="() => _openSubmenu = GitSubmenu">
-            <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
-                    aria-expanded="@(open ? "true" : "false")" @onclick="() => _openSubmenu = open ? null : GitSubmenu">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">@GitGraphIconPaths</svg>
-                <span class="tab-label-text">Git</span>
-                <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <polyline points="9 6 15 12 9 18"></polyline>
-                </svg>
-            </button>
-            @if (open)
-            {
-                <ul class="menu menu-submenu" role="menu" aria-label="Git">
-                    @foreach (var (repository, submodulePath) in GraphTargets())
-                    {
-                        <li role="none" @key="WorkspaceGitGraph.NameFor(repository, submodulePath)">
-                            <button type="button" class="menu-item" role="menuitem"
-                                    @onclick="() => OpenGraph(repository, submodulePath)">
-                                @RepositoryIcon
-                                @(submodulePath is null
-                                    ? $"Repository: {repository.FolderName}"
-                                    : $"Submodule: {repository.FolderName}/{submodulePath}")
-                            </button>
-                        </li>
-                    }
-                </ul>
-            }
-        </li>
-    };
-
-    // A git graph: a branch leaving one lane and merging back into it.
-    private static readonly RenderFragment GitGraphIconPaths =
-        @<g>
-            <circle cx="6" cy="5" r="2" />
-            <circle cx="6" cy="19" r="2" />
-            <circle cx="18" cy="9" r="2" />
-            <path d="M6 7v10" />
-            <path d="M18 11c0 4-6 4-10.5 6.5" />
-        </g>;
-
-    // The New menu's icons: what each item starts, and where. Agents have theirs from AgentIcon.
-    private static readonly RenderFragment TerminalIcon =
-        @<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <rect x="3" y="4" width="18" height="16" rx="2" />
-            <polyline points="7 9 10 12 7 15" />
-            <path d="M12 15h5" />
-        </svg>;
-
-    // A clock with its hands turned back: past sessions.
-    private static readonly RenderFragment HistoryIcon =
-        @<svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" />
-            <path d="M3 3v5h5" />
-            <path d="M12 7v5l3 2" />
-        </svg>;
-
-    private static readonly RenderFragment WorkspaceFolderIcon =
-        @<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-        </svg>;
-
-    private static readonly RenderFragment RepositoryIcon =
-        @<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <circle cx="6" cy="5" r="2" />
-            <circle cx="6" cy="19" r="2" />
-            <circle cx="18" cy="7" r="2" />
-            <path d="M6 7v10M18 9a5 5 0 0 1-5 5h-2a5 5 0 0 0-5 3" />
-        </svg>;
-
-    // An item of the New menu with a submenu of where to start it: the Workspace Folder or one of its repositories.
-    private RenderFragment NewMenuItem(
-        string key,
-        string label,
-        RenderFragment icon,
-        Func<WorkspaceRepository?, Task> start) => __builder =>
-    {
-        var open = _openSubmenu == key;
-        <li role="none" class="menu-submenu-anchor" @key="key" @onmouseenter="() => _openSubmenu = key">
-            <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
-                    aria-expanded="@(open ? "true" : "false")" @onclick="() => _openSubmenu = open ? null : key">
-                @icon
-                <span class="tab-label-text">@label</span>
-                <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <polyline points="9 6 15 12 9 18"></polyline>
-                </svg>
-            </button>
-            @if (open)
-            {
-                <ul class="menu menu-submenu" role="menu" aria-label="@label">
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem" @onclick="() => start(null)">
-                            @WorkspaceFolderIcon
-                            Workspace
-                        </button>
-                    </li>
-                    @foreach (var repository in _listing?.Workspace?.Repositories ?? [])
-                    {
-                        <li role="none" @key="repository.FolderName">
-                            <button type="button" class="menu-item" role="menuitem"
-                                    @onclick="() => start(repository)">
-                                @RepositoryIcon
-                                Repository: @repository.FolderName
-                            </button>
-                        </li>
-                    }
-                </ul>
-            }
-        </li>
-    };
-
-    private RenderFragment NewMenuItem(
-        string key,
-        string label,
-        RenderFragment icon,
-        Action<WorkspaceRepository?> start) =>
-        NewMenuItem(key, label, icon, repository =>
-        {
-            start(repository);
-            return Task.CompletedTask;
-        });
-
-    private void ToggleNewMenu()
-    {
-        CloseContextMenu();
-        _newMenuOpen = !_newMenuOpen;
-        _openSubmenu = null;
-    }
-
-    private void CloseNewMenu()
-    {
-        _newMenuOpen = false;
-        _openSubmenu = null;
-    }
-
-    private void OnNewMenuKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-        {
-            CloseNewMenu();
-        }
-    }
-
     private void OnMainAreaTabsChanged(string workspaceId) => InvokeAsync(() =>
     {
         if (_disposed.IsCancellationRequested || workspaceId != WorkspaceId)
@@ -1234,23 +1001,8 @@ else
         StateHasChanged();
     });
 
-    private void ToggleManageMenu()
-    {
-        CloseContextMenu();
-        _manageMenuOpen = !_manageMenuOpen;
-    }
-
-    private void OnManageMenuKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-        {
-            _manageMenuOpen = false;
-        }
-    }
-
     private void StartDelete(string name)
     {
-        _manageMenuOpen = false;
         _deletingName = name;
         _deleting = true;
         SetGitStatus(null);
@@ -1261,17 +1013,14 @@ else
 
     private void StartEdit()
     {
-        _manageMenuOpen = false;
         Navigation.NavigateTo(AppRoutes.EditWorkspace(WorkspaceId));
     }
 
     private void StartRename()
     {
-        _manageMenuOpen = false;
         _newName = _listing?.Workspace?.Name ?? _tab?.Name ?? "";
         _renameError = null;
         _renaming = true;
-        _focusNewName = true;
     }
 
     private void CancelRename()
@@ -1306,22 +1055,6 @@ else
         finally
         {
             _savingName = false;
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (_focusNewName && _renaming)
-        {
-            _focusNewName = false;
-            try
-            {
-                await _newNameInput.FocusAsync();
-            }
-            catch (InvalidOperationException)
-            {
-                // The input isn't rendered after all, e.g. the workspace couldn't be read.
-            }
         }
     }
 

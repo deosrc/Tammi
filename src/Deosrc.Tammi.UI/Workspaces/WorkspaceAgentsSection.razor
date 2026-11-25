@@ -13,29 +13,7 @@ else
     <ul class="agent-list">
         @foreach (var agent in OpenAgents)
         {
-            var state = agent.State;
-            var shown = ReferenceEquals(agent, Shown);
-            @* Clicking the card shows the agent's tab. Its name is a button for the keyboard, whose click reaches the
-               card. *@
-            <li class="agent-card card-action @AgentStateText.ToneClass(state) @(shown ? "agent-card-shown" : null)"
-                @key="agent" title="Show @agent.DisplayName" @onclick="() => OnShow.InvokeAsync(agent)">
-                <div class="agent-card-heading">
-                    <AgentIcon Definition="agent.Agent.Definition" />
-                    <button type="button" class="agent-card-name card-action-name" title="@agent.WorkingDirectory"
-                            aria-current="@(shown ? "true" : null)">
-                        @agent.DisplayName
-                    </button>
-                    <AgentStateIndicator State="state" />
-                </div>
-                @if (state == AgentState.Error && agent.Agent.ExitCode is { } exitCode)
-                {
-                    <p class="agent-card-detail">Exit code @exitCode</p>
-                }
-                @if (agent.SessionProblem is { } problem)
-                {
-                    <p class="agent-card-detail warning" title="@problem">Its session can't be resumed later.</p>
-                }
-            </li>
+            <AgentCard @key="agent" Agent="agent" Shown="ReferenceEquals(agent, Shown)" OnShow="OnShow" />
         }
     </ul>
 }

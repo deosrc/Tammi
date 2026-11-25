@@ -7,9 +7,8 @@
    aren't shown. *@
 @foreach (var (state, count) in Counts)
 {
-    <span class="agent-count @AgentStateText.ToneClass(state)" @key="state"
-          title="@count @AgentStateText.Label(state).ToLowerInvariant()"
-          aria-label="@count @AgentStateText.Label(state).ToLowerInvariant()">@count</span>
+    <FluentBadge @key="state" Appearance="BadgeAppearance.Filled" Color="AgentStateText.CardTone(state).ToBadgeColor()"
+                 title="@Describe(state, count)" aria-label="@Describe(state, count)">@count</FluentBadge>
 }
 
 @code {
@@ -18,6 +17,8 @@
     /// </summary>
     [Parameter, EditorRequired]
     public string WorkspaceId { get; set; } = "";
+
+    private static string Describe(AgentState state, int count) => $"{count} {AgentStateText.Label(state).ToLowerInvariant()}";
 
     private IEnumerable<(AgentState State, int Count)> Counts => Agents.For(WorkspaceId)
         .GroupBy(agent => agent.State)

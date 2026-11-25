@@ -10,11 +10,11 @@
     <h2>History</h2>
     @if (_error is not null)
     {
-        <p class="error">@_error</p>
+        <PanelMessage>@_error</PanelMessage>
     }
     @if (_problem is not null)
     {
-        <p class="warning">@_problem</p>
+        <PanelMessage Intent="MessageBarIntent.Warning">@_problem</PanelMessage>
     }
     @if (!_loaded)
     {
@@ -42,18 +42,14 @@
                     <div class="agent-session-footer">
                         @if (WorkspaceAgents.RepositoryFolderOf(Workspace, session.WorkingDirectory) is { } folder)
                         {
-                            <span class="badge agent-session-location" title="@session.WorkingDirectory">@folder</span>
+                            <FluentBadge Class="agent-session-location" Appearance="BadgeAppearance.Tint" title="@session.WorkingDirectory">@folder</FluentBadge>
                         }
                         <div class="agent-card-actions">
-                            <button type="button" class="button button-small"
-                                    disabled="@(cantResume is not null || _busy)"
-                                    @onclick="() => ResumeAsync(session)">
-                                Resume
-                            </button>
-                            <button type="button" class="button button-secondary button-small" disabled="@_busy"
-                                    @onclick="() => ForgetAsync(session)">
-                                Forget
-                            </button>
+                            <FluentButton Size="ButtonSize.Small" Appearance="ButtonAppearance.Primary"
+                                          Disabled="@(cantResume is not null || _busy)"
+                                          OnClick="() => ResumeAsync(session)">Resume</FluentButton>
+                            <FluentButton Size="ButtonSize.Small" Disabled="@_busy"
+                                          OnClick="() => ForgetAsync(session)">Forget</FluentButton>
                         </div>
                     </div>
                 </li>

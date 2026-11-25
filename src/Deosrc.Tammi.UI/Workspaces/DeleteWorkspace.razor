@@ -14,14 +14,19 @@
     @switch (_step)
     {
         case Step.Checking:
-            <p class="placeholder">Checking for work that would be lost…</p>
+            <p class="placeholder">
+                <FluentSpinner Size="SpinnerSize.Small" aria-label="Checking" />
+                Checking for work that would be lost…
+            </p>
             break;
 
         case Step.Failed:
-            <p class="error">@_error</p>
+            <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+                @_error
+            </FluentMessageBar>
             <div class="workspace-details-actions">
-                <button type="button" class="button" @onclick="PlanAsync">Check again</button>
-                <button type="button" class="button button-secondary" @onclick="OnCancel">Cancel</button>
+                <FluentButton Appearance="ButtonAppearance.Primary" OnClick="PlanAsync">Check again</FluentButton>
+                <FluentButton OnClick="OnCancel">Cancel</FluentButton>
             </div>
             break;
 
@@ -33,8 +38,8 @@
             </p>
             @TerminalsNotice
             <div class="workspace-details-actions">
-                <button type="button" class="button button-danger" @onclick="DeleteAsync">Remove from list</button>
-                <button type="button" class="button button-secondary" @onclick="OnCancel">Cancel</button>
+                <FluentButton Class="danger-button" Appearance="ButtonAppearance.Primary" OnClick="DeleteAsync">Remove from list</FluentButton>
+                <FluentButton OnClick="OnCancel">Cancel</FluentButton>
             </div>
             break;
 
@@ -43,49 +48,46 @@
             @TerminalsNotice
             @if (!plan.MetadataRead)
             {
-                <p class="warning">
+                <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
                     The workspace's metadata can't be read, so its worktrees were found by looking in its folder.
-                </p>
+                </FluentMessageBar>
             }
             @if (plan.CouldLoseWork)
             {
-                <div class="alert alert-warning" role="alertdialog" aria-labelledby="delete-workspace-lost-title">
-                    <h3 id="delete-workspace-lost-title" class="alert-title">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-                            <path d="M12 9v4M12 17h.01" />
-                        </svg>
-                        Work will be lost
-                    </h3>
-                    <p>Deleting the workspace loses this work, which isn't committed and pushed anywhere else.</p>
+                <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
+                                  AllowDismiss="false" Title="Work will be lost">
+                    <p class="delete-workspace-lost">Deleting the workspace loses this work, which isn't committed and pushed anywhere else.</p>
                     <ul class="settings-list">
                         @foreach (var worktree in plan.Worktrees.Where(worktree => worktree.NeedsConfirmation))
                         {
-                            <li class="settings-list-item">
+                            <CardListItem>
                                 <span class="settings-list-path">@worktree.FolderName</span>
                                 <span class="settings-list-status">@WorktreeDeletionText.Describe(worktree)</span>
-                            </li>
+                            </CardListItem>
                         }
                         @foreach (var path in plan.OtherContent)
                         {
-                            <li class="settings-list-item">
+                            <CardListItem>
                                 <span class="settings-list-path">@System.IO.Path.GetFileName(path)</span>
                                 <span class="settings-list-status">Not a worktree</span>
-                            </li>
+                            </CardListItem>
                         }
                     </ul>
-                </div>
+                </FluentMessageBar>
             }
             <div class="workspace-details-actions">
-                <button type="button" class="button button-danger" @onclick="DeleteAsync">
+                <FluentButton Class="danger-button" Appearance="ButtonAppearance.Primary" OnClick="DeleteAsync">
                     @(plan.CouldLoseWork ? "Delete workspace and lose this work" : "Delete workspace")
-                </button>
-                <button type="button" class="button button-secondary" @onclick="OnCancel">Cancel</button>
+                </FluentButton>
+                <FluentButton OnClick="OnCancel">Cancel</FluentButton>
             </div>
             break;
 
         case Step.Deleting:
-            <p class="placeholder">Deleting the workspace…</p>
+            <p class="placeholder">
+                <FluentSpinner Size="SpinnerSize.Small" aria-label="Deleting" />
+                Deleting the workspace…
+            </p>
             break;
 
         case Step.Branches:
@@ -94,31 +96,38 @@
                 @(_branches.Count == 1 ? "its local repository" : "their local repositories"). Merged and pushed
                 branches are selected, because deleting them loses no work.
             </p>
-            <ul class="settings-list">
+            @* The whole card toggles a branch, so the checkbox ignores the mouse, which reaches the card instead. *@
+            <ul class="task-list">
                 @foreach (var branch in _branches)
                 {
-                    var id = $"delete-branch-{_branches.IndexOf(branch)}";
-                    <li class="settings-list-item">
-                        <input type="checkbox" id="@id" checked="@_selected.Contains(branch)"
-                               @onchange="e => Select(branch, e.Value is true)" />
-                        <label for="@id" class="settings-list-path">@branch.Branch</label>
-                        <span class="settings-list-status" title="@branch.LocalRepositoryPath">
-                            @WorktreeDeletionText.Describe(branch) · @System.IO.Path.GetFileName(branch.LocalRepositoryPath)
-                        </span>
-                    </li>
+                    var selected = _selected.Contains(branch);
+                    <CardListItem @key="branch" Chosen="selected" OnClick="() => Select(branch, !selected)">
+                        <FluentCheckbox Class="task-checkbox" Value="selected"
+                                        ValueChanged="chosen => Select(branch, chosen)">
+                            <span class="task-choice-text">
+                                <span class="settings-list-path">@branch.Branch</span>
+                                <span class="settings-list-status" title="@branch.LocalRepositoryPath">
+                                    @WorktreeDeletionText.Describe(branch) · @System.IO.Path.GetFileName(branch.LocalRepositoryPath)
+                                </span>
+                            </span>
+                        </FluentCheckbox>
+                    </CardListItem>
                 }
             </ul>
             <div class="workspace-details-actions">
-                <button type="button" class="button button-danger" disabled="@(_selected.Count == 0)"
-                        @onclick="DeleteBranchesAsync">
+                <FluentButton Class="danger-button" Appearance="ButtonAppearance.Primary" Disabled="@(_selected.Count == 0)"
+                              OnClick="DeleteBranchesAsync">
                     Delete selected branches
-                </button>
-                <button type="button" class="button button-secondary" @onclick="OnFinished">Keep all branches</button>
+                </FluentButton>
+                <FluentButton OnClick="OnFinished">Keep all branches</FluentButton>
             </div>
             break;
 
         case Step.DeletingBranches:
-            <p class="placeholder">Deleting branches…</p>
+            <p class="placeholder">
+                <FluentSpinner Size="SpinnerSize.Small" aria-label="Deleting" />
+                Deleting branches…
+            </p>
             break;
 
         case Step.BranchesFailed:
@@ -126,14 +135,14 @@
             <ul class="settings-list">
                 @foreach (var result in _failures)
                 {
-                    <li class="settings-list-item">
+                    <CardListItem @key="result.Branch">
                         <span class="settings-list-path">@result.Branch.Branch</span>
                         <span class="error">@result.Error</span>
-                    </li>
+                    </CardListItem>
                 }
             </ul>
             <div class="workspace-details-actions">
-                <button type="button" class="button" @onclick="OnFinished">Done</button>
+                <FluentButton Appearance="ButtonAppearance.Primary" OnClick="OnFinished">Done</FluentButton>
             </div>
             break;
     }

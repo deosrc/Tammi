@@ -1,0 +1,11 @@
+/* A row of badges, wrapping onto more lines when there are many. */
+.pull-request-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacingHorizontalXS);
+}
+
+.pull-request-problem {
+    display: inline-flex;
+}

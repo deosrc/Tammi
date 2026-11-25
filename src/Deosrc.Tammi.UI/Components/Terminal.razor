@@ -9,11 +9,11 @@
 
 @*
     An embedded terminal: shows a pseudoterminal session with xterm.js and sends it the user's input. The terminal
-    fills this element, and the session's size follows it. It starts by showing the session's kept output, so a
+    fills the room its parent gives it (a flex column), and the session's size follows it. It starts by showing the session's kept output, so a
     session shown again after its terminal was closed picks up where it was. The component doesn't own the session:
     whoever started it disposes it. To show a different session, give the component a new @key.
 *@
-<div @ref="_element" class="terminal @Class"></div>
+<div @ref="_element" class="terminal"></div>
 
 @code {
     private const int OutputBufferSize = 64 * 1024;
@@ -30,12 +30,6 @@
     /// </summary>
     [Parameter, EditorRequired]
     public TerminalSession Session { get; set; } = null!;
-
-    /// <summary>
-    /// CSS classes for the terminal's element, which should be given a size.
-    /// </summary>
-    [Parameter]
-    public string? Class { get; set; }
 
     /// <summary>
     /// Called with the exit code once the process has exited and all its output is shown.
