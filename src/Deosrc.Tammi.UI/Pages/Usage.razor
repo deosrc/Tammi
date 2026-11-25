@@ -1,38 +1,39 @@
 @page "/usage"
 @implements IDisposable
+@using Deosrc.Tammi.Core.Agents
 @using Deosrc.Tammi.Core.Usage
 @using Deosrc.Tammi.UI.Components
 @inject AgentUsageMonitor Monitor
 @inject Deosrc.Tammi.UI.Layout.UsageTabState TabState
 
 <div class="page">
-    <h1>AI usage</h1>
+    <h1>AI Usage</h1>
 
     <div class="usage-toolbar">
-        <label for="usage-agent">Show in the footer</label>
-        <select id="usage-agent" value="@Monitor.TabAgentName" @onchange="OnTabAgentChanged">
-            @foreach (var name in Monitor.AgentNames)
-            {
-                <option value="@name">@name</option>
-            }
-        </select>
-        <button type="button" class="button" @onclick="RefreshAllAsync" disabled="@_refreshing">Refresh</button>
+        <FluentSelect Label="Show in the footer" Items="@Monitor.AgentNames" OptionText="@(name => name)"
+                      Value="@Monitor.TabAgentName" ValueChanged="@((string name) => OnTabAgentChanged(name))" />
     </div>
 
     @foreach (var name in Monitor.AgentNames)
     {
         var state = Monitor.Get(name);
-        <section class="usage-agent" aria-labelledby="usage-heading-@name.Replace(' ', '-')">
-            <div class="usage-agent-header">
-                <h2 id="usage-heading-@name.Replace(' ', '-')">@name</h2>
+        <FluentCard Class="usage-agent">
+            @* The heading is the same as an agent's card on the Agents settings page. *@
+            <div class="agent-definition-header">
+                <AgentIcon Definition="DefinitionOf(name)" />
+                <span class="agent-definition-name" role="heading" aria-level="2">@name</span>
                 @if (state.Usage is { } updated)
                 {
                     <span class="usage-limit-reset">Updated @updated.FetchedAt.ToLocalTime().ToString("t")</span>
                 }
+                <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small" IconOnly="true"
+                              Loading="@_refreshing.Contains(name)" IconStart="@(new Icons.Regular.Size16.ArrowSync())"
+                              Title="Read the usage again" aria-label="@($"Refresh {name} usage")"
+                              OnClick="() => RefreshAsync(name, force: true)" />
             </div>
             @if (state.Error is not null)
             {
-                <p class="warning" role="alert">@state.Error</p>
+                <PanelMessage Intent="MessageBarIntent.Warning">@state.Error</PanelMessage>
             }
             @if (state.Usage is { } usage)
             {
@@ -61,40 +62,43 @@
             {
                 <p>Reading usage…</p>
             }
-        </section>
+        </FluentCard>
     }
 </div>
 
 @code {
-    private bool _refreshing;
+    // The agents whose usage is being read.
+    private readonly HashSet<string> _refreshing = [];
 
     protected override async Task OnInitializedAsync()
     {
         // Also covers arriving here by address rather than from the footer.
         TabState.Open();
         Monitor.Changed += OnChanged;
-        await RefreshAllAsync(force: false);
+        await Task.WhenAll(Monitor.AgentNames.Select(name => RefreshAsync(name, force: false)));
     }
 
     public void Dispose() => Monitor.Changed -= OnChanged;
 
-    private Task RefreshAllAsync() => RefreshAllAsync(force: true);
-
-    private async Task RefreshAllAsync(bool force)
+    private async Task RefreshAsync(string name, bool force)
     {
-        _refreshing = true;
+        _refreshing.Add(name);
         try
         {
-            await Task.WhenAll(Monitor.AgentNames.Select(name => Monitor.RefreshAsync(name, force)));
+            await Monitor.RefreshAsync(name, force);
         }
         finally
         {
-            _refreshing = false;
+            _refreshing.Remove(name);
         }
     }
 
-    private Task OnTabAgentChanged(ChangeEventArgs e) =>
-        e.Value is string name ? Monitor.SetTabAgentAsync(name) : Task.CompletedTask;
+    // The agent's definition, which gives its icon.
+    private static AgentDefinition DefinitionOf(string name) =>
+        name == AgentDefinition.ClaudeCode.Name ? AgentDefinition.ClaudeCode : new AgentDefinition(name, name);
+
+    private Task OnTabAgentChanged(string? name) =>
+        name is null ? Task.CompletedTask : Monitor.SetTabAgentAsync(name);
 
     private static string ResetText(DateTimeOffset resetsAt)
     {

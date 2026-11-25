@@ -47,15 +47,11 @@ else if (_renaming && _listing?.Workspace is { } renamedWorkspace)
     <div class="page">
         <h1>Rename @renamedWorkspace.Name</h1>
         <form class="settings-form" @onsubmit="RenameAsync" @onsubmit:preventDefault>
-            <div class="settings-field">
-                <label for="workspace-new-name">Name</label>
-                <input id="workspace-new-name"
-                       class="settings-text @(RenameProblem is null ? null : "invalid")"
-                       autocomplete="off" @bind="_newName" @bind:event="oninput" @ref="_newNameInput" />
-                @if (RenameProblem is { } renameProblem)
-                {
-                    <p class="error">@renameProblem</p>
-                }
+            <div class="settings-field-group">
+                <FluentTextInput Label="Name" AutoComplete="off" Width="100%" Immediate="true" Autofocus="true"
+                                 @bind-Value="_newName" MessageCondition="FluentFieldCondition.Always"
+                                 MessageState="@(RenameProblem is null ? null : MessageState.Error)"
+                                 Message="@RenameProblem" />
                 <p class="settings-help">
                     Shown on Home and the workspace's tab. The Workspace Folder keeps its name:
                     <code>@renamedWorkspace.Folder</code>.
@@ -63,15 +59,14 @@ else if (_renaming && _listing?.Workspace is { } renamedWorkspace)
             </div>
             @if (_renameError is not null)
             {
-                <p class="error" role="alert">@_renameError</p>
+                <PanelMessage>@_renameError</PanelMessage>
             }
             <div class="workspace-details-actions">
-                <button type="submit" class="button" disabled="@(RenameProblem is not null || _savingName)">
+                <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary"
+                              Disabled="@(RenameProblem is not null || _savingName)">
                     @(_savingName ? "Renaming…" : "Rename")
-                </button>
-                <button type="button" class="button button-secondary" disabled="@_savingName" @onclick="CancelRename">
-                    Cancel
-                </button>
+                </FluentButton>
+                <FluentButton Disabled="@_savingName" OnClick="CancelRename">Cancel</FluentButton>
             </div>
         </form>
     </div>
@@ -88,9 +83,8 @@ else if (_listing is { Availability: not WorkspaceAvailability.Available } listi
             <dd>@listing.Folder</dd>
         </dl>
         <div class="workspace-details-actions">
-            <button type="button" class="button button-danger" @onclick="() => StartDelete(listing.Name)">
-                Delete workspace…
-            </button>
+            <FluentButton Class="danger-button" Appearance="ButtonAppearance.Primary"
+                          OnClick="() => StartDelete(listing.Name)">Delete workspace…</FluentButton>
         </div>
     </div>
 }
@@ -280,10 +274,8 @@ else
     private bool _deleting;
     private bool _renaming;
     private bool _savingName;
-    private bool _focusNewName;
     private string _newName = "";
     private string? _renameError;
-    private ElementReference _newNameInput;
 
 
     private string? _startError;
@@ -1029,7 +1021,6 @@ else
         _newName = _listing?.Workspace?.Name ?? _tab?.Name ?? "";
         _renameError = null;
         _renaming = true;
-        _focusNewName = true;
     }
 
     private void CancelRename()
@@ -1064,22 +1055,6 @@ else
         finally
         {
             _savingName = false;
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (_focusNewName && _renaming)
-        {
-            _focusNewName = false;
-            try
-            {
-                await _newNameInput.FocusAsync();
-            }
-            catch (InvalidOperationException)
-            {
-                // The input isn't rendered after all, e.g. the workspace couldn't be read.
-            }
         }
     }
 

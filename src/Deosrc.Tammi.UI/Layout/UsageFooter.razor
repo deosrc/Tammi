@@ -68,7 +68,7 @@
 
     private string Title => Monitor.TabAgentName is { } name
         ? $"{name} usage: " + (Limits.Count == 0 ? "unknown" : string.Join(", ", Limits.Select(l => $"{l.Name} {l.PercentUsed:0}%" + (l.ResetsAt is { } r ? $", resets in {UsageText.TimeUntil(r, DateTimeOffset.UtcNow)}" : ""))))
-        : "AI usage";
+        : "AI Usage";
 
     protected override void OnInitialized()
     {
