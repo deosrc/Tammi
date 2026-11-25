@@ -7,21 +7,30 @@ export function attach(body) {
   }
 
   body.dataset.scrollSync = 'true';
-  let syncing = false;
+
+  // What each pane was last set to by this script. The scroll event that setting raises is an echo, not the user
+  // scrolling, so it's ignored. Ignoring it by time instead let a late echo, carrying an older position, move the
+  // pane under the cursor back, which made it judder.
+  const assigned = new WeakMap();
   body.addEventListener('scroll', event => {
     const pane = event.target;
-    if (syncing || !(pane instanceof HTMLElement) || !pane.classList.contains('git-diff-pane')) {
+    if (!(pane instanceof HTMLElement) || !pane.classList.contains('git-diff-pane')) {
       return;
     }
 
-    syncing = true;
-    for (const other of pane.parentElement.children) {
-      if (other !== pane) {
-        other.scrollLeft = pane.scrollLeft;
+    const echo = assigned.get(pane);
+    if (echo !== undefined) {
+      assigned.delete(pane);
+      if (Math.abs(echo - pane.scrollLeft) < 1) {
+        return;
       }
     }
 
-    // The other pane's own scroll event is raised later, so it's ignored then.
-    requestAnimationFrame(() => { syncing = false; });
+    for (const other of pane.parentElement.children) {
+      if (other !== pane && Math.abs(other.scrollLeft - pane.scrollLeft) >= 1) {
+        other.scrollLeft = pane.scrollLeft;
+        assigned.set(other, other.scrollLeft);
+      }
+    }
   }, true);
 }

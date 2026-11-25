@@ -1,0 +1,9 @@
+.card-list-item-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.card-list-item-clickable ::deep .fluent-card {
+    cursor: pointer;
+}

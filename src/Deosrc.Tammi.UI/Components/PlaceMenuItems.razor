@@ -1,0 +1,24 @@
+@* The items of a submenu of where to start something: the Workspace Folder, then each repository. Put it in a
+   FluentMenuItem's MenuItems. *@
+<FluentMenuItem IconStart="@(new Icons.Regular.Size20.Folder())" Label="Workspace"
+                OnClick="() => OnStart.InvokeAsync(null)" />
+@foreach (var repository in Repositories)
+{
+    var target = repository;
+    <FluentMenuItem @key="target.FolderName" IconStart="@(new Icons.Regular.Size20.BranchFork())"
+                    Label="@($"Repository: {target.FolderName}")" OnClick="() => OnStart.InvokeAsync(target)" />
+}
+
+@code {
+    /// <summary>
+    /// The repositories, after the Workspace Folder.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<WorkspaceRepository> Repositories { get; set; } = [];
+
+    /// <summary>
+    /// Raised with the repository picked, or <see langword="null"/> for the Workspace Folder.
+    /// </summary>
+    [Parameter]
+    public EventCallback<WorkspaceRepository?> OnStart { get; set; }
+}

@@ -1,0 +1,44 @@
+@typeparam TValue
+
+@* A few icon buttons joined into one control, of which exactly one is pressed, e.g. a list or a tree view. *@
+<div class="toggle-button-group @(Small ? "toggle-button-group-small" : null)" role="group" aria-label="@AriaLabel">
+    @foreach (var option in Options)
+    {
+        var chosen = EqualityComparer<TValue>.Default.Equals(option.Value, Value);
+        var value = option.Value;
+        <FluentButton @key="value" Class="toggle-button-group-option" IconOnly="true" Size="@(Small ? ButtonSize.Small : ButtonSize.Medium)"
+                      Appearance="@(chosen ? ButtonAppearance.Primary : ButtonAppearance.Outline)"
+                      IconStart="option.Icon" Title="@option.Title" aria-label="@option.Title"
+                      aria-pressed="@(chosen ? "true" : "false")"
+                      OnClick="() => ValueChanged.InvokeAsync(value)" />
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// The buttons, in order.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ToggleButtonOption<TValue>> Options { get; set; } = [];
+
+    /// <summary>
+    /// The value of the pressed button.
+    /// </summary>
+    [Parameter]
+    public TValue? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<TValue> ValueChanged { get; set; }
+
+    /// <summary>
+    /// The group's name for assistive technology.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = "";
+
+    /// <summary>
+    /// Whether the buttons are small, e.g. in a panel's header.
+    /// </summary>
+    [Parameter]
+    public bool Small { get; set; }
+}

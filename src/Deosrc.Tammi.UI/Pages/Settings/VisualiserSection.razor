@@ -29,10 +29,8 @@
     <div class="settings-field">
         <label for="visualiser-burst">Burst when an agent finishes working</label>
         <div class="settings-field-row">
-            <Switch Id="visualiser-burst"
-                    Checked="SettingsStore.Current.Visualiser.BurstWhenWorkingFinishes"
-                    Label="Burst when an agent finishes working"
-                    CheckedChanged="OnBurstChanged" />
+            <FluentSwitch Id="visualiser-burst" Value="SettingsStore.Current.Visualiser.BurstWhenWorkingFinishes" aria-label="Burst when an agent finishes working"
+                          ValueChanged="OnBurstChanged" />
         </div>
         <p class="settings-help">
             When an agent stops working, it throws out a one-off burst of particles in the colour of the state it moved
@@ -43,10 +41,8 @@
     <div class="settings-field">
         <label for="visualiser-always-on-top">Keep the window on top</label>
         <div class="settings-field-row">
-            <Switch Id="visualiser-always-on-top"
-                    Checked="SettingsStore.Current.Visualiser.AlwaysOnTop"
-                    Label="Keep the visualiser's window on top"
-                    CheckedChanged="OnAlwaysOnTopChanged" />
+            <FluentSwitch Id="visualiser-always-on-top" Value="SettingsStore.Current.Visualiser.AlwaysOnTop" aria-label="Keep the visualiser's window on top"
+                          ValueChanged="OnAlwaysOnTopChanged" />
         </div>
         <p class="settings-help">
             Keeps the visualiser's window above other windows, so it can stay in view while you work in another

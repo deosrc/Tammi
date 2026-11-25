@@ -1,0 +1,11 @@
+.agent-state-indicator {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+}
+
+/* The spinner while an agent works is the app's own ring (.spinner), in the brand colour: Fluent's spinner didn't turn
+   at this size in the web view, and drawing it without its containment covers the window. */
+.agent-state-indicator .spinner {
+    color: var(--colorBrandForeground1);
+}

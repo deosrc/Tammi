@@ -24,3 +24,34 @@ When you add one (including a new transitive dependency that ships, or a depende
 to `src/Deosrc.Tammi.UI/About/ThirdPartySoftware.cs` in alphabetical order, and add its license text to
 `src/Deosrc.Tammi.UI/Licenses/`, copied from the package or its source repository. If the license is only published online,
 link to it instead. When you remove a library, remove its entry and any license text no other entry uses.
+
+## UI
+
+The UI uses Fluent UI Blazor components and Fluent icons, styled with Fluent's tokens (`--colorNeutral*`, `--spacing*`,
+`--fontSize*`). Keep custom markup only where Fluent can't do what's needed, and say why in a comment (e.g. the git
+graph's virtualised commit table, its branch and tag labels, the splitters, the xterm.js terminal and brand logos).
+
+- Reuse the shared components rather than building another: `SidePanel`, `SidePanelSection`, `SidePanelCard`,
+  `SidePanelListItem`, `PanelMessage` (errors and confirmations in a panel), `PointMenu` (menus opened at the pointer,
+  e.g. by a right-click), `ToggleButtonGroup`, `Splitter`, `StatusDot` and `GitSyncChips`.
+- Badges are filled for counters and tinted for everything else.
+- Page and tab titles are in title case.
+
+Pitfalls:
+
+- A component's scoped CSS doesn't reliably reach the root element of a child component, such as a Fluent component.
+  Use `::deep` under an element the component renders itself, or put the rule in `app.css`.
+- Fluent's default stylesheet loads after `app.css` and wins over plain element selectors (e.g. `h2`). Style headings
+  through a class or a more specific selector.
+- `FluentMessageBar` and `FluentBadge` are `width: 100%`-style hosts: side margins make a message bar overflow, so give
+  it `width: auto`. A badge's icon is white, for filled badges: a tinted badge with an icon needs
+  `fill: currentColor !important` on it.
+- `FluentMultiSplitter` reports sizes only as percentages, and its `Min` and `Max` take only `px` or `%`. Use `Splitter`
+  for pixel sizes, keyboard resizing and double-click reset.
+- A menu opened by a right-click closes as soon as the button is let go unless the pointer is inside it. `PointMenu`
+  places the menu so it is.
+
+To check a layout without the app, render Fluent's web components in headless Chromium (e.g. Playwright's cached
+build): serve the package's `Microsoft.FluentUI.AspNetCore.Components.lib.module.js` over a local HTTP server (a module
+won't load from `file://`), import it and call its `beforeWebStart`, `afterWebStarted` and `afterStarted` exports, then
+screenshot the page with `app.css` and the markup under test.

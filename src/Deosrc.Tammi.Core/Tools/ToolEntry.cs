@@ -7,7 +7,7 @@ namespace Deosrc.Tammi.Core.Tools;
 /// One item in the Workspace View's tools: a tool, and the folder or file it opens.
 /// </summary>
 /// <param name="Tool">The tool.</param>
-/// <param name="Label">What it's called: the tool's name, with its placeholders filled in.</param>
+/// <param name="Label">What it's called: the tool's name.</param>
 /// <param name="Path">The full path of the folder or file it opens, shown as its tooltip.</param>
 /// <param name="Repository">The repository the folder or file is in, or <c>null</c> for the Workspace Folder.</param>
 /// <param name="Request">
@@ -26,6 +26,12 @@ public sealed record ToolEntry(
     /// <see cref="ToolDefinition.OpensTerminal"/>), in <see cref="Repository"/> or the Workspace Folder.
     /// </summary>
     public bool OpensTerminal => Tool.OpensTerminal;
+
+    /// <summary>
+    /// What the entry is called in its tool's menu, or <c>null</c> to use <see cref="Label"/>. A file tool's entry is
+    /// named by its tool's <see cref="ToolDefinition.MenuLabel"/>.
+    /// </summary>
+    public string? MenuLabel { get; init; }
 
     /// <summary>
     /// The icon it's shown with, once found (see <see cref="ToolImages"/>), or <c>null</c> until then.

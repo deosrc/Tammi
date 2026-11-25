@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Deosrc.Tammi.Core;
 using Deosrc.Tammi.Core.Agents;
@@ -56,6 +57,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddTammiUI(this IServiceCollection services)
     {
         services.AddTammiLogging();
+        services.AddFluentUIComponents();
         services.TryAddSingleton<ISystemTheme, UndetectedSystemTheme>();
 
         // One window per app, so the open tabs are shared app-wide.

@@ -8,225 +8,216 @@
 <div class="page wizard">
     <h1>New workspace</h1>
 
-    <ol class="wizard-steps" aria-label="Steps">
-        @foreach (var (step, title) in Steps)
-        {
-            <li class="wizard-step @(step == _step ? "active" : null) @(step < _step ? "done" : null)"
-                aria-current="@(step == _step ? "step" : null)">
-                <span class="wizard-step-number">@((int)step + 1)</span>
-                @title
-            </li>
-        }
-    </ol>
+    @* The steps are changed with the buttons below, which check each one first, so the wizard's own navigation is off. *@
+    <FluentWizard Value="@((int)_step)" StepSequence="WizardStepSequence.Linear" StepperPosition="StepperPosition.Top" Height="auto"
+                  DisplayStepNumber="@(WizardStepStatus.Current | WizardStepStatus.Next | WizardStepStatus.Previous)">
+        <Steps>
+            <FluentWizardStep Label="Tasks" DeferredLoading="true" OnChange="KeepStep">
+                <section class="wizard-body">
+                    <h2>Choose tasks</h2>
+                    <p class="settings-help settings-intro">
+                        Choose the tasks this workspace is for, from any of your integrations. You can change them later.
+                    </p>
+                    <TaskPicker Draft="_draft" />
+                </section>
+            </FluentWizardStep>
 
-    @switch (_step)
-    {
-        case NewWorkspaceStep.Tasks:
-            <section class="wizard-body">
-                <h2>Choose tasks</h2>
-                <p class="settings-help settings-intro">
-                    Choose the tasks this workspace is for, from any of your integrations. You can change them later.
-                </p>
-                <TaskPicker Draft="_draft" />
-            </section>
-            break;
-
-        case NewWorkspaceStep.NameAndLocation:
-            <section class="wizard-body">
-                <h2>Name and location</h2>
-                <div class="settings-form">
-                    <div class="settings-field">
-                        <label for="workspace-name">Name</label>
-                        <input id="workspace-name" class="settings-text @(_draft.NameProblem is null ? null : "invalid")"
-                               autocomplete="off" @bind="_draft.Name" @bind:event="oninput" />
-                        @if (_draft.NameProblem is { } nameProblem)
-                        {
-                            <p class="error">@nameProblem</p>
-                        }
-                        else if (!_draft.IsNameEdited && _draft.SuggestedName is not null)
-                        {
-                            <p class="settings-help">
-                                From the task, with the template set in
-                                <a href="@AppRoutes.Settings">Settings › General</a>.
-                            </p>
-                        }
-                        else if (!_draft.IsNameEdited)
-                        {
-                            <p class="settings-help">The folder name, unless you enter another.</p>
-                        }
-                    </div>
-
-                    <div class="settings-field">
-                        <label for="workspace-folder-name">Folder name</label>
-                        <input id="workspace-folder-name"
-                               class="settings-text @(_draft.FolderNameProblem is null ? null : "invalid")"
-                               autocomplete="off" @bind="_draft.FolderName" @bind:event="oninput" />
-                        @if (_draft.FolderNameProblem is { } folderNameProblem)
-                        {
-                            <p class="error">@folderNameProblem</p>
-                        }
-                        else if (!_draft.IsFolderNameEdited && _draft.SuggestedFolderName is not null)
-                        {
-                            <p class="settings-help">
-                                From the task, in the format set in <a href="@AppRoutes.Settings">Settings › General</a>.
-                            </p>
-                        }
-                        else if (!_draft.IsFolderNameEdited && _draft.IsNameEdited)
-                        {
-                            <p class="settings-help">
-                                From the name, in the format set in <a href="@AppRoutes.Settings">Settings › General</a>.
-                            </p>
-                        }
-                    </div>
-
-                    <div class="settings-field">
-                        <label for="workspace-parent-folder">Parent folder</label>
-                        <div class="settings-field-row">
-                            <input id="workspace-parent-folder"
-                                   class="settings-path @(_draft.ParentFolderProblem is null ? null : "invalid")"
-                                   @bind="_draft.ParentFolder" @bind:event="oninput" />
-                            <button type="button" class="button" @onclick="PickParentFolderAsync">Choose…</button>
-                        </div>
-                        @if (_draft.ParentFolderProblem is { } parentProblem)
-                        {
-                            <p class="error">@parentProblem</p>
-                        }
-                        else if (_draft.ParentFolderIsNew)
-                        {
-                            <p class="settings-help">This folder doesn't exist yet. It's created with the workspace.</p>
-                        }
-                    </div>
-
-                    <div class="settings-field">
-                        <div class="settings-field-label">Workspace Folder</div>
-                        @if (_draft.Folder is { } folder)
-                        {
-                            <div class="wizard-folder">@folder</div>
-                        }
-                        else
-                        {
-                            <div class="placeholder">Enter a valid folder name and parent folder.</div>
-                        }
-                        @if (_draft.FolderProblem is { } folderProblem)
-                        {
-                            <p class="error">@folderProblem</p>
-                        }
-                    </div>
-                </div>
-            </section>
-            break;
-
-        case NewWorkspaceStep.Repositories:
-            <section class="wizard-body">
-                <h2>Repositories</h2>
-                <dl class="workspace-details-facts">
-                    <dt>Name</dt>
-                    <dd>@_draft.Name.Trim()</dd>
-                    <dt>Workspace Folder</dt>
-                    <dd>@_draft.Folder</dd>
-                    <dt>Tasks</dt>
-                    <dd>
-                        @if (_draft.Tasks.Count == 0)
-                        {
-                            <span class="placeholder">None</span>
-                        }
-                        else
-                        {
-                            @string.Join(", ", _draft.Tasks.Select(task => task.Key))
-                        }
-                    </dd>
-                </dl>
-
-                @if (_created is not null)
-                {
-                    <p>The workspace <strong>@_created.Workspace.Name</strong> was created.</p>
-                    @foreach (var warning in _created.Warnings)
-                    {
-                        <p class="warning">@warning</p>
-                    }
-                }
-                else if (_creating)
-                {
-                    <div class="workspace-creation" aria-live="polite">
-                        <progress max="@(_progress?.TotalSteps ?? 1)" value="@(_progress?.CompletedSteps ?? 0)"></progress>
-                        <p>@(_progress?.Message ?? "Checking…")</p>
-                    </div>
-                }
-                else
-                {
-                    <RepositoryPicker Draft="_draft" Changed="StateHasChanged" />
-                }
-
-                @if (_failure is not null)
-                {
-                    <div class="workspace-creation-failure" role="alert">
-                        @if (_failure.Problems.Count > 0)
-                        {
-                            <p class="error">The workspace can't be created:</p>
-                            <ul>
-                                @foreach (var problem in _failure.Problems)
-                                {
-                                    <li class="error">@problem</li>
-                                }
-                            </ul>
-                        }
-                        else
-                        {
-                            <p class="error">@_failure.Message</p>
-                        }
-                        @if (_failure.CleanupProblems.Count == 0)
-                        {
-                            @if (_failure.InnerException is not null)
+            <FluentWizardStep Label="Name and location" DeferredLoading="true" OnChange="KeepStep">
+                <section class="wizard-body">
+                    <h2>Name and location</h2>
+                    <div class="settings-form">
+                        <div class="settings-field-group">
+                            <FluentTextInput Label="Name" AutoComplete="off" Width="100%" Immediate="true"
+                                             @bind-Value="_draft.Name" MessageCondition="FluentFieldCondition.Always"
+                                             MessageState="@(_draft.NameProblem is null ? null : MessageState.Error)"
+                                             Message="@_draft.NameProblem" />
+                            @if (_draft.NameProblem is null && !_draft.IsNameEdited && _draft.SuggestedName is not null)
                             {
-                                <p class="settings-help">Everything created for it has been removed again.</p>
+                                <p class="settings-help">
+                                    From the task, with the template set in
+                                    <FluentLink Href="@AppRoutes.Settings">Settings › General</FluentLink>.
+                                </p>
                             }
-                        }
-                        else
-                        {
-                            <p class="error">Some of what was created couldn't be removed again:</p>
-                            <ul>
-                                @foreach (var problem in _failure.CleanupProblems)
+                            else if (_draft.NameProblem is null && !_draft.IsNameEdited)
+                            {
+                                <p class="settings-help">The folder name, unless you enter another.</p>
+                            }
+
+                            <FluentTextInput Label="Folder name" AutoComplete="off" Width="100%" Immediate="true"
+                                             @bind-Value="_draft.FolderName" MessageCondition="FluentFieldCondition.Always"
+                                             MessageState="@(_draft.FolderNameProblem is null ? null : MessageState.Error)"
+                                             Message="@_draft.FolderNameProblem" />
+                            @if (_draft.FolderNameProblem is null && !_draft.IsFolderNameEdited && _draft.SuggestedFolderName is not null)
+                            {
+                                <p class="settings-help">
+                                    From the task, in the format set in
+                                    <FluentLink Href="@AppRoutes.Settings">Settings › General</FluentLink>.
+                                </p>
+                            }
+                            else if (_draft.FolderNameProblem is null && !_draft.IsFolderNameEdited && _draft.IsNameEdited)
+                            {
+                                <p class="settings-help">
+                                    From the name, in the format set in
+                                    <FluentLink Href="@AppRoutes.Settings">Settings › General</FluentLink>.
+                                </p>
+                            }
+
+                            <FluentTextInput Label="Parent folder" Width="100%" Immediate="true"
+                                             @bind-Value="_draft.ParentFolder" MessageCondition="FluentFieldCondition.Always"
+                                             MessageState="@(_draft.ParentFolderProblem is null ? null : MessageState.Error)"
+                                             Message="@(_draft.ParentFolderProblem
+                                                 ?? (_draft.ParentFolderIsNew ? "This folder doesn't exist yet. It's created with the workspace." : null))">
+                                <EndTemplate>
+                                    <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small"
+                                                  OnClick="PickParentFolderAsync">
+                                        Choose…
+                                    </FluentButton>
+                                </EndTemplate>
+                            </FluentTextInput>
+
+                            <div>
+                                <div class="settings-field-label">Workspace Folder</div>
+                                @if (_draft.Folder is { } folder)
                                 {
-                                    <li class="error">@problem</li>
+                                    <div class="wizard-folder">@folder</div>
                                 }
-                            </ul>
-                        }
+                                else
+                                {
+                                    <div class="placeholder">Enter a valid folder name and parent folder.</div>
+                                }
+                                @if (_draft.FolderProblem is { } folderProblem)
+                                {
+                                    <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine"
+                                                      AllowDismiss="false">
+                                        @folderProblem
+                                    </FluentMessageBar>
+                                }
+                            </div>
+                        </div>
                     </div>
-                }
-            </section>
-            break;
-    }
+                </section>
+            </FluentWizardStep>
+
+            <FluentWizardStep Label="Repositories" DeferredLoading="true" OnChange="KeepStep">
+                <section class="wizard-body">
+                    <h2>Repositories</h2>
+                    <dl class="workspace-details-facts">
+                        <dt>Name</dt>
+                        <dd>@_draft.Name.Trim()</dd>
+                        <dt>Workspace Folder</dt>
+                        <dd>@_draft.Folder</dd>
+                        <dt>Tasks</dt>
+                        <dd>
+                            @if (_draft.Tasks.Count == 0)
+                            {
+                                <span class="placeholder">None</span>
+                            }
+                            else
+                            {
+                                @string.Join(", ", _draft.Tasks.Select(task => task.Key))
+                            }
+                        </dd>
+                    </dl>
+
+                    @if (_created is not null)
+                    {
+                        <p>The workspace <strong>@_created.Workspace.Name</strong> was created.</p>
+                        @foreach (var warning in _created.Warnings)
+                        {
+                            <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
+                                              AllowDismiss="false">
+                                @warning
+                            </FluentMessageBar>
+                        }
+                    }
+                    else if (_creating)
+                    {
+                        <div class="workspace-creation" aria-live="polite">
+                            <FluentProgressBar Value="@(_progress?.CompletedSteps ?? 0)" Max="@(_progress?.TotalSteps ?? 1)"
+                                               Width="100%" />
+                            <p>@(_progress?.Message ?? "Checking…")</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <RepositoryPicker Draft="_draft" Changed="StateHasChanged" />
+                    }
+
+                    @if (_failure is not null)
+                    {
+                        <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine"
+                                          AllowDismiss="false">
+                            @if (_failure.Problems.Count > 0)
+                            {
+                                <p>The workspace can't be created:</p>
+                                <ul>
+                                    @foreach (var problem in _failure.Problems)
+                                    {
+                                        <li>@problem</li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p>@_failure.Message</p>
+                            }
+                            @if (_failure.CleanupProblems.Count > 0)
+                            {
+                                <p>Some of what was created couldn't be removed again:</p>
+                                <ul>
+                                    @foreach (var problem in _failure.CleanupProblems)
+                                    {
+                                        <li>@problem</li>
+                                    }
+                                </ul>
+                            }
+                        </FluentMessageBar>
+                        @if (_failure.CleanupProblems.Count == 0 && _failure.InnerException is not null)
+                        {
+                            <p class="settings-help">Everything created for it has been removed again.</p>
+                        }
+                    }
+                </section>
+            </FluentWizardStep>
+        </Steps>
+        @* The buttons are below the wizard, across the whole page, not in its own button area. *@
+        <ButtonTemplate></ButtonTemplate>
+    </FluentWizard>
 
     <div class="wizard-actions">
         @if (_created is not null)
         {
-            <button type="button" class="button button-secondary" @onclick="Close">Home</button>
+            <FluentButton OnClick="Close">Home</FluentButton>
             <div class="wizard-actions-end">
-                <button type="button" class="button" @onclick="OpenCreated">Open workspace</button>
+                <FluentButton Appearance="ButtonAppearance.Primary" OnClick="OpenCreated">Open workspace</FluentButton>
             </div>
         }
         else if (_creating)
         {
-            <button type="button" class="button button-secondary" disabled="@_cancelling" @onclick="CancelCreating">
+            <FluentButton Disabled="_cancelling" OnClick="CancelCreating">
                 @(_cancelling ? "Cancelling…" : "Cancel")
-            </button>
+            </FluentButton>
         }
         else
         {
-            <button type="button" class="button button-secondary" @onclick="Close">Cancel</button>
+            <FluentButton OnClick="Close">Cancel</FluentButton>
             <div class="wizard-actions-end">
                 @if (_step > NewWorkspaceStep.Tasks)
                 {
-                    <button type="button" class="button button-secondary" @onclick="Back">Back</button>
+                    <FluentButton OnClick="Back">Back</FluentButton>
                 }
                 @if (_step < NewWorkspaceStep.Repositories)
                 {
-                    <button type="button" class="button" disabled="@(!CanGoNext)" @onclick="Next">Next</button>
+                    <FluentButton Appearance="ButtonAppearance.Primary" Disabled="@(!CanGoNext)" OnClick="Next">
+                        Next
+                    </FluentButton>
                 }
                 else
                 {
-                    <button type="button" class="button" disabled="@(!_draft.IsRepositoriesValid)"
-                            @onclick="CreateAsync">Create workspace</button>
+                    <FluentButton Appearance="ButtonAppearance.Primary" Disabled="@(!_draft.IsRepositoriesValid)"
+                                  OnClick="CreateAsync">
+                        Create workspace
+                    </FluentButton>
                 }
             </div>
         }
@@ -234,13 +225,6 @@
 </div>
 
 @code {
-    private static readonly IReadOnlyList<(NewWorkspaceStep Step, string Title)> Steps =
-    [
-        (NewWorkspaceStep.Tasks, "Tasks"),
-        (NewWorkspaceStep.NameAndLocation, "Name and location"),
-        (NewWorkspaceStep.Repositories, "Repositories"),
-    ];
-
     private NewWorkspaceSession _session = null!;
 
     private WorkspaceDraft _draft => _session.Draft;
@@ -273,6 +257,9 @@
 
     private void OnCompleted(Deosrc.Tammi.Core.Workspaces.Workspace workspace) =>
         InvokeAsync(() => Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id)));
+
+    // The steps are changed with the buttons, so the wizard's own way of changing them (clicking a step) is turned off.
+    private static void KeepStep(FluentWizardStepChangeEventArgs args) => args.IsCancelled = true;
 
     private void Next()
     {

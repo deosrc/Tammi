@@ -1,0 +1,51 @@
+@using Deosrc.Tammi.Core.Integrations
+@using Deosrc.Tammi.Core.Platform
+@inject IProcessLauncher ProcessLauncher
+
+@* A Pull Request's card, on the dashboard: its badge and title, then its repository, state, checks and review. Its
+   tone follows its state. Clicking the card opens the Pull Request in the browser; the title is a button for the
+   keyboard, whose click reaches the card. *@
+<SidePanelCard Tone="Tone" Hint="@($"Open #{PullRequest.Number} in the browser")"
+               OnClick="() => ProcessLauncher.Open(PullRequest.Url.AbsoluteUri)">
+    <Heading>
+        <PullRequestBadge PullRequest="PullRequest" />
+        <button type="button" class="pull-request-card-title">@PullRequest.Title</button>
+    </Heading>
+    <ChildContent>
+        <div class="pull-request-card-status">
+            <span>@PullRequest.Repository</span>
+            <span>@PullRequestText.State(PullRequest.State)</span>
+            @if (PullRequest.State is PullRequestState.Draft or PullRequestState.Open)
+            {
+                @if (PullRequest.Checks is { } checks)
+                {
+                    <span>@PullRequestText.Checks(checks)</span>
+                }
+                @if (PullRequest.Review is { } review)
+                {
+                    <span class="pull-request-card-review-@ReviewName(review)">@PullRequestText.Review(review)</span>
+                }
+            }
+        </div>
+    </ChildContent>
+</SidePanelCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public PullRequestInfo PullRequest { get; set; } = null!;
+
+    private SidePanelCardTone Tone => PullRequest.State switch
+    {
+        PullRequestState.Open => SidePanelCardTone.Info,
+        PullRequestState.Merged => SidePanelCardTone.Success,
+        PullRequestState.Closed => SidePanelCardTone.Danger,
+        _ => SidePanelCardTone.Neutral,
+    };
+
+    private static string ReviewName(PullRequestReview review) => review switch
+    {
+        PullRequestReview.Approved => "approved",
+        PullRequestReview.ChangesRequested => "changes",
+        _ => "required",
+    };
+}

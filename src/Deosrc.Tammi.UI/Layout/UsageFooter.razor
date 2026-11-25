@@ -13,7 +13,9 @@
 @* The chosen agent's limits as small progress bars, shown throughout the app. Clicking opens the usage tab. On the right,
    a newer release of Tammi, if there is one: clicking opens the Updates settings, or once it's installed, restarts Tammi. *@
 <footer class="app-footer">
-    <button type="button" class="usage-footer" title="@Title" aria-label="@Title" @onclick="OpenUsage">
+    <FluentButton Appearance="ButtonAppearance.Subtle" Size="ButtonSize.Small" Title="@Title" aria-label="@Title"
+                  OnClick="OpenUsage">
+        <span class="usage-footer">
         <span class="usage-footer-title">USAGE</span>
         @if (Limits.Count == 0)
         {
@@ -25,7 +27,7 @@
         {
             <span class="usage-footer-item">
                 <span class="usage-footer-label">@limit.Name</span>
-                <UsageBar Limit="limit" />
+                <UsageBar Limit="limit" Width="80px" />
                 <span class="usage-footer-percent">@limit.PercentUsed.ToString("0")%</span>
                 @if (limit.ResetsAt is { } resetsAt)
                 {
@@ -33,26 +35,27 @@
                 }
             </span>
         }
-    </button>
-    <button type="button" class="visualiser-toggle" title="Open the visualiser" aria-label="Open the visualiser"
-            @onclick="VisualiserWindow.OpenOrFocus">
+        </span>
+    </FluentButton>
+    <FluentButton Appearance="ButtonAppearance.Subtle" Size="ButtonSize.Small" Class="visualiser-toggle"
+                  Title="Open the visualiser" aria-label="Open the visualiser" OnClick="VisualiserWindow.OpenOrFocus">
         VISUALISER
-    </button>
+    </FluentButton>
     @if (Updater.CanUpdate && Updater.Available is { } release)
     {
         @if (Updater.Status == UpdateStatus.Installed)
         {
-            <button type="button" class="usage-footer update-footer" title="Close Tammi and start the new version"
-                    @onclick="RestartToUpdate">
+            <FluentButton Appearance="ButtonAppearance.Subtle" Size="ButtonSize.Small" Class="update-footer"
+                          Title="Close Tammi and start the new version" OnClick="RestartToUpdate">
                 Restart to update
-            </button>
+            </FluentButton>
         }
         else if (Updater.Status is UpdateStatus.Available or UpdateStatus.Installing or UpdateStatus.Failed)
         {
-            <button type="button" class="usage-footer update-footer" title="Open the update settings"
-                    @onclick="OpenUpdates">
+            <FluentButton Appearance="ButtonAppearance.Subtle" Size="ButtonSize.Small" Class="update-footer"
+                          Title="Open the update settings" OnClick="OpenUpdates">
                 @release.Version is available!
-            </button>
+            </FluentButton>
         }
     }
 </footer>
@@ -71,7 +74,7 @@
 
     private string Title => Monitor.TabAgentName is { } name
         ? $"{name} usage: " + (Limits.Count == 0 ? "unknown" : string.Join(", ", Limits.Select(l => $"{l.Name} {l.PercentUsed:0}%" + (l.ResetsAt is { } r ? $", resets in {UsageText.TimeUntil(r, DateTimeOffset.UtcNow)}" : ""))))
-        : "AI usage";
+        : "AI Usage";
 
     protected override void OnInitialized()
     {

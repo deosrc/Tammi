@@ -1,0 +1,66 @@
+/* As Fluent's multi splitter bar: a faint band with a grip, darker when it's pointed at or dragged. */
+.splitter {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--colorNeutralStrokeAccessible);
+    touch-action: none;
+    user-select: none;
+}
+
+.splitter::before {
+    position: absolute;
+    inset: 0;
+    background: var(--colorNeutralStroke2);
+    content: "";
+    opacity: .4;
+    pointer-events: none;
+}
+
+.splitter-vertical {
+    flex-direction: column;
+    width: var(--spacingVerticalS);
+    cursor: col-resize;
+}
+
+.splitter-horizontal {
+    flex-direction: row;
+    height: var(--spacingVerticalS);
+    cursor: row-resize;
+}
+
+.splitter-grip {
+    position: relative;
+    border-radius: var(--borderRadiusSmall);
+    background: currentColor;
+}
+
+.splitter-vertical .splitter-grip {
+    width: 3px;
+    height: 16px;
+}
+
+.splitter-horizontal .splitter-grip {
+    width: 16px;
+    height: 3px;
+}
+
+.splitter:hover::before {
+    opacity: .8;
+}
+
+.splitter.dragging {
+    color: var(--colorNeutralForeground2);
+}
+
+.splitter.dragging::before {
+    background: var(--colorNeutralStroke1Selected);
+    opacity: .8;
+}
+
+.splitter:focus-visible {
+    outline: 2px solid var(--colorBrandStroke1);
+    outline-offset: -2px;
+}

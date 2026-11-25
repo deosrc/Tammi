@@ -7,6 +7,7 @@
 @inject IWorkspaceStore WorkspaceStore
 @inject WorkspaceTabs WorkspaceTabs
 @inject NavigationManager Navigation
+@inject Deosrc.Tammi.UI.Workspaces.WorkspaceViewState ViewState
 @inject HomeGitStatus GitStatus
 @inject WorkspaceAgents Agents
 @inject ISettingsStore SettingsStore
@@ -16,59 +17,48 @@
     <div class="page-header">
         <h1>Workspaces</h1>
         <div class="page-header-actions">
-            <button type="button" class="button button-secondary" aria-expanded="@(_layoutOpen ? "true" : "false")"
-                    aria-controls="home-layout-panel" @onclick="() => _layoutOpen = !_layoutOpen">
+            <FluentButton aria-expanded="@(_layoutOpen ? "true" : "false")" aria-controls="home-layout-panel"
+                          OnClick="() => _layoutOpen = !_layoutOpen">
                 View Options
-            </button>
-            <a class="button" href="@AppRoutes.NewWorkspace">New workspace</a>
+            </FluentButton>
+            <FluentAnchorButton Appearance="ButtonAppearance.Primary" Href="@AppRoutes.NewWorkspace">
+                New workspace
+            </FluentAnchorButton>
         </div>
     </div>
 
     @if (_layoutOpen)
     {
         var general = SettingsStore.Current.General;
-        <div id="home-layout-panel" class="home-layout-panel">
-            <button type="button" class="tab-close home-layout-close" title="Close View Options"
-                    aria-label="Close View Options" @onclick="() => _layoutOpen = false">
-                &times;
-            </button>
+        <FluentCard Class="home-layout-panel" id="home-layout-panel">
+            <FluentButton Class="home-layout-close" Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small"
+                          IconOnly="true" IconStart="@(new Icons.Regular.Size16.Dismiss())" Title="Close View Options"
+                          aria-label="Close View Options" OnClick="() => _layoutOpen = false" />
             <div class="home-layout-body">
                 <div class="home-layout-main">
-                    <div class="settings-options">
-                        <label for="home-tab-by">Tab by</label>
-                        <select id="home-tab-by" value="@general.HomeTabBy"
-                                @onchange="e => UpdateGeneralAsync(g => g with { HomeTabBy = ParseGrouping(e, g.HomeTabBy) })">
-                            @foreach (var option in Groupings)
-                            {
-                                <option value="@option" disabled="@(option != HomeGrouping.None && option == general.HomeGroupBy)">
-                                    @GroupingLabel(option)
-                                </option>
-                            }
-                        </select>
-                        <label for="home-group-by">Group by</label>
-                        <select id="home-group-by" value="@general.HomeGroupBy"
-                                @onchange="e => UpdateGeneralAsync(g => g with { HomeGroupBy = ParseGrouping(e, g.HomeGroupBy) })">
-                            @foreach (var option in Groupings)
-                            {
-                                <option value="@option" disabled="@(option != HomeGrouping.None && option == general.HomeTabBy)">
-                                    @GroupingLabel(option)
-                                </option>
-                            }
-                        </select>
+                    <div class="settings-field-group">
+                        <FluentSelect Label="Tab by" Items="Groupings" OptionText="@(option => GroupingLabel(option))"
+                                      OptionDisabled="@(option => option != HomeGrouping.None && option == general.HomeGroupBy)"
+                                      Value="general.HomeTabBy"
+                                      ValueChanged="@((HomeGrouping grouping) => UpdateGeneralAsync(g => g with { HomeTabBy = grouping }))" />
+                        <FluentSelect Label="Group by" Items="Groupings" OptionText="@(option => GroupingLabel(option))"
+                                      OptionDisabled="@(option => option != HomeGrouping.None && option == general.HomeTabBy)"
+                                      Value="general.HomeGroupBy"
+                                      ValueChanged="@((HomeGrouping grouping) => UpdateGeneralAsync(g => g with { HomeGroupBy = grouping }))" />
                     </div>
                 </div>
                 <div class="home-layout-side home-layout-status">
                     <h2 class="settings-field-title">Status order</h2>
-                    <SortableList Items="StatusLabels(general.HomeStatusOrder)" Label="Status order"
-                                  OnMove="move => MoveStatusToAsync(move.From, move.To)" />
+                    <FluentSortableList TItem="string" AriaLabel="Status order" Items="StatusLabels(general.HomeStatusOrder)"
+                                        OnUpdate="move => MoveStatusToAsync(move.OldIndex, move.NewIndex)">
+                        <ItemTemplate>@context</ItemTemplate>
+                    </FluentSortableList>
                 </div>
                 <div class="home-layout-side home-layout-sources">
                     <h2 class="settings-field-title">Source order</h2>
-                    <select id="home-source-order" aria-label="Source order" value="@general.HomeSourceOrder"
-                            @onchange="e => UpdateGeneralAsync(g => g with { HomeSourceOrder = Enum.TryParse(e.Value?.ToString(), out HomeSourceOrder order) ? order : g.HomeSourceOrder })">
-                        <option value="@HomeSourceOrder.Alphabetical">Alphabetical</option>
-                        <option value="@HomeSourceOrder.Custom">Custom</option>
-                    </select>
+                    <FluentSelect Items="SourceOrders" OptionText="@(order => order.ToString())"
+                                  Value="general.HomeSourceOrder" aria-label="Source order"
+                                  ValueChanged="@((HomeSourceOrder order) => UpdateGeneralAsync(g => g with { HomeSourceOrder = order }))" />
                     @if (general.HomeSourceOrder == HomeSourceOrder.Custom)
                     {
                         @if (CustomSources().Count == 0)
@@ -77,22 +67,28 @@
                         }
                         else
                         {
-                            <SortableList Items="CustomSources()" Label="Source order"
-                                          OnMove="move => MoveSourceAsync(move.From, move.To)" />
+                            <FluentSortableList TItem="string" AriaLabel="Source order" Items="CustomSources()"
+                                                OnUpdate="move => MoveSourceAsync(move.OldIndex, move.NewIndex)">
+                                <ItemTemplate>@context</ItemTemplate>
+                            </FluentSortableList>
                         }
                     }
                 </div>
             </div>
             @if (_settingsError is not null)
             {
-                <p class="error">@_settingsError</p>
+                <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+                    @_settingsError
+                </FluentMessageBar>
             }
-        </div>
+        </FluentCard>
     }
 
     @if (_indexProblem is not null)
     {
-        <p class="error">@_indexProblem</p>
+        <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+            @_indexProblem
+        </FluentMessageBar>
     }
 
     @if (_workspaces is null)
@@ -110,24 +106,23 @@
         var current = tabs.FirstOrDefault(tab => tab.Key == _selectedTab) ?? tabs[0];
         @if (general.HomeTabBy != HomeGrouping.None)
         {
-            <div class="home-tabs" role="tablist" aria-label="@GroupingLabel(general.HomeTabBy)">
+            <FluentTabs Class="home-tabs" ActiveTabId="@current.Key" ActiveTabIdChanged="id => _selectedTab = id">
                 @foreach (var tab in tabs)
                 {
-                    <button type="button" role="tab" class="home-tab-button @(tab == current ? "active" : null)"
-                            data-status="@tab.Status"
-                            aria-selected="@(tab == current ? "true" : "false")" @key="tab.Key"
-                            @onclick="() => _selectedTab = tab.Key">
-                        @tab.Key <span class="home-count">@tab.Entries.Count</span>
-                    </button>
+                    <FluentTab @key="tab.Key" Id="@tab.Key">
+                        <HeaderTemplate>
+                            @tab.Key @Count(tab.Entries.Count, tab.Status)
+                        </HeaderTemplate>
+                    </FluentTab>
                 }
-            </div>
+            </FluentTabs>
         }
         @foreach (var group in Split(current.Entries, general.HomeGroupBy))
         {
             <section class="home-group" @key="group.Key">
                 @if (general.HomeGroupBy != HomeGrouping.None)
                 {
-                    <h2 class="home-group-title">@group.Key <span class="home-count">@group.Entries.Count</span></h2>
+                    <h2 class="home-group-title">@group.Key @Count(group.Entries.Count, null)</h2>
                 }
                 <ul class="workspace-list">
                     @foreach (var entry in group.Entries)
@@ -141,81 +136,88 @@
 </div>
 
 @code {
+    // A count, in a badge. In a tab, a status gives it the status's colour.
+    private static RenderFragment Count(int count, WorkspaceStatus? status) =>
+        @<FluentBadge Class="home-count" Appearance="BadgeAppearance.Filled" Color="@StatusColor(status)">@count</FluentBadge>;
+
+    private static BadgeColor StatusColor(WorkspaceStatus? status) => status switch
+    {
+        WorkspaceStatus.RequiresAttention => BadgeColor.Danger,
+        WorkspaceStatus.InReview => BadgeColor.Warning,
+        WorkspaceStatus.InDevelopment => BadgeColor.Informative,
+        WorkspaceStatus.Done => BadgeColor.Success,
+        _ => BadgeColor.Subtle,
+    };
+
     private RenderFragment Card(Entry entry) => @<text>
         @{
             var workspace = entry.Listing;
             var available = workspace.Availability == WorkspaceAvailability.Available;
         }
-        <li class="workspace-card @(available ? null : "workspace-card-unavailable")" @key="workspace.Id"
-        role="button" tabindex="0" title="@(available ? "Open" : "Details")"
-        @onclick="() => Open(workspace)" @onkeydown="e => OnCardKeyDown(e, workspace)">
-            <div class="workspace-card-body">
-                <div class="workspace-name" title="@workspace.Name">@workspace.Name</div>
-                <div class="workspace-folder" title="@workspace.Folder">@workspace.Folder</div>
-                @if (!available)
-                {
-                    <div class="workspace-problem warning">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-                            <path d="M12 9v4M12 17h.01" />
-                        </svg>
-                        <span>@WorkspaceAvailabilityText.Summary(workspace.Availability)</span>
-                    </div>
-                }
-                @if (available && workspace.Workspace is { Repositories.Count: > 0 } details
-                     && GitStatus.Get(details) is { IsLoaded: true } summary)
-                {
-                    var hasGitBadges = summary.LocalChanges.Count > 0
-                        || summary.Repositories.Any(repository => repository.Git.Status is { AheadBy: > 0 } or { BehindBy: > 0 });
-                    var hasPullRequests = summary.PullRequests.Count > 0 || summary.PullRequestProblem is not null;
-
-                    @* Dividers only where there's something on both sides: after the text, and between the rows. *@
-                    @if (hasGitBadges || hasPullRequests)
+        <li @key="workspace.Id">
+            <FluentCard Class="workspace-card"
+                        Role="button" tabindex="0" title="@(available ? "Open" : "Details")"
+                        OnClick="() => Open(workspace)" @onkeydown="e => OnCardKeyDown(e, workspace)">
+                <div class="workspace-card-body">
+                    <div class="workspace-name" title="@workspace.Name">@workspace.Name</div>
+                    <div class="workspace-folder" title="@workspace.Folder">@workspace.Folder</div>
+                    @if (!available)
                     {
-                        <hr class="workspace-card-divider" />
-                    }
-                    @if (hasGitBadges)
-                    {
-                        <div class="workspace-badges">
-                            @if (summary.LocalChanges.Count > 0)
-                            {
-                                <span class="workspace-badge workspace-badge-warning">
-                                    Local changes
-                                </span>
-                            }
-                            <GitSyncChips Ahead="@summary.Repositories.Sum(repository => repository.Git.Status?.AheadBy ?? 0)"
-                                          Behind="@summary.Repositories.Sum(repository => repository.Git.Status?.BehindBy ?? 0)"
-                                          Inline="true" />
+                        <div class="workspace-problem warning">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.Warning())" />
+                            <span>@WorkspaceAvailabilityText.Summary(workspace.Availability)</span>
                         </div>
                     }
-                    @if (hasGitBadges && hasPullRequests)
+                    @if (available && workspace.Workspace is { Repositories.Count: > 0 } details
+                         && GitStatus.Get(details) is { IsLoaded: true } summary)
                     {
-                        <hr class="workspace-card-divider" />
-                    }
-                    <PullRequestBadges PullRequests="summary.PullRequests" Problem="@summary.PullRequestProblem" />
-                }
-                @if (available && Agents.For(workspace.Id) is { Count: > 0 } agents)
-                {
-                    @* The workspace's agents, one indicator each, in the order they started. *@
-                    <hr class="workspace-card-divider" />
-                    <div class="workspace-agents" aria-label="Agents">
-                        @foreach (var agent in agents)
+                        var hasGitBadges = summary.LocalChanges.Count > 0
+                            || summary.Repositories.Any(repository => repository.Git.Status is { AheadBy: > 0 } or { BehindBy: > 0 });
+                        var hasPullRequests = summary.PullRequests.Count > 0 || summary.PullRequestProblem is not null;
+
+                        @* Dividers only where there's something on both sides: after the text, and between the rows. *@
+                        @if (hasGitBadges || hasPullRequests)
                         {
-                            <AgentStateIndicator State="agent.State"
-                                                 Title="@($"{agent.DisplayName}: {AgentStateText.Label(agent.State)}")" />
+                            <FluentDivider Class="workspace-card-divider" />
                         }
+                        @if (hasGitBadges)
+                        {
+                            <div class="workspace-badges">
+                                @if (summary.LocalChanges.Count > 0)
+                                {
+                                    <FluentBadge Appearance="BadgeAppearance.Tint" Color="BadgeColor.Warning">Local changes</FluentBadge>
+                                }
+                                <GitSyncChips Ahead="@summary.Repositories.Sum(repository => repository.Git.Status?.AheadBy ?? 0)"
+                                              Behind="@summary.Repositories.Sum(repository => repository.Git.Status?.BehindBy ?? 0)"
+                                              Inline="true" />
+                            </div>
+                        }
+                        @if (hasGitBadges && hasPullRequests)
+                        {
+                            <FluentDivider Class="workspace-card-divider" />
+                        }
+                        <PullRequestBadges PullRequests="summary.PullRequests" Problem="@summary.PullRequestProblem" />
+                    }
+                    @if (available && Agents.For(workspace.Id) is { Count: > 0 } agents)
+                    {
+                        @* The workspace's agents, one indicator each, in the order they started. *@
+                        <FluentDivider Class="workspace-card-divider" />
+                        <div class="workspace-agents" aria-label="Agents">
+                            @foreach (var agent in agents)
+                            {
+                                <AgentStateIndicator State="agent.State"
+                                                     Title="@($"{agent.DisplayName}: {AgentStateText.Label(agent.State)}")" />
+                            }
+                        </div>
+                    }
+                </div>
+                @if (entry.Status == WorkspaceStatus.Done && available)
+                {
+                    <div class="workspace-card-actions">
+                        <FluentButton Class="danger-button" StopPropagation="true" OnClick="() => Delete(workspace)">Delete workspace…</FluentButton>
                     </div>
                 }
-            </div>
-            @if (entry.Status == WorkspaceStatus.Done && available)
-            {
-                <div class="workspace-card-actions">
-                    <button type="button" class="button button-danger"
-                            @onclick="() => Delete(workspace)" @onclick:stopPropagation="true">
-                        Delete workspace…
-                    </button>
-                </div>
-            }
+            </FluentCard>
         </li>
     </text>;
 
@@ -419,15 +421,14 @@
 
     private static readonly HomeGrouping[] Groupings = [HomeGrouping.None, HomeGrouping.Source, HomeGrouping.Status];
 
+    private static readonly HomeSourceOrder[] SourceOrders = [HomeSourceOrder.Alphabetical, HomeSourceOrder.Custom];
+
     private static string GroupingLabel(HomeGrouping grouping) => grouping switch
     {
         HomeGrouping.Source => "Source",
         HomeGrouping.Status => "Status",
         _ => "None",
     };
-
-    private static HomeGrouping ParseGrouping(ChangeEventArgs e, HomeGrouping current) =>
-        Enum.TryParse(e.Value?.ToString(), out HomeGrouping value) ? value : current;
 
     // Splits entries into tabs or groups. With None, they are all in one bucket, which isn't shown.
     private IReadOnlyList<Bucket> Split(IReadOnlyList<Entry> entries, HomeGrouping grouping) => grouping switch
@@ -484,7 +485,7 @@
     {
         // Opening a workspace that's already open keeps its tab, so this just shows it.
         WorkspaceTabs.Open(workspace.Id, workspace.Name);
-        Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id));
+        Navigation.NavigateTo(ViewState.RouteOf(workspace.Id));
     }
 
     private void OnWorkspacesChanged() => InvokeAsync(async () =>

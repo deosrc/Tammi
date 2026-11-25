@@ -13,16 +13,17 @@
         {
             <p class="placeholder">
                 No connected integrations provide tasks. Connect one in
-                <a href="@AppRoutes.SettingsIntegrations">Settings › Integrations</a>, or go on without tasks.
+                <FluentLink Href="@AppRoutes.SettingsIntegrations">Settings › Integrations</FluentLink>, or go on without tasks.
             </p>
         }
         else
         {
             <form class="task-search" @onsubmit="SearchNowAsync">
-                <input type="search" class="task-query" aria-label="Search tasks" autocomplete="off" @ref="_queryInput"
-                       placeholder="Search your tasks, or paste a link or reference"
-                       value="@_query" @oninput="OnQueryInput" />
-                <button type="submit" class="button">Search</button>
+                <FluentTextInput Class="task-query" TextInputType="TextInputType.Search" aria-label="Search tasks"
+                                 AutoComplete="off" Autofocus="true" Immediate="true" Width="100%"
+                                 Placeholder="Search your tasks, or paste a link or reference"
+                                 Value="@_query" ValueChanged="OnQueryChanged" />
+                <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary">Search</FluentButton>
             </form>
             <p class="settings-help">
                 Words are searched in your own and your organisations' tasks in @SourceNames. To add any other task, paste its
@@ -32,7 +33,13 @@
             </p>
 
             <div class="task-results" aria-live="polite" aria-busy="@(_searching ? "true" : "false")">
-                <h2>@ResultsHeading</h2>
+                <h2>
+                    @ResultsHeading
+                    @if (_searching)
+                    {
+                        <FluentSpinner Class="task-searching" Size="SpinnerSize.Tiny" aria-label="Searching" />
+                    }
+                </h2>
                 @if (_results?.Kind is null or TaskSearchKind.Assigned)
                 {
                     <p class="settings-help task-results-help">
@@ -43,18 +50,22 @@
 
                 @foreach (var error in _results?.Errors ?? [])
                 {
-                    <p class="warning">
+                    <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
+                                      AllowDismiss="false">
                         @error.SourceName: @error.Message
                         @if (error.IsAuthentication)
                         {
-                            <a href="@AppRoutes.SettingsIntegrations">Check it in Settings › Integrations.</a>
+                            <FluentLink Href="@AppRoutes.SettingsIntegrations">Check it in Settings › Integrations.</FluentLink>
                         }
-                    </p>
+                    </FluentMessageBar>
                 }
 
                 @if (_results is null)
                 {
-                    <p class="placeholder">Searching…</p>
+                    <p class="placeholder">
+                        <FluentSpinner Size="SpinnerSize.Small" aria-label="Searching" />
+                        Searching…
+                    </p>
                 }
                 else if (_results.IsUnrecognisedLink)
                 {
@@ -70,22 +81,27 @@
                         @foreach (var task in _results.Tasks)
                         {
                             var chosen = Draft.ContainsTask(task.Reference);
-                            <li class="task-item @(chosen ? "task-item-chosen" : null)" @key="task.Reference">
-                                <label class="task-choice">
-                                    <input type="checkbox" checked="@chosen" @onchange="() => Toggle(task)" />
-                                    <TaskSourceIcon Source="Registry.Find(task.Source)" />
-                                    <span class="task-key">@task.Key</span>
-                                    <span class="task-title" title="@task.Title">@task.Title</span>
-                                    @if (_workspaceNames.TryGetValue(task.Reference, out var workspace))
-                                    {
-                                        <span class="badge task-workspace" title="Already in the workspace @workspace">
-                                            In @workspace
-                                        </span>
-                                    }
-                                </label>
-                                <button type="button" class="button button-secondary button-small"
-                                        title="Open @task.Key in the browser" @onclick="() => Open(task)">Open</button>
-                            </li>
+                            @* The whole card toggles the task, so the checkbox ignores the mouse, which reaches the card
+                               instead. It still works with the keyboard. The Open button stops its click reaching the card. *@
+                            <CardListItem @key="task.Reference" Chosen="chosen" OnClick="() => Toggle(task)">
+                                <FluentCheckbox Class="task-checkbox" Value="chosen" ValueChanged="_ => Toggle(task)">
+                                    <span class="task-choice-text">
+                                        <TaskSourceIcon Source="Registry.Find(task.Source)" />
+                                        <span class="task-key">@task.Key</span>
+                                        <span class="task-title" title="@task.Title">@task.Title</span>
+                                        @if (_workspaceNames.TryGetValue(task.Reference, out var workspace))
+                                        {
+                                            <FluentBadge Appearance="BadgeAppearance.Tint" title="@($"Already in the workspace {workspace}")">
+                                                In @workspace
+                                            </FluentBadge>
+                                        }
+                                    </span>
+                                </FluentCheckbox>
+                                <FluentButton Size="ButtonSize.Small" Title="@($"Open {task.Key} in the browser")"
+                                              StopPropagation="true" OnClick="() => Open(task)">
+                                    Open
+                                </FluentButton>
+                            </CardListItem>
                         }
                     </ul>
                 }
@@ -105,18 +121,20 @@
         }
         else
         {
-            <ul class="task-list">
+            <ul class="task-list chosen-task-list">
                 @foreach (var task in Draft.Tasks)
                 {
-                    <li class="task-item" @key="task.Reference">
+                    <CardListItem @key="task.Reference">
                         <div class="task-choice">
                             <TaskSourceIcon Source="Registry.Find(task.Source)" />
                             <span class="task-key">@task.Key</span>
                             <span class="task-title" title="@task.Title">@task.Title</span>
                         </div>
-                        <button type="button" class="button button-secondary button-small"
-                                @onclick="() => Draft.RemoveTask(task.Reference)">Remove</button>
-                    </li>
+                        <FluentButton Class="card-remove" Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small"
+                                      IconOnly="true" IconStart="@(new Icons.Regular.Size16.Dismiss())"
+                                      Title="@($"Remove {task.Key}")" aria-label="@($"Remove {task.Key}")"
+                                      OnClick="() => Draft.RemoveTask(task.Reference)" />
+                    </CardListItem>
                 }
             </ul>
         }
@@ -140,8 +158,6 @@
     private string _query = "";
     private TaskSearchResults? _results;
     private bool _searching;
-    private ElementReference _queryInput;
-    private bool _focused;
     private CancellationTokenSource? _search;
 
     // The workspace each task is already in, so it can be left out of the assigned tasks and marked elsewhere.
@@ -169,16 +185,6 @@
         _hasSources = Registry.TaskIntegrations.Count > 0;
         await LoadWorkspaceTasksAsync();
         await SearchAsync(delay: false);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        // The search field only exists once a source is connected, so this waits for it.
-        if (!_focused && _hasSources)
-        {
-            _focused = true;
-            await _queryInput.FocusAsync();
-        }
     }
 
     public void Dispose()
@@ -213,9 +219,9 @@
         _workspaceNames = names;
     }
 
-    private Task OnQueryInput(ChangeEventArgs e)
+    private Task OnQueryChanged(string? query)
     {
-        _query = e.Value?.ToString() ?? "";
+        _query = query ?? "";
         return SearchAsync(delay: true);
     }
 

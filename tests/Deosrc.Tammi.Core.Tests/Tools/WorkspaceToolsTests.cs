@@ -35,7 +35,8 @@ public sealed class WorkspaceToolsTests : IDisposable
     private static ToolDefinition SolutionTool { get; } = new()
     {
         Kind = ToolKind.File,
-        Name = "IDE - {FileNameWithoutExtension}",
+        Name = "IDE",
+        MenuLabel = ToolMenuLabel.FileNameWithoutExtension,
         FilePatterns = ["*.sln", "*.slnx"],
         Executable = "ide",
         Arguments = ["{FilePath}"],
@@ -89,11 +90,11 @@ public sealed class WorkspaceToolsTests : IDisposable
     }
 
     [Fact]
-    public void GetEntries_FillsInPlaceholdersInName()
+    public void GetEntries_LeavesPlaceholdersOutOfTheName()
     {
-        var tool = Editor with { Name = "Edit {LaunchFolder}" };
+        var tool = Editor with { Name = "Edit - {LaunchFolder}" };
 
-        Assert.Equal($"Edit {ApiFolder}", Assert.Single(External(CreateTools(), Workspace, _api, Custom(tool))).Label);
+        Assert.Equal("Edit", Assert.Single(External(CreateTools(), Workspace, _api, Custom(tool))).Label);
     }
 
     [Fact]
@@ -103,7 +104,6 @@ public sealed class WorkspaceToolsTests : IDisposable
 
         Assert.Empty(External(CreateTools(), Workspace, null, Custom(tool)));
         Assert.Single(External(CreateTools(), Workspace, _api, Custom(tool)));
-        Assert.Empty(External(CreateTools(), Workspace, _api, Custom(Editor with { Name = "{FileName}" })));
     }
 
     [Theory]
@@ -193,7 +193,8 @@ public sealed class WorkspaceToolsTests : IDisposable
 
         var entries = External(CreateTools(), Workspace, _api, Custom(SolutionTool));
 
-        Assert.Equal(["IDE - Api", "IDE - Tools"], entries.Select(entry => entry.Label));
+        Assert.Equal(["IDE", "IDE"], entries.Select(entry => entry.Label));
+        Assert.Equal(["Api", "Tools"], entries.Select(entry => entry.MenuLabel));
         Assert.Equal([api, tools], entries.Select(entry => entry.Path));
         Assert.Equal([[api], [tools]], entries.Select(entry => entry.Request!.Arguments));
         Assert.Equal(Path.GetDirectoryName(tools), entries[1].Request!.WorkingDirectory);
@@ -218,7 +219,6 @@ public sealed class WorkspaceToolsTests : IDisposable
         var file = _folder.AddFile(Path.Combine("api", "src", "Api.sln"));
         var tool = SolutionTool with
         {
-            Name = "{FileName}",
             Arguments =
             [
                 "{FileDirectory}", "{FileName}", "{FileNameWithoutExtension}", "{FilePath}",
@@ -228,13 +228,34 @@ public sealed class WorkspaceToolsTests : IDisposable
 
         var entry = Assert.Single(External(CreateTools(), Workspace, null, Custom(tool)));
 
-        Assert.Equal("Api.sln", entry.Label);
+        Assert.Equal("IDE", entry.Label);
+        Assert.Equal("Api", entry.MenuLabel);
         Assert.Equal(
             [
                 Path.GetDirectoryName(file)!, "Api.sln", "Api", file, ApiFolder, _folder.Path, _folder.Path,
                 Path.GetDirectoryName(file)!,
             ],
             entry.Request!.Arguments);
+    }
+
+    [Theory]
+    [InlineData(ToolMenuLabel.FileName, "Api.sln")]
+    [InlineData(ToolMenuLabel.FileNameWithoutExtension, "Api")]
+    [InlineData(ToolMenuLabel.LaunchFolder, "src")]
+    [InlineData(ToolMenuLabel.FullPath, null)]
+    public void GetEntries_FileTool_NamesItsMenuItemByTheMenuLabel(ToolMenuLabel label, string? expected)
+    {
+        var file = _folder.AddFile(Path.Combine("api", "src", "Api.sln"));
+
+        var entry = Assert.Single(External(CreateTools(), Workspace, null, Custom(SolutionTool with { MenuLabel = label })));
+
+        Assert.Equal(expected ?? file, entry.MenuLabel);
+    }
+
+    [Fact]
+    public void GetEntries_FolderTool_HasNoMenuLabel()
+    {
+        Assert.Null(Assert.Single(External(CreateTools(), Workspace, null, Custom(Editor))).MenuLabel);
     }
 
     [Fact]
@@ -267,11 +288,8 @@ public sealed class WorkspaceToolsTests : IDisposable
                 ["open", Path.Combine(ApiFolder, "tools"), "--config", file],
             ],
             entries.Select(entry => entry.Request!.Arguments));
-        Assert.Equal(
-            [
-                "Dev Container - " + Path.GetFileName(ApiFolder), "Dev Container - web", "Dev Container - tools",
-            ],
-            entries.Select(entry => entry.Label));
+        Assert.All(entries, entry => Assert.Equal("Dev Container", entry.Label));
+        Assert.Equal([Path.GetFileName(ApiFolder), "web", "tools"], entries.Select(entry => entry.MenuLabel));
         Assert.Equal(Path.Combine(ApiFolder, "services", "web"), entries[1].Request!.WorkingDirectory);
         Assert.DoesNotContain(
             External(CreateTools(), Workspace, _web, settings), e => e.Tool.Id == PredefinedTools.DevContainer.Id);
@@ -284,19 +302,47 @@ public sealed class WorkspaceToolsTests : IDisposable
 
         var item = Assert.Single(Group(new ToolSettings()), item => item.Tool.Id == PredefinedTools.DevContainer.Id);
 
-        Assert.Equal(config, item.FilePath);
-        var launch = Assert.Single(item.Launches);
+        var launch = Assert.Single(item.Places);
+        Assert.Equal(config, launch.Path);
         Assert.Same(launch, item.DefaultEntry);
         Assert.Equal(["open", Path.Combine(_folder.Path, "web"), "--config", config], launch.Request!.Arguments);
     }
 
     [Fact]
-    public void ToolItem_Launches_KeepEntriesThatStartDifferentCommands()
+    public void ToolItem_FolderTool_WithSeveralRepositories_HasAPlaceForEachAndNoDefault()
     {
         var editor = Assert.Single(Group(Custom(Editor)), item => item.Tool == Editor);
 
-        Assert.Equal(3, editor.Launches.Count);
-        Assert.Same(editor.WorkspaceEntry, editor.DefaultEntry);
+        Assert.Equal([_folder.Path, ApiFolder, Path.Combine(_folder.Path, "web")], editor.Places.Select(e => e.Path));
+        Assert.Null(editor.DefaultEntry);
+    }
+
+    [Theory]
+    [InlineData(SingleRepositoryTarget.Repository, true)]
+    [InlineData(SingleRepositoryTarget.Workspace, false)]
+    public void ToolItem_FolderTool_WithOneRepository_DefaultsByTheSetting_AndStillOffersBoth(
+        SingleRepositoryTarget target,
+        bool opensRepository)
+    {
+        var settings = Custom(Editor);
+
+        var editor = Assert.Single(GroupSingle(settings, target), item => item.Tool == Editor);
+
+        Assert.Equal([_folder.Path, ApiFolder], editor.Places.Select(e => e.Path));
+        Assert.Equal(opensRepository ? ApiFolder : _folder.Path, editor.DefaultEntry!.Path);
+        Assert.Equal(opensRepository ? _api : null, editor.DefaultEntry.Repository);
+    }
+
+    [Theory]
+    [InlineData(SingleRepositoryTarget.Repository, true)]
+    [InlineData(SingleRepositoryTarget.Workspace, false)]
+    public void ToolItem_Terminal_WithOneRepository_DefaultsByTheSetting(SingleRepositoryTarget target, bool opensRepository)
+    {
+        var terminal = GroupSingle(Custom(), target).First(item => item.Tool.OpensTerminal);
+
+        Assert.Equal(2, terminal.Places.Count);
+        Assert.Equal(opensRepository ? _api : null, terminal.DefaultEntry!.Repository);
+        Assert.Equal(opensRepository ? ApiFolder : _folder.Path, terminal.DefaultEntry.Path);
     }
 
     [Fact]
@@ -306,7 +352,7 @@ public sealed class WorkspaceToolsTests : IDisposable
             Group(Custom(Editor with { Scope = ToolScope.Repository })), item => item.Tool.Name == "Editor");
 
         Assert.Null(editor.DefaultEntry);
-        Assert.Equal(2, editor.Launches.Count);
+        Assert.Equal(2, editor.Places.Count);
     }
 
     [Fact]
@@ -316,9 +362,8 @@ public sealed class WorkspaceToolsTests : IDisposable
 
         var item = Assert.Single(Group(Custom(SolutionTool)), item => item.Tool.Kind == ToolKind.File);
 
-        Assert.Equal(2, item.Entries.Count);
-        var launch = Assert.Single(item.Launches);
-        Assert.Same(item.WorkspaceEntry, launch);
+        var launch = Assert.Single(item.Places);
+        Assert.Same(launch, item.DefaultEntry);
         Assert.Equal([solution], launch.Request!.Arguments);
     }
 
@@ -360,7 +405,6 @@ public sealed class WorkspaceToolsTests : IDisposable
 
         var editor = Assert.Single(items, item => item.Tool == Editor);
         Assert.Equal("Editor", editor.Label);
-        Assert.Null(editor.FilePath);
         Assert.Equal(_folder.Path, editor.WorkspaceEntry!.Path);
         Assert.Equal([_api, _web], editor.RepositoryEntries.Select(entry => entry.Repository));
         Assert.Equal([_folder.Path, ApiFolder, Path.Combine(_folder.Path, "web")], editor.Entries.Select(e => e.Path));
@@ -388,19 +432,17 @@ public sealed class WorkspaceToolsTests : IDisposable
     }
 
     [Fact]
-    public void GroupByTool_FileTool_HasItemForEachFile_WithItsRepositorysEntry()
+    public void GroupByTool_FileTool_IsOneItemWithAPlaceForEachFile_AndNoDefault()
     {
         var api = _folder.AddFile(Path.Combine("api", "Api.sln"));
         var web = _folder.AddFile(Path.Combine("web", "Web.sln"));
 
-        var items = Group(Custom(SolutionTool)).Where(item => item.Tool.Kind == ToolKind.File).ToArray();
+        var item = Assert.Single(Group(Custom(SolutionTool)), item => item.Tool.Kind == ToolKind.File);
 
-        Assert.Equal([api, web], items.Select(item => item.FilePath));
-        Assert.Equal(["IDE - Api", "IDE - Web"], items.Select(item => item.Label));
-        Assert.All(items, item => Assert.Equal(item.FilePath, item.WorkspaceEntry!.Path));
-        Assert.Same(_api, Assert.Single(items[0].RepositoryEntries).Repository);
-        Assert.Same(_web, Assert.Single(items[1].RepositoryEntries).Repository);
-        Assert.All(items, item => Assert.All(item.Entries, entry => Assert.Equal(item.FilePath, entry.Path)));
+        Assert.Equal("IDE", item.Label);
+        Assert.Equal([api, web], item.Places.Select(entry => entry.Path));
+        Assert.Equal([_api, _web], item.Places.Select(entry => entry.Repository));
+        Assert.Null(item.DefaultEntry);
     }
 
     [Fact]
@@ -411,7 +453,7 @@ public sealed class WorkspaceToolsTests : IDisposable
 
         var items = Group(settings);
 
-        Assert.Equal(["Terminal", "IDE - Api", "Editor"], items.Select(item => item.Label));
+        Assert.Equal(["Terminal", "IDE", "Editor"], items.Select(item => item.Label));
         Assert.True(items[0].Tool.OpensTerminal);
         Assert.Null(items[0].WorkspaceEntry!.Repository);
         Assert.Equal([_api, _web], items[0].RepositoryEntries.Select(entry => entry.Repository));
@@ -424,29 +466,13 @@ public sealed class WorkspaceToolsTests : IDisposable
     }
 
     [Fact]
-    public void PreferredFolder_WithOneRepository_IsTheRepositoryByDefault()
+    public void PreferredFolder_AtWorkspaceLevel_IsTheWorkspaceFolder_EvenWithOneRepository()
     {
         var tool = Editor with { Arguments = ["{PreferredFolder}", "{LaunchFolder}"] };
 
         var entry = Assert.Single(External(CreateTools(), SingleRepository, null, Custom(tool)));
 
-        Assert.Equal([ApiFolder, _folder.Path], entry.Request!.Arguments);
-        Assert.Equal(ApiFolder, entry.Path);
-        Assert.Equal(ApiFolder, entry.Request.WorkingDirectory);
-        Assert.Same(_api, entry.Repository);
-    }
-
-    [Fact]
-    public void PreferredFolder_WithOneRepository_CanBeTheWorkspaceFolder()
-    {
-        var settings = Custom(Editor with { Arguments = ["{PreferredFolder}"] }) with
-        {
-            SingleRepositoryTarget = SingleRepositoryTarget.Workspace,
-        };
-
-        var entry = Assert.Single(External(CreateTools(), SingleRepository, null, settings));
-
-        Assert.Equal([_folder.Path], entry.Request!.Arguments);
+        Assert.Equal([_folder.Path, _folder.Path], entry.Request!.Arguments);
         Assert.Equal(_folder.Path, entry.Path);
         Assert.Null(entry.Repository);
     }
@@ -479,28 +505,15 @@ public sealed class WorkspaceToolsTests : IDisposable
         Assert.Null(entry.Repository);
     }
 
-    [Theory]
-    [InlineData(SingleRepositoryTarget.Repository, true)]
-    [InlineData(SingleRepositoryTarget.Workspace, false)]
-    public void Terminal_WithOneRepository_FollowsTheSetting(SingleRepositoryTarget target, bool opensRepository)
-    {
-        var settings = new ToolSettings { SingleRepositoryTarget = target };
-
-        var terminal = CreateTools().GetEntries(SingleRepository, null, settings).First(entry => entry.OpensTerminal);
-
-        Assert.Equal(opensRepository ? _api : null, terminal.Repository);
-        Assert.Equal(opensRepository ? ApiFolder : _folder.Path, terminal.Path);
-    }
-
     [Fact]
-    public void PredefinedFolderTools_OpenThePreferredFolder()
+    public void PredefinedFolderTools_AtWorkspaceLevel_OpenTheWorkspaceFolder_WhateverTheSetting()
     {
         var entries = External(CreateTools(), SingleRepository, null, new ToolSettings())
             .Where(entry => entry.Tool.Kind == ToolKind.Folder)
             .ToArray();
 
         Assert.NotEmpty(entries);
-        Assert.All(entries, entry => Assert.Equal([ApiFolder], entry.Request!.Arguments));
+        Assert.All(entries, entry => Assert.Equal([_folder.Path], entry.Request!.Arguments));
     }
 
     [Fact]
@@ -556,6 +569,17 @@ public sealed class WorkspaceToolsTests : IDisposable
             settings.Tools,
             tools.GetEntries(Workspace, null, settings),
             [tools.GetEntries(Workspace, _api, settings), tools.GetEntries(Workspace, _web, settings)]);
+    }
+
+    // As Group, for a workspace with only one repository.
+    private IReadOnlyList<ToolItem> GroupSingle(ToolSettings settings, SingleRepositoryTarget target)
+    {
+        var tools = CreateTools();
+        return WorkspaceTools.GroupByTool(
+            settings.Tools,
+            tools.GetEntries(SingleRepository, null, settings),
+            [tools.GetEntries(SingleRepository, _api, settings)],
+            target);
     }
 
     // The entries of the tools that start an executable: every entry but the Terminal tool's, which is always there.

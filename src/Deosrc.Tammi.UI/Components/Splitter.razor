@@ -1,0 +1,34 @@
+@* A bar between two parts of a panel, styled like Fluent's splitter bar. The user drags it, or focuses it and uses the
+   arrow keys, to resize one of the parts, and double-clicks it to go back to that part's default size. The resizing is
+   done by Splitter.razor.js, which the panel's own script calls with this bar's Element. *@
+<div class="splitter @(Vertical ? "splitter-vertical" : "splitter-horizontal")" role="separator"
+     aria-orientation="@(Vertical ? "vertical" : "horizontal")" aria-label="@AriaLabel" aria-controls="@ControlsId"
+     tabindex="0" title="Drag to resize. Double-click to reset." @ref="Element">
+    <span class="splitter-grip"></span>
+</div>
+
+@code {
+    /// <summary>
+    /// The bar's element, which the script that does the resizing is given.
+    /// </summary>
+    public ElementReference Element { get; private set; }
+
+    /// <summary>
+    /// Whether the bar is a vertical line, between parts side by side, and so resizes widths. Otherwise it's a
+    /// horizontal line, between parts one above the other, and resizes heights.
+    /// </summary>
+    [Parameter]
+    public bool Vertical { get; set; }
+
+    /// <summary>
+    /// What the bar is called to a screen reader, e.g. "Resize commit details".
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = "";
+
+    /// <summary>
+    /// The id of the element the bar resizes, if it has one.
+    /// </summary>
+    [Parameter]
+    public string? ControlsId { get; set; }
+}

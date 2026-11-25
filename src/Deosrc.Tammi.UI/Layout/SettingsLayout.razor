@@ -4,12 +4,17 @@
 @inject ISettingsStore SettingsStore
 
 <div class="settings">
-    <nav class="settings-nav" aria-label="Settings">
-        @foreach (var settingsSection in AppRoutes.SettingsSections)
-        {
-            <NavLink class="settings-nav-item" href="@settingsSection.Route" Match="@(settingsSection.Route == AppRoutes.Settings ? NavLinkMatch.All : NavLinkMatch.Prefix)">@settingsSection.Title</NavLink>
-        }
-    </nav>
+    <div class="settings-nav">
+        <FluentNav Width="100%" BackgroundColor="transparent" UseIcons="false" aria-label="Settings">
+            @foreach (var settingsSection in AppRoutes.SettingsSections)
+            {
+                <FluentNavItem Href="@settingsSection.Route"
+                               Match="@(settingsSection.Route == AppRoutes.Settings ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+                    @settingsSection.Title
+                </FluentNavItem>
+            }
+        </FluentNav>
+    </div>
     <div class="settings-content page">
         @* Shown on every section until the settings are next saved. *@
         @if (SettingsStore.LoadProblem is { } loadProblem)

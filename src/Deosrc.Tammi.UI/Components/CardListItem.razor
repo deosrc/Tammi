@@ -1,0 +1,30 @@
+@* An item in a list, in a card, e.g. a folder with its status and actions, or a task that can be chosen. Put it in a <ul>.
+   Its content sits in a row: its text first, then any status and buttons. When it has an OnClick, the whole card
+   is clickable, so a control inside it that does the same thing should stop its click reaching the card. *@
+<li class="@(OnClick.HasDelegate ? "card-list-item-clickable" : null)">
+    <FluentCard Appearance="@(Chosen ? CardAppearance.Filled : null)" OnClick="OnClick">
+        <div class="card-list-item-row">
+            @ChildContent
+        </div>
+    </FluentCard>
+</li>
+
+@code {
+    /// <summary>
+    /// What the item shows, laid out in a row.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Whether the item is chosen, which shows it filled.
+    /// </summary>
+    [Parameter]
+    public bool Chosen { get; set; }
+
+    /// <summary>
+    /// Raised when the card is clicked. Without one, the card isn't clickable.
+    /// </summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+}
