@@ -78,8 +78,7 @@
     }
 
     @* Resizes the message's body: drag it up to make the body taller, or focus it and use Up and Down. *@
-    <div class="git-working-splitter" role="separator" aria-orientation="horizontal" aria-label="Resize the commit message"
-         tabindex="0" title="Drag to resize. Double-click to reset." @ref="_splitter"></div>
+    <Splitter AriaLabel="Resize the commit message" @ref="_splitter" />
 
     <section class="git-working-message" aria-label="Commit message">
         @* The counter, at the end of the subject, counts down the characters left of the soft limit in the settings. *@
@@ -113,7 +112,7 @@
     // The selected file whose diff is shown, if any.
     private string? _active;
     private ElementReference _root;
-    private ElementReference _splitter;
+    private Splitter? _splitter;
     private ElementReference _bodyInput;
     private IJSObjectReference? _module;
     private IJSObjectReference? _script;
@@ -193,7 +192,7 @@
             _script = await _module.InvokeAsync<IJSObjectReference>("attachSplitter",
                 _root,
                 _bodyInput,
-                _splitter,
+                _splitter!.Element,
                 LayoutStore.Current.GitWorkingMessageHeight,
                 _self ??= DotNetObjectReference.Create(this));
         }

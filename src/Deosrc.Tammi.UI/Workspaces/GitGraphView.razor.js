@@ -1,3 +1,5 @@
+import { attach as attachSplitterBar } from "../Components/Splitter.razor.js";
+
 // The git graph's commit list. Up and Down select the next or previous commit (in .NET), so they mustn't also scroll the
 // list; the list scrolls to keep the selected commit in view instead. Its header's handles resize the columns.
 
@@ -132,129 +134,24 @@ export function attach(list, header) {
 const defaultDetailsWidth = 360;
 const minDetailsWidth = 240;
 const minListWidth = 320;
-const keyboardStep = 16;
 
-// Makes `splitter`, between the commit list and the details panel in `body`, resize the panel: drag it, or focus it and
-// use Left and Right. Double-clicking it goes back to the default width.
-//
-// The panel starts at `savedWidth` (the default when it's null). That's the width the user chose, in pixels: when the
-// window is too narrow for it, the panel is shown narrower, but the chosen width doesn't change, so the panel goes
-// back to it when there's room. Only the user's resizing changes it, and then `dotNet.OnDetailsWidthChanged` is told
-// the new width (null for the default), to keep it for next time.
-export function attachSplitter(body, splitter, savedWidth, dotNet) {
-  let chosenWidth = savedWidth ?? defaultDetailsWidth;
-  let isDefault = savedWidth === null || savedWidth === undefined;
-
-  const maxWidth = () => Math.max(minDetailsWidth, body.clientWidth - minListWidth - splitter.offsetWidth);
-
-  // Shows the chosen width, as far as the window has room for it.
-  const show = () => {
-    const max = maxWidth();
-    const shown = Math.round(Math.min(Math.max(chosenWidth, minDetailsWidth), max));
-    body.style.setProperty("--git-graph-details-width", `${shown}px`);
-    splitter.setAttribute("aria-valuenow", String(shown));
-    splitter.setAttribute("aria-valuemin", String(minDetailsWidth));
-    splitter.setAttribute("aria-valuemax", String(max));
-  };
-
-  // The user chose a width: it's limited to what fits now, which is what they see.
-  const choose = (width) => {
-    chosenWidth = Math.round(Math.min(Math.max(width, minDetailsWidth), maxWidth()));
-    isDefault = false;
-    show();
-  };
-
-  const save = () => {
-    dotNet.invokeMethodAsync("OnDetailsWidthChanged", isDefault ? null : chosenWidth).catch(() => {
+// Makes `bar`, the Splitter between the commit list and the details panel in `body`, resize the panel. The panel starts
+// at `savedWidth` (the default when it's null), and `dotNet.OnDetailsWidthChanged` is told the width the user chooses.
+export function attachSplitter(body, bar, savedWidth, dotNet) {
+  const details = bar.nextElementSibling;
+  return attachSplitterBar({
+    bar,
+    vertical: true,
+    reverse: true,
+    getSize: () => details.offsetWidth,
+    min: () => minDetailsWidth,
+    max: () => Math.max(minDetailsWidth, body.clientWidth - minListWidth - bar.offsetWidth),
+    defaultSize: () => defaultDetailsWidth,
+    apply: (width) => body.style.setProperty("--git-graph-details-width", `${width}px`),
+    observe: body,
+    saved: savedWidth,
+    save: (width) => dotNet.invokeMethodAsync("OnDetailsWidthChanged", width).catch(() => {
       // The view has gone: the width is lost, which only means the panel opens at its old width next time.
-    });
-  };
-
-  let dragStartWidth = null;
-
-  const onPointerMove = (e) => {
-    // The panel ends at the body's right edge, so its width is the distance from the pointer to that edge.
-    choose(body.getBoundingClientRect().right - e.clientX - splitter.offsetWidth / 2);
-  };
-
-  const onPointerUp = (e) => {
-    splitter.releasePointerCapture(e.pointerId);
-    splitter.classList.remove("dragging");
-    splitter.removeEventListener("pointermove", onPointerMove);
-    splitter.removeEventListener("pointerup", onPointerUp);
-    splitter.removeEventListener("pointercancel", onPointerUp);
-    if (chosenWidth !== dragStartWidth) {
-      save();
-    }
-  };
-
-  const onPointerDown = (e) => {
-    if (e.button !== 0) {
-      return;
-    }
-
-    e.preventDefault();
-    dragStartWidth = chosenWidth;
-    splitter.setPointerCapture(e.pointerId);
-    splitter.classList.add("dragging");
-    splitter.addEventListener("pointermove", onPointerMove);
-    splitter.addEventListener("pointerup", onPointerUp);
-    splitter.addEventListener("pointercancel", onPointerUp);
-  };
-
-  // Keys move from the width shown, which is the chosen one unless the window is too narrow for it. A held key
-  // repeats its keydown but has one keyup, so the width is saved once the key is let go, not at every step.
-  const isResizeKey = (e) => e.key === "ArrowLeft" || e.key === "ArrowRight";
-  let keyStartWidth = null;
-
-  const onKeyDown = (e) => {
-    if (!isResizeKey(e)) {
-      return;
-    }
-
-    e.preventDefault();
-    keyStartWidth ??= chosenWidth;
-    const shown = Number(splitter.getAttribute("aria-valuenow"));
-    choose(shown + (e.key === "ArrowLeft" ? keyboardStep : -keyboardStep));
-  };
-
-  const onKeyUp = (e) => {
-    if (isResizeKey(e) && keyStartWidth !== null) {
-      if (chosenWidth !== keyStartWidth) {
-        save();
-      }
-
-      keyStartWidth = null;
-    }
-  };
-
-  const onDoubleClick = () => {
-    chosenWidth = defaultDetailsWidth;
-    isDefault = true;
-    show();
-    save();
-  };
-
-  // Keep the panel within its limits as the window changes size.
-  const observer = new ResizeObserver(show);
-
-  splitter.addEventListener("pointerdown", onPointerDown);
-  splitter.addEventListener("keydown", onKeyDown);
-  splitter.addEventListener("keyup", onKeyUp);
-  splitter.addEventListener("dblclick", onDoubleClick);
-  observer.observe(body);
-  show();
-
-  return {
-    dispose() {
-      observer.disconnect();
-      splitter.removeEventListener("pointerdown", onPointerDown);
-      splitter.removeEventListener("keydown", onKeyDown);
-      splitter.removeEventListener("keyup", onKeyUp);
-      splitter.removeEventListener("dblclick", onDoubleClick);
-      splitter.removeEventListener("pointermove", onPointerMove);
-      splitter.removeEventListener("pointerup", onPointerUp);
-      splitter.removeEventListener("pointercancel", onPointerUp);
-    },
-  };
+    }),
+  });
 }

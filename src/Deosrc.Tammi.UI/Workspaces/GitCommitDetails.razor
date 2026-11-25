@@ -61,10 +61,7 @@
         {
             <div class="git-commit-body" tabindex="0" aria-label="Commit message" @ref="_message">@body</div>
             @* Resizes the body: drag it, or focus it and use Up and Down. *@
-            <div class="git-commit-body-splitter" role="separator" aria-orientation="horizontal"
-                 aria-label="Resize the commit message" tabindex="0" title="Drag to resize. Double-click to reset."
-                 @ref="_messageSplitter">
-            </div>
+            <Splitter AriaLabel="Resize the commit message" @ref="_messageSplitter" />
         }
 
         <div class="git-commit-lower">
@@ -157,7 +154,7 @@
     private readonly HashSet<string> _expanded = [];
     private ElementReference _root;
     private ElementReference _message;
-    private ElementReference _messageSplitter;
+    private Splitter? _messageSplitter;
     private IJSObjectReference? _module;
     private IJSObjectReference? _messageScript;
     private DotNetObjectReference<GitCommitDetails>? _self;
@@ -218,7 +215,7 @@
                     "attachMessageSplitter",
                     _root,
                     _message,
-                    _messageSplitter,
+                    _messageSplitter!.Element,
                     LayoutStore.Current.GitGraphMessageHeight,
                     _self);
             }

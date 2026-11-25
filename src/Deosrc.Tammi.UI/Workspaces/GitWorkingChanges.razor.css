@@ -92,30 +92,6 @@
   gap: var(--space-2);
 }
 
-/* A thin bar above the message, with a taller area to grab. */
-.git-working-splitter {
-  position: relative;
-  flex: none;
-  height: 1px;
-  background: var(--colorNeutralStroke2);
-  cursor: row-resize;
-  touch-action: none;
-}
-
-.git-working-splitter::before {
-  position: absolute;
-  inset: -4px 0;
-  content: "";
-}
-
-.git-working-splitter:hover,
-.git-working-splitter.dragging,
-.git-working-splitter:focus-visible {
-  background: var(--colorBrandStroke1);
-  outline: none;
-  box-shadow: 0 0 0 1px var(--colorBrandStroke1);
-}
-
 /* At the end of the subject's field. */
 .git-working-subject-counter {
   position: absolute;

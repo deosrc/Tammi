@@ -440,9 +440,7 @@
     </div>
 
     @* Resizes the details panel: drag it, or focus it and use Left and Right. *@
-    <div class="git-graph-splitter" role="separator" aria-orientation="vertical" aria-label="Resize commit details"
-         aria-controls="@_detailsId" tabindex="0" title="Drag to resize. Double-click to reset." @ref="_splitter">
-    </div>
+    <Splitter Vertical="true" AriaLabel="Resize commit details" ControlsId="@_detailsId" @ref="_splitter" />
 
     <aside class="git-graph-details" id="@_detailsId" aria-label="Commit details">
         @if (Graph.IsWorkingChangesSelected)
@@ -470,7 +468,7 @@
     private ElementReference _list;
     private ElementReference _header;
     private ElementReference _body;
-    private ElementReference _splitter;
+    private Splitter? _splitter;
 
     // Set when the branch prompt or the delete confirmation opens, so the next render moves focus into it.
     private IJSObjectReference? _splitterScript;
@@ -593,7 +591,7 @@
             _splitterScript = await _module.InvokeAsync<IJSObjectReference>(
                 "attachSplitter",
                 _body,
-                _splitter,
+                _splitter!.Element,
                 LayoutStore.Current.GitGraphDetailsWidth,
                 _self);
         }

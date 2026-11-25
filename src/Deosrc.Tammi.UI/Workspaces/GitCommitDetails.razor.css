@@ -70,30 +70,6 @@
   outline-offset: -2px;
 }
 
-/* A thin bar below the body, with a taller area to grab. */
-.git-commit-body-splitter {
-  position: relative;
-  flex: none;
-  height: 1px;
-  background: var(--colorNeutralStroke2);
-  cursor: row-resize;
-  touch-action: none;
-}
-
-.git-commit-body-splitter::before {
-  position: absolute;
-  inset: -3px 0;
-  content: "";
-}
-
-.git-commit-body-splitter:hover,
-.git-commit-body-splitter.dragging,
-.git-commit-body-splitter:focus-visible {
-  background: var(--colorBrandStroke1);
-  outline: none;
-  box-shadow: 0 0 0 1px var(--colorBrandStroke1);
-}
-
 /* The sections have the side padding, so the divider between them runs the panel's full width. */
 .git-commit-lower {
   flex: 1;
