@@ -2001,6 +2001,12 @@ a {
 }
 
 /* A line between the card's parts. The spacing around it is its own, so nothing else adds margins to the rows. */
+/* Between the sections of a repository's card (GitStatusDetails), as on a workspace's card on Home. It's here rather
+   than in the component's scoped styles, which don't reach the divider: it's another component's element. */
+.git-status-divider {
+  margin: var(--spacingVerticalS) 0;
+}
+
 .workspace-card-divider {
   height: 0;
   margin: var(--space-2) 0;

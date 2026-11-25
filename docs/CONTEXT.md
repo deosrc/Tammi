@@ -353,13 +353,14 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   attention: danger when the worktree is broken or its status can't be read, warning when it has work that isn't
   pushed (uncommitted changes or unpushed commits) or is behind its upstream, in it or any of its submodules. A
   repository with no issues has no colour and no label, and looks like a card in the Tasks section. Each card has:
-  - a label: Broken, Unreadable, Changed (as on Home) or Out of sync (only behind). A clean repository has none
-  - its branch (or the commit, when HEAD is detached), and how far it's ahead of and behind its upstream, when it
-    tracks one
-  - how many uncommitted changes and unpushed commits it has
+  - a label: Broken, Unreadable or Out of sync (behind, with nothing that could be lost). A clean repository, or one
+    with uncommitted changes or unpushed commits (which its sections show), has none
+  - its branch (or the commit, when HEAD is detached), with the branch's name as its tooltip
+  - then, in sections under dividers as on Home: how far it's ahead of and behind its upstream, when it tracks one;
+    its Pull Requests; and how many uncommitted changes it has
   - its submodules, nested under it, each with the same details, or "Not checked out"
   - a broken worktree says what's wrong (e.g. "Local Repository moved or deleted") instead
-  - under its name, a badge for each [Pull Request](#github) from its workspace branch, oldest first, coloured by its
+  - in its Pull Requests section, a badge for each [Pull Request](#github) from its workspace branch, oldest first, coloured by its
     state (grey for a draft, blue for open, green for merged, red for closed), with an icon for its state and its number.
     A draft or open Pull Request with checks ends with a dot for them: red if any failed, amber if any are running,
     green if all passed. The tooltip

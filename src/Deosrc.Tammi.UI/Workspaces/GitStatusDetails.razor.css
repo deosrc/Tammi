@@ -73,8 +73,3 @@
     color: var(--colorBrandForegroundLink);
     text-decoration: underline;
 }
-
-.git-status-heading ::deep .git-status-badge {
-    flex: none;
-    margin-left: auto;
-}

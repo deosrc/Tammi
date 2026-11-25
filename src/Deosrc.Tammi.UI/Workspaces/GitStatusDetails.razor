@@ -2,17 +2,28 @@
 @* The git status of a repository or submodule: what's checked out, what could be lost, and its submodules. *@
 
 <div class="git-status-head">
-    <span class="git-status-branch" title="@(Status.Branch is null ? "Detached HEAD" : "Branch")">
+    <span class="git-status-branch" title="@(Status.Branch is { } branch ? $"Branch: {branch}" : "Detached HEAD")">
         @GitStatusText.Head(Status)
     </span>
-    @if (Status.Upstream is not null && (Status.AheadBy > 0 || Status.BehindBy > 0))
-    {
-        <GitSyncChips Ahead="Status.AheadBy ?? 0" Behind="Status.BehindBy ?? 0" Upstream="@Status.Upstream" />
-    }
 </div>
+
+@* The rest is in sections, like a workspace's card on Home, each after a divider: how far it is ahead of and behind its
+   upstream, then its Pull Requests (a repository's card gives them), then the changes that could be lost. *@
+@if (Status.Upstream is not null && (Status.AheadBy > 0 || Status.BehindBy > 0))
+{
+    <FluentDivider Class="git-status-divider" />
+    <GitSyncChips Ahead="Status.AheadBy ?? 0" Behind="Status.BehindBy ?? 0" Upstream="@Status.Upstream" Inline="true" />
+}
+
+@if (PullRequests is not null)
+{
+    <FluentDivider Class="git-status-divider" />
+    @PullRequests
+}
 
 @if (GitStatusText.Summary(Status) is { } summary)
 {
+    <FluentDivider Class="git-status-divider" />
     <div class="git-status-summary">@summary</div>
 }
 
@@ -38,12 +49,6 @@
                     else
                     {
                         <span class="git-status-name" title="@submodule.Name">@submodule.Path</span>
-                    }
-                    @if (submodule.Status is { } inner && GitStatusText.NeedsAttention(inner))
-                    {
-                        <FluentBadge Class="git-status-badge" Appearance="BadgeAppearance.Tint" Color="BadgeColor.Warning">
-                            @(inner.IsChanged ? "Changed" : "Out of sync")
-                        </FluentBadge>
                     }
                 </div>
                 @if (submodule.CommitChange != SubmoduleCommitChange.None)
@@ -72,6 +77,12 @@
     /// </summary>
     [Parameter]
     public string? SubmodulePath { get; set; }
+
+    /// <summary>
+    /// The repository's Pull Requests, shown in their own section, or <see langword="null"/> for none.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? PullRequests { get; set; }
 
     /// <summary>
     /// Opens a submodule's git graph, by its path in the workspace's repository.

@@ -3,8 +3,9 @@
    upstream. A clean card has no label and is styled like a task's card. Clicking the card opens the repository's git
    graph, or shows it if it's open.
    Its name is a button for the keyboard, whose click reaches the card. A checked-out submodule's part of the card
-   opens the submodule's graph instead. A badge for each Pull Request from the workspace branch sits under its name,
-   and opens the Pull Request in the browser. *@
+   opens the submodule's graph instead. Under the branch, in sections like a workspace's card on Home: how far it's
+   ahead of and behind its upstream, a badge for each Pull Request from the workspace branch (which opens it in the
+   browser), and its uncommitted changes. *@
 
 <SidePanelCard Tone="Tone" Hint="@($"Open the git graph of {Repository.Repository.FolderName}")" Badge="@Label"
                OnClick="() => OnOpenGraph.InvokeAsync(null)" OnContextMenu="OnContextMenu">
@@ -14,11 +15,6 @@
         </button>
     </Heading>
     <ChildContent>
-        @if (PullRequests is { } pullRequests)
-        {
-            <PullRequestBadges PullRequests="pullRequests.PullRequests" Problem="@pullRequests.Problem" />
-        }
-
         @if (!Repository.IsLoaded)
         {
             <p class="git-status-note">Reading status…</p>
@@ -32,7 +28,8 @@
         }
         else if (Repository.Status is { } status)
         {
-            <GitStatusDetails Status="status" OnOpenGraph="path => OnOpenGraph.InvokeAsync(path)" />
+            <GitStatusDetails Status="status" PullRequests="PullRequestSection"
+                              OnOpenGraph="path => OnOpenGraph.InvokeAsync(path)" />
         }
         else
         {
@@ -69,10 +66,15 @@
         { IsLoaded: false } => null,
         { IsBroken: true } => "Broken",
         { Status: null } => "Unreadable",
-        { Status.IsChanged: true } => "Changed",
-        { Status: { } status } when GitStatusText.NeedsAttention(status) => "Out of sync",
+        { Status: { IsChanged: false } status } when GitStatusText.NeedsAttention(status) => "Out of sync",
         _ => null,
     };
+
+    // The Pull Requests' section of the card, when there are any or they couldn't be read.
+    private RenderFragment? PullRequestSection => PullRequests is { } pullRequests
+        && (pullRequests.PullRequests.Count > 0 || pullRequests.Problem is not null)
+            ? @<PullRequestBadges PullRequests="pullRequests.PullRequests" Problem="@pullRequests.Problem" />
+            : null;
 
     private SidePanelCardTone Tone => Repository switch
     {
