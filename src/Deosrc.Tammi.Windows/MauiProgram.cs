@@ -45,6 +45,9 @@ public static class MauiProgram
             var services = IPlatformApplication.Current!.Services;
             WindowStatePersistence.Attach(window, services.GetRequiredService<WindowStateStore>());
 
+            // No title bar: the app bar takes its place.
+            services.GetRequiredService<WindowsWindowFrame>().Attach(window);
+
             // Another copy being started shows this window instead.
             _instanceLock!.Activated += () => window.DispatcherQueue.TryEnqueue(() => ShowWindow(window));
             _instanceLock.StartListening();

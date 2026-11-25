@@ -54,6 +54,8 @@ internal static class Program
         app.MainWindow
             .SetLogVerbosity(0)
             .SetTitle(AppInfo.Name)
+            // No title bar: the app bar takes its place (see PhotinoWindowFrame).
+            .SetChromeless(true)
             .SetIconFile(Path.Combine(AppContext.BaseDirectory, "tammi.png"))
             .SetMinSize(800, 600)
             // On Linux, Photino sends the maximum size along with the minimum size. Left unset it's -1, which

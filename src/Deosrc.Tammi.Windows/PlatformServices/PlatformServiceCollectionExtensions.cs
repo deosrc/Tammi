@@ -21,6 +21,8 @@ internal static class PlatformServiceCollectionExtensions
         services.AddSingleton<IFolderPicker, WindowsFolderPicker>();
         services.AddSingleton<IFilePicker, WindowsFilePicker>();
         services.AddSingleton<IAppCloser, WindowsAppCloser>();
+        services.AddSingleton<WindowsWindowFrame>();
+        services.AddSingleton<IWindowFrame>(provider => provider.GetRequiredService<WindowsWindowFrame>());
         services.AddSingleton<IPtyService, WindowsPtyService>();
         services.AddSingleton<IApplicationIconProvider, WindowsApplicationIconProvider>();
         return services;
