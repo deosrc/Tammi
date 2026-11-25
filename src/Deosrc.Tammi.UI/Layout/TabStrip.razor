@@ -104,7 +104,8 @@
                 }
                 else if (key == MainTabOrder.UsageKey)
                 {
-                    items.Add(new(key, AppRoutes.Usage, "AI Usage", "AI Usage", Active: IsCurrent(AppRoutes.Usage)));
+                    items.Add(new(key, AppRoutes.Usage, "AI Usage", "AI Usage", IconOf(new Icons.Regular.Size16.Bot()),
+                        Active: IsCurrent(AppRoutes.Usage)));
                 }
             }
 
