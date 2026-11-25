@@ -3,10 +3,12 @@
 @inject IWindowFrame Frame
 
 @* Thin strips along the window's edges and corners that resize it, for platforms where removing the title bar also
-   removed the window's own resize borders. A maximised window can't be resized, so they're gone then. Custom markup:
-   Fluent has nothing for a window's edges. *@
+   removed the window's own resize borders. Those platforms also lose the window's shadow, so a 1px border outlines the
+   window, or it would blend into the windows behind it. A maximised window can't be resized and has nothing to blend
+   into, so they're gone then. Custom markup: Fluent has nothing for a window's edges. *@
 @if (!Frame.HasTitleBar && Frame.NeedsResizeEdges && !Frame.IsMaximized)
 {
+    <div class="window-outline" aria-hidden="true"></div>
     @foreach (var edge in Enum.GetValues<WindowEdge>())
     {
         <div class="window-resize-edge @EdgeClass(edge)" aria-hidden="true"

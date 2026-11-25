@@ -1,3 +1,12 @@
+/* Drawn over the page's outermost pixels rather than taking room from it, and never in the way of the pointer. */
+.window-outline {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    border: 1px solid var(--color-border);
+    pointer-events: none;
+}
+
 /* Over everything else, so they're found at the very edge of the window whatever is under them. */
 .window-resize-edge {
     position: fixed;
