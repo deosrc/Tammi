@@ -29,3 +29,21 @@
     align-self: stretch;
     height: auto;
 }
+
+/* A prompt under the toolbar, to name a branch or a tag or to confirm a delete: its fields, then its buttons. */
+.git-graph-prompt {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacingVerticalS);
+    padding: var(--spacingVerticalS) var(--spacingHorizontalM);
+    border-bottom: 1px solid var(--colorNeutralStroke2);
+}
+
+.git-graph-prompt p {
+    margin: 0;
+}
+
+.git-graph-prompt-actions {
+    display: flex;
+    gap: var(--spacingHorizontalS);
+}

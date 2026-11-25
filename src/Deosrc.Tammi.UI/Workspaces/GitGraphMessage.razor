@@ -1,0 +1,48 @@
+@* A message under the git graph's toolbar: an error (dismissible) or a warning that asks to be confirmed, with its own
+   buttons. *@
+<FluentMessageBar Class="git-graph-message" Intent="Intent" Layout="MessageBarLayout.MultiLine" Title="@Title"
+                  AllowDismiss="@(OnDismiss.HasDelegate)" Visible="true" VisibleChanged="OnVisibleChanged" role="@Role">
+    <ChildContent>@ChildContent</ChildContent>
+    <ActionsTemplate>@Actions</ActionsTemplate>
+</FluentMessageBar>
+
+@code {
+    /// <summary>
+    /// What kind of message it is: an error by default.
+    /// </summary>
+    [Parameter]
+    public MessageBarIntent Intent { get; set; } = MessageBarIntent.Error;
+
+    /// <summary>
+    /// A title above the message, e.g. what's to be confirmed.
+    /// </summary>
+    [Parameter]
+    public string? Title { get; set; }
+
+    /// <summary>
+    /// The message.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Buttons after the message.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    /// <summary>
+    /// Called when the user dismisses the message. Without one, it can't be dismissed.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnDismiss { get; set; }
+
+    /// <summary>
+    /// The message's role for assistive technology: <c>alert</c> for an error, or <c>alertdialog</c> for something to
+    /// confirm.
+    /// </summary>
+    [Parameter]
+    public string Role { get; set; } = "alert";
+
+    private Task OnVisibleChanged(bool visible) => visible ? Task.CompletedTask : OnDismiss.InvokeAsync();
+}

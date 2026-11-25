@@ -53,10 +53,10 @@
         </div>
 
         @* Only a failed fetch, pull or push is shown: the buttons' spinner says one is running. *@
-        @if (Graph.Syncing is null && Graph.SyncProblem is { } syncProblem)
+        @if (Graph.SyncProblem is { } syncProblem)
         {
-            <div class="error git-graph-sync-error" role="alert">
-                <div class="git-graph-sync-error-body">
+            <GitGraphMessage OnDismiss="Graph.DismissSyncProblem">
+                <ChildContent>
                     <p>@syncProblem.Message</p>
                     @if (syncProblem.Details.Length > 0 && syncProblem.Failure != GitSyncFailure.ForcePushRequired)
                     {
@@ -65,20 +65,15 @@
                             <pre class="git-graph-sync-details">@syncProblem.Details</pre>
                         </details>
                     }
+                </ChildContent>
+                <Actions>
                     @if (syncProblem.Failure == GitSyncFailure.ForcePushRequired)
                     {
-                        <p class="git-graph-sync-error-actions">
-                            <button type="button" class="button button-danger" @onclick="Graph.ForcePushAsync">Force push</button>
-                        </p>
+                        <FluentButton Appearance="ButtonAppearance.Primary" Class="danger-button" Size="ButtonSize.Small"
+                                      OnClick="Graph.ForcePushAsync">Force push</FluentButton>
                     }
-                </div>
-                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissSyncProblem">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M6 6l12 12M18 6 6 18" />
-                    </svg>
-                </button>
-            </div>
+                </Actions>
+            </GitGraphMessage>
         }
 
         @if (Graph.Problem is { } problem)
@@ -88,133 +83,94 @@
 
         @if (Graph.TagProblem is { } tagProblem)
         {
-            <div class="error git-graph-sync-error" role="alert">
-                <div class="git-graph-sync-error-body">
-                    <p>@tagProblem</p>
-                </div>
-                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissTagProblem">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M6 6l12 12M18 6 6 18" />
-                    </svg>
-                </button>
-            </div>
+            <GitGraphMessage OnDismiss="Graph.DismissTagProblem">@tagProblem</GitGraphMessage>
         }
 
         @if (Graph.BranchProblem is { } branchProblem)
         {
-            <div class="error git-graph-sync-error" role="alert">
-                <div class="git-graph-sync-error-body">
-                    <p>@branchProblem</p>
-                </div>
-                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissBranchProblem">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M6 6l12 12M18 6 6 18" />
-                    </svg>
-                </button>
-            </div>
+            <GitGraphMessage OnDismiss="Graph.DismissBranchProblem">@branchProblem</GitGraphMessage>
         }
 
         @if (Graph.DropRequest is { } dropRequest)
         {
-            <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-drop-stash-title">
-                <h3 id="confirm-drop-stash-title" class="alert-title">Drop @dropRequest.Name?</h3>
-                <p>
+            <GitGraphMessage Intent="MessageBarIntent.Warning" Role="alertdialog" Title="@($"Drop {dropRequest.Name}?")">
+                <ChildContent>
                     "@dropRequest.Message" is deleted without being applied, and Tammi can't bring it back.
-                </p>
-                <div class="settings-field-row">
-                    <button type="button" class="button button-danger" disabled="@_stashing"
-                            @onclick="() => RunStashAsync(Graph.ConfirmDropStashAsync())">Drop stash</button>
-                    <button type="button" class="button button-secondary" disabled="@_stashing"
-                            @onclick="Graph.CancelDropStash">Cancel</button>
-                </div>
-            </div>
+                </ChildContent>
+                <Actions>
+                    <FluentButton Appearance="ButtonAppearance.Primary" Class="danger-button" Size="ButtonSize.Small"
+                                  Disabled="@_stashing" OnClick="() => RunStashAsync(Graph.ConfirmDropStashAsync())">Drop stash</FluentButton>
+                    <FluentButton Size="ButtonSize.Small" Disabled="@_stashing" OnClick="Graph.CancelDropStash">Cancel</FluentButton>
+                </Actions>
+            </GitGraphMessage>
         }
 
         @if (Graph.PendingReset is { } reset)
         {
-            <div class="alert alert-warning git-graph-drop-confirm" role="alertdialog" aria-labelledby="confirm-reset-title">
-                <h3 id="confirm-reset-title" class="alert-title">
-                    @ResetTitle(reset.Mode) @(Graph.Refs.HeadBranch ?? "HEAD") to @reset.Sha[..Math.Min(7, reset.Sha.Length)]?
-                </h3>
-                <p>@ResetText(reset.Mode)</p>
-                <div class="settings-field-row">
-                    <button type="button" class="button @(reset.Mode == GitResetMode.Hard ? "button-danger" : null)"
-                            @onclick="Graph.ConfirmResetAsync">@ResetTitle(reset.Mode)</button>
-                    <button type="button" class="button button-secondary" @onclick="Graph.CancelReset">Cancel</button>
-                </div>
-            </div>
+            <GitGraphMessage Intent="MessageBarIntent.Warning" Role="alertdialog"
+                             Title="@($"{ResetTitle(reset.Mode)} {Graph.Refs.HeadBranch ?? "HEAD"} to {reset.Sha[..Math.Min(7, reset.Sha.Length)]}?")">
+                <ChildContent>@ResetText(reset.Mode)</ChildContent>
+                <Actions>
+                    <FluentButton Appearance="ButtonAppearance.Primary" Size="ButtonSize.Small"
+                                  Class="@(reset.Mode == GitResetMode.Hard ? "danger-button" : null)"
+                                  OnClick="Graph.ConfirmResetAsync">@ResetTitle(reset.Mode)</FluentButton>
+                    <FluentButton Size="ButtonSize.Small" OnClick="Graph.CancelReset">Cancel</FluentButton>
+                </Actions>
+            </GitGraphMessage>
         }
 
         @if (Graph.StashProblem is { } stashProblem)
         {
-            <div class="error git-graph-sync-error" role="alert">
-                <div class="git-graph-sync-error-body">
-                    <p>@stashProblem</p>
-                </div>
-                <button type="button" class="button button-secondary button-icon git-graph-sync-error-close"
-                        title="Dismiss" aria-label="Dismiss the error" @onclick="Graph.DismissStashProblem">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M6 6l12 12M18 6 6 18" />
-                    </svg>
-                </button>
-            </div>
+            <GitGraphMessage OnDismiss="Graph.DismissStashProblem">@stashProblem</GitGraphMessage>
         }
 
         @if (_branchPrompt is { } branchPrompt)
         {
-            <form class="git-graph-tag-prompt" @onsubmit="SubmitBranchPromptAsync" @onsubmit:preventDefault="true">
-                <label>
-                    @(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")
-                    <input type="text" class="input" @bind="_branchName" @bind:event="oninput" @ref="_branchInput"
-                           spellcheck="false" />
-                </label>
-                <div class="git-graph-tag-prompt-actions">
-                    <button type="submit" class="button" disabled="@(!CanSubmitBranchPrompt)">
+            <form class="git-graph-prompt" @onsubmit="SubmitBranchPromptAsync" @onsubmit:preventDefault="true">
+                <FluentTextInput Label="@(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")"
+                                 Value="@_branchName" ValueChanged="name => _branchName = name ?? string.Empty" Immediate="true"
+                                 Autofocus="true" Spellcheck="false" Width="100%" />
+                <div class="git-graph-prompt-actions">
+                    <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Disabled="@(!CanSubmitBranchPrompt)">
                         @(branchPrompt.Kind == BranchPromptKind.Create ? "Create and checkout" : "Rename branch")
-                    </button>
+                    </FluentButton>
                     @if (branchPrompt.Kind == BranchPromptKind.Create)
                     {
-                        <button type="button" class="button button-secondary" disabled="@(!CanSubmitBranchPrompt)"
-                                @onclick="() => SubmitBranchPromptAsync(checkout: false)">
+                        <FluentButton Disabled="@(!CanSubmitBranchPrompt)" OnClick="() => SubmitBranchPromptAsync(checkout: false)">
                             Create branch
-                        </button>
+                        </FluentButton>
                     }
-                    <button type="button" class="button button-secondary" @onclick="() => _branchPrompt = null">Cancel</button>
+                    <FluentButton OnClick="() => _branchPrompt = null">Cancel</FluentButton>
                 </div>
             </form>
         }
 
         @if (_confirm is { } confirm)
         {
-            <form class="git-graph-tag-prompt" role="alertdialog" aria-label="Confirm delete"
+            <form class="git-graph-prompt" role="alertdialog" aria-label="Confirm delete"
                   @onsubmit="ConfirmAsync" @onsubmit:preventDefault="true">
                 <p>@confirm.Message</p>
-                <div class="git-graph-tag-prompt-actions">
-                    <button type="submit" class="button button-danger" @ref="_confirmButton">Delete</button>
-                    <button type="button" class="button button-secondary" @onclick="() => _confirm = null">Cancel</button>
+                <div class="git-graph-prompt-actions">
+                    <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Class="danger-button"
+                                  Autofocus="true">Delete</FluentButton>
+                    <FluentButton OnClick="() => _confirm = null">Cancel</FluentButton>
                 </div>
             </form>
         }
 
         @if (_tagPrompt is { } prompt)
         {
-            <form class="git-graph-tag-prompt" @onsubmit="() => SubmitTagPromptAsync(push: false)" @onsubmit:preventDefault="true">
-                <label>
-                    Tag name
-                    <input type="text" class="input" @bind="_tagName" @bind:event="oninput" autofocus
-                           spellcheck="false" />
-                </label>
-                <div class="git-graph-tag-prompt-actions">
-                    <button type="submit" class="button" disabled="@(!CanSubmitTagPrompt)">
+            <form class="git-graph-prompt" @onsubmit="() => SubmitTagPromptAsync(push: false)" @onsubmit:preventDefault="true">
+                <FluentTextInput Label="Tag name" Value="@_tagName" ValueChanged="name => _tagName = name ?? string.Empty"
+                                 Immediate="true" Autofocus="true" Spellcheck="false" Width="100%" />
+                <div class="git-graph-prompt-actions">
+                    <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Disabled="@(!CanSubmitTagPrompt)">
                         Create tag
-                    </button>
-                    <button type="button" class="button button-secondary" disabled="@(!CanSubmitTagPrompt)"
-                            @onclick="() => SubmitTagPromptAsync(push: true)">
+                    </FluentButton>
+                    <FluentButton Disabled="@(!CanSubmitTagPrompt)" OnClick="() => SubmitTagPromptAsync(push: true)">
                         Create and push tag
-                    </button>
-                    <button type="button" class="button button-secondary" @onclick="() => _tagPrompt = null">Cancel</button>
+                    </FluentButton>
+                    <FluentButton OnClick="() => _tagPrompt = null">Cancel</FluentButton>
                 </div>
             </form>
         }
@@ -602,12 +558,8 @@
     private ElementReference _header;
     private ElementReference _body;
     private ElementReference _splitter;
-    private ElementReference _branchInput;
-    private ElementReference _confirmButton;
 
     // Set when the branch prompt or the delete confirmation opens, so the next render moves focus into it.
-    private bool _focusBranchInput;
-    private bool _focusConfirm;
     private IJSObjectReference? _splitterScript;
     private DotNetObjectReference<GitGraphView>? _self;
     private Virtualize<GitGraphItem>? _virtualize;
@@ -713,17 +665,6 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_focusBranchInput && _branchPrompt is not null)
-        {
-            _focusBranchInput = false;
-            await _branchInput.FocusAsync();
-        }
-        else if (_focusConfirm && _confirm is not null)
-        {
-            _focusConfirm = false;
-            await _confirmButton.FocusAsync();
-        }
-
         if (!firstRender)
         {
             return;
@@ -1033,7 +974,6 @@
     {
         _commitMenu = null;
         _confirm = new Confirmation(message, action);
-        _focusConfirm = true;
     }
 
     private void ConfirmDeleteBranch(string branch, bool deleteLocal, bool deleteRemote, GitUpstream? upstream)
@@ -1091,7 +1031,6 @@
         _commitMenu = null;
         _branchName = "";
         _branchPrompt = new BranchPrompt(BranchPromptKind.Create, menu.Sha);
-        _focusBranchInput = true;
     }
 
     private void StartRenameBranch(string branch)
@@ -1099,7 +1038,6 @@
         _commitMenu = null;
         _branchName = branch;
         _branchPrompt = new BranchPrompt(BranchPromptKind.Rename, branch);
-        _focusBranchInput = true;
     }
 
     private async Task RunBranchAsync(Func<Task<bool>> action)
