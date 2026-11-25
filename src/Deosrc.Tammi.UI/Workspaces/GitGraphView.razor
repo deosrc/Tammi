@@ -15,99 +15,39 @@
         <div class="git-graph-toolbar">
             @if (!Graph.IsStandalone)
             {
-                <div class="segmented" role="group" aria-label="Commits shown">
-                    @* Icons, with the text as the tooltip. *@
-                    <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.WorkspaceBranch)"
-                            aria-label="Workspace branch"
-                            title="Workspace branch: HEAD, the workspace branch, its upstream and its merge target"
-                            @onclick="() => Graph.SetScopeAsync(GitGraphScope.WorkspaceBranch)">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <circle cx="12" cy="5" r="2" />
-                            <circle cx="12" cy="12" r="2" />
-                            <circle cx="12" cy="19" r="2" />
-                            <path d="M12 7v3M12 14v3" />
-                        </svg>
-                    </button>
-                    <button type="button" class="segmented-option" aria-pressed="@Pressed(GitGraphScope.Everything)"
-                            aria-label="Everything" title="Everything: every branch and tag"
-                            @onclick="() => Graph.SetScopeAsync(GitGraphScope.Everything)">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <circle cx="6" cy="5" r="2" />
-                            <circle cx="6" cy="19" r="2" />
-                            <circle cx="18" cy="9" r="2" />
-                            <path d="M6 7v10M18 11c0 4-12 2-12 6" />
-                        </svg>
-                    </button>
-                </div>
+                @* Icons, with the text as the tooltip. *@
+                <ToggleButtonGroup TValue="GitGraphScope" Options="_scopes" Value="Graph.Scope"
+                                   ValueChanged="scope => Graph.SetScopeAsync(scope)" AriaLabel="Commits shown" />
             }
             <div class="git-graph-actions">
                 <div class="git-graph-sync" role="group" aria-label="Sync with the remote">
-                    <button type="button" class="button button-secondary git-graph-action" title="Download new commits from the remotes"
-                            disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Fetch)">
-                        @if (Graph.Syncing == GitSyncOperation.Fetch)
-                        {
-                            <span class="spinner git-graph-action-spinner" role="progressbar" aria-label="Fetching"></span>
-                        }
-                        else
-                        {
-                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
-                            </svg>
-                        }
-                        <span class="git-graph-action-label">Fetch</span>
-                    </button>
-                    <button type="button" class="button button-secondary git-graph-action"
-                            title="Fetch the upstream branch and bring this branch up to date with it"
-                            disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Pull)">
-                        @if (Graph.Syncing == GitSyncOperation.Pull)
-                        {
-                            <span class="spinner git-graph-action-spinner" role="progressbar" aria-label="Pulling"></span>
-                        }
-                        else
-                        {
-                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M12 5v14M19 12l-7 7-7-7" />
-                            </svg>
-                        }
-                        <span class="git-graph-action-label">Pull</span>
-                    </button>
-                    <button type="button" class="button button-secondary git-graph-action" title="Upload this branch's commits to the remote"
-                            disabled="@(Graph.Syncing is not null)" @onclick="() => Graph.SyncAsync(GitSyncOperation.Push)">
-                        @if (Graph.Syncing == GitSyncOperation.Push)
-                        {
-                            <span class="spinner git-graph-action-spinner" role="progressbar" aria-label="Pushing"></span>
-                        }
-                        else
-                        {
-                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M12 19V5M5 12l7-7 7 7" />
-                            </svg>
-                        }
-                        <span class="git-graph-action-label">Push</span>
-                    </button>
+                    <FluentButton Appearance="ButtonAppearance.Subtle" Title="Download new commits from the remotes"
+                                  IconStart="@(new Icons.Regular.Size20.ArrowSync())"
+                                  Loading="@(Graph.Syncing == GitSyncOperation.Fetch)"
+                                  Disabled="@(Graph.Syncing is not null)"
+                                  OnClick="() => Graph.SyncAsync(GitSyncOperation.Fetch)">Fetch</FluentButton>
+                    <FluentButton Appearance="ButtonAppearance.Subtle"
+                                  Title="Fetch the upstream branch and bring this branch up to date with it"
+                                  IconStart="@(new Icons.Regular.Size20.ArrowDown())"
+                                  Loading="@(Graph.Syncing == GitSyncOperation.Pull)"
+                                  Disabled="@(Graph.Syncing is not null)"
+                                  OnClick="() => Graph.SyncAsync(GitSyncOperation.Pull)">Pull</FluentButton>
+                    <FluentButton Appearance="ButtonAppearance.Subtle" Title="Upload this branch's commits to the remote"
+                                  IconStart="@(new Icons.Regular.Size20.ArrowUp())"
+                                  Loading="@(Graph.Syncing == GitSyncOperation.Push)"
+                                  Disabled="@(Graph.Syncing is not null)"
+                                  OnClick="() => Graph.SyncAsync(GitSyncOperation.Push)">Push</FluentButton>
                 </div>
-                <span class="git-graph-divider" role="separator" aria-orientation="vertical"></span>
+                <FluentDivider Vertical="true" />
                 <div class="git-graph-sync" role="group" aria-label="Stash">
-                    <button type="button" class="button button-secondary git-graph-action"
-                            title="Stash every change, including new files"
-                            disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
-                            @onclick="() => RunStashAsync(Graph.StashAsync())">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M12 3v11M8 10l4 4 4-4" />
-                            <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
-                        </svg>
-                        <span class="git-graph-action-label">Stash</span>
-                    </button>
-                    <button type="button" class="button button-secondary git-graph-action"
-                            title="Apply the newest stash and drop it"
-                            disabled="@(Graph.Stashes.Count == 0 || _stashing)"
-                            @onclick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M12 14V3M8 7l4-4 4 4" />
-                            <path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
-                        </svg>
-                        <span class="git-graph-action-label">Pop</span>
-                    </button>
+                    <FluentButton Appearance="ButtonAppearance.Subtle" Title="Stash every change, including new files"
+                                  IconStart="@(new Icons.Regular.Size20.ArrowDownload())"
+                                  Disabled="@((Graph.WorkingChanges?.Count ?? 0) == 0 || _stashing)"
+                                  OnClick="() => RunStashAsync(Graph.StashAsync())">Stash</FluentButton>
+                    <FluentButton Appearance="ButtonAppearance.Subtle" Title="Apply the newest stash and drop it"
+                                  IconStart="@(new Icons.Regular.Size20.ArrowUpload())"
+                                  Disabled="@(Graph.Stashes.Count == 0 || _stashing)"
+                                  OnClick="() => RunStashAsync(Graph.PopStashAsync(Graph.Stashes[0]))">Pop</FluentButton>
                 </div>
             </div>
         </div>
@@ -862,7 +802,13 @@
         }
     }
 
-    private string Pressed(GitGraphScope scope) => Graph.Scope == scope ? "true" : "false";
+    private static readonly IReadOnlyList<ToggleButtonOption<GitGraphScope>> _scopes =
+    [
+        new(GitGraphScope.WorkspaceBranch, new Icons.Regular.Size20.BranchFork(),
+            "Workspace branch: HEAD, the workspace branch, its upstream and its merge target"),
+        new(GitGraphScope.Everything, new Icons.Regular.Size20.BranchCompare(),
+            "Everything: every branch and tag"),
+    ];
 
     // Gives the list the rows it asks for, reading more of the history when it scrolls past what's been read. Until
     // every commit is read, the list is a page longer than what's been read, so it can scroll on.
