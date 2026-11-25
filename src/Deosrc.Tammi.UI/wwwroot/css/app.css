@@ -1243,10 +1243,6 @@ a {
   padding: var(--space-6);
 }
 
-.workspace-main-error {
-  margin: var(--space-2) var(--space-3) 0;
-}
-
 /* A second tab bar, set apart from the app's main one by a small divider. */
 .session-tabs {
   display: flex;
@@ -1265,12 +1261,6 @@ a {
   flex: none;
   align-items: center;
   padding: 0 var(--space-1);
-}
-
-/* The shown terminal fills the rest of the main area, with a small gap around it. */
-.workspace-terminal {
-  flex: 1;
-  margin: var(--space-2);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
@@ -1876,19 +1866,6 @@ a {
 #blazor-error-ui .reload:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
-}
-
-/* ---------------------------------------------------------------------------------------------------------------
-   Terminal
-   --------------------------------------------------------------------------------------------------------------- */
-
-/* The terminal fills this element. Its colours come from the xterm.js theme, which is dark in both app themes. */
-.terminal {
-  min-height: 0;
-  padding: var(--space-1);
-  overflow: hidden;
-  border-radius: var(--radius);
-  background-color: #1e1e1e;
 }
 
 /* ---------------------------------------------------------------------------------------------------------------

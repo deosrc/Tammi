@@ -1,0 +1,5 @@
+/* Less space above than below, so the message sits close to what is above it and clear of what follows. */
+.panel-message {
+    flex: none;
+    margin: var(--spacingVerticalS) var(--spacingHorizontalM) 0;
+}

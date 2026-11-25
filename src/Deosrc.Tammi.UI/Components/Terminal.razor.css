@@ -1,0 +1,10 @@
+/* The terminal fills the room its parent gives it. Its colours come from the xterm.js theme (Terminal.razor.js), which
+   is dark in both app themes. xterm.js has no padding of its own, so the gap around the text is this element's padding,
+   which has the theme's background and which xterm.js's fit leaves out of the terminal's size. */
+.terminal {
+    flex: 1;
+    min-height: 0;
+    padding: var(--spacingVerticalM) var(--spacingHorizontalM);
+    overflow: hidden;
+    background-color: #1e1e1e;
+}

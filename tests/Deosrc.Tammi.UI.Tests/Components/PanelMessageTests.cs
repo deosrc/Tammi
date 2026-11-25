@@ -1,14 +1,14 @@
 using Bunit;
-using Deosrc.Tammi.UI.Workspaces;
+using Deosrc.Tammi.UI.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Deosrc.Tammi.UI.Tests.Components;
 
-public sealed class GitGraphMessageTests : BunitContext
+public sealed class PanelMessageTests : BunitContext
 {
-    public GitGraphMessageTests()
+    public PanelMessageTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddFluentUIComponents();
@@ -18,7 +18,7 @@ public sealed class GitGraphMessageTests : BunitContext
     public void ShowsItsMessageTitleAndButtons()
     {
         RenderFragment actions = builder => builder.AddMarkupContent(0, "<button class=\"test-action\">Drop</button>");
-        var message = Render<GitGraphMessage>(parameters => parameters
+        var message = Render<PanelMessage>(parameters => parameters
             .Add(p => p.Intent, MessageBarIntent.Warning)
             .Add(p => p.Title, "Drop stash?")
             .Add(p => p.Actions, actions)
@@ -32,10 +32,10 @@ public sealed class GitGraphMessageTests : BunitContext
     [Fact]
     public void CanBeDismissedOnlyWithAnOnDismiss()
     {
-        var without = Render<GitGraphMessage>(parameters => parameters.AddChildContent("Failed"));
+        var without = Render<PanelMessage>(parameters => parameters.AddChildContent("Failed"));
         Assert.DoesNotContain("dismiss", without.Markup, StringComparison.OrdinalIgnoreCase);
 
-        var with = Render<GitGraphMessage>(parameters => parameters
+        var with = Render<PanelMessage>(parameters => parameters
             .Add(p => p.OnDismiss, () => { })
             .AddChildContent("Failed"));
         Assert.Contains("dismiss", with.Markup, StringComparison.OrdinalIgnoreCase);

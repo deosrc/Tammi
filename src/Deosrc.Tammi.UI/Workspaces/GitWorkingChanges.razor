@@ -21,7 +21,7 @@
 
     @if (Graph.WorkingChanges is null && Graph.WorkingChangesProblem is { } readProblem)
     {
-        <GitGraphMessage>Couldn't read the changes. @readProblem</GitGraphMessage>
+        <PanelMessage>Couldn't read the changes. @readProblem</PanelMessage>
     }
     else
     {
@@ -38,7 +38,7 @@
             </div>
             @if (Graph.PendingDiscard is { } discard)
             {
-                <GitGraphMessage Intent="MessageBarIntent.Warning" Role="alertdialog" Title="@($"Discard {DiscardSubject(discard)}?")">
+                <PanelMessage Intent="MessageBarIntent.Warning" Role="alertdialog" Title="@($"Discard {DiscardSubject(discard)}?")">
                     <ChildContent>
                         The changes are lost, and Tammi can't bring them back. Untracked files are deleted. Staged changes are
                         kept.
@@ -48,7 +48,7 @@
                                       OnClick="Graph.ConfirmDiscardAsync">Discard</FluentButton>
                         <FluentButton Size="ButtonSize.Small" OnClick="Graph.CancelDiscard">Cancel</FluentButton>
                     </Actions>
-                </GitGraphMessage>
+                </PanelMessage>
             }
             @FileList(Graph.UnstagedChanges, staged: false)
         </section>
@@ -93,7 +93,7 @@
                   value="@_body" @oninput="OnBodyInput"></textarea>
         @if (Graph.WorkingChangesProblem is { } problem && Graph.WorkingChanges is not null)
         {
-            <GitGraphMessage>@problem</GitGraphMessage>
+            <PanelMessage>@problem</PanelMessage>
         }
         <FluentButton Class="git-working-commit" Appearance="ButtonAppearance.Primary" Disabled="@(!CanCommit)"
                       OnClick="CommitAsync">

@@ -53,7 +53,7 @@
             </div>
             @if (Graph.StashProblem is { } stashProblem)
             {
-                <GitGraphMessage OnDismiss="Graph.DismissStashProblem">@stashProblem</GitGraphMessage>
+                <PanelMessage OnDismiss="Graph.DismissStashProblem">@stashProblem</PanelMessage>
             }
         }
 
@@ -104,7 +104,7 @@
 
                 @if (Graph.SelectedChangesProblem is { } changesProblem)
                 {
-                    <GitGraphMessage>Couldn't read the changed files. @changesProblem</GitGraphMessage>
+                    <PanelMessage>Couldn't read the changed files. @changesProblem</PanelMessage>
                 }
                 else if (Graph.SelectedChanges is not { } changes)
                 {

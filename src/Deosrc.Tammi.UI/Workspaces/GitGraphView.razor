@@ -55,7 +55,7 @@
         @* Only a failed fetch, pull or push is shown: the buttons' spinner says one is running. *@
         @if (Graph.SyncProblem is { } syncProblem)
         {
-            <GitGraphMessage OnDismiss="Graph.DismissSyncProblem">
+            <PanelMessage OnDismiss="Graph.DismissSyncProblem">
                 <ChildContent>
                     <p>@syncProblem.Message</p>
                     @if (syncProblem.Details.Length > 0 && syncProblem.Failure != GitSyncFailure.ForcePushRequired)
@@ -73,7 +73,7 @@
                                       OnClick="Graph.ForcePushAsync">Force push</FluentButton>
                     }
                 </Actions>
-            </GitGraphMessage>
+            </PanelMessage>
         }
 
         @if (Graph.Problem is { } problem)
@@ -83,17 +83,17 @@
 
         @if (Graph.TagProblem is { } tagProblem)
         {
-            <GitGraphMessage OnDismiss="Graph.DismissTagProblem">@tagProblem</GitGraphMessage>
+            <PanelMessage OnDismiss="Graph.DismissTagProblem">@tagProblem</PanelMessage>
         }
 
         @if (Graph.BranchProblem is { } branchProblem)
         {
-            <GitGraphMessage OnDismiss="Graph.DismissBranchProblem">@branchProblem</GitGraphMessage>
+            <PanelMessage OnDismiss="Graph.DismissBranchProblem">@branchProblem</PanelMessage>
         }
 
         @if (Graph.DropRequest is { } dropRequest)
         {
-            <GitGraphMessage Intent="MessageBarIntent.Warning" Role="alertdialog" Title="@($"Drop {dropRequest.Name}?")">
+            <PanelMessage Intent="MessageBarIntent.Warning" Role="alertdialog" Title="@($"Drop {dropRequest.Name}?")">
                 <ChildContent>
                     "@dropRequest.Message" is deleted without being applied, and Tammi can't bring it back.
                 </ChildContent>
@@ -102,12 +102,12 @@
                                   Disabled="@_stashing" OnClick="() => RunStashAsync(Graph.ConfirmDropStashAsync())">Drop stash</FluentButton>
                     <FluentButton Size="ButtonSize.Small" Disabled="@_stashing" OnClick="Graph.CancelDropStash">Cancel</FluentButton>
                 </Actions>
-            </GitGraphMessage>
+            </PanelMessage>
         }
 
         @if (Graph.PendingReset is { } reset)
         {
-            <GitGraphMessage Intent="MessageBarIntent.Warning" Role="alertdialog"
+            <PanelMessage Intent="MessageBarIntent.Warning" Role="alertdialog"
                              Title="@($"{ResetTitle(reset.Mode)} {Graph.Refs.HeadBranch ?? "HEAD"} to {reset.Sha[..Math.Min(7, reset.Sha.Length)]}?")">
                 <ChildContent>@ResetText(reset.Mode)</ChildContent>
                 <Actions>
@@ -116,12 +116,12 @@
                                   OnClick="Graph.ConfirmResetAsync">@ResetTitle(reset.Mode)</FluentButton>
                     <FluentButton Size="ButtonSize.Small" OnClick="Graph.CancelReset">Cancel</FluentButton>
                 </Actions>
-            </GitGraphMessage>
+            </PanelMessage>
         }
 
         @if (Graph.StashProblem is { } stashProblem)
         {
-            <GitGraphMessage OnDismiss="Graph.DismissStashProblem">@stashProblem</GitGraphMessage>
+            <PanelMessage OnDismiss="Graph.DismissStashProblem">@stashProblem</PanelMessage>
         }
 
         @if (_branchPrompt is { } branchPrompt)

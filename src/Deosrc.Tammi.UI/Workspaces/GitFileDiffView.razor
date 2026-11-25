@@ -43,7 +43,7 @@
     <div class="git-diff-body" @ref="_body">
         @if (Graph.DiffProblem is { } problem)
         {
-            <GitGraphMessage>Couldn't read the diff. @problem</GitGraphMessage>
+            <PanelMessage>Couldn't read the diff. @problem</PanelMessage>
         }
         else if (Graph.ActiveDiff is not { } diff)
         {

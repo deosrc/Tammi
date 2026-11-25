@@ -1,6 +1,6 @@
-@* A message under the git graph's toolbar: an error (dismissible) or a warning that asks to be confirmed, with its own
-   buttons. *@
-<FluentMessageBar Class="git-graph-message" Intent="Intent" Layout="MessageBarLayout.MultiLine" Title="@Title"
+@* A message in a panel, e.g. under the git graph's toolbar: an error (dismissible) or a warning that asks to be
+   confirmed, with its own buttons. *@
+<FluentMessageBar Class="panel-message" Intent="Intent" Layout="MessageBarLayout.MultiLine" Title="@Title"
                   AllowDismiss="@(OnDismiss.HasDelegate)" Visible="true" VisibleChanged="OnVisibleChanged" role="@Role">
     <ChildContent>@ChildContent</ChildContent>
     <ActionsTemplate>@Actions</ActionsTemplate>

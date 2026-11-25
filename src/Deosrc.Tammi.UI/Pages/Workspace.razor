@@ -235,11 +235,11 @@ else
             </TabBar>
             @if (_startError is not null)
             {
-                <p class="error workspace-main-error">@_startError</p>
+                <PanelMessage OnDismiss="DismissStartError">@_startError</PanelMessage>
             }
             @if (_shown is IWorkspaceProcess shownProcess)
             {
-                <Terminal @key="shownProcess" Session="shownProcess.Session" Class="workspace-terminal" />
+                <Terminal @key="shownProcess" Session="shownProcess.Session" />
             }
             else if (_shown is WorkspaceHistoryTab && _listing?.Workspace is { } historyWorkspace)
             {
@@ -287,6 +287,8 @@ else
 
 
     private string? _startError;
+
+    private void DismissStartError() => _startError = null;
 
     // The workspace's main area tabs after the dashboard, in the order they started.
     private IReadOnlyList<IMainAreaTab> _tabs = [];

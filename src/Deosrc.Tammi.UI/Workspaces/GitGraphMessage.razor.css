@@ -1,5 +1,0 @@
-/* Less space above than below, so the message sits close to the toolbar and clear of the graph. */
-.git-graph-message {
-    flex: none;
-    margin: var(--spacingVerticalS) var(--spacingHorizontalM) 0;
-}
