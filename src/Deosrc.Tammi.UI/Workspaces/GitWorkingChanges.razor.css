@@ -67,8 +67,10 @@
   border: 1px solid var(--colorNeutralStroke2);
 }
 
+/* Shift-clicking selects a range of files, so it mustn't select their text. */
 .git-working-file {
   display: flex;
+  user-select: none;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
