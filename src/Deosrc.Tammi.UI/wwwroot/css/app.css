@@ -243,17 +243,6 @@ a {
   color: var(--color-warning);
 }
 
-/* Line icons drawn with inline SVG. They take the text colour. */
-.icon {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .button {
   padding: var(--space-1) var(--space-3);
   border: none;
@@ -558,12 +547,6 @@ a {
   margin-top: var(--space-1);
   font-size: var(--font-size-small);
   font-weight: 600;
-}
-
-.workspace-problem .icon {
-  flex: none;
-  width: 14px;
-  height: 14px;
 }
 
 .workspace-problem span {
@@ -1068,23 +1051,13 @@ a {
   gap: var(--space-1);
 }
 
-.icon-spin {
-  animation: icon-spin 1s linear infinite;
-}
-
 @keyframes icon-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .icon-spin {
-    animation: none;
-  }
-}
-
-/* A ring with one coloured arc, turning. Sized like .icon-small (14px) so it can stand in for an icon. */
+/* A ring with one coloured arc, turning. 14px, so it can stand in for an icon. */
 .spinner {
   display: inline-block;
   flex: none;
@@ -1695,11 +1668,6 @@ a {
   gap: var(--space-2);
 }
 
-.icon-small {
-  width: 14px;
-  height: 14px;
-}
-
 .integration-title {
   display: flex;
   flex-direction: column;
@@ -1973,14 +1941,13 @@ a {
 }
 
 .git-commit-count-icon {
+  display: inline-flex;
   flex: none;
+}
+
+.git-commit-count-icon svg {
   width: 12px;
   height: 12px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.25;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .git-commit-files,
@@ -2094,7 +2061,7 @@ a {
   color: var(--color-text-muted);
 }
 
-/* A tool's application or custom icon, the size of the line icons it stands in for. */
+/* A tool's application or custom icon, the size of the Fluent icons it stands in for. */
 .tool-image {
   flex: none;
   width: 18px;
@@ -2102,12 +2069,7 @@ a {
   object-fit: contain;
 }
 
-.tool-image.icon-small {
-  width: 14px;
-  height: 14px;
-}
-
-/* The placeholders a custom tool can use, on the Tools settings page. */
+.tool-image/* The placeholders a custom tool can use, on the Tools settings page. */
 .tool-placeholders {
   margin: 0 0 var(--space-2);
   font-size: var(--font-size-small);

@@ -4,11 +4,11 @@
    the generic icon is shown. *@
 @if (Image?.DataUri is { } dataUri)
 {
-    <img class="tool-image @Class" src="@dataUri" alt="" aria-hidden="true" />
+    <img class="tool-image" src="@dataUri" alt="" aria-hidden="true" />
 }
 else
 {
-    <ToolIconImage Icon="@(Image?.Generic ?? Fallback)" Class="@Class" />
+    <ToolIconImage Icon="@(Image?.Generic ?? Fallback)" />
 }
 
 @code {
@@ -23,10 +23,4 @@ else
     /// </summary>
     [Parameter]
     public ToolIcon Fallback { get; set; } = ToolIcon.Application;
-
-    /// <summary>
-    /// More classes for the icon, e.g. <c>icon-small</c>.
-    /// </summary>
-    [Parameter]
-    public string? Class { get; set; }
 }
