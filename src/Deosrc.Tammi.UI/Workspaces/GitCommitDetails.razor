@@ -351,14 +351,12 @@
                 <li role="treeitem" aria-expanded="@(open ? "true" : "false")" @key="node.Path">
                     <button type="button" class="git-commit-file git-commit-folder" style="@indent" title="@node.Path"
                             @onclick="() => ToggleFolder(node.Path)">
-                        <svg class="icon icon-small git-commit-folder-chevron @(open ? "open" : null)" viewBox="0 0 24 24"
-                             aria-hidden="true" focusable="false">
-                            <polyline points="9 6 15 12 9 18"></polyline>
-                        </svg>
-                        <svg class="icon icon-small git-commit-folder-icon" viewBox="0 0 24 24" aria-hidden="true"
-                             focusable="false">
-                            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-                        </svg>
+                        <span class="git-commit-folder-chevron @(open ? "open" : null)">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.ChevronRight())" />
+                        </span>
+                        <span class="git-commit-folder-icon">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.Folder())" />
+                        </span>
                         <span class="git-commit-folder-name">@node.Name</span>
                         <GitFileChangeCounts Kinds="CommitFileTree.FilesIn(node).Select(change => change.Kind)" />
                     </button>

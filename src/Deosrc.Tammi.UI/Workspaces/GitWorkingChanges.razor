@@ -15,56 +15,40 @@
     <div class="git-working-titlebar">
         <h2 class="git-working-title">Working changes</h2>
         @* Shows both lists as a list or a tree, the same choice as the changed files of a commit. *@
-        <div class="segmented segmented-small git-commit-file-view" role="group" aria-label="Show files as">
-            <button type="button" class="segmented-option" title="As a list" aria-label="As a list"
-                    aria-pressed="@(Options.FileView == GitGraphFileView.List ? "true" : "false")"
-                    @onclick="() => Options.SetFileViewAsync(GitGraphFileView.List)">
-                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M9 6h11M9 12h11M9 18h11" />
-                    <path d="M4 6h.01M4 12h.01M4 18h.01" />
-                </svg>
-            </button>
-            <button type="button" class="segmented-option" title="As a tree" aria-label="As a tree"
-                    aria-pressed="@(Options.FileView == GitGraphFileView.Tree ? "true" : "false")"
-                    @onclick="() => Options.SetFileViewAsync(GitGraphFileView.Tree)">
-                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M4 4h6M7 4v14h5M7 11h5" />
-                    <path d="M14 11h6M14 18h6" />
-                </svg>
-            </button>
-        </div>
+        <ToggleButtonGroup TValue="GitGraphFileView" Small="true" Options="_fileViews" Value="Options.FileView"
+                           ValueChanged="view => Options.SetFileViewAsync(view)" AriaLabel="Show files as" />
     </div>
 
     @if (Graph.WorkingChanges is null && Graph.WorkingChangesProblem is { } readProblem)
     {
-        <p class="error">Couldn't read the changes. @readProblem</p>
+        <GitGraphMessage>Couldn't read the changes. @readProblem</GitGraphMessage>
     }
     else
     {
         <section class="git-working-section" aria-label="Unstaged changes">
             <div class="git-working-heading">
                 <h3>Unstaged <span class="git-working-count">@Graph.UnstagedChanges.Count</span></h3>
-                <button type="button" class="button button-secondary" disabled="@(SelectedIn(staged: false).Count == 0)"
-                        @onclick="() => StageAsync(SelectedIn(staged: false))">Stage</button>
-                <button type="button" class="button button-secondary" disabled="@(Graph.UnstagedChanges.Count == 0)"
-                        @onclick="() => StageAsync(Graph.UnstagedChanges)">Stage all</button>
-                <button type="button" class="button button-danger" title="Discard every unstaged change"
-                        disabled="@(Graph.UnstagedChanges.Count == 0)"
-                        @onclick="() => RequestDiscard(null)">Discard all</button>
+                <FluentButton Size="ButtonSize.Small" Disabled="@(SelectedIn(staged: false).Count == 0)"
+                              OnClick="() => StageAsync(SelectedIn(staged: false))">Stage</FluentButton>
+                <FluentButton Size="ButtonSize.Small" Disabled="@(Graph.UnstagedChanges.Count == 0)"
+                              OnClick="() => StageAsync(Graph.UnstagedChanges)">Stage all</FluentButton>
+                <FluentButton Size="ButtonSize.Small" Class="danger-button" Title="Discard every unstaged change"
+                              Disabled="@(Graph.UnstagedChanges.Count == 0)"
+                              OnClick="() => RequestDiscard(null)">Discard all</FluentButton>
             </div>
             @if (Graph.PendingDiscard is { } discard)
             {
-                <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-discard-title">
-                    <h3 id="confirm-discard-title" class="alert-title">Discard @DiscardSubject(discard)?</h3>
-                    <p>
-                        The changes are lost, and Tammi can't bring them back. Untracked files are deleted.
-                        Staged changes are kept.
-                    </p>
-                    <div class="settings-field-row">
-                        <button type="button" class="button button-danger" @onclick="Graph.ConfirmDiscardAsync">Discard</button>
-                        <button type="button" class="button button-secondary" @onclick="Graph.CancelDiscard">Cancel</button>
-                    </div>
-                </div>
+                <GitGraphMessage Intent="MessageBarIntent.Warning" Role="alertdialog" Title="@($"Discard {DiscardSubject(discard)}?")">
+                    <ChildContent>
+                        The changes are lost, and Tammi can't bring them back. Untracked files are deleted. Staged changes are
+                        kept.
+                    </ChildContent>
+                    <Actions>
+                        <FluentButton Appearance="ButtonAppearance.Primary" Class="danger-button" Size="ButtonSize.Small"
+                                      OnClick="Graph.ConfirmDiscardAsync">Discard</FluentButton>
+                        <FluentButton Size="ButtonSize.Small" OnClick="Graph.CancelDiscard">Cancel</FluentButton>
+                    </Actions>
+                </GitGraphMessage>
             }
             @FileList(Graph.UnstagedChanges, staged: false)
         </section>
@@ -72,10 +56,10 @@
         <section class="git-working-section" aria-label="Staged changes">
             <div class="git-working-heading">
                 <h3>Staged <span class="git-working-count">@Graph.StagedChanges.Count</span></h3>
-                <button type="button" class="button button-secondary" disabled="@(SelectedIn(staged: true).Count == 0)"
-                        @onclick="() => UnstageAsync(SelectedIn(staged: true))">Unstage</button>
-                <button type="button" class="button button-secondary" disabled="@(Graph.StagedChanges.Count == 0)"
-                        @onclick="() => UnstageAsync(Graph.StagedChanges)">Unstage all</button>
+                <FluentButton Size="ButtonSize.Small" Disabled="@(SelectedIn(staged: true).Count == 0)"
+                              OnClick="() => UnstageAsync(SelectedIn(staged: true))">Unstage</FluentButton>
+                <FluentButton Size="ButtonSize.Small" Disabled="@(Graph.StagedChanges.Count == 0)"
+                              OnClick="() => UnstageAsync(Graph.StagedChanges)">Unstage all</FluentButton>
             </div>
             @FileList(Graph.StagedChanges, staged: true)
         </section>
@@ -99,21 +83,23 @@
 
     <section class="git-working-message" aria-label="Commit message">
         @* The counter, at the end of the subject, counts down the characters left of the soft limit in the settings. *@
-        <div class="git-working-subject-field">
-            <input type="text" class="git-working-subject" placeholder="Subject" aria-label="Commit subject"
-                   value="@_subject" @oninput="OnSubjectInput" />
-            <span class="git-working-subject-counter git-working-subject-counter-@CounterState"
-                  title="@CounterTitle">@Remaining</span>
-        </div>
+        <FluentTextInput Class="git-working-subject" Placeholder="Subject" aria-label="Commit subject" Width="100%"
+                         Value="@_subject" ValueChanged="OnSubjectChanged" Immediate="true">
+            <EndTemplate>
+                <span class="git-working-subject-counter git-working-subject-counter-@CounterState"
+                      title="@CounterTitle">@Remaining</span>
+            </EndTemplate>
+        </FluentTextInput>
         <textarea class="git-working-body" rows="5" @ref="_bodyInput" placeholder="Body (optional)" aria-label="Commit body"
                   value="@_body" @oninput="OnBodyInput"></textarea>
         @if (Graph.WorkingChangesProblem is { } problem && Graph.WorkingChanges is not null)
         {
-            <p class="error git-working-problem">@problem</p>
+            <GitGraphMessage>@problem</GitGraphMessage>
         }
-        <button type="button" class="button git-working-commit" disabled="@(!CanCommit)" @onclick="CommitAsync">
+        <FluentButton Class="git-working-commit" Appearance="ButtonAppearance.Primary" Disabled="@(!CanCommit)"
+                      OnClick="CommitAsync">
             @(_committing ? "Committing…" : $"Commit {Graph.StagedChanges.Count} {(Graph.StagedChanges.Count == 1 ? "file" : "files")}")
-        </button>
+        </FluentButton>
     </section>
 </div>
 
@@ -140,6 +126,12 @@
 
     [Parameter, EditorRequired]
     public WorkspaceGitGraph Graph { get; set; } = null!;
+
+    private static readonly IReadOnlyList<ToggleButtonOption<GitGraphFileView>> _fileViews =
+    [
+        new(GitGraphFileView.List, new Icons.Regular.Size16.TextBulletListLtr(), "As a list"),
+        new(GitGraphFileView.Tree, new Icons.Regular.Size16.TextBulletListTree(), "As a tree"),
+    ];
 
     private int Remaining => Settings.Current.Git.SubjectLimit - _subject.Length;
 
@@ -336,15 +328,13 @@
                          @oncontextmenu:preventDefault>
                         <button type="button" class="git-commit-folder-toggle" aria-label="@(open ? "Close" : "Open") @node.Path"
                                 @onclick="() => ToggleFolder(folderKey)" @onclick:stopPropagation>
-                            <svg class="icon icon-small git-commit-folder-chevron @(open ? "open" : null)" viewBox="0 0 24 24"
-                                 aria-hidden="true" focusable="false">
-                                <polyline points="9 6 15 12 9 18"></polyline>
-                            </svg>
+                            <span class="git-commit-folder-chevron @(open ? "open" : null)">
+                                <FluentIcon Value="@(new Icons.Regular.Size16.ChevronRight())" />
+                            </span>
                         </button>
-                        <svg class="icon icon-small git-commit-folder-icon" viewBox="0 0 24 24" aria-hidden="true"
-                             focusable="false">
-                            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-                        </svg>
+                        <span class="git-commit-folder-icon">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.Folder())" />
+                        </span>
                         <span class="git-commit-folder-name">@node.Name</span>
                         <GitFileChangeCounts Kinds="folderFiles.Select(change => change.Kind)" />
                     </div>
@@ -567,9 +557,9 @@
     private string Combine() =>
         _body.Trim().Length == 0 ? _subject : $"{_subject}\n\n{_body}";
 
-    private void OnSubjectInput(ChangeEventArgs e)
+    private void OnSubjectChanged(string? value)
     {
-        _subject = (e.Value as string ?? "").ReplaceLineEndings(" ");
+        _subject = (value ?? "").ReplaceLineEndings(" ");
         SaveSoon();
     }
 

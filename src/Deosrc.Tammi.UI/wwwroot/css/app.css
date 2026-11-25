@@ -2039,7 +2039,7 @@ a {
   flex: none;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--font-size-small);
+  font-size: var(--fontSizeBase200);
   font-weight: normal;
 }
 
@@ -2091,8 +2091,8 @@ a {
 .git-commit-file-kind {
   flex: none;
   width: 1.2em;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-weight: 600;
+  font-family: var(--fontFamilyMonospace);
+  font-weight: var(--fontWeightSemibold);
   text-align: center;
 }
 
@@ -2111,8 +2111,8 @@ a {
   min-width: 0;
   overflow: hidden;
   padding-left: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
+  color: var(--colorNeutralForeground3);
+  font-size: var(--fontSizeBase200);
   text-overflow: ellipsis;
 }
 
@@ -2120,28 +2120,29 @@ a {
   width: 100%;
   border: none;
   background: none;
-  color: var(--color-text);
+  color: var(--colorNeutralForeground1);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
 .git-commit-folder:hover {
-  background: var(--color-surface-hover);
+  background: var(--colorSubtleBackgroundHover);
 }
 
 .git-commit-folder-name {
   min-width: 0;
   overflow: hidden;
-  font-weight: 600;
+  font-weight: var(--fontWeightSemibold);
   text-overflow: ellipsis;
 }
 
 .git-commit-folder-chevron {
+  display: inline-flex;
   flex: none;
   align-self: center;
   width: 1.2em;
-  color: var(--color-text-muted);
+  color: var(--colorNeutralForeground3);
   transition: transform 0.1s;
 }
 
@@ -2150,24 +2151,25 @@ a {
 }
 
 .git-commit-folder-icon {
+  display: inline-flex;
   flex: none;
   align-self: center;
-  color: var(--color-text-muted);
+  color: var(--colorNeutralForeground3);
 }
 
 .git-graph-file-added {
-  color: var(--color-success);
+  color: var(--colorStatusSuccessForeground1);
 }
 
 .git-graph-file-deleted,
 .git-graph-file-conflicted {
-  color: var(--color-error);
+  color: var(--colorStatusDangerForeground1);
 }
 
 .git-graph-file-modified,
 .git-graph-file-renamed,
 .git-graph-file-typechanged {
-  color: var(--color-warning);
+  color: var(--colorStatusWarningForeground1);
 }
 
 /* The header's right-click menu, opened where the pointer is. */
@@ -2249,179 +2251,21 @@ a {
   color: var(--color-text-muted);
 }
 
+/* In a tree, a file's status sits under its folder's icon, which comes after the folder's chevron. */
+.git-commit-tree .git-commit-file-openable {
+  padding-left: calc(var(--git-commit-tree-depth, 0) * 16px + 1.2em + var(--space-2));
+}
+
 .git-commit-file-openable {
   cursor: pointer;
 }
 
 .git-commit-file-openable:hover {
-  background: var(--color-surface-hover);
+  background: var(--colorSubtleBackgroundHover);
 }
 
 .git-commit-file-openable.selected {
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-}
-
-/* The commit panel for the working changes. */
-.git-working {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-height: 0;
-  padding: var(--space-3);
-  overflow: auto;
-}
-
-/* The unstaged and staged files share the space above the message evenly, each scrolling on its own. */
-.git-working-section {
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  min-height: 5em;
-}
-
-.git-working-titlebar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.git-working-title {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.git-working-files ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.git-working-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.git-working-heading h3 {
-  flex: 1;
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.git-working-count {
-  color: var(--color-text-muted);
-  font-weight: 400;
-}
-
-.git-working-files {
-  flex: 1;
-  min-height: 0;
-  margin: var(--space-1) 0 0;
-  padding: 0;
-  overflow: auto;
-  list-style: none;
-  border: 1px solid var(--color-border);
-}
-
-.git-working-file {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  padding: 1px var(--space-2) 1px calc(var(--space-2) + var(--git-commit-tree-depth, 0) * 16px);
-  white-space: nowrap;
-  cursor: default;
-}
-
-.git-working-file:hover {
-  background: var(--color-surface-hover);
-}
-
-.git-working-file.selected {
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-}
-
-.git-working-file .git-commit-file-folder {
-  flex: 1;
-}
-
-/* Stays at the bottom of the panel. */
-.git-working-message {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* A thin bar above the message, with a taller area to grab. */
-.git-working-splitter {
-  position: relative;
-  flex: none;
-  height: 1px;
-  background: var(--color-border);
-  cursor: row-resize;
-  touch-action: none;
-}
-
-.git-working-splitter::before {
-  position: absolute;
-  inset: -4px 0;
-  content: "";
-}
-
-.git-working-splitter:hover,
-.git-working-splitter.dragging,
-.git-working-splitter:focus-visible {
-  background: var(--color-focus);
-  outline: none;
-  box-shadow: 0 0 0 1px var(--color-focus);
-}
-
-.git-working-subject,
-.git-working-body {
-  width: 100%;
-  box-sizing: border-box;
-  font: inherit;
-}
-
-.git-working-subject-field {
-  position: relative;
-  display: flex;
-}
-
-.git-working-subject {
-  padding: var(--space-2) 3.5em var(--space-2) var(--space-3);
-  font-size: 1.05rem;
-}
-
-/* At the end of the subject's field. */
-.git-working-subject-counter {
-  position: absolute;
-  top: 50%;
-  right: var(--space-3);
-  font-size: 0.85rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  pointer-events: none;
-  transform: translateY(-50%);
-}
-
-.git-working-subject-counter-ok {
-  color: var(--color-success);
-}
-
-.git-working-subject-counter-near {
-  color: var(--color-warning);
-}
-
-.git-working-subject-counter-over {
-  color: var(--color-error);
-}
-
-.git-working-body {
-  resize: none;
+  background: var(--colorBrandBackground2);
 }
 
 /* A file's diff, in place of the graph. */
@@ -2646,33 +2490,6 @@ a {
 
 .git-graph-list[hidden] {
   display: none;
-}
-
-/* A folder in a working changes tree: a row that selects all its files, with a chevron that opens and closes it. */
-.git-working-folder {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 1px var(--space-2) 1px calc(var(--space-2) + var(--git-commit-tree-depth, 0) * 16px);
-  cursor: pointer;
-}
-
-.git-working-folder:hover {
-  background: var(--color-surface-hover);
-}
-
-.git-working-folder.selected {
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-}
-
-.git-commit-folder-toggle {
-  display: inline-flex;
-  flex: none;
-  padding: 0;
-  border: none;
-  background: none;
-  color: inherit;
-  cursor: pointer;
 }
 
 /* A workspace's status on Home: a badge for each kind of thing that needs attention, shown only when there is some. */

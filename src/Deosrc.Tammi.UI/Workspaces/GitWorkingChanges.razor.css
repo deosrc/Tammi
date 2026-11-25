@@ -1,0 +1,201 @@
+/* The commit panel for the working changes. */
+.git-working {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  padding: var(--space-3);
+  overflow: auto;
+}
+
+/* The unstaged and staged files share the space above the message evenly, each scrolling on its own. */
+.git-working-section {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 5em;
+}
+
+.git-working-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.git-working-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.git-working-files ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.git-working-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.git-working-heading h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.git-working-count {
+  color: var(--colorNeutralForeground3);
+  font-weight: 400;
+}
+
+.git-working-files {
+  flex: 1;
+  min-height: 0;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  border: 1px solid var(--colorNeutralStroke2);
+}
+
+.git-working-file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 1px var(--space-2) 1px calc(var(--space-2) + var(--git-commit-tree-depth, 0) * 16px);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.git-working-file:hover {
+  background: var(--colorSubtleBackgroundHover);
+}
+
+.git-working-file.selected {
+  background: var(--colorBrandBackground2);
+}
+
+.git-working-file .git-commit-file-folder {
+  flex: 1;
+}
+
+/* Stays at the bottom of the panel. */
+.git-working-message {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* A thin bar above the message, with a taller area to grab. */
+.git-working-splitter {
+  position: relative;
+  flex: none;
+  height: 1px;
+  background: var(--colorNeutralStroke2);
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.git-working-splitter::before {
+  position: absolute;
+  inset: -4px 0;
+  content: "";
+}
+
+.git-working-splitter:hover,
+.git-working-splitter.dragging,
+.git-working-splitter:focus-visible {
+  background: var(--colorBrandStroke1);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colorBrandStroke1);
+}
+
+/* At the end of the subject's field. */
+.git-working-subject-counter {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.git-working-subject-counter-ok {
+  color: var(--colorStatusSuccessForeground1);
+}
+
+.git-working-subject-counter-near {
+  color: var(--colorStatusWarningForeground1);
+}
+
+.git-working-subject-counter-over {
+  color: var(--colorStatusDangerForeground1);
+}
+
+/* The body is a plain text area, as the splitter above it sets its height, styled like Fluent's inputs. */
+.git-working-body {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--colorNeutralStroke1);
+  border-bottom-color: var(--colorNeutralStrokeAccessible);
+  border-radius: var(--borderRadiusMedium);
+  background: var(--colorNeutralBackground1);
+  color: var(--colorNeutralForeground1);
+  font: inherit;
+  resize: none;
+}
+
+.git-working-body:focus-visible {
+  border-bottom-color: var(--colorCompoundBrandStroke);
+  outline: none;
+}
+
+/* A folder in a working changes tree: a row that selects all its files, with a chevron that opens and closes it. */
+.git-working-folder {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 1px var(--space-2) 1px calc(var(--space-2) + var(--git-commit-tree-depth, 0) * 16px);
+  cursor: pointer;
+}
+
+.git-working-folder:hover {
+  background: var(--colorSubtleBackgroundHover);
+}
+
+.git-working-folder.selected {
+  background: var(--colorBrandBackground2);
+}
+
+.git-commit-folder-toggle {
+  display: inline-flex;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* The subject's field is a Fluent text input, with the counter in its end. */
+.git-working-subject {
+  width: 100%;
+}
+
+.git-working-commit {
+  width: 100%;
+}
+
+/* In a tree, a file's status sits under its folder's icon, which comes after the folder's chevron. */
+.git-commit-tree .git-working-file {
+  padding-left: calc(var(--space-2) + var(--git-commit-tree-depth, 0) * 16px + 1.2em + var(--space-2));
+}
