@@ -16,6 +16,10 @@
    large, 24px high, so the 16px icon has room above and below it. */
 .pull-request-badge ::deep fluent-badge > svg {
     margin-inline: var(--spacingHorizontalXXS) var(--spacingHorizontalXS);
+    /* FluentBadge colours its icon white, for a filled badge. On a tinted one that's lost on the light background (a
+       closed Pull Request's is the palest), so the icon takes the badge's text colour. Its inline fill needs
+       !important. */
+    fill: currentColor !important;
 }
 
 .pull-request-badge:focus-visible {
@@ -41,7 +45,7 @@
 }
 
 .pull-request-checks-warning {
-    --pull-request-checks-tone: var(--colorPaletteDarkOrangeBackground3);
+    --pull-request-checks-tone: var(--colorPaletteMarigoldBackground3);
 }
 
 .pull-request-checks-ok {
