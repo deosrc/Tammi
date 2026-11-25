@@ -7,7 +7,7 @@
    (e.g. a menu to open a new one), and the trailing tabs, which sit at the far end. When tabs are hidden, a More Tabs
    menu of the closable tabs comes just before the trailing tabs. The fixed and trailing tabs are always in sight, so
    they aren't in the menu. With OnMove, the closable tabs can be put in another order, by dragging them or with
-   Ctrl+Shift+Left and Right. They stay between the fixed and trailing tabs, and one pinned last stays last. *@
+   Ctrl+Shift+Left and Right. They stay between the fixed and trailing tabs. *@
 <nav class="tab-bar @Class" aria-label="@AriaLabel">
     @foreach (var item in FixedItems)
     {
@@ -155,7 +155,7 @@
     public async Task MoveTab(string key, string otherKey, bool after)
     {
         var moved = Items.FirstOrDefault(item => item.Key == key);
-        if (moved is null || moved.PinnedLast || key == otherKey)
+        if (moved is null || key == otherKey)
         {
             return;
         }
@@ -172,19 +172,13 @@
             index++;
         }
 
-        // Never after a tab that's pinned last.
-        while (index > 0 && others[index - 1].PinnedLast)
-        {
-            index--;
-        }
-
         if (index != Items.ToList().IndexOf(moved))
         {
             await OnMove.InvokeAsync(new TabBarMove(moved, index));
         }
     }
 
-    private bool IsMovable(TabBarItem item, bool closable) => closable && !item.PinnedLast && OnMove.HasDelegate;
+    private bool IsMovable(TabBarItem item, bool closable) => closable && OnMove.HasDelegate;
 
     private RenderFragment Tab(TabBarItem item, bool closable) =>
         @<div class="tab-bar-tab @(item.Active ? "active" : null) @(closable ? "closable" : null) @(IsMovable(item, closable) ? "movable" : null)"

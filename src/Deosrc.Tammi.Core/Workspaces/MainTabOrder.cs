@@ -2,8 +2,8 @@ namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
 /// The order of the tabs in the main tab strip, whatever they are: a new one is added at the end, and the user can move
-/// them. The Usage tab is always last. It is kept here, not in the strip, so <see cref="WorkspaceTabsKeeper"/> can save
-/// it and open the tabs in the same order.
+/// them. It is kept here, not in the strip, so <see cref="WorkspaceTabsKeeper"/> can save it and open the tabs in the
+/// same order.
 /// </summary>
 public sealed class MainTabOrder
 {
@@ -64,7 +64,7 @@ public sealed class MainTabOrder
 
     /// <summary>
     /// Brings the order in line with the tabs that are open: closed tabs are dropped, and new ones are added at the
-    /// end in the order given, before the Usage tab.
+    /// end in the order given.
     /// </summary>
     /// <returns>The keys, in tab order.</returns>
     public IReadOnlyList<string> Sync(IReadOnlyList<string> open)
@@ -74,7 +74,7 @@ public sealed class MainTabOrder
         bool changed;
         lock (_lock)
         {
-            result = UsageLast([.. _keys.Where(open.Contains), .. open.Where(key => !_keys.Contains(key))]);
+            result = [.. _keys.Where(open.Contains), .. open.Where(key => !_keys.Contains(key))];
             changed = !result.SequenceEqual(_keys);
             _keys = result;
         }
@@ -88,9 +88,9 @@ public sealed class MainTabOrder
     }
 
     /// <summary>
-    /// Moves a tab to another place, as the user drags it. The Usage tab stays last, so nothing moves after it.
+    /// Moves a tab to another place, as the user drags it.
     /// </summary>
-    /// <param name="key">The tab to move. Nothing happens if it isn't in the order, or is the Usage tab.</param>
+    /// <param name="key">The tab to move. Nothing happens if it isn't in the order.</param>
     /// <param name="index">Its new place among the tabs, counted without it.</param>
     public void Move(string key, int index)
     {
@@ -98,15 +98,14 @@ public sealed class MainTabOrder
         bool changed;
         lock (_lock)
         {
-            if (key == UsageKey || !_keys.Contains(key))
+            if (!_keys.Contains(key))
             {
                 return;
             }
 
             List<string> result = [.. _keys];
             result.Remove(key);
-            var last = result.Contains(UsageKey) ? result.Count - 1 : result.Count;
-            result.Insert(Math.Clamp(index, 0, last), key);
+            result.Insert(Math.Clamp(index, 0, result.Count), key);
             changed = !result.SequenceEqual(_keys);
             _keys = result;
         }
@@ -126,19 +125,9 @@ public sealed class MainTabOrder
         ArgumentNullException.ThrowIfNull(keys);
         lock (_lock)
         {
-            _keys = UsageLast([.. keys.Distinct()]);
+            _keys = [.. keys.Distinct()];
         }
 
         Changed?.Invoke();
-    }
-
-    private static List<string> UsageLast(List<string> keys)
-    {
-        if (keys.Remove(UsageKey))
-        {
-            keys.Add(UsageKey);
-        }
-
-        return keys;
     }
 }

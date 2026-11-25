@@ -12,8 +12,8 @@
 @inject Deosrc.Tammi.UI.Workspaces.WorkspaceViewState ViewState
 
 @* The app's main tabs: Home and Repositories, then a tab for each workspace, repository and flow that is open, in the
-   order they were opened unless the user has moved them, then AI Usage if it's open, and Settings at the far end. Only
-   the tabs between Repositories and AI Usage can be moved. *@
+   order they were opened unless the user has moved them, and Settings at the far end. Only the tabs between
+   Repositories and Settings can be moved. *@
 <TabBar Class="app-bar-tabs" AriaLabel="Main" FixedItems="FixedItems" Items="OpenItems" TrailingItems="SettingsItems"
         OnClose="CloseAsync" OnMove="Move" />
 
@@ -106,7 +106,7 @@
                 else if (key == MainTabOrder.UsageKey)
                 {
                     items.Add(new(key, AppRoutes.Usage, "AI Usage", "AI Usage", IconOf(new Icons.Regular.Size16.Bot()),
-                        Active: IsCurrent(AppRoutes.Usage), PinnedLast: true));
+                        Active: IsCurrent(AppRoutes.Usage)));
                 }
             }
 

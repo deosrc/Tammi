@@ -46,22 +46,4 @@ public sealed class MainTabOrderTests
 
         Assert.Equal(1, changes);
     }
-
-    [Fact]
-    public void UsageTab_StaysLast()
-    {
-        var order = new MainTabOrder();
-        order.Sync(["a", MainTabOrder.UsageKey]);
-
-        Assert.Equal(["a", "b", MainTabOrder.UsageKey], order.Sync(["a", MainTabOrder.UsageKey, "b"]));
-
-        order.Move("a", 5);
-        Assert.Equal(["b", "a", MainTabOrder.UsageKey], order.Keys);
-
-        order.Move(MainTabOrder.UsageKey, 0);
-        Assert.Equal(["b", "a", MainTabOrder.UsageKey], order.Keys);
-
-        order.Set([MainTabOrder.UsageKey, "b"]);
-        Assert.Equal(["b", MainTabOrder.UsageKey], order.Keys);
-    }
 }

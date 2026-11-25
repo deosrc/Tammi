@@ -16,8 +16,8 @@ public sealed class TabBarTests : BunitContext
     }
 
     private static TabBarItem Item(
-        string key, string? label = null, bool active = false, RenderFragment? indicator = null, bool pinned = false) =>
-        new(key, "/" + key, key + " tooltip", label, Indicator: indicator, Active: active, PinnedLast: pinned);
+        string key, string? label = null, bool active = false, RenderFragment? indicator = null) =>
+        new(key, "/" + key, key + " tooltip", label, Indicator: indicator, Active: active);
 
     private IRenderedComponent<TabBar> Render(
         IReadOnlyList<TabBarItem>? fixedItems = null,
@@ -172,15 +172,15 @@ public sealed class TabBarTests : BunitContext
     }
 
     [Fact]
-    public void OnlyTheClosableTabsThatArentPinned_CanBeMoved()
+    public void OnlyTheClosableTabs_CanBeMoved()
     {
         var bar = Render(
             fixedItems: [Item("home", "Home")],
-            items: [Item("one", "One"), Item("usage", "Usage", pinned: true)],
+            items: [Item("one", "One"), Item("two", "Two")],
             trailing: [Item("settings", "Settings")],
             onMove: _ => { });
 
-        Assert.Equal(["one"], bar.FindAll(".tab-bar-tab.movable").Select(tab => tab.GetAttribute("data-key")));
+        Assert.Equal(["one", "two"], bar.FindAll(".tab-bar-tab.movable").Select(tab => tab.GetAttribute("data-key")));
     }
 
     [Fact]
@@ -195,13 +195,11 @@ public sealed class TabBarTests : BunitContext
     [InlineData("one", "three", true, 2)]
     [InlineData("three", "one", false, 0)]
     [InlineData("one", "two", true, 1)]
-    // Never after the pinned tab.
-    [InlineData("one", "usage", true, 2)]
     public async Task MovingATabNextToAnother_RaisesOnMoveWithItsNewPlace(string key, string other, bool after, int index)
     {
         TabBarMove? moved = null;
         var bar = Render(
-            items: [Item("one", "One"), Item("two", "Two"), Item("three", "Three"), Item("usage", "Usage", pinned: true)],
+            items: [Item("one", "One"), Item("two", "Two"), Item("three", "Three")],
             onMove: move => moved = move);
 
         await bar.InvokeAsync(() => bar.Instance.MoveTab(key, other, after));
@@ -213,13 +211,12 @@ public sealed class TabBarTests : BunitContext
     [Theory]
     // Already there.
     [InlineData("two", "one", true)]
-    [InlineData("usage", "one", false)]
     [InlineData("one", "missing", true)]
     public async Task MovingATabWhereItCantGo_RaisesNothing(string key, string other, bool after)
     {
         TabBarMove? moved = null;
         var bar = Render(
-            items: [Item("one", "One"), Item("two", "Two"), Item("usage", "Usage", pinned: true)],
+            items: [Item("one", "One"), Item("two", "Two")],
             onMove: move => moved = move);
 
         await bar.InvokeAsync(() => bar.Instance.MoveTab(key, other, after));
