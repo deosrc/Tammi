@@ -82,20 +82,14 @@
 
         @if (_menu is { } menu)
         {
-            <ContextMenu @key="menu" X="menu.X" Y="menu.Y" Label="@(menu.Staged ? "Staged changes" : "Unstaged changes")"
-                         OnClose="() => _menu = null">
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
-                            @onclick="() => StashFromMenu(menu)">@menu.Describe("Stash")</button>
-                </li>
+            <PointMenu @key="menu" X="menu.X" Y="menu.Y" Label="@(menu.Staged ? "Staged changes" : "Unstaged changes")"
+                       OnClose="() => _menu = null">
+                <FluentMenuItem Disabled="@_stashing" OnClick="() => StashFromMenu(menu)">@menu.Describe("Stash")</FluentMenuItem>
                 @if (!menu.Staged)
                 {
-                    <li role="none">
-                        <button type="button" class="menu-item menu-item-danger" role="menuitem"
-                                @onclick="() => DiscardFromMenu(menu)">@menu.Describe("Discard")…</button>
-                    </li>
+                    <FluentMenuItem Class="danger-menu-item" OnClick="() => DiscardFromMenu(menu)">@menu.Describe("Discard")…</FluentMenuItem>
                 }
-            </ContextMenu>
+            </PointMenu>
         }
     }
 

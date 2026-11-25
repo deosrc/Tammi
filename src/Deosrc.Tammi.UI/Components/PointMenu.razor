@@ -5,13 +5,15 @@
 @* A menu opened where the pointer is, e.g. by a right-click: its items are FluentMenuItems. The menu is anchored to an
    empty element at the point, so it flips to stay inside the window, and closes as any menu does: on Escape, or a click
    outside it, or an item. Give it a new @key each time it opens, and drop it when OnClose is raised. *@
-<span id="@_anchorId" class="point-menu-anchor" aria-hidden="true"
-      style="left: @Pixels(X); top: @Pixels(Y)"></span>
-<FluentMenu Id="@_menuId" Trigger="@_anchorId" OpenedChanged="OnOpenedChanged">
-    <FluentMenuList aria-label="@Label">
-        @ChildContent
-    </FluentMenuList>
-</FluentMenu>
+<div class="point-menu">
+    <span id="@_anchorId" class="point-menu-anchor" aria-hidden="true"
+          style="left: @Pixels(X); top: @Pixels(Y)"></span>
+    <FluentMenu Id="@_menuId" Trigger="@_anchorId" OpenedChanged="OnOpenedChanged">
+        <FluentMenuList aria-label="@Label">
+            @ChildContent
+        </FluentMenuList>
+    </FluentMenu>
+</div>
 
 @code {
     private static int _count;

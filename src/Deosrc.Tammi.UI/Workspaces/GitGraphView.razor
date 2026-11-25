@@ -177,212 +177,125 @@
 
         @if (_stashMenu is { } stashMenu)
         {
-            <ContextMenu @key="stashMenu" X="stashMenu.X" Y="stashMenu.Y" Label="Stash" OnClose="() => _stashMenu = null">
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
-                            @onclick="() => RunStashMenuAsync(Graph.PopStashAsync(stashMenu.Stash))">Pop stash</button>
-                </li>
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem" disabled="@_stashing"
-                            @onclick="() => RunStashMenuAsync(Graph.ApplyStashAsync(stashMenu.Stash))">Apply stash</button>
-                </li>
-                <li role="none">
-                    <button type="button" class="menu-item menu-item-danger" role="menuitem" disabled="@_stashing"
-                            @onclick="() => ConfirmDrop(stashMenu.Stash)">Drop stash</button>
-                </li>
-            </ContextMenu>
+            <PointMenu @key="stashMenu" X="stashMenu.X" Y="stashMenu.Y" Label="Stash" OnClose="() => _stashMenu = null">
+                <FluentMenuItem Disabled="@_stashing" OnClick="() => RunStashMenuAsync(Graph.PopStashAsync(stashMenu.Stash))">Pop stash</FluentMenuItem>
+                <FluentMenuItem Disabled="@_stashing" OnClick="() => RunStashMenuAsync(Graph.ApplyStashAsync(stashMenu.Stash))">Apply stash</FluentMenuItem>
+                <FluentMenuItem Class="danger-menu-item" Disabled="@_stashing" OnClick="() => ConfirmDrop(stashMenu.Stash)">Drop stash</FluentMenuItem>
+            </PointMenu>
         }
 
         @if (_commitMenu is { } commitMenu)
         {
-            <ContextMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
+            @* The menu is drawn again as what it waits for (each branch's upstream, whether the remote has each tag) is
+               found. *@
+            <PointMenu @key="commitMenu" X="commitMenu.X" Y="commitMenu.Y" Label="Commit" OnClose="CloseCommitMenu">
                 @if (Graph.Refs.HeadBranch is not null && commitMenu.Sha != Graph.Refs.HeadSha)
                 {
                     var mergeable = commitMenu.Branches.Where(b => b != Graph.Refs.HeadBranch).Concat(commitMenu.RemoteBranches).ToList();
                     @foreach (var branch in mergeable)
                     {
-                        <li role="none">
-                            <button type="button" class="menu-item" role="menuitem"
-                                    @onclick="() => RunBranchAsync(() => Graph.MergeBranchAsync(branch))">
-                                Merge @branch
-                            </button>
-                        </li>
-                        <li role="none">
-                            <button type="button" class="menu-item" role="menuitem"
-                                    @onclick="() => RunBranchAsync(() => Graph.RebaseBranchAsync(branch))">
-                                Rebase onto @branch
-                            </button>
-                        </li>
+                        <FluentMenuItem @key="@($"merge:{branch}")" OnClick="() => RunBranchAsync(() => Graph.MergeBranchAsync(branch))">Merge @branch</FluentMenuItem>
+                        <FluentMenuItem @key="@($"rebase:{branch}")" OnClick="() => RunBranchAsync(() => Graph.RebaseBranchAsync(branch))">Rebase onto @branch</FluentMenuItem>
                     }
                     @if (mergeable.Count > 0)
                     {
-                        <li role="separator" class="menu-separator"></li>
+                        <FluentDivider />
                     }
                 }
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateBranch(commitMenu)">
-                        Create branch…
-                    </button>
-                </li>
+                <FluentMenuItem OnClick="() => StartCreateBranch(commitMenu)">Create branch…</FluentMenuItem>
                 @foreach (var branch in commitMenu.Branches)
                 {
                     var isCurrent = branch == Graph.Refs.HeadBranch;
                     var isWorkspace = Graph.IsWorkspaceBranch(branch);
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem" disabled="@isCurrent"
-                                @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
-                            Checkout @branch@(isCurrent ? " (current)" : null)
-                        </button>
-                    </li>
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem" disabled="@isWorkspace"
-                                title="@(isWorkspace ? "The workspace branch can't be renamed here" : null)"
-                                @onclick="() => StartRenameBranch(branch)">
-                            Rename branch @branch…
-                        </button>
-                    </li>
-                    var deleteKey = DeleteBranchSubmenu + branch;
                     var hasUpstream = commitMenu.Upstreams.TryGetValue(branch, out var upstream);
-                    <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = deleteKey">
-                        <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu" disabled="@isWorkspace"
-                                title="@(isWorkspace ? "The workspace branch can't be deleted here" : null)"
-                                aria-expanded="@(commitMenu.OpenSubmenu == deleteKey ? "true" : "false")"
-                                @onclick="() => ToggleSubmenu(commitMenu, deleteKey)">
-                            <span class="tab-label-text">Delete branch @branch…</span>
-                            <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <polyline points="9 6 15 12 9 18"></polyline>
-                            </svg>
-                        </button>
-                        @if (commitMenu.OpenSubmenu == deleteKey && !isWorkspace)
-                        {
-                            <ul class="menu menu-submenu" role="menu" aria-label="Delete branch">
-                                <li role="none">
-                                    <button type="button" class="menu-item" role="menuitem" disabled="@isCurrent"
-                                            title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
-                                            @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: false, upstream)">
-                                        Local branch
-                                    </button>
-                                </li>
-                                <li role="none">
-                                    <button type="button" class="menu-item" role="menuitem" disabled="@(upstream is null)"
-                                            @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: false, deleteRemote: true, upstream)">
-                                        Remote branch@(!hasUpstream ? " (checking...)" : upstream is null ? " (none)" : $" ({upstream.Remote}/{upstream.Branch})")
-                                    </button>
-                                </li>
-                                <li role="none">
-                                    <button type="button" class="menu-item" role="menuitem" disabled="@(isCurrent || upstream is null)"
-                                            title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
-                                            @onclick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: true, upstream)">
-                                        Local and remote branch
-                                    </button>
-                                </li>
-                            </ul>
-                        }
-                    </li>
+                    <FluentMenuItem @key="@($"checkout:{branch}")" Disabled="@isCurrent"
+                                    OnClick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
+                        Checkout @branch@(isCurrent ? " (current)" : null)
+                    </FluentMenuItem>
+                    <FluentMenuItem @key="@($"rename:{branch}")" Disabled="@isWorkspace"
+                                    Title="@(isWorkspace ? "The workspace branch can't be renamed here" : null)"
+                                    OnClick="() => StartRenameBranch(branch)">
+                        Rename branch @branch…
+                    </FluentMenuItem>
+                    <FluentMenuItem @key="@($"delete:{branch}")" Class="danger-menu-item" Disabled="@isWorkspace"
+                                    Title="@(isWorkspace ? "The workspace branch can't be deleted here" : null)">
+                        <ChildContent>Delete branch @branch…</ChildContent>
+                        <MenuItems>
+                            <FluentMenuItem Disabled="@isCurrent"
+                                            Title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
+                                            OnClick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: false, upstream)">
+                                Local branch
+                            </FluentMenuItem>
+                            <FluentMenuItem Disabled="@(upstream is null)"
+                                            OnClick="() => ConfirmDeleteBranch(branch, deleteLocal: false, deleteRemote: true, upstream)">
+                                Remote branch@(!hasUpstream ? " (checking...)" : upstream is null ? " (none)" : $" ({upstream.Remote}/{upstream.Branch})")
+                            </FluentMenuItem>
+                            <FluentMenuItem Disabled="@(isCurrent || upstream is null)"
+                                            Title="@(isCurrent ? "The checked out branch can't be deleted" : null)"
+                                            OnClick="() => ConfirmDeleteBranch(branch, deleteLocal: true, deleteRemote: true, upstream)">
+                                Local and remote branch
+                            </FluentMenuItem>
+                        </MenuItems>
+                    </FluentMenuItem>
                 }
                 @foreach (var branch in commitMenu.RemoteBranches)
                 {
-                    <li role="separator" class="menu-separator"></li>
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem"
-                                @onclick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">
-                            Checkout @branch
-                        </button>
-                    </li>
-                    <li role="none">
-                        <button type="button" class="menu-item menu-item-danger" role="menuitem"
-                                @onclick="() => ConfirmDeleteRemoteBranch(branch)">
-                            Delete remote branch @branch…
-                        </button>
-                    </li>
+                    <FluentDivider @key="@($"remote-divider:{branch}")" />
+                    <FluentMenuItem @key="@($"remote-checkout:{branch}")"
+                                    OnClick="() => RunBranchAsync(() => Graph.CheckoutBranchAsync(branch))">Checkout @branch</FluentMenuItem>
+                    <FluentMenuItem @key="@($"remote-delete:{branch}")" Class="danger-menu-item"
+                                    OnClick="() => ConfirmDeleteRemoteBranch(branch)">Delete remote branch @branch…</FluentMenuItem>
                 }
-                <li role="separator" class="menu-separator"></li>
-                <li role="none">
-                    <button type="button" class="menu-item" role="menuitem" @onclick="() => StartCreateTag(commitMenu)">
-                        Create tag…
-                    </button>
-                </li>
+                <FluentDivider />
+                <FluentMenuItem OnClick="() => StartCreateTag(commitMenu)">Create tag…</FluentMenuItem>
                 @if (commitMenu.Tags.Count == 1)
                 {
                     var tag = commitMenu.Tags[0];
-                    <li role="none">
-                        <button type="button" class="menu-item" role="menuitem"
-                                disabled="@(PushState(commitMenu, tag) is not false)"
-                                @onclick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
-                            Push tag @tag@(PushState(commitMenu, tag) is null ? " (checking...)" : PushState(commitMenu, tag) is true ? $" (already on {commitMenu.Remote})" : null)
-                        </button>
-                    </li>
-                    <li role="none">
-                        <button type="button" class="menu-item menu-item-danger" role="menuitem"
-                                @onclick="() => ConfirmDeleteTag(commitMenu, tag)">
-                            Delete tag @tag@DeleteSuffix(commitMenu, tag)
-                        </button>
-                    </li>
+                    <FluentMenuItem Disabled="@(PushState(commitMenu, tag) is not false)"
+                                    OnClick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
+                        Push tag @tag@(PushState(commitMenu, tag) is null ? " (checking...)" : PushState(commitMenu, tag) is true ? $" (already on {commitMenu.Remote})" : null)
+                    </FluentMenuItem>
+                    <FluentMenuItem Class="danger-menu-item" OnClick="() => ConfirmDeleteTag(commitMenu, tag)">
+                        Delete tag @tag@DeleteSuffix(commitMenu, tag)
+                    </FluentMenuItem>
                 }
                 else if (commitMenu.Tags.Count > 1)
                 {
-                    <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = PushSubmenu">
-                        <button type="button" class="menu-item" role="menuitem" aria-haspopup="menu"
-                                aria-expanded="@(commitMenu.OpenSubmenu == PushSubmenu ? "true" : "false")"
-                                @onclick="() => ToggleSubmenu(commitMenu, PushSubmenu)">
-                            <span class="tab-label-text">Push tag…</span>
-                            <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <polyline points="9 6 15 12 9 18"></polyline>
-                            </svg>
-                        </button>
-                        @if (commitMenu.OpenSubmenu == PushSubmenu)
-                        {
-                            <ul class="menu menu-submenu" role="menu" aria-label="Push tag">
-                                @foreach (var tag in commitMenu.Tags)
-                                {
-                                    var state = PushState(commitMenu, tag);
-                                    <li role="none">
-                                        <button type="button" class="menu-item" role="menuitem" disabled="@(state is not false)"
-                                                @onclick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
-                                            @tag@(state is null ? " (checking...)" : state is true ? $" (already on {commitMenu.Remote})" : null)
-                                        </button>
-                                    </li>
-                                }
-                            </ul>
-                        }
-                    </li>
-                    <li role="none" class="menu-submenu-anchor" @onmouseenter="() => commitMenu.OpenSubmenu = DeleteSubmenu">
-                        <button type="button" class="menu-item menu-item-danger" role="menuitem" aria-haspopup="menu"
-                                aria-expanded="@(commitMenu.OpenSubmenu == DeleteSubmenu ? "true" : "false")"
-                                @onclick="() => ToggleSubmenu(commitMenu, DeleteSubmenu)">
-                            <span class="tab-label-text">Delete tag…</span>
-                            <svg class="icon icon-small menu-item-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <polyline points="9 6 15 12 9 18"></polyline>
-                            </svg>
-                        </button>
-                        @if (commitMenu.OpenSubmenu == DeleteSubmenu)
-                        {
-                            <ul class="menu menu-submenu" role="menu" aria-label="Delete tag">
-                                @foreach (var tag in commitMenu.Tags)
-                                {
-                                    <li role="none">
-                                        <button type="button" class="menu-item" role="menuitem"
-                                                @onclick="() => ConfirmDeleteTag(commitMenu, tag)">
-                                            @tag@DeleteSuffix(commitMenu, tag)
-                                        </button>
-                                    </li>
-                                }
-                            </ul>
-                        }
-                    </li>
+                    <FluentMenuItem>
+                        <ChildContent>Push tag…</ChildContent>
+                        <MenuItems>
+                            @foreach (var tag in commitMenu.Tags)
+                            {
+                                var state = PushState(commitMenu, tag);
+                                <FluentMenuItem @key="@($"push:{tag}")" Disabled="@(state is not false)"
+                                                OnClick="() => RunTagAsync(commitMenu, () => Graph.PushTagAsync(tag))">
+                                    @tag@(state is null ? " (checking...)" : state is true ? $" (already on {commitMenu.Remote})" : null)
+                                </FluentMenuItem>
+                            }
+                        </MenuItems>
+                    </FluentMenuItem>
+                    <FluentMenuItem Class="danger-menu-item">
+                        <ChildContent>Delete tag…</ChildContent>
+                        <MenuItems>
+                            @foreach (var tag in commitMenu.Tags)
+                            {
+                                <FluentMenuItem @key="@($"delete-tag:{tag}")" OnClick="() => ConfirmDeleteTag(commitMenu, tag)">
+                                    @tag@DeleteSuffix(commitMenu, tag)
+                                </FluentMenuItem>
+                            }
+                        </MenuItems>
+                    </FluentMenuItem>
                 }
-                <li role="separator" class="menu-separator"></li>
+                <FluentDivider />
                 @foreach (var mode in new[] { GitResetMode.Soft, GitResetMode.Mixed, GitResetMode.Hard })
                 {
-                    <li role="none">
-                        <button type="button" class="menu-item @(mode == GitResetMode.Hard ? "menu-item-danger" : null)"
-                                role="menuitem" disabled="@(Graph.Refs.HeadBranch is null)"
-                                title="@ResetText(mode)" @onclick="() => StartReset(commitMenu, mode)">
-                            @ResetTitle(mode)…
-                        </button>
-                    </li>
+                    <FluentMenuItem @key="@($"reset:{mode}")" Class="@(mode == GitResetMode.Hard ? "danger-menu-item" : null)"
+                                    Disabled="@(Graph.Refs.HeadBranch is null)" Title="@ResetText(mode)"
+                                    OnClick="() => StartReset(commitMenu, mode)">
+                        @ResetTitle(mode)…
+                    </FluentMenuItem>
                 }
-            </ContextMenu>
+            </PointMenu>
         }
 
         <div class="git-graph-body">
@@ -417,24 +330,22 @@
                 </div>
                 @if (_viewMenu is { } menuAt)
                 {
-                    <div class="menu-backdrop" @onclick="CloseViewMenu"
-                         @oncontextmenu="CloseViewMenu" @oncontextmenu:preventDefault="true"></div>
-                    <ul class="menu git-graph-view-menu" role="menu" aria-label="View" @onkeydown="OnViewMenuKeyDown"
-                        style="@FormattableString.Invariant($"left: {menuAt.X}px; top: {menuAt.Y}px")">
-                        @* The columns, then the rows' labels. Graph is always shown, so it isn't offered. Description is,
-                           greyed out, as the column the others give their space to. *@
+                    @* The columns, then the rows' labels. Graph is always shown, so it isn't offered. Description is,
+                       greyed out, as the column the others give their space to. *@
+                    <PointMenu @key="menuAt" X="menuAt.X" Y="menuAt.Y" Label="View" OnClose="CloseViewMenu">
                         @foreach (var column in Enum.GetValues<GitGraphColumn>().Where(column => column != GitGraphColumn.Graph))
                         {
-                            @MenuCheckbox(
-                                column.ToString(),
-                                Options.IsVisible(column),
-                                GitGraphViewOptions.CanHide(column),
-                                () => Options.ToggleColumn(column))
+                            var shown = column;
+                            <FluentMenuItem @key="@shown" Role="MenuItemRole.Checkbox" Checked="@Options.IsVisible(shown)"
+                                            Disabled="@(!GitGraphViewOptions.CanHide(shown))"
+                                            CheckedChanged="_ => Options.ToggleColumn(shown)">@shown</FluentMenuItem>
                         }
-                        <li role="separator" class="menu-separator"></li>
-                        @MenuCheckbox("Tags", Options.ShowTags, enabled: true, Options.ToggleTags)
-                        @MenuCheckbox("Remote branches", Options.ShowRemoteBranches, enabled: true, Options.ToggleRemoteBranches)
-                    </ul>
+                        <FluentDivider />
+                        <FluentMenuItem Role="MenuItemRole.Checkbox" Checked="@Options.ShowTags"
+                                        CheckedChanged="_ => Options.ToggleTags()">Tags</FluentMenuItem>
+                        <FluentMenuItem Role="MenuItemRole.Checkbox" Checked="@Options.ShowRemoteBranches"
+                                        CheckedChanged="_ => Options.ToggleRemoteBranches()">Remote branches</FluentMenuItem>
+                    </PointMenu>
                 }
                 @* The changes not yet committed, as a row above the commits, with a dashed line down to HEAD. There
                    is no row while there are none. *@
@@ -551,7 +462,9 @@
 
     private WorkspaceGitGraph? _attached;
     // Where the header's right-click menu is open, in the window, or null when it's closed.
-    private (double X, double Y)? _viewMenu;
+    private ViewMenuAt? _viewMenu;
+
+    private sealed record ViewMenuAt(double X, double Y);
     private IReadOnlyList<GitGraphColumn> _visibleColumns = [];
     private readonly string _detailsId = $"git-graph-details-{Guid.NewGuid():N}";
     private ElementReference _list;
@@ -945,9 +858,7 @@
     // tags, whether the remote has it, once that's known.
     private sealed record CommitMenu(double X, double Y, string Sha, IReadOnlyList<string> Tags, IReadOnlyList<string> Branches, IReadOnlyList<string> RemoteBranches)
     {
-        // The submenu that's open, if any, and the remote the tags are pushed to once that's known.
-        public string? OpenSubmenu { get; set; }
-
+        // The remote the tags are pushed to, once that's known.
         public string? Remote { get; set; }
 
         // Each local branch's upstream (null for none), once it's been read.
@@ -1074,10 +985,6 @@
     // Asks for a new tag's name.
     private sealed record TagPrompt(string Sha);
 
-    private const string PushSubmenu = "push";
-    private const string DeleteSubmenu = "delete";
-    private const string DeleteBranchSubmenu = "delete-branch:";
-
     private CommitMenu? _commitMenu;
     private TagPrompt? _tagPrompt;
     private string _tagName = "";
@@ -1143,9 +1050,6 @@
         true => $" (local and {menu.Remote})",
         false => " (local only)",
     };
-
-    private static void ToggleSubmenu(CommitMenu menu, string submenu) =>
-        menu.OpenSubmenu = menu.OpenSubmenu == submenu ? null : submenu;
 
     private void CloseCommitMenu() => _commitMenu = null;
 
@@ -1237,21 +1141,6 @@
         }
     };
 
-    // An item of the header's menu that's ticked when its option is on.
-    private RenderFragment MenuCheckbox(string label, bool on, bool enabled, Action toggle) => __builder =>
-    {
-        <li role="none" @key="label">
-            <button type="button" class="menu-item" role="menuitemcheckbox" aria-checked="@(on ? "true" : "false")"
-                    disabled="@(!enabled)" @onclick="() => { CloseViewMenu(); toggle(); }">
-                <svg class="icon icon-small git-graph-menu-check @(on ? null : "hidden")" viewBox="0 0 24 24"
-                     aria-hidden="true" focusable="false">
-                    <polyline points="5 12 10 17 19 7" />
-                </svg>
-                @label
-            </button>
-        </li>
-    };
-
     // A handle on a column heading's edge that resizes the column: drag it, or focus it and use Left and Right.
     // `end` puts it on the heading's right edge, otherwise it's on its left edge.
     private static RenderFragment ColumnHandle(GitGraphColumn column, bool end) => __builder =>
@@ -1293,17 +1182,9 @@
         }
     }
 
-    private void OpenViewMenu(MouseEventArgs e) => _viewMenu = (e.ClientX, e.ClientY);
+    private void OpenViewMenu(MouseEventArgs e) => _viewMenu = new ViewMenuAt(e.ClientX, e.ClientY);
 
     private void CloseViewMenu() => _viewMenu = null;
-
-    private void OnViewMenuKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-        {
-            CloseViewMenu();
-        }
-    }
 
     // This graph's menu, or another's, changed the options. Rows already shown are rendered again with them.
     private void OnOptionsChanged() => _ = InvokeAsync(async () =>

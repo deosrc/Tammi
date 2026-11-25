@@ -1695,7 +1695,6 @@ a {
 
 /* JIRA's logo is shown in its brand blue, except on buttons, where it takes the button's text colour. */
 .integration-heading .integration-icon-jira,
-.menu-item .integration-icon-jira,
 .integration-menu-item .integration-icon-jira {
   color: var(--color-jira);
 }
@@ -1704,158 +1703,6 @@ a {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-/* Drop-down menus: a list of actions shown below the button that opens them. */
-.menu-anchor {
-  position: relative;
-  display: inline-block;
-}
-
-/* Catches clicks outside an open menu, to close it. */
-.menu-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-}
-
-.menu {
-  position: absolute;
-  top: calc(100% + var(--space-1));
-  left: 0;
-  z-index: 11;
-  min-width: 200px;
-  margin: 0;
-  padding: var(--space-1);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
-  list-style: none;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: none;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.menu-item:hover,
-.menu-item:focus-visible {
-  background: var(--color-surface-hover);
-}
-
-/* An agent's logo, e.g. Claude's on the New menu. It's shown in its brand colour. */
-.agent-icon {
-  flex: none;
-  width: 18px;
-  height: 18px;
-}
-
-.agent-icon-claude {
-  fill: var(--color-claude);
-}
-
-/* An icon at the start of a menu item, e.g. what the New menu's items start. It keeps its size beside long names. */
-.menu-item > .icon {
-  flex: none;
-  color: var(--color-text-muted);
-}
-
-.menu-item:hover > .icon,
-.menu-item:focus-visible > .icon {
-  color: var(--color-text);
-}
-
-/* A menu item that's one of several choices, with a tick by the one in use and a line describing it. */
-.menu-item-choice {
-  align-items: flex-start;
-  min-width: 320px;
-}
-
-.menu-item-choice > .icon {
-  margin-top: 3px;
-}
-
-.menu-item-choice > .icon-hidden {
-  visibility: hidden;
-}
-
-.menu-item-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.menu-item-note,
-.menu-item-description {
-  color: var(--color-text-muted);
-}
-
-.menu-item-description {
-  font-size: 0.9em;
-}
-
-/* Razor drops the space before it, so it's spaced with a margin instead. */
-.menu-item-note {
-  margin-left: var(--space-2);
-}
-
-/* A menu item that deletes something. */
-.menu-item-danger {
-  color: var(--color-error);
-}
-
-/* A menu anchor that fills its container, with its button and menu as wide as it. */
-.menu-anchor-wide {
-  display: block;
-}
-
-.menu-anchor-wide > .button {
-  justify-content: space-between;
-  width: 100%;
-}
-
-.menu-anchor-wide > .menu {
-  right: 0;
-  min-width: 0;
-}
-
-/* A line between groups of menu items. */
-.menu-separator {
-  height: 1px;
-  margin: var(--space-1) 0;
-  background: var(--color-border);
-}
-
-/* A menu item that opens a submenu beside it. */
-.menu-submenu-anchor {
-  position: relative;
-}
-
-.menu-submenu {
-  top: calc(-1 * var(--space-1) - 1px);
-  left: calc(100% + var(--space-1));
-}
-
-/* Pushes an icon, e.g. a submenu's arrow, to the end of a menu item. */
-.menu-item-end {
-  margin-left: auto;
-}
-
-/* A menu that opens above its button, e.g. at the bottom of the window. */
-.menu-up {
-  top: auto;
-  bottom: calc(100% + var(--space-1));
 }
 
 .icon-small {
@@ -2821,34 +2668,6 @@ a {
   white-space: nowrap;
 }
 
-/* A menu opened by a right-click (see ContextMenu.razor), at the pointer rather than below a button. */
-.menu-context {
-  position: fixed;
-}
-
-/* Items stay on one line, so a menu opened near the window's edge grows rather than wrapping its text. */
-.menu-context .menu-item {
-  white-space: nowrap;
-}
-
-.menu-context:focus {
-  outline: none;
-}
-
-/* A menu item that can't be chosen, e.g. "No tools". */
-.menu-item:disabled {
-  color: var(--color-text-muted);
-  cursor: default;
-}
-
-.menu-item:disabled:hover {
-  background: none;
-}
-
-.git-graph-menu-check.hidden {
-  visibility: hidden;
-}
-
 /* Working changes row: a dashed line from the dot down to HEAD. */
 .git-graph-working-line {
   fill: none;
@@ -3470,4 +3289,12 @@ a {
   justify-content: center;
   width: 20px;
   height: 20px;
+}
+
+/* Every Fluent menu is as wide as its items, so none has a horizontal scrollbar. A very long item is cut off at the
+   window's width rather than scrolled. */
+fluent-menu-list {
+  width: max-content;
+  max-width: 90vw;
+  overflow-x: hidden;
 }
