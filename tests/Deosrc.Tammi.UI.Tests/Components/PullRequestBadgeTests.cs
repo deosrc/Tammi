@@ -45,6 +45,22 @@ public sealed class PullRequestBadgeTests : BunitContext
         Assert.Equal(dots, badge.FindAll(".pull-request-checks").Count);
     }
 
+    [Theory]
+    [InlineData(PullRequestState.Open, "side-panel-card-info")]
+    [InlineData(PullRequestState.Draft, "side-panel-card-neutral")]
+    [InlineData(PullRequestState.Merged, "side-panel-card-success")]
+    [InlineData(PullRequestState.Closed, "side-panel-card-danger")]
+    public void Card_TakesItsToneFromTheState_AndOpensThePullRequestWhenClicked(PullRequestState state, string toneClass)
+    {
+        var card = Render<PullRequestCard>(p => p.Add(c => c.PullRequest, PullRequest(state)));
+
+        Assert.Contains(toneClass, card.Find("li").ClassList);
+        Assert.Contains("Fix it", card.Find(".pull-request-card-title").TextContent);
+        card.Find(".fluent-card").Click();
+
+        Assert.Equal(["https://example.test/pull/42"], _launcher.Opened);
+    }
+
     [Fact]
     public void BadgesShowsNothingWithoutPullRequestsOrAProblem()
     {

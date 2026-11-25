@@ -3,7 +3,7 @@
 @* One open agent's card, in the side panel's Agents section and on the dashboard: its icon, name and state. Clicking the
    card shows the agent's tab. Its name is a button for the keyboard, whose click reaches the card. *@
 <SidePanelCard Tone="AgentStateText.CardTone(Agent.State)" Chosen="Shown" Hint="@($"Show {Agent.DisplayName}")"
-               Badge="@(ShowStateLabel ? AgentStateText.Label(Agent.State) : null)" OnClick="() => OnShow.InvokeAsync(Agent)">
+               OnClick="() => OnShow.InvokeAsync(Agent)">
     <Heading>
         <AgentIcon Definition="Agent.Agent.Definition" />
         <button type="button" class="agent-card-name" title="@Agent.WorkingDirectory"
@@ -31,12 +31,6 @@
     /// </summary>
     [Parameter]
     public bool Shown { get; set; }
-
-    /// <summary>
-    /// Whether the card also says the state in words, in a badge.
-    /// </summary>
-    [Parameter]
-    public bool ShowStateLabel { get; set; }
 
     /// <summary>
     /// Called with the agent to show its tab, when the card is clicked.

@@ -256,6 +256,7 @@ else
                     {
                         <WorkspaceDashboard Workspace="dashboardWorkspace" Tasks="_tasks" PullRequests="_pullRequests"
                                             GitStatus="_gitStatus" OnShowAgent="ShowTab"
+                                            OnRepositoryContextMenu="menu => OpenRepositoryMenu(menu.Repository, menu.Event)"
                                             OnOpenGraph="graph => OpenGraph(graph.Repository, graph.Path)" />
                     }
                 </div>
