@@ -107,6 +107,10 @@
     private const int SubjectWarningAt = 10;
 
     private readonly List<string> _selected = [];
+    // The files' rows, by key, in the order they're shown, and the one clicked last without Shift, which a Shift-click
+    // selects from.
+    private readonly List<string> _rowOrder = [];
+    private string? _anchor;
     // The tree's closed folders, by list and path. Folders start open.
     private readonly HashSet<string> _collapsed = [];
     // The selected file whose diff is shown, if any.
@@ -196,9 +200,9 @@
                 LayoutStore.Current.GitWorkingMessageHeight,
                 _self ??= DotNetObjectReference.Create(this));
         }
-        catch (JSDisconnectedException)
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException)
         {
-            // The web view has gone.
+            // The web view has gone, or the panel left the page while its script was loading.
         }
     }
 
@@ -277,12 +281,13 @@
     private RenderFragment FileRow(FileChange change, bool staged, int depth, bool showFolder) => __builder =>
     {
         var key = Key(change, staged);
+        _rowOrder.Add(key);
         var kind = staged ? change.Staged : change.Unstaged;
         var isSelected = _selected.Contains(key);
         <li class="git-working-file @(isSelected ? "selected" : null)" role="@(showFolder ? "option" : "treeitem")"
             aria-selected="@(isSelected ? "true" : "false")" @key="key" style="--git-commit-tree-depth: @depth"
             title="@(change.OldPath is { } old ? $"{old} → {change.Path}" : change.Path)"
-            @onclick="e => ToggleAsync(key, e.CtrlKey || e.MetaKey)"
+            @onclick="e => e.ShiftKey ? SelectRangeAsync(key, e.CtrlKey || e.MetaKey) : ToggleAsync(key, e.CtrlKey || e.MetaKey)"
             @oncontextmenu="e => OpenFileMenu(e, change, staged)" @oncontextmenu:preventDefault
             @ondblclick="() => MoveAsync(change, staged)">
             <span class="git-commit-file-kind git-graph-file-@kind.ToString().ToLowerInvariant()"
@@ -362,6 +367,7 @@
     // selected, the diff is of the one selected last.
     private Task ToggleAsync(string key, bool add)
     {
+        _anchor = key;
         if (!add)
         {
             bool only = _selected.Count == 1 && _selected.Contains(key);
@@ -381,6 +387,33 @@
         }
 
         return ShowDiffForSelectionAsync(_selected.Contains(key) ? key : null);
+    }
+
+    // Shift-clicking a file selects every file shown from the one clicked last (without Shift) to this one, in the same
+    // list, instead of the selection, or with Ctrl as well as it. Without such a file, it's an ordinary click.
+    private Task SelectRangeAsync(string key, bool add)
+    {
+        int from = _anchor is null ? -1 : _rowOrder.IndexOf(_anchor);
+        int to = _rowOrder.IndexOf(key);
+        if (from < 0 || to < 0 || _anchor![0] != key[0])
+        {
+            return ToggleAsync(key, add);
+        }
+
+        if (!add)
+        {
+            _selected.Clear();
+        }
+
+        foreach (var row in _rowOrder.GetRange(Math.Min(from, to), Math.Abs(to - from) + 1))
+        {
+            if (!_selected.Contains(row))
+            {
+                _selected.Add(row);
+            }
+        }
+
+        return ShowDiffForSelectionAsync(key);
     }
 
     // Selecting a folder selects all the files in it. Like for a file, selecting it again deselects them: if they're

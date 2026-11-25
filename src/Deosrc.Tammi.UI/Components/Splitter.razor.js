@@ -16,10 +16,17 @@
 //   observe     the element whose size changes may leave the part without room for its size.
 //   saved       the size the user chose last time, or null.
 //   save(size)  called with the size the user chose.
+//
+// It returns null, and does nothing, if the bar is no longer on the page.
 
 const keyboardStep = 16;
 
 export function attach({ bar, vertical, reverse, getSize, min, max, defaultSize, apply, observe, saved, save }) {
+  // The panel was taken off the page before this ran, e.g. by switching tabs quickly: there's nothing to resize.
+  if (!bar || !observe) {
+    return null;
+  }
+
   let chosen = saved ?? null;
   const sign = reverse ? -1 : 1;
   const position = (e) => (vertical ? e.clientX : e.clientY);
