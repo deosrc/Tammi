@@ -4,6 +4,7 @@
 @using Deosrc.Tammi.Core.Windowing
 @inject IJSRuntime JS
 @inject GitGraphViewOptions Options
+@inject Clipboard Clipboard
 @inject LayoutStateStore LayoutStore
 @* The selected commit's details, beside a git graph: a bar with its short id (which copies it), its subject, its
    message's body (resizable, with the split below it), its authors (which collapse) and, after a divider, the files it
@@ -24,10 +25,11 @@
         var sha = commit?.Sha ?? stash!.Sha;
 
         <div class="git-commit-bar">
-            <button type="button" class="git-commit-hash" title="Copy the @(stash is null ? "commit" : "stash") id (@sha)"
-                    @onclick="() => CopyAsync(sha)">
+            <FluentButton Class="git-commit-hash" Appearance="ButtonAppearance.Transparent"
+                          Title="@($"Copy the {(stash is null ? "commit" : "stash")} id ({sha})")"
+                          OnClick="() => CopyAsync(sha)">
                 @(stash is null ? GitGraphText.ShortSha(sha) : $"{stash.Name} {GitGraphText.ShortSha(sha)}")
-            </button>
+            </FluentButton>
             <span class="git-commit-copied @(_copied == sha ? "shown" : null)" role="status">
                 @(_copied == sha ? "Copied" : null)
             </span>
@@ -43,14 +45,15 @@
                     Stashed @GitGraphText.When(stash.CreatedAt, DateTimeOffset.Now).ToLowerInvariant()
                 </span>
                 <div class="git-commit-actions">
-                    <button type="button" class="button button-secondary button-danger-text" disabled="@_busy" @onclick="() => Graph.RequestDropStash(stash)">Drop stash</button>
-                    <button type="button" class="button button-secondary" disabled="@_busy" @onclick="() => RunAsync(Graph.ApplyStashAsync(stash))">Apply stash</button>
-                    <button type="button" class="button" disabled="@_busy" @onclick="() => RunAsync(Graph.PopStashAsync(stash))">Pop stash</button>
+                    <FluentButton Class="danger-button" Disabled="@_busy" OnClick="() => Graph.RequestDropStash(stash)">Drop stash</FluentButton>
+                    <FluentButton Disabled="@_busy" OnClick="() => RunAsync(Graph.ApplyStashAsync(stash))">Apply stash</FluentButton>
+                    <FluentButton Appearance="ButtonAppearance.Primary" Disabled="@_busy"
+                                  OnClick="() => RunAsync(Graph.PopStashAsync(stash))">Pop stash</FluentButton>
                 </div>
             </div>
             @if (Graph.StashProblem is { } stashProblem)
             {
-                <p class="error git-commit-actions-problem">@stashProblem</p>
+                <GitGraphMessage OnDismiss="Graph.DismissStashProblem">@stashProblem</GitGraphMessage>
             }
         }
 
@@ -68,33 +71,25 @@
             @* Collapses to its heading, with the author's name beside it. *@
             @if (commit is not null)
             {
-            <section class="git-commit-section" aria-labelledby="@($"{_id}-authors")">
-                <h3 class="git-commit-heading" id="@($"{_id}-authors")">
-                    <button type="button" class="git-commit-collapse" aria-expanded="@(Options.AuthorsCollapsed ? "false" : "true")"
-                            aria-controls="@($"{_id}-people")" @onclick="Options.ToggleAuthors">
-                        <svg class="icon icon-small git-commit-folder-chevron @(Options.AuthorsCollapsed ? null : "open")"
-                             viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <polyline points="9 6 15 12 9 18"></polyline>
-                        </svg>
-                        Authors
-                    </button>
-                    @if (Options.AuthorsCollapsed)
-                    {
+                <SidePanelSection Title="Authors" Expanded="@(!Options.AuthorsCollapsed)"
+                                  ExpandedChanged="_ => Options.ToggleAuthors()">
+                    <HeaderContent>
                         <span class="git-commit-heading-summary" title="@commit.Author.Email">@commit.Author.Name</span>
-                    }
-                </h3>
-                <ul class="git-commit-people" id="@($"{_id}-people")" hidden="@Options.AuthorsCollapsed">
-                    @Person(commit.Author.Name, commit.Author.Email, "Authored", commit.Author.When)
-                    @if (commit.Committer.Name != commit.Author.Name || commit.Committer.Email != commit.Author.Email)
-                    {
-                        @Person(commit.Committer.Name, commit.Committer.Email, "Committed", commit.Committer.When)
-                    }
-                    @foreach (var coAuthor in CommitMessage.CoAuthors(commit.Message))
-                    {
-                        @Person(coAuthor.Name, coAuthor.Email, "Co-author", null)
-                    }
-                </ul>
-            </section>
+                    </HeaderContent>
+                    <ChildContent>
+                        <ul class="git-commit-people">
+                            @Person(commit.Author.Name, commit.Author.Email, "Authored", commit.Author.When)
+                            @if (commit.Committer.Name != commit.Author.Name || commit.Committer.Email != commit.Author.Email)
+                            {
+                                @Person(commit.Committer.Name, commit.Committer.Email, "Committed", commit.Committer.When)
+                            }
+                            @foreach (var coAuthor in CommitMessage.CoAuthors(commit.Message))
+                            {
+                                @Person(coAuthor.Name, coAuthor.Email, "Co-author", null)
+                            }
+                        </ul>
+                    </ChildContent>
+                </SidePanelSection>
             }
 
             <section class="git-commit-section" aria-labelledby="@($"{_id}-files")">
@@ -104,29 +99,15 @@
                     {
                         <GitFileChangeCounts Kinds="counted.Select(change => change.Kind)" />
                     }
-                    <div class="segmented segmented-small git-commit-file-view" role="group" aria-label="Show files as">
-                        <button type="button" class="segmented-option" title="As a list" aria-label="As a list"
-                                aria-pressed="@(Options.FileView == GitGraphFileView.List ? "true" : "false")"
-                                @onclick="() => Options.SetFileViewAsync(GitGraphFileView.List)">
-                            <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M9 6h11M9 12h11M9 18h11" />
-                                <path d="M4 6h.01M4 12h.01M4 18h.01" />
-                            </svg>
-                        </button>
-                        <button type="button" class="segmented-option" title="As a tree" aria-label="As a tree"
-                                aria-pressed="@(Options.FileView == GitGraphFileView.Tree ? "true" : "false")"
-                                @onclick="() => Options.SetFileViewAsync(GitGraphFileView.Tree)">
-                            <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M4 4h6M7 4v14h5M7 11h5" />
-                                <path d="M14 11h6M14 18h6" />
-                            </svg>
-                        </button>
+                    <div class="git-commit-file-view">
+                        <ToggleButtonGroup TValue="GitGraphFileView" Small="true" Options="_fileViews" Value="Options.FileView"
+                                           ValueChanged="view => Options.SetFileViewAsync(view)" AriaLabel="Show files as" />
                     </div>
                 </div>
 
                 @if (Graph.SelectedChangesProblem is { } changesProblem)
                 {
-                    <p class="error">Couldn't read the changed files. @changesProblem</p>
+                    <GitGraphMessage>Couldn't read the changed files. @changesProblem</GitGraphMessage>
                 }
                 else if (Graph.SelectedChanges is not { } changes)
                 {
@@ -188,6 +169,12 @@
 
     [Parameter, EditorRequired]
     public WorkspaceGitGraph Graph { get; set; } = null!;
+
+    private static readonly IReadOnlyList<ToggleButtonOption<GitGraphFileView>> _fileViews =
+    [
+        new(GitGraphFileView.List, new Icons.Regular.Size16.TextBulletListLtr(), "As a list"),
+        new(GitGraphFileView.Tree, new Icons.Regular.Size16.TextBulletListTree(), "As a tree"),
+    ];
 
     protected override void OnInitialized() => Options.Changed += OnOptionsChanged;
 
@@ -287,19 +274,7 @@
     // Copies the full commit id, and says so for a moment.
     private async Task CopyAsync(string sha)
     {
-        if (_module is null)
-        {
-            return;
-        }
-
-        try
-        {
-            if (!await _module.InvokeAsync<bool>("copyText", sha))
-            {
-                return;
-            }
-        }
-        catch (JSDisconnectedException)
+        if (!await Clipboard.CopyAsync(sha))
         {
             return;
         }

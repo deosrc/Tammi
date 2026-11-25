@@ -1,35 +1,5 @@
 // The selected commit's details beside a git graph.
 
-// Copies `text` to the clipboard. The Clipboard API isn't always there in the app's web view (it needs a secure
-// context), so it falls back to copying from a hidden text area. Returns whether it was copied.
-export async function copyText(text) {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // Not allowed here: try the other way.
-  }
-
-  const area = document.createElement("textarea");
-  area.value = text;
-  area.setAttribute("readonly", "");
-  area.style.position = "fixed";
-  area.style.opacity = "0";
-  document.body.appendChild(area);
-  const focused = document.activeElement;
-  area.select();
-  try {
-    return document.execCommand("copy");
-  } catch {
-    return false;
-  } finally {
-    area.remove();
-    focused?.focus?.();
-  }
-}
-
 // The body's default height, in lines, and the least it shows. The rest of the panel keeps at least `minLowerHeight`.
 const defaultLines = 8;
 const minLines = 3;
