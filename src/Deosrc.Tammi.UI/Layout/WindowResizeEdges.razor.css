@@ -1,0 +1,81 @@
+/* Drawn over the page's outermost pixels rather than taking room from it, and never in the way of the pointer. */
+.window-outline {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    border: 1px solid var(--color-border);
+    pointer-events: none;
+}
+
+/* Over everything else, so they're found at the very edge of the window whatever is under them. */
+.window-resize-edge {
+    position: fixed;
+    z-index: 10000;
+}
+
+.north,
+.south {
+    left: 8px;
+    right: 8px;
+    height: 4px;
+}
+
+.west,
+.east {
+    top: 8px;
+    bottom: 8px;
+    width: 4px;
+}
+
+/* The corners are larger than the edges are thick, so they're easier to find. */
+.north-west,
+.north-east,
+.south-west,
+.south-east {
+    width: 8px;
+    height: 8px;
+}
+
+.north,
+.north-west,
+.north-east {
+    top: 0;
+}
+
+.south,
+.south-west,
+.south-east {
+    bottom: 0;
+}
+
+.west,
+.north-west,
+.south-west {
+    left: 0;
+}
+
+.east,
+.north-east,
+.south-east {
+    right: 0;
+}
+
+.north,
+.south {
+    cursor: ns-resize;
+}
+
+.west,
+.east {
+    cursor: ew-resize;
+}
+
+.north-west,
+.south-east {
+    cursor: nwse-resize;
+}
+
+.north-east,
+.south-west {
+    cursor: nesw-resize;
+}

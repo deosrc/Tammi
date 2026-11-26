@@ -117,6 +117,16 @@
     </div>
 
     <div class="settings-field-group">
+        <FluentCheckbox Label="Slim window" Value="Current.SlimWindow"
+                        ValueChanged="slim => UpdateGeneralAsync(g => g with { SlimWindow = slim })" />
+        <p class="settings-help">
+            Removes the window's title bar, and puts the minimise, maximise and close buttons at the end of the tabs.
+            Drag any empty space in the tab bar, or the Tammi logo, to move the window, and double-click it to maximise
+            or restore the window. Changes apply straight away.
+        </p>
+    </div>
+
+    <div class="settings-field-group">
         <FluentSelect Label="Log level" Items="LogLevels" OptionText="@(level => level.ToString())"
                       Value="Current.LogLevel"
                       ValueChanged="@((LogLevel level) => UpdateGeneralAsync(g => g with { LogLevel = level }))" />
