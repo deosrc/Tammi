@@ -29,6 +29,13 @@ public sealed record WorkspaceGitSummary(IReadOnlyList<HomeRepositoryStatus> Rep
             .Select(repository => repository.Git.Repository)];
 
     /// <summary>
+    /// The repositories whose branch has commits that aren't on the merge target, pushed or not.
+    /// </summary>
+    public IReadOnlyList<WorkspaceRepository> OnBranch =>
+        [.. Repositories.Where(repository => repository.Git.Status?.HasCommitsOnBranch == true)
+            .Select(repository => repository.Git.Repository)];
+
+    /// <summary>
     /// The repositories whose upstream has commits they don't. Separate from the changes above: being behind doesn't
     /// put work at risk.
     /// </summary>
