@@ -1,8 +1,9 @@
 namespace Deosrc.Tammi.Core.Workspaces;
 
 /// <summary>
-/// The order of the tabs in the main tab strip, whatever they are: a new one is always added at the end. It is kept
-/// here, not in the strip, so <see cref="WorkspaceTabsKeeper"/> can save it and open the tabs in the same order.
+/// The order of the tabs in the main tab strip, whatever they are: a new one is added at the end, and the user can move
+/// them. It is kept here, not in the strip, so <see cref="WorkspaceTabsKeeper"/> can save it and open the tabs in the
+/// same order.
 /// </summary>
 public sealed class MainTabOrder
 {
@@ -84,6 +85,35 @@ public sealed class MainTabOrder
         }
 
         return [.. result];
+    }
+
+    /// <summary>
+    /// Moves a tab to another place, as the user drags it.
+    /// </summary>
+    /// <param name="key">The tab to move. Nothing happens if it isn't in the order.</param>
+    /// <param name="index">Its new place among the tabs, counted without it.</param>
+    public void Move(string key, int index)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        bool changed;
+        lock (_lock)
+        {
+            if (!_keys.Contains(key))
+            {
+                return;
+            }
+
+            List<string> result = [.. _keys];
+            result.Remove(key);
+            result.Insert(Math.Clamp(index, 0, result.Count), key);
+            changed = !result.SequenceEqual(_keys);
+            _keys = result;
+        }
+
+        if (changed)
+        {
+            Changed?.Invoke();
+        }
     }
 
     /// <summary>

@@ -18,6 +18,7 @@ public sealed class WorkspaceTabRestorer : IDisposable
 {
     private readonly WorkspaceAgents _agents;
     private readonly WorkspaceGitGraphs _graphs;
+    private readonly MainAreaTabArrangement _arrangement;
     private readonly ILogger _logger;
     private readonly Lock _lock = new();
     private readonly Dictionary<string, Tracked> _tracked = [];
@@ -30,13 +31,16 @@ public sealed class WorkspaceTabRestorer : IDisposable
     public WorkspaceTabRestorer(
         WorkspaceAgents agents,
         WorkspaceGitGraphs graphs,
-        ILogger<WorkspaceTabRestorer>? logger = null)
+        ILogger<WorkspaceTabRestorer>? logger = null,
+        MainAreaTabArrangement? arrangement = null)
     {
         _agents = agents;
         _graphs = graphs;
+        _arrangement = arrangement ?? new MainAreaTabArrangement();
         _logger = logger ?? NullLogger<WorkspaceTabRestorer>.Instance;
         _agents.Changed += OnChanged;
         _graphs.Changed += OnChanged;
+        _arrangement.Changed += OnChanged;
     }
 
     /// <summary>
@@ -163,6 +167,7 @@ public sealed class WorkspaceTabRestorer : IDisposable
     {
         _agents.Changed -= OnChanged;
         _graphs.Changed -= OnChanged;
+        _arrangement.Changed -= OnChanged;
     }
 
     private async Task<string?> RestoreTabAsync(Workspace workspace, SavedTab saved)
@@ -273,15 +278,12 @@ public sealed class WorkspaceTabRestorer : IDisposable
                 return;
             }
 
-            var tabs = _agents.For(workspaceId)
-                .Where(agent => agent.Agent.SessionId is not null)
-                .Select(agent => (agent.StartOrder, Tab: new SavedTab(SavedTab.AgentKind, Id: agent.Agent.SessionId)))
-                .Concat(_graphs.For(workspaceId).Select(graph => (graph.StartOrder, Tab: new SavedTab(
-                    SavedTab.GitGraphKind,
-                    Id: graph.Repository.FolderName,
-                    Path: graph.SubmodulePath))))
-                .OrderBy(entry => entry.StartOrder)
-                .Select(entry => entry.Tab)
+            // In the order of the workspace's tabs, so they open again in it.
+            var tabs = _arrangement.Arrange(
+                    workspaceId,
+                    _agents.For(workspaceId).Concat<IMainAreaTab>(_graphs.For(workspaceId)))
+                .Select(ToSaved)
+                .OfType<SavedTab>()
                 .ToArray();
             // A tab that has closed isn't the one shown.
             var active = ToSaved(tracked.Active) is { } shown && tabs.Contains(shown) ? shown : null;

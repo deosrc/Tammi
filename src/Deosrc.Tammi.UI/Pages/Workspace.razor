@@ -12,6 +12,7 @@
 @inject WorkspaceGitGraphs GitGraphs
 @inject WorkspaceHistoryTabs HistoryTabs
 @inject WorkspaceTabRestorer TabRestorer
+@inject MainAreaTabArrangement TabArrangement
 @inject ISettingsStore SettingsStore
 @inject WorkspaceViewState ViewState
 @inject IWorkspaceStore WorkspaceStore
@@ -216,9 +217,10 @@ else
             </Footer>
         </SidePanel>
         <div class="workspace-main">
-            @* The first tab is the dashboard and the last opens the New menu, so they're always there. *@
+            @* The first tab is the dashboard and the last opens the New menu, so they're always there. The tabs between
+               them can be moved. *@
             <TabBar Class="session-tabs" AriaLabel="Workspace" FixedItems="DashboardItems" Items="TabItems"
-                    OnClose="CloseTabItemAsync">
+                    OnClose="CloseTabItemAsync" OnMove="MoveTab">
                 <EndContent>
                     <NewTabMenu AgentDefinitions="AgentDefinitions" Repositories="_listing?.Workspace?.Repositories ?? []"
                                 GitTargets="@(_listing?.Workspace?.Repositories.Count > 0 ? GraphTargets().ToList() : null)"
@@ -784,10 +786,10 @@ else
 
     private void UpdateTabs()
     {
-        _tabs = [.. Terminals.For(WorkspaceId).Concat<IMainAreaTab>(Agents.For(WorkspaceId))
+        // In the order they started or opened, unless the user has moved them.
+        _tabs = TabArrangement.Arrange(WorkspaceId, Terminals.For(WorkspaceId).Concat<IMainAreaTab>(Agents.For(WorkspaceId))
             .Concat(GitGraphs.For(WorkspaceId))
-            .Concat(HistoryTabs.For(WorkspaceId))
-            .OrderBy(tab => tab.StartOrder)];
+            .Concat(HistoryTabs.For(WorkspaceId)));
 
         // The tab the address names, or the dashboard if it names none or the tab isn't open.
         _shown = TabId is null ? null : _tabs.FirstOrDefault(tab => tab.Id == TabId);
@@ -851,6 +853,12 @@ else
         builder.AddAttribute(1, "State", agent.State);
         builder.CloseComponent();
     };
+
+    private void MoveTab(TabBarMove move)
+    {
+        TabArrangement.Move(WorkspaceId, _tabs, move.Item.Key, move.Index);
+        UpdateTabs();
+    }
 
     private Task CloseTabItemAsync(TabBarItem item) =>
         _tabs.FirstOrDefault(tab => tab.Id == item.Key) is { } tab ? CloseTabAsync(tab) : Task.CompletedTask;

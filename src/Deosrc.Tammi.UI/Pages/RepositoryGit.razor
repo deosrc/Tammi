@@ -11,6 +11,7 @@
 @inject ISettingsStore SettingsStore
 @inject WorkspaceViewState ViewState
 @inject WorkspaceTabsKeeper TabsKeeper
+@inject MainAreaTabArrangement TabArrangement
 
 @* A Local Repository's primary tab, opened from the Repositories page without a workspace. Like a workspace's, it has
    secondary tabs: the repository's own git graph, which is always there and can't be closed, then the graphs of its
@@ -19,9 +20,10 @@
     <RepositoryToolsPanel RepositoryPath="@_path" Shown="_shown" OnShowAgent="ShowTab" OnStartAgent="StartAgentAsync" OnOpenGit="OpenGit"
                           OnOpenTerminal="StartTerminal" />
     <div class="workspace-main">
-        @* The repository's own git graph is always the first tab, and the last opens the New menu. *@
+        @* The repository's own git graph is always the first tab, and the last opens the New menu. The tabs between
+           them can be moved. *@
         <TabBar Class="session-tabs" AriaLabel="Repository" FixedItems="PrimaryItems" Items="TabItems"
-                OnClose="CloseTabItemAsync">
+                OnClose="CloseTabItemAsync" OnMove="MoveTab">
             <EndContent>
                 <NewTabMenu AgentDefinitions="AgentDefinitions" OnTerminal="_ => StartTerminal()"
                             OnAgent="request => StartAgentAsync(request.Definition)" />
@@ -126,13 +128,12 @@
 
     private void UpdateTabs()
     {
-        // The repository's graph first, then the rest in the order they were opened.
+        // The repository's graph first, then the rest in the order they were opened, unless the user has moved them.
         _tabs =
         [
             .. GitGraphs.For(_id).Where(graph => graph.IsPrimary),
-            .. Terminals.For(_id).Concat<IMainAreaTab>(Agents.For(_id))
-                .Concat(GitGraphs.For(_id).Where(graph => !graph.IsPrimary))
-                .OrderBy(tab => tab.StartOrder),
+            .. TabArrangement.Arrange(_id, Terminals.For(_id).Concat<IMainAreaTab>(Agents.For(_id))
+                .Concat(GitGraphs.For(_id).Where(graph => !graph.IsPrimary))),
         ];
 
         // The tab the address names, or the repository's graph if it names none. Null if the tab isn't open.
@@ -151,6 +152,12 @@
     private IReadOnlyList<TabBarItem> PrimaryItems => [.. _tabs.Where(IsPrimary).Select(ToItem)];
 
     private IReadOnlyList<TabBarItem> TabItems => [.. _tabs.Where(tab => !IsPrimary(tab)).Select(ToItem)];
+
+    private void MoveTab(TabBarMove move)
+    {
+        TabArrangement.Move(_id, _tabs.Where(tab => !IsPrimary(tab)), move.Item.Key, move.Index);
+        UpdateTabs();
+    }
 
     private static bool IsPrimary(IMainAreaTab tab) => tab is WorkspaceGitGraph { IsPrimary: true };
 
