@@ -9,116 +9,13 @@
 @inject Deosrc.Tammi.Core.Terminals.WorkspaceTerminals Terminals
 @inject MainTabOrder TabOrder
 @inject NavigationManager Navigation
+@inject Deosrc.Tammi.UI.Workspaces.WorkspaceViewState ViewState
 
-<nav class="tab-strip" aria-label="Main">
-    <a class="tab home-tab @ActiveClass(AppRoutes.Home)" href="@AppRoutes.Home" title="Home" aria-label="Home"
-       aria-current="@AriaCurrent(AppRoutes.Home)">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M3 10.5 12 3l9 7.5" />
-            <path d="M5 9v11a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9" />
-        </svg>
-    </a>
-
-    <a class="tab home-tab @ActiveClass(AppRoutes.Repositories)" href="@AppRoutes.Repositories" title="Repositories"
-       aria-label="Repositories" aria-current="@AriaCurrent(AppRoutes.Repositories)">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <circle cx="6" cy="5" r="2" />
-            <circle cx="6" cy="19" r="2" />
-            <circle cx="18" cy="9" r="2" />
-            <path d="M6 7v10M18 11c0 4-12 2-12 6" />
-        </svg>
-    </a>
-
-    @* Tabs are in the order they were opened, whatever they are: a new one is always added at the end. *@
-    @foreach (var key in OrderedKeys())
-    {
-        @if (MainTabOrder.IsWorkspaceKey(key))
-        {
-            var tab = WorkspaceTabs.Tabs.First(t => MainTabOrder.WorkspaceKey(t.WorkspaceId) == key);
-            // Returns to the edit flow if the workspace has one in progress.
-            var route = EditSessions.Find(tab.WorkspaceId) is null
-                ? AppRoutes.Workspace(tab.WorkspaceId)
-                : AppRoutes.EditWorkspace(tab.WorkspaceId);
-            var shown = IsWorkspaceShown(tab.WorkspaceId);
-            <div class="tab workspace-tab @(shown ? "active" : null)" @key="key">
-                <a class="tab-label" href="@route" title="@tab.Name" aria-current="@(shown ? "page" : null)">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
-                    </svg>
-                    <span class="tab-label-text">@tab.Name</span>
-                    @* The state of the workspace's agents that most needs the user, if it has any. *@
-                    @if (AgentStates.Summarise(Agents.For(tab.WorkspaceId).Select(agent => agent.State)) is { } agentState)
-                    {
-                        <AgentStateIndicator State="agentState" />
-                    }
-                </a>
-                <button type="button" class="tab-close" title="Close @tab.Name" aria-label="Close @tab.Name"
-                        @onclick="() => Close(tab)">
-                    &times;
-                </button>
-            </div>
-        }
-        else if (MainTabOrder.IsRepositoryKey(key))
-        {
-            var graph = GitGraphs.StandaloneGraphs().First(g => MainTabOrder.RepositoryKey(g.Path) == key);
-            var graphRoute = AppRoutes.RepositoryGit(graph.Path);
-            <div class="tab workspace-tab @ActiveClass(graphRoute)" @key="key">
-                <a class="tab-label" href="@graphRoute" title="@graph.Path" aria-current="@AriaCurrent(graphRoute)">
-                    <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <circle cx="6" cy="5" r="2" />
-                        <circle cx="6" cy="19" r="2" />
-                        <circle cx="18" cy="9" r="2" />
-                        <path d="M6 7v10M18 11c0 4-12 2-12 6" />
-                    </svg>
-                    <span class="tab-label-text">@graph.Name</span>
-                    @* The state of the agents in the tab that most needs the user, if it has any. *@
-                    @if (AgentStates.Summarise(Agents.For(graph.WorkspaceId).Select(agent => agent.State)) is { } graphAgentState)
-                    {
-                        <AgentStateIndicator State="graphAgentState" />
-                    }
-                </a>
-                <button type="button" class="tab-close" title="Close @graph.Name" aria-label="Close @graph.Name"
-                        @onclick="() => CloseRepositoryGraph(graph)">
-                    &times;
-                </button>
-            </div>
-        }
-        else if (key == MainTabOrder.NewWorkspaceKey)
-        {
-            <div class="tab workspace-tab @ActiveClass(AppRoutes.NewWorkspace)" @key="key">
-                <a class="tab-label" href="@AppRoutes.NewWorkspace" title="New workspace"
-                   aria-current="@AriaCurrent(AppRoutes.NewWorkspace)">
-                    <span class="tab-label-text">New workspace</span>
-                </a>
-                <button type="button" class="tab-close" title="Close New workspace" aria-label="Close New workspace"
-                        @onclick="CloseNewWorkspace">
-                    &times;
-                </button>
-            </div>
-        }
-        else if (key == MainTabOrder.UsageKey)
-        {
-            <div class="tab workspace-tab @ActiveClass(AppRoutes.Usage)" @key="key">
-                <a class="tab-label" href="@AppRoutes.Usage" title="AI usage" aria-current="@AriaCurrent(AppRoutes.Usage)">
-                    <span class="tab-label-text">AI usage</span>
-                </a>
-                <button type="button" class="tab-close" title="Close AI usage" aria-label="Close AI usage"
-                        @onclick="CloseUsage">
-                    &times;
-                </button>
-            </div>
-        }
-    }
-</nav>
-
-<a class="tab settings-tab @(IsInSettings ? "active" : null)" href="@AppRoutes.Settings" title="Settings"
-   aria-label="Settings" aria-current="@(IsInSettings ? "page" : null)">
-    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <circle cx="12" cy="12" r="6.5" />
-        <circle cx="12" cy="12" r="2.5" />
-        <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" stroke-width="3" />
-    </svg>
-</a>
+@* The app's main tabs: Home and Repositories, then a tab for each workspace, repository and flow that is open, in the
+   order they were opened unless the user has moved them, and Settings at the far end. Only the tabs between
+   Repositories and Settings can be moved. *@
+<TabBar Class="app-bar-tabs" AriaLabel="Main" FixedItems="FixedItems" Items="OpenItems" TrailingItems="SettingsItems"
+        OnClose="CloseAsync" OnMove="Move" />
 
 @code {
     private string _currentPath = AppRoutes.Home;
@@ -146,17 +43,112 @@
         Navigation.LocationChanged -= OnLocationChanged;
     }
 
+    private static RenderFragment IconOf(Microsoft.FluentUI.AspNetCore.Components.Icon icon) =>
+        builder =>
+        {
+            builder.OpenComponent<FluentIcon<Microsoft.FluentUI.AspNetCore.Components.Icon>>(0);
+            builder.AddAttribute(1, "Value", icon);
+            builder.CloseComponent();
+        };
+
+    private IReadOnlyList<TabBarItem> FixedItems =>
+    [
+        new("home", AppRoutes.Home, "Home", Icon: IconOf(new Icons.Regular.Size20.Home()), Active: IsCurrent(AppRoutes.Home)),
+        new("repositories", AppRoutes.Repositories, "Repositories", Icon: IconOf(new Icons.Regular.Size20.BranchFork()),
+            Active: IsCurrent(AppRoutes.Repositories)),
+    ];
+
+    private IReadOnlyList<TabBarItem> SettingsItems =>
+    [
+        new("settings", AppRoutes.Settings, "Settings", Icon: IconOf(new Icons.Regular.Size20.Settings()), Active: IsInSettings),
+    ];
+
+    // The state of the agents in a tab that most needs the user, if it has any that are running or need attention.
+    private RenderFragment? AgentIndicatorOf(string workspaceId) =>
+        AgentStates.Summarise(Agents.For(workspaceId).Select(agent => agent.State)) is { } state
+            ? builder =>
+            {
+                builder.OpenComponent<AgentStateIndicator>(0);
+                builder.AddAttribute(1, "State", state);
+                builder.CloseComponent();
+            }
+            : null;
+
+    private IReadOnlyList<TabBarItem> OpenItems
+    {
+        get
+        {
+            var items = new List<TabBarItem>();
+            foreach (var key in OrderedKeys())
+            {
+                if (MainTabOrder.IsWorkspaceKey(key))
+                {
+                    var tab = WorkspaceTabs.Tabs.First(t => MainTabOrder.WorkspaceKey(t.WorkspaceId) == key);
+                    // Returns to the edit flow if the workspace has one in progress.
+                    var route = EditSessions.Find(tab.WorkspaceId) is null
+                        ? ViewState.RouteOf(tab.WorkspaceId)
+                        : AppRoutes.EditWorkspace(tab.WorkspaceId);
+                    items.Add(new(key, route, tab.Name, tab.Name, IconOf(new Icons.Regular.Size16.Folder()),
+                        AgentIndicatorOf(tab.WorkspaceId), IsWorkspaceShown(tab.WorkspaceId)));
+                }
+                else if (MainTabOrder.IsRepositoryKey(key))
+                {
+                    var graph = GitGraphs.StandaloneGraphs().First(g => MainTabOrder.RepositoryKey(g.Path) == key);
+                    items.Add(new(key, ViewState.RepositoryRouteOf(graph.Path), graph.Path, graph.Name,
+                        IconOf(new Icons.Regular.Size16.BranchFork()), AgentIndicatorOf(graph.WorkspaceId),
+                        IsRepositoryShown(graph.Path)));
+                }
+                else if (key == MainTabOrder.NewWorkspaceKey)
+                {
+                    items.Add(new(key, AppRoutes.NewWorkspace, "New workspace", "New workspace",
+                        Active: IsCurrent(AppRoutes.NewWorkspace)));
+                }
+                else if (key == MainTabOrder.UsageKey)
+                {
+                    items.Add(new(key, AppRoutes.Usage, "AI Usage", "AI Usage", IconOf(new Icons.Regular.Size16.Bot()),
+                        Active: IsCurrent(AppRoutes.Usage)));
+                }
+            }
+
+            return items;
+        }
+    }
+
+    // The tabs are in the order of OrderedKeys, so the place among them is the place in the order.
+    private void Move(TabBarMove move) => TabOrder.Move(move.Item.Key, move.Index);
+
+    private void CloseAsync(TabBarItem item)
+    {
+        if (MainTabOrder.IsWorkspaceKey(item.Key))
+        {
+            Close(WorkspaceTabs.Tabs.First(t => MainTabOrder.WorkspaceKey(t.WorkspaceId) == item.Key));
+        }
+        else if (MainTabOrder.IsRepositoryKey(item.Key))
+        {
+            CloseRepositoryGraph(GitGraphs.StandaloneGraphs().First(g => MainTabOrder.RepositoryKey(g.Path) == item.Key));
+        }
+        else if (item.Key == MainTabOrder.NewWorkspaceKey)
+        {
+            CloseNewWorkspace();
+        }
+        else if (item.Key == MainTabOrder.UsageKey)
+        {
+            CloseUsage();
+        }
+    }
+
     private void Close(WorkspaceTab tab)
     {
         var wasShown = IsWorkspaceShown(tab.WorkspaceId);
         var next = WorkspaceTabs.Close(tab.WorkspaceId);
         if (wasShown)
         {
-            Navigation.NavigateTo(next is null ? AppRoutes.Home : AppRoutes.Workspace(next.WorkspaceId));
+            Navigation.NavigateTo(next is null ? AppRoutes.Home : ViewState.RouteOf(next.WorkspaceId));
         }
     }
 
-    // The open tabs' keys, in the order they were opened (or, after a restart, the order they were saved in).
+    // The open tabs' keys, in the order they were opened (or, after a restart, the order they were saved in), unless
+    // the user has moved them.
     private IReadOnlyList<string> OrderedKeys()
     {
         var open = WorkspaceTabs.Tabs.Select(tab => MainTabOrder.WorkspaceKey(tab.WorkspaceId))
@@ -169,7 +161,7 @@
 
     private void CloseRepositoryGraph(WorkspaceGitGraph graph)
     {
-        var wasShown = IsCurrent(AppRoutes.RepositoryGit(graph.Path));
+        var wasShown = IsRepositoryShown(graph.Path);
         // Closes everything in the tab: its graphs, and the terminals, which end their shells.
         GitGraphs.CloseAll(graph.WorkspaceId);
         _ = Terminals.CloseAllAsync(graph.WorkspaceId);
@@ -205,12 +197,11 @@
 
     private bool IsCurrent(string route) => string.Equals(_currentPath, route, StringComparison.Ordinal);
 
+    // A repository's tab also shows its secondary tabs.
+    private bool IsRepositoryShown(string repositoryPath) => AppRoutes.RepositoryGitPathOf(_currentPath) == repositoryPath;
+
     // A workspace's tab also shows its edit flow.
     private bool IsWorkspaceShown(string workspaceId) => AppRoutes.WorkspaceIdOf(_currentPath) == workspaceId;
-
-    private string? ActiveClass(string route) => IsCurrent(route) ? "active" : null;
-
-    private string? AriaCurrent(string route) => IsCurrent(route) ? "page" : null;
 
     private string CurrentPath()
     {

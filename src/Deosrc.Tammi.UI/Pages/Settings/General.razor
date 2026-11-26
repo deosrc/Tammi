@@ -12,33 +12,33 @@
 <h1>General</h1>
 
 <div class="settings-form">
-    <div class="settings-field">
-        <label for="default-workspace-parent-folder">Default Workspace Parent Folder</label>
-        <div class="settings-field-row">
-            <input id="default-workspace-parent-folder"
-                   class="settings-path"
-                   value="@Current.DefaultWorkspaceParentFolder"
-                   @onchange="OnDefaultWorkspaceParentFolderChanged" />
-            <button type="button" class="button" @onclick="PickDefaultWorkspaceParentFolderAsync">Choose…</button>
-        </div>
-        <p class="settings-help">New workspaces are created in this folder unless you choose another one.</p>
+    <div class="settings-field-group">
+        <FluentTextInput Label="Default Workspace Parent Folder" Width="100%"
+                         Value="@Current.DefaultWorkspaceParentFolder"
+                         ValueChanged="OnDefaultWorkspaceParentFolderChanged"
+                         Message="New workspaces are created in this folder unless you choose another one."
+                         MessageCondition="FluentFieldCondition.Always">
+            <EndTemplate>
+                <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small"
+                              OnClick="PickDefaultWorkspaceParentFolderAsync">
+                    Choose…
+                </FluentButton>
+            </EndTemplate>
+        </FluentTextInput>
     </div>
 
-    <div class="settings-field">
-        <h2 class="settings-field-title">Suggested workspace name</h2>
-        <p class="settings-help settings-field-intro">
-            The name a new workspace with exactly one task is given, shown on Home and its tab. You can still change it,
-            when you create the workspace or later.
-        </p>
-        <label for="workspace-name-template">Template</label>
-        @* Recreated after each change, so it shows the saved value even when that's unchanged, e.g. when a cleared
-           template stays cleared. *@
-        <input @key="_nameTemplateRevision"
-               id="workspace-name-template"
-               class="settings-input-wide"
-               autocomplete="off"
-               value="@Current.WorkspaceNameTemplate"
-               @onchange="OnWorkspaceNameTemplateChanged" />
+    <div class="settings-field-group">
+        <div class="settings-field">
+            <h2 class="settings-field-title">Suggested workspace name</h2>
+            <p class="settings-help settings-field-intro">
+                The name a new workspace with exactly one task is given, shown on Home and its tab. You can still change it,
+                when you create the workspace or later.
+            </p>
+        </div>
+        @* Recreated when what it shows differs from what was entered, e.g. when it was trimmed, as recreating it drops
+           its focus. *@
+        <FluentTextInput @key="_nameTemplateRevision" Label="Template" Width="100%" AutoComplete="off"
+                         Value="@Current.WorkspaceNameTemplate" ValueChanged="OnWorkspaceNameTemplateChanged" />
         <dl class="settings-values tool-placeholders">
             @foreach (var placeholder in WorkspaceNames.Placeholders)
             {
@@ -53,10 +53,10 @@
         </p>
         @if (WorkspaceNames.FindUnknown(Current.WorkspaceNameTemplate).ToList() is { Count: > 0 } unknown)
         {
-            <p class="warning">
+            <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false">
                 @string.Join(", ", unknown.Select(WorkspaceNames.Format)) @(unknown.Count == 1 ? "isn't a placeholder" : "aren't placeholders"),
                 so @(unknown.Count == 1 ? "it's" : "they're") left as written.
-            </p>
+            </FluentMessageBar>
         }
         <dl class="settings-preview">
             @foreach (var example in Examples)
@@ -77,34 +77,24 @@
         </dl>
     </div>
 
-    <div class="settings-field">
-        <h2 class="settings-field-title">Suggested folder name</h2>
-        <p class="settings-help settings-field-intro">
-            How the Workspace Folder's name is written when a new workspace has exactly one task. Otherwise it's made
-            from the name you enter. You can still change it before the workspace is created.
-        </p>
-        <div class="settings-options">
-            <label for="workspace-folder-name-separator">Separator</label>
-            <select id="workspace-folder-name-separator" value="@FolderNameFormat.Separator"
-                    @onchange="e => UpdateFolderNameFormatAsync(f => f with { Separator = Parse(e, f.Separator) })">
-                <option value="@WorkspaceFolderNameSeparator.Hyphens">Hyphens</option>
-                <option value="@WorkspaceFolderNameSeparator.Underscores">Underscores</option>
-                <option value="@WorkspaceFolderNameSeparator.Spaces">Spaces</option>
-            </select>
-
-            <label for="workspace-folder-name-case">Case</label>
-            <select id="workspace-folder-name-case" value="@FolderNameFormat.Case"
-                    @onchange="e => UpdateFolderNameFormatAsync(f => f with { Case = Parse(e, f.Case) })">
-                <option value="@WorkspaceFolderNameCase.Lowercase">Lowercase</option>
-                <option value="@WorkspaceFolderNameCase.Uppercase">Uppercase</option>
-                <option value="@WorkspaceFolderNameCase.AsWritten">As written</option>
-            </select>
+    <div class="settings-field-group">
+        <div class="settings-field">
+            <h2 class="settings-field-title">Suggested folder name</h2>
+            <p class="settings-help settings-field-intro">
+                How the Workspace Folder's name is written when a new workspace has exactly one task. Otherwise it's made
+                from the name you enter. You can still change it before the workspace is created.
+            </p>
         </div>
-        <label class="settings-choice">
-            <input type="checkbox" checked="@FolderNameFormat.IncludeTaskReference"
-                   @onchange="e => UpdateFolderNameFormatAsync(f => f with { IncludeTaskReference = e.Value is true })" />
-            Start with the task's reference
-        </label>
+        <div class="settings-field-row">
+            <FluentSelect Label="Separator" Items="Separators" OptionText="@(separator => SeparatorText(separator))"
+                          Value="FolderNameFormat.Separator"
+                          ValueChanged="@((WorkspaceFolderNameSeparator separator) => UpdateFolderNameFormatAsync(f => f with { Separator = separator }))" />
+            <FluentSelect Label="Case" Items="Cases" OptionText="@(folderCase => CaseText(folderCase))"
+                          Value="FolderNameFormat.Case"
+                          ValueChanged="@((WorkspaceFolderNameCase folderCase) => UpdateFolderNameFormatAsync(f => f with { Case = folderCase }))" />
+        </div>
+        <FluentCheckbox Label="Start with the task's reference" Value="FolderNameFormat.IncludeTaskReference"
+                        ValueChanged="included => UpdateFolderNameFormatAsync(f => f with { IncludeTaskReference = included })" />
         <dl class="settings-preview">
             @foreach (var example in Examples)
             {
@@ -117,48 +107,41 @@
         </p>
     </div>
 
-    <div class="settings-field">
-        <label for="theme">Theme</label>
-        <select id="theme" value="@Current.Theme"
-                @onchange="e => UpdateGeneralAsync(g => g with { Theme = Parse(e, g.Theme) })">
-            <option value="@ThemePreference.Auto">Auto</option>
-            <option value="@ThemePreference.Light">Light</option>
-            <option value="@ThemePreference.Dark">Dark</option>
-        </select>
+    <div class="settings-field-group">
+        <FluentSelect Label="Theme" Items="Themes" OptionText="@(theme => theme.ToString())" Value="Current.Theme"
+                      ValueChanged="@((ThemePreference theme) => UpdateGeneralAsync(g => g with { Theme = theme }))" />
         <p class="settings-help">
             Auto follows the system theme, and changes with it, e.g. when the system switches to dark mode in the
             evening. Changes apply straight away.
         </p>
     </div>
 
-    <div class="settings-field">
-        <label for="log-level">Log level</label>
-        <select id="log-level" value="@Current.LogLevel"
-                @onchange="e => UpdateGeneralAsync(g => g with { LogLevel = Parse(e, g.LogLevel) })">
-            <option value="@LogLevel.Trace">Trace</option>
-            <option value="@LogLevel.Debug">Debug</option>
-            <option value="@LogLevel.Information">Information</option>
-            <option value="@LogLevel.Warning">Warning</option>
-            <option value="@LogLevel.Error">Error</option>
-        </select>
+    <div class="settings-field-group">
+        <FluentSelect Label="Log level" Items="LogLevels" OptionText="@(level => level.ToString())"
+                      Value="Current.LogLevel"
+                      ValueChanged="@((LogLevel level) => UpdateGeneralAsync(g => g with { LogLevel = level }))" />
         <p class="settings-help">
             The least important messages Tammi logs. Debug adds details such as each git command, and Trace also adds
             the messages of the frameworks Tammi uses. Changes apply straight away. Logs are written to the console and
             to the logs folder.
         </p>
-        <div class="settings-field-actions">
-            <button type="button" class="button" @onclick="OpenLogFolder">Open logs folder</button>
+        <div class="settings-field-row">
+            <FluentButton Appearance="ButtonAppearance.Primary" OnClick="OpenLogFolder">Open logs folder</FluentButton>
         </div>
         @if (_openLogFolderError is not null)
         {
-            <p class="error">@_openLogFolderError</p>
+            <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+                @_openLogFolderError
+            </FluentMessageBar>
         }
     </div>
 </div>
 
 @if (SaveError is not null)
 {
-    <p class="error">@SaveError</p>
+    <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+        @SaveError
+    </FluentMessageBar>
 }
 
 @code {
@@ -181,8 +164,8 @@
         }
     }
 
-    private Task OnDefaultWorkspaceParentFolderChanged(ChangeEventArgs e) =>
-        UpdateGeneralAsync(general => general with { DefaultWorkspaceParentFolder = e.Value?.ToString() ?? "" });
+    private Task OnDefaultWorkspaceParentFolderChanged(string? folder) =>
+        UpdateGeneralAsync(general => general with { DefaultWorkspaceParentFolder = folder ?? "" });
 
     private async Task PickDefaultWorkspaceParentFolderAsync()
     {
@@ -211,10 +194,16 @@
 
     private int _nameTemplateRevision;
 
-    private async Task OnWorkspaceNameTemplateChanged(ChangeEventArgs e)
+    private async Task OnWorkspaceNameTemplateChanged(string? template)
     {
-        await UpdateGeneralAsync(general => general with { WorkspaceNameTemplate = e.Value?.ToString()?.Trim() ?? "" });
-        _nameTemplateRevision++;
+        var trimmed = template?.Trim() ?? "";
+        await UpdateGeneralAsync(general => general with { WorkspaceNameTemplate = trimmed });
+
+        // Recreating the input drops its focus, so it's only done when what it shows isn't what was saved.
+        if (!string.Equals(template ?? "", Current.WorkspaceNameTemplate, StringComparison.Ordinal))
+        {
+            _nameTemplateRevision++;
+        }
     }
 
     private static string PlaceholderDescription(string placeholder) => placeholder switch
@@ -232,8 +221,21 @@
     private Task UpdateFolderNameFormatAsync(Func<WorkspaceFolderNameFormat, WorkspaceFolderNameFormat> update) =>
         UpdateGeneralAsync(general => general with { WorkspaceFolderNameFormat = update(general.WorkspaceFolderNameFormat) });
 
-    private static T Parse<T>(ChangeEventArgs e, T current) where T : struct, Enum =>
-        Enum.TryParse(e.Value?.ToString(), out T value) ? value : current;
+    private static readonly WorkspaceFolderNameSeparator[] Separators =
+        [WorkspaceFolderNameSeparator.Hyphens, WorkspaceFolderNameSeparator.Underscores, WorkspaceFolderNameSeparator.Spaces];
+
+    private static string SeparatorText(WorkspaceFolderNameSeparator separator) => separator.ToString();
+
+    private static readonly WorkspaceFolderNameCase[] Cases =
+        [WorkspaceFolderNameCase.Lowercase, WorkspaceFolderNameCase.Uppercase, WorkspaceFolderNameCase.AsWritten];
+
+    private static string CaseText(WorkspaceFolderNameCase folderCase) =>
+        folderCase == WorkspaceFolderNameCase.AsWritten ? "As written" : folderCase.ToString();
+
+    private static readonly ThemePreference[] Themes = [ThemePreference.Auto, ThemePreference.Light, ThemePreference.Dark];
+
+    private static readonly LogLevel[] LogLevels =
+        [LogLevel.Trace, LogLevel.Debug, LogLevel.Information, LogLevel.Warning, LogLevel.Error];
 
     private Task UpdateGeneralAsync(Func<GeneralSettings, GeneralSettings> update) =>
         UpdateAsync(settings => settings with { General = update(settings.General) });

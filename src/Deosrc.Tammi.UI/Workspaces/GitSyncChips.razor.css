@@ -1,0 +1,10 @@
+.git-sync-chips {
+    display: inline-flex;
+    flex: none;
+    gap: var(--spacingHorizontalXS);
+}
+
+/* Pushed to the end of a card's heading. */
+.git-sync-chips-end {
+    margin-left: auto;
+}

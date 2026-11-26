@@ -21,4 +21,29 @@ public sealed class MainTabOrderTests
 
         Assert.Equal(["b", "a", "c"], order.Sync(["a", "c", "b"]));
     }
+
+    [Fact]
+    public void Move_PutsTheTabAtItsNewPlace_AndKeepsItThere()
+    {
+        var order = new MainTabOrder();
+        order.Sync(["a", "b", "c"]);
+
+        order.Move("c", 0);
+
+        Assert.Equal(["c", "a", "b", "d"], order.Sync(["a", "b", "c", "d"]));
+    }
+
+    [Fact]
+    public void Move_RaisesChanged_OnlyWhenTheOrderChanges()
+    {
+        var order = new MainTabOrder();
+        order.Sync(["a", "b"]);
+        var changes = 0;
+        order.Changed += () => changes++;
+
+        order.Move("a", 0);
+        order.Move("a", 1);
+
+        Assert.Equal(1, changes);
+    }
 }

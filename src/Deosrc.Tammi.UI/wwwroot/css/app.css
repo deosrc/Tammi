@@ -1,6 +1,8 @@
 /* ---------------------------------------------------------------------------------------------------------------
    Theme. Components use these variables rather than literal colours, so the light and dark themes stay in step.
-   They're built from the brand colours in palette.css.
+   They're built from the brand colours in palette.css. Each colour that differs between the themes is a light-dark()
+   of its two values, which follows the root element's color-scheme: the browser's (the system's theme) unless the
+   theme setting puts data-theme on the root element, and then the setting's.
    --------------------------------------------------------------------------------------------------------------- */
 
 :root {
@@ -20,119 +22,40 @@
   --app-bar-height: 40px;
   --side-panel-width: 280px;
 
-  --color-bg: var(--tammi-white);
-  --color-surface: #ffffff;
-  --color-surface-hover: #eef0f2;
-  --color-chrome: #e9ebee;
-  --color-border: #d0d7de;
-  --color-text: var(--tammi-slate);
-  --color-text-muted: var(--tammi-grey-dark);
-  --color-accent: var(--tammi-teal);
-  --color-accent-text: #ffffff;
-  --color-focus: #0969da;
-  --color-error: #cf222e;
-  --color-success: #1a7f37;
-  --color-info: #0969da;
-  --color-info-text: #ffffff;
-  --color-success-bg: #dafbe1;
-  --color-warning: #9a6700;
-  --color-warning-bg: #fff8c5;
-  --color-warning-border: #d4a72c;
-  --color-warning-text: #ffffff;
-  --color-error-bg: #ffebe9;
-  --color-merged: #8250df;
-  --color-jira: #0052cc;
+  --color-bg: light-dark(var(--tammi-white), var(--tammi-slate));
+  --color-surface: light-dark(#ffffff, var(--tammi-slate-raised));
+  --color-surface-hover: light-dark(#eef0f2, #35373c);
+  --color-chrome: light-dark(#e9ebee, #17181a);
+  --color-border: light-dark(#d0d7de, #3f4147);
+  --color-text: light-dark(var(--tammi-slate), var(--tammi-white));
+  --color-text-muted: light-dark(var(--tammi-grey-dark), var(--tammi-grey));
+  --color-accent: light-dark(var(--tammi-teal), var(--tammi-mint));
+  --color-accent-text: light-dark(#ffffff, var(--tammi-slate));
+  --color-focus: light-dark(#0969da, #4c9aff);
+  --color-error: light-dark(#cf222e, #ff7b72);
+  --color-error-bg: light-dark(#ffebe9, #2d1416);
+  --color-success-bg: light-dark(#dafbe1, #12261e);
+  --color-warning: light-dark(#9a6700, #d29922);
+  --color-jira: light-dark(#0052cc, #4c9aff);
   --color-claude: #d97757;
 
   /* The git graph's lane colours, in the order lanes take them. */
-  --color-graph-0: #0969da;
-  --color-graph-1: #bf3989;
-  --color-graph-2: #1a7f37;
-  --color-graph-3: #bc4c00;
-  --color-graph-4: #8250df;
-  --color-graph-5: #0a7f8a;
-  --color-graph-6: #9a6700;
-  --color-graph-7: #cf222e;
+  --color-graph-0: light-dark(#0969da, #4c9aff);
+  --color-graph-1: light-dark(#bf3989, #f778ba);
+  --color-graph-2: light-dark(#1a7f37, #3fb950);
+  --color-graph-3: light-dark(#bc4c00, #f0883e);
+  --color-graph-4: light-dark(#8250df, #a371f7);
+  --color-graph-5: light-dark(#0a7f8a, #39c5cf);
+  --color-graph-6: light-dark(#9a6700, #d29922);
+  --color-graph-7: light-dark(#cf222e, #ff7b72);
 }
 
-/* The dark theme, used when the app is set to dark, or when it follows the system and the system is dark. The theme
-   setting puts data-theme on the root element, except while the system theme is undetected, then the browser decides. */
 :root[data-theme="light"] {
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-
-  --color-bg: var(--tammi-slate);
-  --color-surface: var(--tammi-slate-raised);
-  --color-surface-hover: #35373c;
-  --color-chrome: #17181a;
-  --color-border: #3f4147;
-  --color-text: var(--tammi-white);
-  --color-text-muted: var(--tammi-grey);
-  --color-accent: var(--tammi-mint);
-  --color-accent-text: var(--tammi-slate);
-  --color-focus: #4c9aff;
-  --color-error: #ff7b72;
-  --color-success: #3fb950;
-  --color-info: #4c9aff;
-  --color-info-text: #1f2328;
-  --color-success-bg: #12261e;
-  --color-warning: #d29922;
-  --color-warning-bg: #3b2e0e;
-  --color-warning-border: #9e6a03;
-  --color-warning-text: #1f2328;
-  --color-error-bg: #2d1416;
-  --color-merged: #a371f7;
-  --color-jira: #4c9aff;
-
-  --color-graph-0: #4c9aff;
-  --color-graph-1: #f778ba;
-  --color-graph-2: #3fb950;
-  --color-graph-3: #f0883e;
-  --color-graph-4: #a371f7;
-  --color-graph-5: #39c5cf;
-  --color-graph-6: #d29922;
-  --color-graph-7: #ff7b72;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-
-    --color-bg: var(--tammi-slate);
-    --color-surface: var(--tammi-slate-raised);
-    --color-surface-hover: #35373c;
-    --color-chrome: #17181a;
-    --color-border: #3f4147;
-    --color-text: var(--tammi-white);
-    --color-text-muted: var(--tammi-grey);
-    --color-accent: var(--tammi-mint);
-    --color-accent-text: var(--tammi-slate);
-    --color-focus: #4c9aff;
-    --color-error: #ff7b72;
-    --color-success: #3fb950;
-    --color-info: #4c9aff;
-    --color-info-text: #1f2328;
-    --color-success-bg: #12261e;
-    --color-warning: #d29922;
-    --color-warning-bg: #3b2e0e;
-    --color-warning-border: #9e6a03;
-    --color-warning-text: #1f2328;
-    --color-error-bg: #2d1416;
-    --color-merged: #a371f7;
-    --color-jira: #4c9aff;
-
-    --color-graph-0: #4c9aff;
-    --color-graph-1: #f778ba;
-    --color-graph-2: #3fb950;
-    --color-graph-3: #f0883e;
-    --color-graph-4: #a371f7;
-    --color-graph-5: #39c5cf;
-    --color-graph-6: #d29922;
-    --color-graph-7: #ff7b72;
-  
-  }
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
@@ -208,105 +131,6 @@ a {
 .warning {
   color: var(--color-warning);
 }
-
-/* A message that needs the user's attention, e.g. a change that waits for them to confirm it. */
-.alert {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-}
-
-.alert p {
-  margin: 0;
-}
-
-.alert .settings-list {
-  margin: 0;
-}
-
-.alert-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  font-size: inherit;
-  font-weight: 600;
-}
-
-.alert-warning {
-  border-color: var(--color-warning-border);
-  border-left-width: 4px;
-  background: var(--color-warning-bg);
-}
-
-.alert-warning .alert-title {
-  color: var(--color-warning);
-}
-
-/* Line icons drawn with inline SVG. They take the text colour. */
-.icon {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.button {
-  padding: var(--space-1) var(--space-3);
-  border: none;
-  border-radius: var(--radius);
-  background: var(--color-accent);
-  color: var(--color-accent-text);
-  font: inherit;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.button:hover {
-  filter: brightness(1.1);
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: default;
-  filter: none;
-}
-
-/* A quieter button for secondary actions, e.g. Cancel. */
-.button-secondary {
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.button-secondary:hover:not(:disabled) {
-  background: var(--color-surface-hover);
-  filter: none;
-}
-
-/* A button for actions that delete something. */
-.button-danger {
-  background: var(--color-error);
-}
-
-/* A secondary button for an action that deletes something, with red text. */
-.button-secondary.button-danger-text {
-  color: var(--color-error);
-}
-
-/* A button that confirms a change with side effects, e.g. in a warning alert. */
-.button-warning {
-  background: var(--color-warning);
-  color: var(--color-warning-text);
-}
-
 /* ---------------------------------------------------------------------------------------------------------------
    App shell: app bar with the tab strip, and the page below it
    --------------------------------------------------------------------------------------------------------------- */
@@ -317,6 +141,11 @@ a {
   height: 100%;
 }
 
+/* The main tab bar fills what the app name leaves in the app bar. */
+.app-bar-tabs {
+  flex: 1;
+}
+
 .app-bar {
   display: flex;
   flex: none;
@@ -324,24 +153,6 @@ a {
   height: var(--app-bar-height);
   background: var(--color-chrome);
   border-bottom: 1px solid var(--color-border);
-}
-
-/* The bar under the app bar that offers an update. */
-.update-prompt {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-chrome);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.update-prompt-actions {
-  align-items: center;
-  display: flex;
-  gap: var(--space-2);
-  margin-left: auto;
 }
 
 /* The release offered on the Updates page: its title, notes and the Update button. */
@@ -446,93 +257,6 @@ a {
   margin: 0;
 }
 
-/* ---------------------------------------------------------------------------------------------------------------
-   Tab strip
-   --------------------------------------------------------------------------------------------------------------- */
-
-.tab-strip {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.tab {
-  display: flex;
-  flex: none;
-  align-items: center;
-  padding: 0 var(--space-4);
-  border-right: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.tab:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
-}
-
-.tab.active {
-  background: var(--color-bg);
-  color: var(--color-text);
-  box-shadow: inset 0 2px 0 var(--color-accent);
-}
-
-/* A workspace tab is a link and a close button side by side. The link fills the rest of the tab, padding included,
-   so clicking anywhere on the tab but the close button switches to it. */
-.workspace-tab {
-  padding: 0 var(--space-1) 0 0;
-}
-
-.tab-label {
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-  gap: var(--space-2);
-  max-width: 200px;
-  padding: 0 var(--space-1) 0 var(--space-4);
-  color: inherit;
-  text-decoration: none;
-}
-
-/* Only the text gives way when a tab is too narrow, not its icon. */
-.tab-label > .icon {
-  flex: none;
-}
-
-/* The ellipsis needs an inline box: it isn't drawn on a flex container's own text. */
-.tab-label-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tab-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius);
-  background: none;
-  color: inherit;
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.tab-close:hover {
-  background: var(--color-border);
-}
-
-.home-tab,
-.settings-tab {
-  padding: 0 var(--space-3);
-}
-
 .app-footer {
   display: flex;
   flex: none;
@@ -546,19 +270,8 @@ a {
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  height: 100%;
-  padding: 0 var(--space-4);
-  border: none;
-  background: none;
   color: var(--color-text-muted);
-  font: inherit;
   font-size: 0.75rem;
-  cursor: pointer;
-}
-
-.usage-footer:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
 }
 
 /* The new release notice, at the right end of the footer. */
@@ -575,37 +288,6 @@ a {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.usage-footer-item .usage-bar {
-  width: 80px;
-}
-
-.usage-bar {
-  display: block;
-  height: 4px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: var(--color-border);
-}
-
-.usage-bar-fill {
-  display: block;
-  height: 100%;
-  background: var(--color-accent);
-}
-
-.usage-bar-fill.high {
-  background: var(--color-warning);
-}
-
-.usage-bar-fill.full {
-  background: var(--color-error);
-}
-
-.usage-bar-large {
-  height: 10px;
-  border-radius: 5px;
 }
 
 .usage-limits {
@@ -635,11 +317,6 @@ a {
   margin-bottom: var(--space-4);
 }
 
-.settings-tab {
-  border-right: none;
-  border-left: 1px solid var(--color-border);
-}
-
 /* ---------------------------------------------------------------------------------------------------------------
    Home
    --------------------------------------------------------------------------------------------------------------- */
@@ -654,15 +331,13 @@ a {
   list-style: none;
 }
 
+/* A workspace's card is a Fluent card, which is clickable, so it shows that. */
 .workspace-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
+  cursor: pointer;
 }
 
 .workspace-card:hover {
@@ -704,21 +379,11 @@ a {
   font-weight: 600;
 }
 
-.workspace-problem .icon {
-  flex: none;
-  width: 14px;
-  height: 14px;
-}
-
 .workspace-problem span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.workspace-card-unavailable:hover {
-  border-color: var(--color-border);
 }
 
 /* The tab of a workspace that can't be read: what's wrong with it, and what can be done. */
@@ -764,22 +429,84 @@ a {
   margin: 0;
 }
 
+/* Room between what the warning says and the list of work that would be lost. */
+.delete-workspace p.delete-workspace-lost {
+  margin-bottom: var(--space-3);
+}
+
 /* ---------------------------------------------------------------------------------------------------------------
    Create Workspace flow: numbered steps above the current step, with Back and Next below it
    --------------------------------------------------------------------------------------------------------------- */
 
+/* The wizard is exactly as tall as the window, with its buttons at the bottom of it. Its steps fill what's between its
+   heading and its buttons, and the lists in them scroll, not the page. Each level of the wizard has to be allowed to
+   shrink (min-height) for that to work. */
 .wizard {
   display: flex;
   flex-direction: column;
-  max-width: 900px;
+  height: 100%;
+  min-height: 0;
 }
 
-/* On wide screens the wizard uses the extra room, so the chosen tasks can sit beside the search. */
-@media (min-width: 1200px) {
-  .wizard {
-    max-width: 1400px;
-  }
+.wizard > .fluent-wizard {
+  flex: 1 1 auto;
+  min-height: 0;
+}
 
+/* The step's content fills the wizard's middle row. A narrow window, where the pickers' columns stack, scrolls it. */
+.wizard .fluent-wizard-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+
+.wizard .fluent-wizard-content > * {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wizard-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The pickers fill the step, and their lists the pickers' columns. */
+.task-picker,
+.repository-picker {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.task-picker-search,
+.task-picker-chosen,
+.repository-picker-catalogue,
+.repository-picker-chosen,
+.task-results {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.task-results {
+  flex: 1 1 auto;
+}
+
+.wizard .task-list,
+.wizard .repository-picker .task-list,
+.wizard .chosen-repositories {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+
+/* On wide windows the chosen tasks can sit beside the search. */
+@media (min-width: 900px) {
   .task-picker {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -798,50 +525,6 @@ a {
   }
 }
 
-.wizard-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-6);
-  margin: 0 0 var(--space-6);
-  padding: 0;
-  list-style: none;
-}
-
-.wizard-step {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-text-muted);
-}
-
-.wizard-step.active {
-  color: var(--color-text);
-  font-weight: 600;
-}
-
-.wizard-step-number {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  font-size: var(--font-size-small);
-}
-
-.wizard-step.active .wizard-step-number {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  color: var(--color-accent-text);
-}
-
-.wizard-step.done .wizard-step-number {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
 .wizard-body {
   margin-bottom: var(--space-6);
 }
@@ -851,12 +534,19 @@ a {
   font-family: ui-monospace, monospace;
 }
 
+/* The wizard's buttons, in a bar fixed to the bottom of the window. The page has padding all round, so the bar's margins
+   cancel it on the sides and bottom, to reach the edges, and its own padding gives the buttons the room back. */
 .wizard-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   display: flex;
+  margin: auto calc(-1 * var(--space-6)) calc(-1 * var(--space-6));
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-surface);
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding-top: var(--space-4);
   border-top: 1px solid var(--color-border);
 }
 
@@ -864,28 +554,12 @@ a {
   display: flex;
   gap: var(--space-2);
 }
-
-/* A smaller button inside a list item, e.g. a task's Open and Remove. */
-.button-small {
-  padding: 0 var(--space-2);
-  font-size: var(--font-size-small);
-}
-
 /* Finding and choosing tasks */
 
 .task-search {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.task-search input {
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
 }
 
 .task-query {
@@ -914,35 +588,15 @@ a {
 .task-source-icon .integration-icon-jira {
   color: var(--color-jira);
 }
-
-.task-workspace {
-  flex: none;
-  white-space: nowrap;
-}
-
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  max-height: 360px;
+  gap: 2px;
+  max-height: calc(100vh - 20rem);
   margin: 0;
   overflow-y: auto;
   padding: 0;
   list-style: none;
-}
-
-.task-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-
-.task-item-chosen {
-  border-color: var(--color-accent);
 }
 
 .task-choice {
@@ -953,8 +607,90 @@ a {
   min-width: 0;
 }
 
-label.task-choice {
-  cursor: pointer;
+/* In the pickers, a checkbox fills the card's row and ignores the mouse, as the card around it takes the click. Only
+   its size and mouse are set here, so the box and its label lay out as they do anywhere else. */
+.task-checkbox {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  pointer-events: none;
+}
+
+/* Fluent's fields have vertical margins, which would make a row of the list taller than its text. */
+.task-list fluent-field {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* A danger button: a Fluent button for something destructive, e.g. deleting. Fluent's buttons have no danger look, so the
+   colours they read from the theme are changed for this one. With the primary appearance it's a red button, and with the
+   default one it has red text and outline. */
+.danger-button {
+  /* White on red in both themes: the theme's text on its own primary colour is dark in the dark theme. */
+  --colorNeutralForegroundOnBrand: #ffffff;
+  --colorBrandBackground: var(--colorPaletteRedBackground3);
+  --colorBrandBackgroundHover: color-mix(in srgb, var(--colorPaletteRedBackground3) 85%, black);
+  --colorBrandBackgroundPressed: color-mix(in srgb, var(--colorPaletteRedBackground3) 70%, black);
+  --colorBrandBackgroundSelected: color-mix(in srgb, var(--colorPaletteRedBackground3) 70%, black);
+  --colorNeutralForeground1: var(--colorPaletteRedForeground1);
+  --colorNeutralForeground1Hover: var(--colorPaletteRedForeground1);
+  --colorNeutralForeground1Pressed: var(--colorPaletteRedForeground1);
+  --colorNeutralStroke1: var(--colorPaletteRedBorderActive);
+  --colorNeutralStroke1Hover: var(--colorPaletteRedBorderActive);
+  --colorNeutralStroke1Pressed: var(--colorPaletteRedBorderActive);
+}
+
+/* A menu item for something destructive: its text is red, as a danger button's is. */
+.danger-menu-item {
+  --colorNeutralForeground1: var(--colorPaletteRedForeground1);
+  --colorNeutralForeground1Hover: var(--colorPaletteRedForeground1);
+  --colorNeutralForeground1Pressed: var(--colorPaletteRedForeground1);
+  --colorNeutralForeground2: var(--colorPaletteRedForeground1);
+  color: var(--colorPaletteRedForeground1);
+}
+
+/* A card's remove button is a close icon at its top right, over the card, so the card's content leaves room for it. */
+.task-list .fluent-card,
+.chosen-repositories .fluent-card {
+  position: relative;
+}
+
+.card-remove {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+}
+
+.chosen-task-list .fluent-card,
+.chosen-repository {
+  padding-right: 2.25rem;
+}
+
+/* The rows of both lists, the results and the chosen tasks, are the same height. */
+.task-list .card-list-item-row {
+  min-height: 1.75rem;
+}
+
+/* The rows of the pickers are compact: their cards are only as tall as the checkbox, so most of the card can be clicked
+   to choose it. */
+.task-list .fluent-card {
+  padding: 0.25lh var(--space-3);
+}
+
+/* The spinner beside "Searching…" or a heading, in line with its text. */
+.task-searching {
+  display: inline-block;
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+/* The checkbox's label: the task's or repository's details, which give way to a long title. */
+.task-choice-text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
 }
 
 .task-key {
@@ -985,11 +721,6 @@ label.task-choice {
   margin-bottom: var(--space-6);
 }
 
-.repository-filter {
-  width: 100%;
-  margin-bottom: var(--space-2);
-}
-
 .repository-name {
   flex: none;
   font-weight: 600;
@@ -1009,11 +740,19 @@ label.task-choice {
   list-style: none;
 }
 
+/* The repository step has more above its lists than the task step, so its lists are shorter, so that the lists scroll
+   and the wizard's buttons stay on the page. */
+.repository-picker .task-list,
+.chosen-repositories {
+  max-height: max(12rem, calc(100vh - 32rem));
+  overflow-y: auto;
+}
+
+/* A chosen repository's card: its heading, then its folder, merge target and branch. */
 .chosen-repository {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .chosen-repository-heading {
@@ -1030,23 +769,19 @@ label.task-choice {
 .chosen-repository-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: start;
   gap: var(--space-2) var(--space-4);
-  margin-top: var(--space-2);
 }
 
-.chosen-repository-fields .settings-field {
-  margin: 0;
-}
-
-.chosen-repository-fields .settings-text {
+/* Fluent's fields come with vertical margins and their own width, so the fields in a row would not line up with each
+   other. Each fills its column and sits at the top of it. */
+.chosen-repository-fields fluent-field {
   width: 100%;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
-.workspace-creation progress {
-  width: 100%;
-}
-
-@media (min-width: 1200px) {
+@media (min-width: 900px) {
   .repository-picker {
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
@@ -1090,104 +825,47 @@ label.task-choice {
 }
 
 .side-panel-footer {
+  display: flex;
   flex: none;
+  flex-direction: column;
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--color-border);
 }
 
+/* A button in the footer has no margin of its own, and as the footer is a flex column, no line height below it either, so
+   the room above and below it is the footer's padding. */
+.side-panel-footer > fluent-button {
+  margin: 0;
+}
+
 .side-panel-section {
+  position: relative;
   border-bottom: 1px solid var(--color-border);
 }
 
-.side-panel-section-header {
+/* The title, and what's after it, in a row with their middles lined up, whatever sizes they are. */
+.side-panel-section-heading {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--font-size-small);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
 }
 
-/* Hide the default disclosure triangle (WebKit needs its own selector) and draw a chevron instead. */
-.side-panel-section-header::-webkit-details-marker {
-  display: none;
-}
-
-.side-panel-section-header::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform 0.15s;
-}
-
-.side-panel-section[open] > .side-panel-section-header::before {
-  transform: rotate(45deg);
-}
-
-.side-panel-section-header:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
-}
-
+/* The section's heading, in its accordion header. */
 .side-panel-section-title {
   min-width: 0;
-}
-
-/* A chip for each state agents are in, holding their count, in the state's colours. It follows the Agents section's
-   title. */
-.agent-count {
-  flex: none;
-  min-width: 1.6em;
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  background: var(--agent-state-tone);
-  color: var(--agent-state-tone-text);
   font-size: var(--font-size-small);
-  font-weight: 700;
-  line-height: 1.6;
-  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
+/* The buttons at the end of a section's header sit over it, so they aren't inside the header, which is a button. */
 .side-panel-section-actions {
+  position: absolute;
+  top: 4px;
+  right: var(--space-2);
   display: flex;
-  flex: none;
-  margin-left: auto;
   gap: var(--space-1);
-}
-
-/* A small icon button in a section's header, e.g. to refresh it. */
-.side-panel-section-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-  border: none;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-}
-
-.side-panel-section-action:hover:not(:disabled) {
-  background: var(--color-chrome);
-  color: var(--color-text);
-}
-
-.side-panel-section-action:disabled {
-  cursor: default;
-}
-
-.icon-spin {
-  animation: icon-spin 1s linear infinite;
 }
 
 @keyframes icon-spin {
@@ -1196,13 +874,7 @@ label.task-choice {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .icon-spin {
-    animation: none;
-  }
-}
-
-/* A ring with one coloured arc, turning. Sized like .icon-small (14px) so it can stand in for an icon. */
+/* A ring with one coloured arc, turning. 14px, so it can stand in for an icon. */
 .spinner {
   display: inline-block;
   flex: none;
@@ -1229,6 +901,15 @@ label.task-choice {
   margin: 0;
 }
 
+/* A flush section's rows fill the panel's width, and its text keeps the padding. */
+.side-panel-section-body-flush {
+  padding-inline: 0;
+}
+
+.side-panel-section-body-flush > p {
+  padding-inline: var(--space-4);
+}
+
 /* The side panel's Agents section: a card for each open agent. */
 .agent-list,
 .agent-session-list {
@@ -1238,51 +919,6 @@ label.task-choice {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.agent-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-left: 4px solid var(--agent-state-tone, var(--color-border));
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-
-.agent-card-shown {
-  background: var(--color-surface-hover);
-}
-
-.agent-card-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-/* Looks like other card names (.card-action-name), in one line. */
-.agent-card-name {
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The card's state icon sits at the end of its heading. */
-.agent-card-heading .agent-tab-state {
-  margin-left: auto;
-}
-
-.side-panel-section-body .agent-card-detail,
-.agent-session-time {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-}
-
-.side-panel-section-body .agent-card-detail.warning {
-  color: var(--color-warning);
 }
 
 .agent-card-actions {
@@ -1358,252 +994,13 @@ label.task-choice {
 
 /* The side panel's git status section: a card for each repository, with its submodules nested inside it. The card's
    colour says whether the repository needs attention. */
-.git-status-list,
-.git-status-submodules {
+.git-status-list {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.git-status-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-
-.git-status-card {
-  --git-status-tone: var(--color-text-muted);
-  /* Text on a solid fill of the tone. The surface colour contrasts with every tone in both themes, except warning,
-     which has its own. */
-  --git-status-tone-text: var(--color-surface);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-left: 4px solid var(--git-status-tone);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-
-.git-status-card-warning {
-  --git-status-tone: var(--color-warning);
-  --git-status-tone-text: var(--color-warning-text);
-  border-color: var(--color-warning-border);
-  border-left-color: var(--color-warning);
-  background: var(--color-warning-bg);
-}
-
-.git-status-card-danger {
-  --git-status-tone: var(--color-error);
-  border-color: var(--color-error);
-  background: var(--color-error-bg);
-}
-
-.git-status-submodules {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-1);
-  padding-left: var(--space-3);
-  border-left: 2px solid color-mix(in srgb, var(--git-status-tone) 40%, transparent);
-}
-
-.git-status-heading,
-.git-status-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.git-status-name {
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.git-status-submodule .git-status-name {
-  font-weight: normal;
-}
-
-.git-status-badge {
-  flex: none;
-  margin-left: auto;
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  background: var(--git-status-tone);
-  color: var(--git-status-tone-text);
-  font-size: var(--font-size-small);
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-/* A submodule's badge only appears when it needs attention, so it's always a warning, whatever the card's colour. */
-.git-status-submodule .git-status-badge {
-  background: var(--color-warning);
-  color: var(--color-warning-text);
-}
-
-.git-status-head,
-.git-status-summary,
-.git-status-card .placeholder {
-  font-size: var(--font-size-small);
-}
-
-.git-status-card p {
-  margin: 0;
-}
-
-.git-status-branch {
-  overflow: hidden;
-  color: var(--color-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* A repository's Pull Requests: a filled badge for each, coloured by its state, with its number and an icon for its
-   checks. They're buttons that open the Pull Request, and wrap onto more lines when there are many. */
-.pull-request-badges {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.pull-request-badge {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 3px;
-  padding: 0 var(--space-2) 0 6px;
-  border: none;
-  border-radius: 999px;
-  background: var(--pull-request-tone);
-  /* The surface colour contrasts with the green, purple, red and muted tones in both themes. */
-  color: var(--color-surface);
-  font: inherit;
-  font-size: var(--font-size-small);
-  font-weight: 700;
-  line-height: 1.6;
-  cursor: pointer;
-}
-
-.pull-request-badge:hover {
-  background: color-mix(in srgb, var(--pull-request-tone) 85%, var(--color-text));
-}
-
-.pull-request-badge:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 1px;
-}
-
-.pull-request-badge .icon {
-  stroke-width: 2.5;
-}
-
-.pull-request-draft {
-  --pull-request-tone: var(--color-text-muted);
-}
-
-.pull-request-open {
-  --pull-request-tone: var(--color-focus);
-}
-
-.pull-request-merged {
-  --pull-request-tone: var(--color-success);
-}
-
-.pull-request-closed {
-  --pull-request-tone: var(--color-error);
-}
-
-/* The checks dot: ringed in the surface colour, so it stands out on the badge's fill. */
-.pull-request-checks {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  margin-left: 2px;
-  border-radius: 50%;
-  background: var(--pull-request-checks-tone);
-  box-shadow: 0 0 0 1.5px var(--color-surface);
-}
-
-.pull-request-checks-failed {
-  --pull-request-checks-tone: var(--color-error);
-}
-
-.pull-request-checks-running {
-  --pull-request-checks-tone: var(--color-warning);
-}
-
-.pull-request-checks-passed {
-  --pull-request-checks-tone: var(--color-success);
-}
-
-.pull-request-problem {
-  display: inline-flex;
-  color: var(--color-error);
-}
-
-/* Ahead and behind counts are filled chips, so they stand out on any card colour. Ahead is work to push (warning);
-   behind is commits to pull (informational). */
-.git-status-sync {
-  display: flex;
-  flex: none;
-  gap: var(--space-1);
-  margin-left: auto;
-}
-
-.git-status-sync-inline {
-  margin-left: 0;
-}
-
-.git-status-sync-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 var(--space-2) 0 var(--space-1);
-  border-radius: 999px;
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-.git-status-sync-chip .icon {
-  width: 12px;
-  height: 12px;
-  stroke-width: 3;
-}
-
-.git-status-ahead {
-  background: var(--color-warning);
-  color: var(--color-warning-text);
-}
-
-.git-status-behind {
-  background: var(--color-focus);
-  /* The surface colour contrasts with the blue in both light and dark themes. */
-  color: var(--color-surface);
-}
-
-.git-status-summary {
-  color: var(--git-status-tone);
-}
-
-.git-status-problem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--git-status-tone);
-  font-size: var(--font-size-small);
-}
-
-.git-status-problem .icon {
-  flex: none;
-  width: 14px;
-  height: 14px;
 }
 
 /* The side panel's Tasks section: a card for each task, with its status as a chip coloured by its category (to do,
@@ -1615,70 +1012,6 @@ label.task-choice {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.workspace-task {
-  --workspace-task-tone: var(--color-text-muted);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-left: 4px solid var(--workspace-task-tone);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-
-.workspace-task-in-progress {
-  --workspace-task-tone: var(--color-focus);
-}
-
-.workspace-task-done {
-  --workspace-task-tone: var(--color-success);
-}
-
-.workspace-task-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.workspace-task-key {
-  overflow: hidden;
-  color: var(--color-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  font-size: var(--font-size-small);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.workspace-task-status {
-  flex: none;
-  max-width: 50%;
-  margin-left: auto;
-  overflow: hidden;
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  background: var(--workspace-task-tone);
-  /* The surface colour contrasts with the muted, blue and green tones in both themes. */
-  color: var(--color-surface);
-  font-size: var(--font-size-small);
-  font-weight: 700;
-  line-height: 1.6;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The summary opens the task's page, so it's a button that reads as text. Long summaries wrap. */
-/* Looks like other card names (.card-action-name), wrapping however long it is. */
-.workspace-task-title {
-  overflow-wrap: anywhere;
-}
-
-.workspace-task p {
-  margin: 0;
-  font-size: var(--font-size-small);
 }
 
 .workspace-task-problem {
@@ -1700,11 +1033,7 @@ label.task-choice {
   padding: var(--space-6);
 }
 
-.workspace-main-error {
-  margin: var(--space-2) var(--space-3) 0;
-}
-
-/* A second row of tabs, set apart from the app's tab strip by a small divider. */
+/* A second tab bar, set apart from the app's main one by a small divider. */
 .session-tabs {
   display: flex;
   flex: none;
@@ -1716,149 +1045,16 @@ label.task-choice {
   background: var(--color-surface);
 }
 
-.session-tab-list {
-  display: flex;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.session-tab {
-  display: flex;
-  flex: none;
-  align-items: center;
-  padding-right: var(--space-1);
-  border-right: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-}
-
-.session-tab:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
-}
-
-.session-tab.active {
-  background: var(--color-bg);
-  color: var(--color-text);
-  box-shadow: inset 0 2px 0 var(--color-accent);
-}
-
-/* Like a workspace tab, the label fills the tab, so clicking anywhere on it but the close button shows it. */
-.session-tab-label {
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-  gap: var(--space-2);
-  max-width: 220px;
-  padding: 0 var(--space-1) 0 var(--space-3);
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-/* A tab that shows only an icon: the dashboard, and the tab that opens the New menu. */
-.session-tab-icon {
-  padding: 0 var(--space-3);
-}
-
-/* The dashboard can't be closed, so it has no close button to leave room for. */
-.session-tab-dashboard {
-  padding-right: 0;
-}
-
-/* More specific than .menu-anchor, which comes later and would make it inline-block, so the button fills the tab
-   row's height like the other tabs. */
+/* The New menu after the tabs (NewTabMenu), with its button centred in the bar's height. */
 .session-tabs > .session-tab-new {
   display: flex;
   flex: none;
-}
-
-.session-tab-new > .session-tab-label {
-  color: var(--color-text-muted);
-}
-
-.session-tab-new > .session-tab-label:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
-}
-
-.session-tab-status {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-}
-
-/* An agent's state, as an icon on its tab and on its card in the side panel. Each state sets the tone
-   both use: blue while working, warning (as a repository with changes) when it needs input, grey when idle, red on error. */
-.agent-state-active {
-  --agent-state-tone: var(--color-info);
-  --agent-state-tone-text: var(--color-info-text);
-}
-
-.agent-state-idle {
-  --agent-state-tone: var(--color-text-muted);
-  --agent-state-tone-text: var(--color-surface);
-}
-
-.agent-state-warning {
-  --agent-state-tone: var(--color-warning);
-  --agent-state-tone-text: var(--color-warning-text);
-}
-
-/* Needs input and Error also tint the card like a repository card with changes or a problem (.git-status-card-warning
-   and -danger): border and background. */
-.agent-card.agent-state-warning {
-  border-color: var(--color-warning-border);
-  border-left-color: var(--color-warning);
-  background: var(--color-warning-bg);
-}
-
-.agent-card.agent-state-danger {
-  border-color: var(--color-error);
-  background: var(--color-error-bg);
-}
-
-.agent-state-danger {
-  --agent-state-tone: var(--color-error);
-  --agent-state-tone-text: var(--color-surface);
-}
-
-.agent-state-ended {
-  --agent-state-tone: var(--color-text-muted);
-  --agent-state-tone-text: var(--color-surface);
-}
-
-/* An agent's state icon, in the state's tone: a spinner, an icon or a dot. */
-.agent-tab-state {
-  display: inline-flex;
-  flex: none;
   align-items: center;
-  color: var(--agent-state-tone);
-}
-
-.agent-tab-state .spinner {
-  border-color: color-mix(in srgb, currentColor 30%, transparent);
-  border-top-color: currentColor;
-}
-
-.agent-state-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--agent-state-tone);
-}
-
-/* The shown terminal fills the rest of the main area, with a small gap around it. */
-.workspace-terminal {
-  flex: 1;
-  margin: var(--space-2);
+  padding: 0 var(--space-1);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
-   Settings: a vertical tab list of sections, with the selected section beside it
+   Settings: a navigation menu of sections, with the selected section beside it
    --------------------------------------------------------------------------------------------------------------- */
 
 .settings {
@@ -1867,34 +1063,12 @@ label.task-choice {
 }
 
 .settings-nav {
-  display: flex;
   flex: none;
-  flex-direction: column;
-  gap: 2px;
   width: 200px;
   overflow-y: auto;
   padding: var(--space-4) var(--space-2);
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
-}
-
-.settings-nav-item {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius);
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.settings-nav-item:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
-}
-
-.settings-nav-item.active {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
-  font-weight: 600;
-  box-shadow: inset 2px 0 0 var(--color-accent);
 }
 
 .settings-content {
@@ -1928,6 +1102,26 @@ label.task-choice {
   margin: 0 0 var(--space-6);
 }
 
+/* The parts of one section of a settings form (its title and help, then its fields) stay close together, as the form
+   spaces its sections apart. */
+/* A notice at the top of a settings page, with room below it. It's only in the page while it applies, so the space is too. */
+.settings-banner {
+  margin-bottom: var(--space-4);
+}
+
+.settings-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Fluent's fields come with vertical margins (its .my-3-o class), which double up with the gap above. The selector has
+   to be more specific than that class. */
+.settings-field-group fluent-field {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 .settings-field label {
   display: block;
   margin-bottom: var(--space-2);
@@ -1945,43 +1139,6 @@ label.task-choice {
   display: flex;
   gap: var(--space-2);
   margin-top: var(--space-2);
-}
-
-.settings-field input,
-.settings-field textarea {
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-}
-
-.settings-field select {
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-}
-
-.settings-field input[type="checkbox"] {
-  padding: 0;
-}
-
-/* Several short options under one field heading: a label beside each control. */
-.settings-options {
-  display: grid;
-  grid-template-columns: max-content max-content;
-  gap: var(--space-2) var(--space-3);
-  align-items: center;
-  margin: var(--space-2) 0;
-}
-
-.settings-field .settings-options label {
-  margin: 0;
-  font-weight: normal;
 }
 
 .settings-field-intro {
@@ -2015,32 +1172,6 @@ label.task-choice {
   min-width: 0;
   font-family: ui-monospace, monospace;
 }
-
-.settings-number {
-  width: 6rem;
-}
-
-/* Fields that fill the form's width, e.g. one argument on each line. */
-.settings-arguments,
-.settings-template {
-  display: block;
-  width: 100%;
-  resize: vertical;
-}
-
-.settings-arguments {
-  font-family: ui-monospace, monospace;
-}
-
-.settings-field textarea:disabled,
-.settings-field input:disabled {
-  opacity: 0.6;
-}
-
-.settings-field input.invalid {
-  border-color: var(--color-error);
-}
-
 .settings-field .error,
 .settings-field .warning {
   margin: var(--space-1) 0 0;
@@ -2070,16 +1201,42 @@ label.task-choice {
   list-style: none;
 }
 
-.agent-definition {
-  padding: var(--space-3) var(--space-4) 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
+/* The content of an agent's card on the Agents settings page: its header, fields and previews, spaced evenly. */
+.agent-settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.agent-definition .settings-form {
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
+.agent-settings-card .agent-definition-header,
+.agent-settings-card .agent-status,
+.agent-settings-card .agent-command-preview,
+.agent-settings-card p {
+  margin: 0;
+}
+
+/* A list of cards in a settings page: the width of the rest of the page's content. */
+.settings-card-list {
+  max-width: 720px;
+  margin: 0 0 var(--space-4);
+}
+
+/* A header that toggles its card when clicked. */
+.agent-definition-toggle {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* A predefined prompt's name with its description below it, in a menu item. The menu item keeps its text on one line
+   and cuts it off, so this lets the description wrap, within a width that suits it. */
+.prompt-menu-item {
+  display: flex;
+  flex-direction: column;
+  width: 28rem;
+  max-width: 100%;
+  padding: var(--space-1) 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .agent-definition-header {
@@ -2101,11 +1258,6 @@ label.task-choice {
   overflow-wrap: anywhere;
 }
 
-.agent-definition > .error,
-.agent-definition > p {
-  margin: 0 0 var(--space-3);
-}
-
 .agent-definition-name {
   flex: 1;
   min-width: 0;
@@ -2114,24 +1266,9 @@ label.task-choice {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.settings-text {
-  width: 100%;
-  max-width: 480px;
-}
-
-/* A group of radio buttons, with a label like a field's. */
 .settings-field-label {
   margin-bottom: var(--space-2);
   font-weight: 600;
-}
-
-.settings-field label.settings-choice {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-1);
-  font-weight: normal;
 }
 
 .settings-help.settings-intro {
@@ -2172,184 +1309,9 @@ label.task-choice {
   font-weight: 600;
 }
 
-/* A settings page with a second column, e.g. the Repository Catalogue beside the Repositories settings. The column
-   goes below the settings on smaller screens. */
-.settings-columns {
-  display: flex;
-  flex-direction: column;
-}
-
-@media (min-width: 1200px) {
-  .settings-columns {
-    display: grid;
-    /* The catalogue takes the width its table needs, leaving the settings at least 400px. */
-    grid-template-columns: minmax(400px, 720px) minmax(320px, max-content);
-    gap: var(--space-6);
-    align-items: start;
-  }
-
-  .settings-columns > .settings-aside {
-    max-width: none;
-    min-width: 0;
-    padding-left: var(--space-6);
-    border-left: 1px solid var(--color-border);
-  }
-
-  /* Text wraps to the column's width instead of setting it, so the column is as wide as its table needs. */
-  .settings-columns > .settings-aside p {
-    contain: inline-size;
-  }
-}
-
-/* A table of data, e.g. the Repository Catalogue. It's a grid, so each column can take the width its contents need
-   (or the width the user dragged it to) and shrink with an ellipsis when there isn't room. */
-.data-table {
-  display: grid;
-  grid-template-columns:
-    var(--column-0, minmax(0, max-content))
-    var(--column-1, minmax(0, max-content));
-  width: max-content;
-  max-width: 100%;
-  margin: var(--space-2) 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  border-collapse: separate;
-  background: var(--color-surface);
-  font-size: var(--font-size-small);
-}
-
-.data-table thead,
-.data-table tbody,
-.data-table tr {
-  display: contents;
-}
-
-.data-table th,
-.data-table td {
-  min-width: 0;
-  padding: var(--space-1) var(--space-2);
-  border-bottom: 1px solid var(--color-border);
-  text-align: left;
-}
-
-/* Centred, so monospace paths line up with the names beside them. */
-.data-table td {
-  display: flex;
-  align-items: center;
-}
-
-.data-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.data-table th {
-  position: sticky;
-  top: 0;
-  display: flex;
-  align-items: center;
-  padding: 0;
-  background: var(--color-surface);
-  font-weight: 600;
-}
-
-/* The Repositories page's table: six columns, where an unreadable repository's problem spans the five status ones. */
-.data-table-repositories {
-  grid-template-columns: repeat(6, minmax(0, max-content));
-}
-
-/* A row that opens something when clicked. The rows are display: contents, so the cursor is inherited by the cells. */
-.data-table-row-action {
+/* A row of the Repositories tab's table that opens a repository, as the rows of the grid are clickable. */
+.repository-row-open {
   cursor: pointer;
-}
-
-.data-table-row-action:hover > td {
-  background: var(--color-surface-hover);
-}
-
-.data-table-row-action:focus-visible > td {
-  background: var(--color-surface-hover);
-}
-
-.data-table-repositories {
-  font-size: var(--font-size);
-}
-
-.settings-help.repositories-help {
-  font-size: var(--font-size);
-}
-
-.data-table-repositories th {
-  padding: var(--space-1) var(--space-2);
-}
-
-.data-table-repositories .data-table-span {
-  grid-column: span 5;
-}
-
-.data-table-text {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.data-table-path {
-  font-family: ui-monospace, monospace;
-}
-
-.data-table-sort {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: var(--space-1);
-  min-width: 0;
-  padding: var(--space-1) var(--space-2);
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.data-table-sort:hover {
-  color: var(--color-accent);
-}
-
-.data-table-sort-icon {
-  flex: none;
-  font-size: 0.7em;
-}
-
-/* The drag handle on a header's right edge. */
-.data-table-resize {
-  flex: none;
-  align-self: stretch;
-  width: 8px;
-  margin-right: -4px;
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.data-table-resize::after {
-  display: block;
-  width: 1px;
-  height: 100%;
-  margin: 0 auto;
-  background: var(--color-border);
-  content: "";
-}
-
-.data-table-resize:hover::after,
-.data-table-resize:focus-visible::after,
-.data-table-resizing .data-table-resize::after {
-  width: 3px;
-  background: var(--color-accent);
-}
-
-.data-table-resizing {
-  cursor: col-resize;
-  user-select: none;
 }
 
 /* Lists of folders in a setting, each with its status and actions. */
@@ -2360,16 +1322,6 @@ label.task-choice {
   margin: var(--space-2) 0;
   padding: 0;
   list-style: none;
-}
-
-.settings-list-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
 }
 
 .settings-list-name {
@@ -2388,41 +1340,6 @@ label.task-choice {
   color: var(--color-text-muted);
   white-space: nowrap;
 }
-
-.settings-details {
-  margin-top: var(--space-2);
-}
-
-.settings-details summary {
-  cursor: pointer;
-}
-
-.badge {
-  padding: 0 var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  font-size: var(--font-size-small);
-  color: var(--color-text-muted);
-}
-
-/* Status badges, e.g. whether a Supported Agent is ready. They come after .badge so they override its colours. */
-.badge-success,
-.badge-error {
-  font-weight: 600;
-}
-
-.badge-success {
-  border-color: var(--color-success);
-  background: var(--color-success-bg);
-  color: var(--color-success);
-}
-
-.badge-error {
-  border-color: var(--color-error);
-  background: var(--color-error-bg);
-  color: var(--color-error);
-}
-
 /* Integrations section of Settings */
 
 .integration-list {
@@ -2435,11 +1352,18 @@ label.task-choice {
   list-style: none;
 }
 
-.integration-item {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
+/* An integration's card: its header, status and messages, spaced evenly. */
+.integration-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* An item of the Add integration menu: a service's logo and name. */
+.integration-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .integration-header {
@@ -2473,173 +1397,9 @@ label.task-choice {
 
 /* JIRA's logo is shown in its brand blue, except on buttons, where it takes the button's text colour. */
 .integration-heading .integration-icon-jira,
-.menu-item .integration-icon-jira {
+.integration-menu-item .integration-icon-jira {
   color: var(--color-jira);
 }
-
-.button-icon {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-/* Drop-down menus: a list of actions shown below the button that opens them. */
-.menu-anchor {
-  position: relative;
-  display: inline-block;
-}
-
-/* Catches clicks outside an open menu, to close it. */
-.menu-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-}
-
-.menu {
-  position: absolute;
-  top: calc(100% + var(--space-1));
-  left: 0;
-  z-index: 11;
-  min-width: 200px;
-  margin: 0;
-  padding: var(--space-1);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
-  list-style: none;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: none;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.menu-item:hover,
-.menu-item:focus-visible {
-  background: var(--color-surface-hover);
-}
-
-/* An agent's logo, e.g. Claude's on the New menu. It's shown in its brand colour. */
-.agent-icon {
-  flex: none;
-  width: 18px;
-  height: 18px;
-}
-
-.agent-icon-claude {
-  fill: var(--color-claude);
-}
-
-/* An icon at the start of a menu item, e.g. what the New menu's items start. It keeps its size beside long names. */
-.menu-item > .icon {
-  flex: none;
-  color: var(--color-text-muted);
-}
-
-.menu-item:hover > .icon,
-.menu-item:focus-visible > .icon {
-  color: var(--color-text);
-}
-
-/* A menu item that's one of several choices, with a tick by the one in use and a line describing it. */
-.menu-item-choice {
-  align-items: flex-start;
-  min-width: 320px;
-}
-
-.menu-item-choice > .icon {
-  margin-top: 3px;
-}
-
-.menu-item-choice > .icon-hidden {
-  visibility: hidden;
-}
-
-.menu-item-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.menu-item-note,
-.menu-item-description {
-  color: var(--color-text-muted);
-}
-
-.menu-item-description {
-  font-size: 0.9em;
-}
-
-/* Razor drops the space before it, so it's spaced with a margin instead. */
-.menu-item-note {
-  margin-left: var(--space-2);
-}
-
-/* A menu item that deletes something. */
-.menu-item-danger {
-  color: var(--color-error);
-}
-
-/* A menu anchor that fills its container, with its button and menu as wide as it. */
-.menu-anchor-wide {
-  display: block;
-}
-
-.menu-anchor-wide > .button {
-  justify-content: space-between;
-  width: 100%;
-}
-
-.menu-anchor-wide > .menu {
-  right: 0;
-  min-width: 0;
-}
-
-/* A line between groups of menu items. */
-.menu-separator {
-  height: 1px;
-  margin: var(--space-1) 0;
-  background: var(--color-border);
-}
-
-/* A menu item that opens a submenu beside it. */
-.menu-submenu-anchor {
-  position: relative;
-}
-
-.menu-submenu {
-  top: calc(-1 * var(--space-1) - 1px);
-  left: calc(100% + var(--space-1));
-}
-
-/* Pushes an icon, e.g. a submenu's arrow, to the end of a menu item. */
-.menu-item-end {
-  margin-left: auto;
-}
-
-/* A menu that opens above its button, e.g. at the bottom of the window. */
-.menu-up {
-  top: auto;
-  bottom: calc(100% + var(--space-1));
-}
-
-.icon-small {
-  width: 14px;
-  height: 14px;
-}
-
 .integration-title {
   display: flex;
   flex-direction: column;
@@ -2661,58 +1421,21 @@ label.task-choice {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-2);
 }
 
 .integration-message {
   overflow-wrap: anywhere;
 }
 
-/* The authenticate and remove forms, shown inside an integration's entry. */
-.integration-panel {
-  margin: var(--space-3) 0 0;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
-}
-
-.integration-panel p {
-  margin-top: 0;
-}
-
-.integration-panel.settings-form {
-  gap: var(--space-4);
-}
-
 .integration-add {
-  margin-top: var(--space-4);
+  margin-top: var(--space-3);
 }
 
-.status-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-text-muted);
-}
-
-.status-ok {
-  background: var(--color-success);
-}
-
-.status-warning {
-  background: var(--color-warning);
-}
-
-.status-error {
-  background: var(--color-error);
-}
-
-/* SSH keys in the Git settings: each key's details, actions and services stacked in its list item. */
-.settings-list-item.ssh-key {
+/* SSH keys in the Git settings: each key's details, actions and services stacked in its card. */
+.ssh-key {
+  display: flex;
   flex-direction: column;
-  align-items: stretch;
   gap: var(--space-2);
-  padding: var(--space-2);
 }
 
 .ssh-key-summary {
@@ -2727,8 +1450,7 @@ label.task-choice {
   font-size: var(--font-size-small);
 }
 
-.ssh-key p,
-.ssh-key .alert {
+.ssh-key p {
   margin: 0;
 }
 
@@ -2750,10 +1472,9 @@ label.task-choice {
 }
 
 .third-party-item {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .third-party-header {
@@ -2766,30 +1487,28 @@ label.task-choice {
   font-weight: 600;
 }
 
+/* The website button at the card's top right. */
+.third-party-website {
+  margin-left: auto;
+}
+
 .third-party-links {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-4);
-  margin-top: var(--space-2);
 }
 
+/* A license's text, in an accordion, on a darker background than the card. */
 .license-text {
-  margin-top: var(--space-2);
-}
-
-.license-text summary {
-  color: var(--color-accent);
-  cursor: pointer;
-}
-
-.license-text pre {
+  box-sizing: border-box;
+  width: 100%;
   max-height: 320px;
   overflow: auto;
-  margin: var(--space-2) 0 0;
+  margin: 0;
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  background: var(--color-bg);
+  background: var(--color-chrome);
   font-size: var(--font-size-small);
   white-space: pre-wrap;
 }
@@ -2800,8 +1519,7 @@ label.task-choice {
 
 /* Blazor sets display:block on this element when an unhandled error occurs, so it is the full-window backdrop and the
    dialog is positioned inside it. */
-#blazor-error-ui,
-.error-backdrop {
+#blazor-error-ui {
   display: none;
   position: fixed;
   inset: 0;
@@ -2809,13 +1527,7 @@ label.task-choice {
   z-index: 10000;
 }
 
-/* The same backdrop for a dialog the app shows itself, e.g. when git is missing. */
-.error-backdrop {
-  display: block;
-}
-
-#blazor-error-ui .error-dialog,
-.error-backdrop .error-dialog {
+#blazor-error-ui .error-dialog {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -2831,20 +1543,17 @@ label.task-choice {
   text-align: center;
 }
 
-#blazor-error-ui h2,
-.error-backdrop h2 {
+#blazor-error-ui h2 {
   margin: 0 0 var(--space-2);
   font-size: 1.25rem;
 }
 
-#blazor-error-ui p,
-.error-backdrop p {
+#blazor-error-ui p {
   margin: 0 0 var(--space-4);
   color: var(--color-text-muted);
 }
 
-#blazor-error-ui .reload,
-.error-backdrop .reload {
+#blazor-error-ui .reload {
   padding: var(--space-2) var(--space-6);
   border: 0;
   border-radius: var(--radius);
@@ -2854,23 +1563,9 @@ label.task-choice {
   cursor: pointer;
 }
 
-#blazor-error-ui .reload:focus-visible,
-.error-backdrop .reload:focus-visible {
+#blazor-error-ui .reload:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
-}
-
-/* ---------------------------------------------------------------------------------------------------------------
-   Terminal
-   --------------------------------------------------------------------------------------------------------------- */
-
-/* The terminal fills this element. Its colours come from the xterm.js theme, which is dark in both app themes. */
-.terminal {
-  min-height: 0;
-  padding: var(--space-1);
-  overflow: hidden;
-  border-radius: var(--radius);
-  background-color: #1e1e1e;
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
@@ -2898,118 +1593,6 @@ label.task-choice {
   display: none;
 }
 
-/* The view control is at the start, and the buttons are centred, in the middle column of three. */
-.git-graph-toolbar {
-  display: grid;
-  flex: none;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 0 var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.git-graph-toolbar > .segmented {
-  justify-self: start;
-}
-
-.git-graph-toolbar .segmented-option {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-2) var(--space-3);
-}
-
-/* The buttons fill the toolbar's height, so the toolbar's own height comes from them. */
-.git-graph-actions {
-  display: flex;
-  grid-column: 2;
-  align-items: stretch;
-  align-self: stretch;
-  gap: var(--space-1);
-}
-
-.git-graph-actions > .git-graph-sync {
-  align-items: stretch;
-}
-
-.git-graph-divider {
-  align-self: stretch;
-  width: 1px;
-  background: var(--color-border);
-}
-
-/* A button with its icon above a smaller label, without a background or border until it's hovered. */
-.git-graph-action {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  min-width: 4rem;
-  padding: var(--space-3);
-  border: none;
-  border-radius: 0;
-  background: none;
-}
-
-.git-graph-action .icon,
-.git-graph-action-spinner {
-  width: 20px;
-  height: 20px;
-}
-
-.git-graph-action-label {
-  font-size: var(--font-size-small);
-  line-height: 1;
-}
-
-.git-graph-sync {
-  display: inline-flex;
-  gap: var(--space-1);
-}
-
-/* Less space above than below, so the message sits close to the toolbar and clear of the graph. */
-.git-graph-drop-confirm {
-  flex: none;
-  margin: var(--space-2) var(--space-3);
-}
-
-.git-graph-sync-error {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  margin: var(--space-1) 0 0;
-  padding: 0 var(--space-3) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.git-graph-sync-error-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.git-graph-sync-error-body p {
-  margin: 0;
-}
-
-.git-graph-sync-error-body p.git-graph-sync-error-actions {
-  margin-top: var(--space-3);
-}
-
-/* Just the close icon, with no button border or background. */
-.button.git-graph-sync-error-close {
-  flex: none;
-  padding: var(--space-1);
-  border: none;
-  background: none;
-  color: var(--color-text);
-}
-
-.button.git-graph-sync-error-close:hover:not(:disabled) {
-  background: none;
-  opacity: 0.7;
-}
-
 .git-graph-sync-details {
   margin: var(--space-1) 0 0;
   overflow-x: auto;
@@ -3021,155 +1604,10 @@ label.task-choice {
   margin: var(--space-2) var(--space-3) 0;
 }
 
-/* Two buttons joined into one control, the pressed one highlighted. */
-.segmented {
-  display: inline-flex;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.segmented-option {
-  padding: var(--space-1) var(--space-3);
-  border: none;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  cursor: pointer;
-}
-
-.segmented-option + .segmented-option {
-  border-left: 1px solid var(--color-border);
-}
-
-.segmented-option:hover {
-  background: var(--color-surface-hover);
-}
-
-.segmented-option[aria-pressed="true"] {
-  background: var(--color-accent);
-  color: var(--color-accent-text);
-}
-
-.segmented-option:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: -2px;
-}
-
 .git-graph-body {
   display: flex;
   flex: 1;
   min-height: 0;
-}
-
-/* The header and every row share the columns shown (--git-graph-columns), set by GitGraphView. The user's widths
-   (--git-graph-col-*) are set by dragging the header's handles (GitGraphView.razor.js). Until then, the graph fits its
-   lanes (wide enough for its heading) and the others have their defaults. Description takes the space left, down to
-   its minimum, after which the list scrolls sideways. */
-.git-graph-list {
-  --git-graph-graph-column: var(--git-graph-col-graph, max(var(--git-graph-width), 48px));
-
-  flex: 1;
-  min-width: 0;
-  overflow: auto;
-  background: var(--color-surface);
-}
-
-.git-graph-header {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: var(--git-graph-columns);
-  align-items: center;
-  gap: var(--space-3);
-  min-width: var(--git-graph-columns-min-width);
-  height: 28px;
-  padding: 0 var(--space-3) 0 var(--space-2);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* The heading itself doesn't clip, so its handle can reach into the gap. Its label does. */
-.git-graph-heading {
-  position: relative;
-  min-width: 0;
-}
-
-.git-graph-heading-label {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* A column's resize handle: a thin line in the gap between two headings, with a wider area to grab. */
-.git-graph-column-handle {
-  position: absolute;
-  top: -6px;
-  bottom: -6px;
-  width: 7px;
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.git-graph-column-handle::before {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 3px;
-  width: 1px;
-  background: var(--color-border);
-  content: "";
-}
-
-.git-graph-column-handle-end {
-  right: calc(var(--space-3) / -2 - 3px);
-}
-
-.git-graph-column-handle-start {
-  left: calc(var(--space-3) / -2 - 4px);
-}
-
-.git-graph-column-handle:hover::before,
-.git-graph-column-handle.dragging::before,
-.git-graph-column-handle:focus-visible::before {
-  left: 2px;
-  width: 3px;
-  background: var(--color-focus);
-}
-
-.git-graph-column-handle:focus-visible {
-  outline: none;
-}
-
-.git-graph-list:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: -2px;
-}
-
-/* Every row is exactly as high as GitGraphRowView.RowHeight, so the list knows where each one is. */
-.git-graph-row {
-  display: grid;
-  grid-template-columns: var(--git-graph-columns);
-  align-items: center;
-  gap: var(--space-3);
-  min-width: var(--git-graph-columns-min-width);
-  height: 26px;
-  padding: 0 var(--space-3) 0 var(--space-2);
-  cursor: default;
-  white-space: nowrap;
-}
-
-.git-graph-row:hover {
-  background: var(--color-surface-hover);
-}
-
-.git-graph-row.selected {
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
 }
 
 /* A graph wider than its column is cut off at the column's edge. */
@@ -3192,97 +1630,7 @@ label.task-choice {
   stroke-width: 2.5;
 }
 
-.git-graph-summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.git-graph-subject,
-.git-graph-author,
-.git-graph-date,
-.git-graph-row .git-graph-sha {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.git-graph-author,
-.git-graph-date {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-}
-
-.git-graph-sha {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: var(--font-size-small);
-}
-
-.git-graph-row .git-graph-sha {
-  color: var(--color-text-muted);
-}
-
-/* Branch and tag labels. */
-.git-graph-ref {
-  flex: none;
-  max-width: 14rem;
-  overflow: hidden;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--git-graph-ref-colour, var(--color-border));
-  border-radius: 999px;
-  color: var(--git-graph-ref-colour, var(--color-text));
-  font-size: var(--font-size-small);
-  line-height: 18px;
-  text-overflow: ellipsis;
-}
-
-.git-graph-ref {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.git-graph-ref-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* A tag's icon, before its name. */
-.git-graph-ref-icon {
-  flex: none;
-  width: 11px;
-  height: 11px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.5;
-  stroke-linejoin: round;
-}
-
-.git-graph-ref-local {
-  --git-graph-ref-colour: var(--color-graph-0);
-}
-
-.git-graph-ref-remote {
-  --git-graph-ref-colour: var(--color-text-muted);
-}
-
-.git-graph-ref-tag {
-  --git-graph-ref-colour: var(--color-warning);
-}
-
-.git-graph-ref-head,
-.git-graph-ref-detached {
-  background: var(--git-graph-ref-colour, var(--color-accent));
-  color: var(--color-accent-text);
-  font-weight: 600;
-}
-
-.git-graph-ref-detached {
-  --git-graph-ref-colour: var(--color-accent);
-}
-
-/* The details panel's width is set by dragging the splitter (GitGraphView.razor.js). Without it, the panel keeps to its
+/* The details panel's width is set by dragging the Splitter (GitGraphView.razor.js). Without it, the panel keeps to its
    default, and leaves the main column room. */
 .git-graph-details {
   display: flex;
@@ -3293,249 +1641,8 @@ label.task-choice {
   overflow: hidden;
 }
 
-/* A thin bar between the list and the details panel, with a wider area to grab. */
-.git-graph-splitter {
-  position: relative;
-  flex: none;
-  width: 1px;
-  background: var(--color-border);
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.git-graph-splitter::before {
-  position: absolute;
-  inset: 0 -3px;
-  content: "";
-}
-
-.git-graph-splitter:hover,
-.git-graph-splitter.dragging,
-.git-graph-splitter:focus-visible {
-  background: var(--color-focus);
-  outline: none;
-  box-shadow: 0 0 0 1px var(--color-focus);
-}
-
-/* The selected commit's details (GitCommitDetails): a bar with its short id, its subject, its body (whose height
-   --git-commit-body-height is set by dragging the split below it), and the rest, which scrolls. */
-.git-commit-details {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.git-commit-details-empty {
-  margin: var(--space-4);
-}
-
-.git-commit-bar {
-  position: relative;
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  height: 36px;
-  padding: 0 var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-chrome);
-}
-
-.git-commit-hash {
-  padding: 2px var(--space-2);
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--color-text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: var(--font-size);
-  cursor: copy;
-}
-
-.git-commit-hash:hover,
-.git-commit-hash:focus-visible {
-  border-color: var(--color-border);
-  background: var(--color-surface);
-}
-
-/* Beside the id, so the id stays in the middle. */
-.git-commit-copied {
-  position: absolute;
-  left: calc(50% + 4.5em);
-  color: var(--color-success);
-  font-size: var(--font-size-small);
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.git-commit-copied.shown {
-  opacity: 1;
-}
-
-/* As the message writes it: no change of case. */
-.git-commit-subject {
-  flex: none;
-  margin: 0;
-  padding: var(--space-3) var(--space-4) var(--space-2);
-  font-size: 1.3em;
-  font-weight: 600;
-  line-height: 1.3;
-  text-transform: none;
-  overflow-wrap: anywhere;
-}
-
-.git-commit-body {
-  flex: none;
-  height: var(--git-commit-body-height, calc(8 * 1.45em + 2 * var(--space-2)));
-  overflow: auto;
-  padding: var(--space-2) var(--space-4);
-  line-height: 1.45;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.git-commit-body:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: -2px;
-}
-
-/* A thin bar below the body, with a taller area to grab. */
-.git-commit-body-splitter {
-  position: relative;
-  flex: none;
-  height: 1px;
-  background: var(--color-border);
-  cursor: row-resize;
-  touch-action: none;
-}
-
-.git-commit-body-splitter::before {
-  position: absolute;
-  inset: -3px 0;
-  content: "";
-}
-
-.git-commit-body-splitter:hover,
-.git-commit-body-splitter.dragging,
-.git-commit-body-splitter:focus-visible {
-  background: var(--color-focus);
-  outline: none;
-  box-shadow: 0 0 0 1px var(--color-focus);
-}
-
-/* The sections have the side padding, so the divider between them runs the panel's full width. */
-.git-commit-lower {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: var(--space-2) 0 var(--space-4);
-}
-
-.git-commit-section {
-  padding: 0 var(--space-4);
-}
-
-.git-commit-stash-bar {
-  display: flex;
-  flex: none;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-  padding: 0 var(--space-4) var(--space-3);
-}
-
-.git-commit-stash-date {
-  color: var(--color-text-muted);
-}
-
-/* The stash's buttons, right-aligned under the summary, also when they wrap onto a row of their own. */
-.git-commit-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  margin-left: auto;
-}
-
-.git-commit-actions-problem {
-  flex: none;
-  margin: 0;
-  padding: 0 var(--space-4) var(--space-3);
-}
-
-/* A divider between the sections. */
-.git-commit-section + .git-commit-section {
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
-}
-
-.git-commit-heading {
-  margin: 0 0 var(--space-2);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.git-commit-heading:has(.git-commit-collapse) {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-/* The heading of a section that collapses: its chevron and name, which open and close it. */
-.git-commit-collapse {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-1);
-  margin-left: -4px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  cursor: pointer;
-}
-
-.git-commit-collapse:hover {
-  color: var(--color-text);
-}
-
-/* What a collapsed section holds, beside its heading. */
-.git-commit-heading-summary {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text);
-  font-size: var(--font-size);
-  font-weight: 600;
-  letter-spacing: normal;
-  text-overflow: ellipsis;
-  text-transform: none;
-  white-space: nowrap;
-}
-
-.git-commit-people[hidden] {
-  display: none;
-}
-
-.git-commit-people {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* The Workspace View's Tools section: a button for each tool that opens the Workspace Folder. */
-.tool-list {
+/* A side panel section's list of rows (SidePanelListItem). */
+.side-panel-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -3544,46 +1651,13 @@ label.task-choice {
   list-style: none;
 }
 
-.git-commit-person {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 var(--space-2);
-  overflow-wrap: anywhere;
-}
-
-.git-commit-person-name {
-  font-weight: 600;
-}
-
-.git-commit-person-email,
-.git-commit-person-role {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-}
-
-.git-commit-person-role {
-  flex-basis: 100%;
-}
-
-.git-commit-files-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.git-commit-files-heading .git-commit-heading {
-  margin: 0;
-}
-
 /* How many files changed in each way: a coloured icon and a number for each. In a folder's row, they follow its name. */
 .git-commit-counts {
   display: inline-flex;
   flex: none;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--font-size-small);
+  font-size: var(--fontSizeBase200);
   font-weight: normal;
 }
 
@@ -3599,25 +1673,13 @@ label.task-choice {
 }
 
 .git-commit-count-icon {
+  display: inline-flex;
   flex: none;
+}
+
+.git-commit-count-icon svg {
   width: 12px;
   height: 12px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.25;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.git-commit-file-view {
-  flex: none;
-  margin-left: auto;
-}
-
-.segmented-small .segmented-option {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px var(--space-2);
 }
 
 .git-commit-files,
@@ -3640,8 +1702,8 @@ label.task-choice {
 .git-commit-file-kind {
   flex: none;
   width: 1.2em;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-weight: 600;
+  font-family: var(--fontFamilyMonospace);
+  font-weight: var(--fontWeightSemibold);
   text-align: center;
 }
 
@@ -3660,8 +1722,8 @@ label.task-choice {
   min-width: 0;
   overflow: hidden;
   padding-left: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
+  color: var(--colorNeutralForeground3);
+  font-size: var(--fontSizeBase200);
   text-overflow: ellipsis;
 }
 
@@ -3669,28 +1731,29 @@ label.task-choice {
   width: 100%;
   border: none;
   background: none;
-  color: var(--color-text);
+  color: var(--colorNeutralForeground1);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
 .git-commit-folder:hover {
-  background: var(--color-surface-hover);
+  background: var(--colorSubtleBackgroundHover);
 }
 
 .git-commit-folder-name {
   min-width: 0;
   overflow: hidden;
-  font-weight: 600;
+  font-weight: var(--fontWeightSemibold);
   text-overflow: ellipsis;
 }
 
 .git-commit-folder-chevron {
+  display: inline-flex;
   flex: none;
   align-self: center;
   width: 1.2em;
-  color: var(--color-text-muted);
+  color: var(--colorNeutralForeground3);
   transition: transform 0.1s;
 }
 
@@ -3699,194 +1762,31 @@ label.task-choice {
 }
 
 .git-commit-folder-icon {
+  display: inline-flex;
   flex: none;
   align-self: center;
-  color: var(--color-text-muted);
+  color: var(--colorNeutralForeground3);
 }
 
 .git-graph-file-added {
-  color: var(--color-success);
+  color: var(--colorStatusSuccessForeground1);
 }
 
 .git-graph-file-deleted,
 .git-graph-file-conflicted {
-  color: var(--color-error);
+  color: var(--colorStatusDangerForeground1);
 }
 
 .git-graph-file-modified,
 .git-graph-file-renamed,
 .git-graph-file-typechanged {
-  color: var(--color-warning);
+  color: var(--colorStatusWarningForeground1);
 }
-
-/* A side panel card that does something when it's clicked anywhere: a repository's opens its git graph, an agent's
-   shows its tab and a task's opens it in the browser. Its border takes the card's tone (--card-action-tone) on hover.
-   Its name is a button for the keyboard, whose click reaches the card. */
-.card-action {
-  cursor: pointer;
-}
-
-.card-action:hover {
-  border-color: var(--card-action-tone, var(--color-border));
-}
-
-.git-status-card.card-action {
-  --card-action-tone: var(--git-status-tone);
-}
-
-.agent-card.card-action {
-  --card-action-tone: var(--agent-state-tone, var(--color-text-muted));
-}
-
-.workspace-task.card-action {
-  --card-action-tone: var(--workspace-task-tone);
-}
-
-/* A submodule in a repository's card opens its own git graph. Its hover is drawn inside its parent's, so the part that
-   opens is clear. */
-.git-status-submodule.card-action {
-  margin: 0 calc(-1 * var(--space-1));
-  padding: 0 var(--space-1);
-  border-radius: var(--radius);
-}
-
-.git-status-submodule.card-action:hover {
-  background: var(--color-surface-hover);
-}
-
-.card-action-name {
-  padding: 0;
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.card-action-name:hover {
-  color: var(--color-focus);
-  text-decoration: underline;
-}
-
-/* The header's right-click menu, opened where the pointer is. */
-.git-graph-view-menu {
-  position: fixed;
-  min-width: 160px;
-}
-
-.tool-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  min-width: 0;
-  padding: var(--space-1) var(--space-2);
-  border: none;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-/* A tool that was just launched: its background pulses once, so the click is seen while the tool starts. */
-.tool-item-pulse {
-  animation: tool-item-pulse 0.6s ease-out;
-}
-
-.tool-item-pulse-again {
-  animation: tool-item-pulse-again 0.6s ease-out;
-}
-
-@keyframes tool-item-pulse {
-  from {
-    background: color-mix(in srgb, var(--color-accent) 30%, transparent);
-  }
-}
-
-@keyframes tool-item-pulse-again {
-  from {
-    background: color-mix(in srgb, var(--color-accent) 30%, transparent);
-  }
-}
-
-.tool-item .icon {
-  flex: none;
-}
-
-.tool-item:hover,
-.tool-item:focus-visible {
-  background: var(--color-surface-hover);
-}
-
-/* An on/off switch (see Switch.razor): a track with a knob that slides to the end and takes the accent colour when
-   it's on. */
-.switch {
-  position: relative;
-  flex: none;
-  width: 32px;
-  height: 18px;
-  margin: 0;
-  border: 1px solid var(--color-border);
-  border-radius: 9px;
-  background: var(--color-chrome);
-  appearance: none;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-
-.switch::before {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--color-text-muted);
-  content: "";
-  transition: transform 0.15s, background-color 0.15s;
-}
-
-.switch:checked {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-}
-
-.switch:checked::before {
-  background: var(--color-accent-text);
-  transform: translateX(14px);
-}
-
-.switch:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-/* A disabled tool's card on the Tools settings page: only its header, with the switch to enable it. */
-.agent-definition-collapsed {
-  padding-bottom: var(--space-3);
-}
-
-.agent-definition-collapsed .agent-definition-header {
-  margin-bottom: 0;
-}
-
-/* An enabled custom tool whose settings are hidden: only its header. */
-.agent-definition-folded {
-  padding-bottom: var(--space-3);
-}
-
-.agent-definition-folded .agent-definition-header {
-  margin-bottom: 0;
-}
-
 .agent-definition-collapsed .agent-definition-name {
   color: var(--color-text-muted);
 }
 
-/* A tool's application or custom icon, the size of the line icons it stands in for. */
+/* A tool's application or custom icon, the size of the Fluent icons it stands in for. */
 .tool-image {
   flex: none;
   width: 18px;
@@ -3894,20 +1794,10 @@ label.task-choice {
   object-fit: contain;
 }
 
-.tool-image.icon-small {
-  width: 14px;
-  height: 14px;
-}
-
-/* The placeholders a custom tool can use, on the Tools settings page. */
+.tool-image/* The placeholders a custom tool can use, on the Tools settings page. */
 .tool-placeholders {
   margin: 0 0 var(--space-2);
   font-size: var(--font-size-small);
-}
-
-/* A text field that takes the whole width of its card, e.g. a custom tool's name and executable. */
-.settings-field input.settings-input-wide {
-  width: 100%;
 }
 
 /* The button that chooses a tool's custom icon image, below the icon select. */
@@ -3922,34 +1812,6 @@ label.task-choice {
   font-size: var(--font-size-small);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* A menu opened by a right-click (see ContextMenu.razor), at the pointer rather than below a button. */
-.menu-context {
-  position: fixed;
-}
-
-/* Items stay on one line, so a menu opened near the window's edge grows rather than wrapping its text. */
-.menu-context .menu-item {
-  white-space: nowrap;
-}
-
-.menu-context:focus {
-  outline: none;
-}
-
-/* A menu item that can't be chosen, e.g. "No tools". */
-.menu-item:disabled {
-  color: var(--color-text-muted);
-  cursor: default;
-}
-
-.menu-item:disabled:hover {
-  background: none;
-}
-
-.git-graph-menu-check.hidden {
-  visibility: hidden;
 }
 
 /* Working changes row: a dashed line from the dot down to HEAD. */
@@ -3988,285 +1850,21 @@ label.task-choice {
   color: var(--color-text-muted);
 }
 
+/* In a tree, a file's status sits under its folder's icon, which comes after the folder's chevron. */
+.git-commit-tree .git-commit-file-openable {
+  padding-left: calc(var(--git-commit-tree-depth, 0) * 16px + 1.2em + var(--space-2));
+}
+
 .git-commit-file-openable {
   cursor: pointer;
 }
 
 .git-commit-file-openable:hover {
-  background: var(--color-surface-hover);
+  background: var(--colorSubtleBackgroundHover);
 }
 
 .git-commit-file-openable.selected {
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-}
-
-/* The commit panel for the working changes. */
-.git-working {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-height: 0;
-  padding: var(--space-3);
-  overflow: auto;
-}
-
-/* The unstaged and staged files share the space above the message evenly, each scrolling on its own. */
-.git-working-section {
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  min-height: 5em;
-}
-
-.git-working-titlebar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.git-working-title {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.git-working-files ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.git-working-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.git-working-heading h3 {
-  flex: 1;
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.git-working-count {
-  color: var(--color-text-muted);
-  font-weight: 400;
-}
-
-.git-working-files {
-  flex: 1;
-  min-height: 0;
-  margin: var(--space-1) 0 0;
-  padding: 0;
-  overflow: auto;
-  list-style: none;
-  border: 1px solid var(--color-border);
-}
-
-.git-working-file {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  padding: 1px var(--space-2) 1px calc(var(--space-2) + var(--git-commit-tree-depth, 0) * 16px);
-  white-space: nowrap;
-  cursor: default;
-}
-
-.git-working-file:hover {
-  background: var(--color-surface-hover);
-}
-
-.git-working-file.selected {
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-}
-
-.git-working-file .git-commit-file-folder {
-  flex: 1;
-}
-
-/* Stays at the bottom of the panel. */
-.git-working-message {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* A thin bar above the message, with a taller area to grab. */
-.git-working-splitter {
-  position: relative;
-  flex: none;
-  height: 1px;
-  background: var(--color-border);
-  cursor: row-resize;
-  touch-action: none;
-}
-
-.git-working-splitter::before {
-  position: absolute;
-  inset: -4px 0;
-  content: "";
-}
-
-.git-working-splitter:hover,
-.git-working-splitter.dragging,
-.git-working-splitter:focus-visible {
-  background: var(--color-focus);
-  outline: none;
-  box-shadow: 0 0 0 1px var(--color-focus);
-}
-
-.git-working-subject,
-.git-working-body {
-  width: 100%;
-  box-sizing: border-box;
-  font: inherit;
-}
-
-.git-working-subject-field {
-  position: relative;
-  display: flex;
-}
-
-.git-working-subject {
-  padding: var(--space-2) 3.5em var(--space-2) var(--space-3);
-  font-size: 1.05rem;
-}
-
-/* At the end of the subject's field. */
-.git-working-subject-counter {
-  position: absolute;
-  top: 50%;
-  right: var(--space-3);
-  font-size: 0.85rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  pointer-events: none;
-  transform: translateY(-50%);
-}
-
-.git-working-subject-counter-ok {
-  color: var(--color-success);
-}
-
-.git-working-subject-counter-near {
-  color: var(--color-warning);
-}
-
-.git-working-subject-counter-over {
-  color: var(--color-error);
-}
-
-.git-working-body {
-  resize: none;
-}
-
-/* A file's diff, in place of the graph. */
-.git-diff {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  background: var(--color-surface);
-}
-
-.git-diff-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.git-diff-title {
-  min-width: 0;
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.git-diff-source {
-  flex: 1;
-  color: var(--color-text-muted);
-}
-
-.git-diff-body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  container-type: inline-size;
-  /* Swiping sideways at the edge mustn't go back or forward in the web view's history. */
-  overscroll-behavior-x: none;
-}
-
-.git-diff-settings {
-  position: relative;
-}
-
-/* Catches a click anywhere else, to close the popover. */
-.git-diff-settings-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-}
-
-.git-diff-settings-popover {
-  position: absolute;
-  top: calc(100% + var(--space-1));
-  right: 0;
-  z-index: 11;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  width: 20rem;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
-}
-
-.git-diff-settings-popover label {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.git-diff-settings-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-/* A number with a minus button before it and a plus button after it, instead of the browser's up and down arrows. */
-.git-diff-stepper {
-  display: flex;
-  align-items: stretch;
-  gap: var(--space-1);
-}
-
-.git-diff-stepper input {
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-.git-diff-stepper input::-webkit-inner-spin-button,
-.git-diff-stepper input::-webkit-outer-spin-button {
-  margin: 0;
-  -webkit-appearance: none;
-}
-
-.git-diff-settings-popover .git-diff-settings-check {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-2);
+  background: var(--colorBrandBackground2);
 }
 
 /* Two columns need room: below this width a side by side diff shows as unified. */
@@ -4387,61 +1985,11 @@ label.task-choice {
   display: none;
 }
 
-/* A folder in a working changes tree: a row that selects all its files, with a chevron that opens and closes it. */
-.git-working-folder {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 1px var(--space-2) 1px calc(var(--space-2) + var(--git-commit-tree-depth, 0) * 16px);
-  cursor: pointer;
-}
-
-.git-working-folder:hover {
-  background: var(--color-surface-hover);
-}
-
-.git-working-folder.selected {
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-}
-
-.git-commit-folder-toggle {
-  display: inline-flex;
-  flex: none;
-  padding: 0;
-  border: none;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-}
-
 /* A workspace's status on Home: a badge for each kind of thing that needs attention, shown only when there is some. */
 .workspace-badges {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-}
-
-.workspace-badge {
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  background: var(--workspace-badge-tone);
-  color: var(--workspace-badge-text, var(--color-surface));
-  font-size: var(--font-size-small);
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-.workspace-badge-warning {
-  --workspace-badge-tone: var(--color-warning);
-  --workspace-badge-text: var(--color-warning-text);
-}
-
-.workspace-badge-info {
-  --workspace-badge-tone: var(--color-text-muted);
-}
-
-.workspace-badge-danger {
-  --workspace-badge-tone: var(--color-error);
 }
 
 /* A workspace's agents on Home: an indicator for each, in the order they started. */
@@ -4453,6 +2001,12 @@ label.task-choice {
 }
 
 /* A line between the card's parts. The spacing around it is its own, so nothing else adds margins to the rows. */
+/* Between the sections of a repository's card (GitStatusDetails), as on a workspace's card on Home. It's here rather
+   than in the component's scoped styles, which don't reach the divider: it's another component's element. */
+.git-status-divider {
+  margin: var(--spacingVerticalS) 0;
+}
+
 .workspace-card-divider {
   height: 0;
   margin: var(--space-2) 0;
@@ -4464,94 +2018,20 @@ label.task-choice {
   color: var(--color-text-muted);
 }
 
-/* One agent's usage, on the AI usage page. */
+/* One agent's usage, on the AI usage page: a card like the Agents settings page's, as wide as a settings card. */
 .usage-agent {
   max-width: 560px;
   margin-bottom: var(--space-4);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
 }
-
-.usage-agent h2 {
-  margin-top: 0;
-}
-
-.usage-agent-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-}
-
 
 /* Home's tabs (by source or status), and the groups in a tab. */
 .home-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
   margin-bottom: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
 }
 
-.home-tab-button {
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-}
-
-.home-tab-button:hover {
-  color: var(--color-text);
-}
-
-.home-tab-button.active {
-  border-bottom-color: var(--color-accent);
-  color: var(--color-text);
-}
-
-/* A count in a chip. In a tab, a status gives it (and the active tab's underline) the status's colour. */
+/* The count after a tab's or a group's name. */
 .home-count {
-  display: inline-block;
-  min-width: 1.5em;
-  margin-left: var(--space-1);
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  background: var(--home-status-tone, var(--color-text-muted));
-  color: var(--home-status-text, var(--color-surface));
-  font-size: var(--font-size-small);
-  font-weight: 700;
-  text-align: center;
-}
-
-.home-tab-button[data-status="RequiresAttention"] {
-  --home-status-tone: var(--color-error);
-}
-
-.home-tab-button[data-status="InReview"] {
-  --home-status-tone: var(--color-warning);
-  --home-status-text: var(--color-warning-text);
-}
-
-.home-tab-button[data-status="InDevelopment"] {
-  --home-status-tone: var(--color-info);
-  --home-status-text: var(--color-info-text);
-}
-
-.home-tab-button[data-status="Planning"] {
-  --home-status-tone: var(--color-text-muted);
-}
-
-.home-tab-button[data-status="Done"] {
-  --home-status-tone: var(--color-success);
-}
-
-.home-tab-button.active[data-status] {
-  border-bottom-color: var(--home-status-tone);
+  margin-left: var(--spacingHorizontalS);
 }
 
 .home-group {
@@ -4563,10 +2043,6 @@ label.task-choice {
   font-size: var(--font-size-base, 1rem);
 }
 
-.workspace-card[role="button"] {
-  cursor: pointer;
-}
-
 .page-header-actions {
   display: flex;
   align-items: center;
@@ -4574,62 +2050,8 @@ label.task-choice {
 }
 
 .home-layout-panel {
-  margin-bottom: var(--space-4);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-
-/* A list whose items are reordered by dragging their handle, or with buttons at their end. */
-.sortable-list {
-  display: flex;
-  max-width: 20rem;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin: 0 0 var(--space-4);
-  padding: 0;
-  list-style: none;
-}
-
-.sortable-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  cursor: grab;
-  user-select: none;
-}
-
-.sortable-item.dragging {
-  opacity: 0.5;
-}
-
-.sortable-item.drag-over {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 1px var(--color-accent);
-}
-
-.sortable-handle {
-  color: var(--color-text-muted);
-  letter-spacing: -2px;
-  user-select: none;
-}
-
-.sortable-label {
-  flex: 1;
-  min-width: 0;
-}
-
-.sortable-item button {
-  cursor: pointer;
-}
-
-.home-layout-panel {
   position: relative;
+  margin-bottom: var(--space-4);
 }
 
 /* The status order is beside the other options when there's room, and below them when there isn't. */
@@ -4668,129 +2090,6 @@ label.task-choice {
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
-}
-
-/* A little room between the source order's select and its list. */
-.home-layout-sources select {
-  margin-bottom: var(--space-2);
-}
-
-/* The Workspace View's dashboard. */
-.dashboard-title {
-  margin: 0 0 var(--space-4);
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
-
-.dashboard-section h2 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--font-size);
-}
-
-.dashboard-summary {
-  margin: 0 0 var(--space-2);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-}
-
-.dashboard-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dashboard-pull-request {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-
-.dashboard-pull-request-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.dashboard-pull-request-title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
-}
-
-.dashboard-pull-request-status {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-}
-
-.dashboard-review-approved {
-  color: var(--color-success);
-}
-
-.dashboard-review-changes {
-  color: var(--color-error);
-}
-
-.dashboard-review-required {
-  color: var(--color-warning);
-}
-
-.git-graph-tag-prompt {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--color-border);
-}
-
-.git-graph-tag-prompt label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.git-graph-tag-prompt-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-/* A bar standing in for a value that's still being read. */
-.placeholder-bar {
-  display: block;
-  width: 3em;
-  height: 0.9em;
-  border-radius: var(--radius);
-  background: var(--color-border);
-  animation: placeholder-bar-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes placeholder-bar-pulse {
-  50% {
-    opacity: 0.4;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .placeholder-bar {
-    animation: none;
-  }
 }
 
 /* The wordmark: the version for the theme's background, chosen the way the theme variables are (see the data-theme
@@ -4832,42 +2131,19 @@ label.task-choice {
   margin-bottom: 1rem;
 }
 
-/* A session tab's tooltip: its full name, and the folder it's in. The tab list scrolls, so it would clip an absolutely
-   positioned tooltip; a fixed one with no offsets stays where it would have been in the tab, and the margin moves
-   it below the tab row. It shows after the pointer has rested on the tab for a moment. */
-.session-tab-tooltip {
-  position: fixed;
-  z-index: 100;
-  display: none;
-  flex-direction: column;
-  gap: var(--space-1);
-  align-self: flex-start;
-  max-width: min(480px, 90vw);
-  margin-top: 38px;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
-  color: var(--color-text);
-  font-size: var(--font-size);
-  pointer-events: none;
-  white-space: normal;
-  overflow-wrap: anywhere;
+/* A tool's icon image in a Fluent menu item's start slot, at the size of the item's Fluent icons. */
+.side-panel-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
 }
 
-.session-tab:hover > .session-tab-tooltip {
-  display: flex;
-  animation: session-tab-tooltip-in 0s 0.5s backwards;
-}
-
-@keyframes session-tab-tooltip-in {
-  from {
-    visibility: hidden;
-  }
-}
-
-.session-tab-tooltip-detail {
-  color: var(--color-text-muted);
-  font-size: 13px;
+/* Every Fluent menu is as wide as its items, so none has a horizontal scrollbar. A very long item is cut off at the
+   window's width rather than scrolled. */
+fluent-menu-list {
+  width: max-content;
+  max-width: 90vw;
+  overflow-x: hidden;
 }

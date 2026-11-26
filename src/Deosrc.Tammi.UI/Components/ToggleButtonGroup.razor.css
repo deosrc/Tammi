@@ -1,0 +1,22 @@
+.toggle-button-group {
+    display: inline-flex;
+}
+
+/* The buttons are joined: only the ends are rounded, and each shares its border with the next. */
+.toggle-button-group ::deep .toggle-button-group-option {
+    border-radius: 0;
+}
+
+.toggle-button-group ::deep .toggle-button-group-option:first-child {
+    border-start-start-radius: var(--borderRadiusMedium);
+    border-end-start-radius: var(--borderRadiusMedium);
+}
+
+.toggle-button-group ::deep .toggle-button-group-option:last-child {
+    border-start-end-radius: var(--borderRadiusMedium);
+    border-end-end-radius: var(--borderRadiusMedium);
+}
+
+.toggle-button-group ::deep .toggle-button-group-option + .toggle-button-group-option {
+    margin-inline-start: -1px;
+}

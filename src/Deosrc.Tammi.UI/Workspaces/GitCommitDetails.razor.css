@@ -1,0 +1,175 @@
+/* The selected commit's details (GitCommitDetails): a bar with its short id, its subject, its body (whose height
+   --git-commit-body-height is set by dragging the split below it), and the rest, which scrolls. */
+.git-commit-details {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.git-commit-details-empty {
+  margin: var(--space-4);
+}
+
+.git-commit-bar {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--colorNeutralStroke2);
+  background: var(--colorNeutralBackground2);
+}
+
+/* The id is a button that copies it, in the monospace font. */
+.git-commit-hash {
+  font-family: var(--fontFamilyMonospace);
+  cursor: copy;
+}
+
+/* Beside the id, so the id stays in the middle. */
+.git-commit-copied {
+  position: absolute;
+  left: calc(50% + 4.5em);
+  color: var(--colorStatusSuccessForeground1);
+  font-size: var(--fontSizeBase200);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.git-commit-copied.shown {
+  opacity: 1;
+}
+
+/* As the message writes it: no change of case. */
+.git-commit-subject {
+  flex: none;
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  font-size: 1.3em;
+  font-weight: var(--fontWeightSemibold);
+  line-height: 1.3;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+.git-commit-body {
+  flex: none;
+  height: var(--git-commit-body-height, calc(8 * 1.45em + 2 * var(--space-2)));
+  overflow: auto;
+  padding: var(--space-2) var(--space-4);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.git-commit-body:focus-visible {
+  outline: 2px solid var(--colorBrandStroke1);
+  outline-offset: -2px;
+}
+
+/* The sections have the side padding, so the divider between them runs the panel's full width. */
+.git-commit-lower {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-2) 0 var(--space-4);
+}
+
+.git-commit-section {
+  padding: var(--space-3) var(--space-4) 0;
+  border-top: 1px solid var(--colorNeutralStroke2);
+}
+
+.git-commit-stash-bar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.git-commit-stash-date {
+  color: var(--colorNeutralForeground3);
+}
+
+/* The stash's buttons, right-aligned under the summary, also when they wrap onto a row of their own. */
+.git-commit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.git-commit-heading {
+  margin: 0 0 var(--space-2);
+  color: var(--colorNeutralForeground3);
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* What a collapsed section holds, beside its heading. */
+.git-commit-heading-summary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--colorNeutralForeground1);
+  font-size: var(--fontSizeBase300);
+  font-weight: var(--fontWeightSemibold);
+  letter-spacing: normal;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.git-commit-people {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.git-commit-person {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.git-commit-person-name {
+  font-weight: var(--fontWeightSemibold);
+}
+
+.git-commit-person-email,
+.git-commit-person-role {
+  color: var(--colorNeutralForeground3);
+  font-size: var(--fontSizeBase200);
+}
+
+.git-commit-person-role {
+  flex-basis: 100%;
+}
+
+.git-commit-files-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.git-commit-files-heading .git-commit-heading {
+  margin: 0;
+}
+
+.git-commit-file-view {
+  flex: none;
+  margin-left: auto;
+}

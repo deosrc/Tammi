@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Deosrc.Tammi.Core;
 using Deosrc.Tammi.Core.Agents;
@@ -55,11 +56,13 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddTammiUI(this IServiceCollection services)
     {
         services.AddTammiLogging();
+        services.AddFluentUIComponents();
         services.TryAddSingleton<ISystemTheme, UndetectedSystemTheme>();
 
         // One window per app, so the open tabs are shared app-wide.
         services.AddSingleton<WorkspaceTabs>();
         services.AddSingleton<MainTabOrder>();
+        services.AddSingleton<MainAreaTabArrangement>();
         services.AddSingleton<OpenWorkspaceTabsStore>();
         services.AddSingleton<WorkspaceTabsKeeper>();
         services.AddSingleton<IGitCli>(services => new GitCli(logger: services.GetRequiredService<ILogger<GitCli>>()));

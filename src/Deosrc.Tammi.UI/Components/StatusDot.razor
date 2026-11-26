@@ -1,0 +1,20 @@
+@* A small coloured dot for a status: ok (green), warning, error or unknown (grey). It has no text of its own, so the
+   status is written beside it. *@
+<FluentBadge Appearance="BadgeAppearance.Filled" Size="BadgeSize.Tiny" Shape="BadgeShape.Circular"
+             Color="@ColorOf(Tone)" aria-hidden="true" />
+
+@code {
+    /// <summary>
+    /// The status: <c>ok</c>, <c>warning</c>, <c>error</c>, or anything else for unknown.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Tone { get; set; } = "";
+
+    private static BadgeColor ColorOf(string tone) => tone switch
+    {
+        "ok" => BadgeColor.Success,
+        "warning" => BadgeColor.Warning,
+        "error" => BadgeColor.Danger,
+        _ => BadgeColor.Subtle,
+    };
+}

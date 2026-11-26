@@ -11,7 +11,7 @@ namespace Deosrc.Tammi.Core.Tools;
 /// A tool is only offered when its executable is found, except the Terminal tool, which has none. Two definitions are equal when their values are, including
 /// their lists.
 /// </remarks>
-public sealed record ToolDefinition
+public sealed partial record ToolDefinition
 {
     /// <summary>
     /// Identifies a predefined tool in the settings file, or <c>null</c> for a custom tool. It never changes.
@@ -25,10 +25,17 @@ public sealed record ToolDefinition
     public ToolKind Kind { get; init; } = ToolKind.Folder;
 
     /// <summary>
-    /// The name each entry is shown with, with placeholders (see <see cref="ToolPlaceholders"/>), e.g.
-    /// <c>Visual Studio - {FileName}</c>.
+    /// The name the tool is shown with in the Tools section, e.g. <c>Visual Studio</c>. Placeholders written in it by
+    /// older versions (e.g. <c>Visual Studio - {FileName}</c>) are left out of <see cref="DisplayName"/>: a file tool's
+    /// menu items are named by <see cref="MenuLabel"/> instead.
     /// </summary>
     public string Name { get; init; } = string.Empty;
+
+    /// <summary>
+    /// For a file tool, what its menu item for each file found is called. Not used by folder tools, whose menu items
+    /// are the Workspace Folder and the repositories.
+    /// </summary>
+    public ToolMenuLabel MenuLabel { get; init; } = ToolMenuLabel.FileName;
 
     /// <summary>
     /// For a file tool, the files it opens. A pattern with no <c>/</c> (e.g. <c>*.sln</c>) matches file names in the
@@ -75,6 +82,23 @@ public sealed record ToolDefinition
     public bool OpensTerminal { get; init; }
 
     /// <summary>
+    /// The name, without the placeholders and what joins them to it (e.g. <c>Visual Studio - {FileName}</c> is
+    /// <c>Visual Studio</c>), trimmed; or <c>Unnamed tool</c> if that leaves nothing.
+    /// </summary>
+    [JsonIgnore]
+    public string DisplayName
+    {
+        get
+        {
+            var plain = PlaceholderInName().Replace(Name ?? string.Empty, string.Empty).Trim();
+            return plain.Length > 0 ? plain : "Unnamed tool";
+        }
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\s*[-\u2013\u2014:|]?\s*\{[^{}]*\}")]
+    private static partial System.Text.RegularExpressions.Regex PlaceholderInName();
+
+    /// <summary>
     /// Whether this is a predefined tool.
     /// </summary>
     [JsonIgnore]
@@ -94,6 +118,7 @@ public sealed record ToolDefinition
     {
         Kind = Enum.IsDefined(Kind) ? Kind : ToolKind.Folder,
         Name = Name ?? string.Empty,
+        MenuLabel = Enum.IsDefined(MenuLabel) ? MenuLabel : ToolMenuLabel.FileName,
         FilePatterns = FilePatterns?.Where(pattern => !string.IsNullOrWhiteSpace(pattern))
             .Select(pattern => pattern.Trim())
             .ToArray() ?? [],
@@ -122,6 +147,7 @@ public sealed record ToolDefinition
         && Id == other.Id
         && Kind == other.Kind
         && Name == other.Name
+        && MenuLabel == other.MenuLabel
         && Executable == other.Executable
         && Scope == other.Scope
         && Equals(Icon, other.Icon)

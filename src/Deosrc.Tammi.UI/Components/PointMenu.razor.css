@@ -1,0 +1,16 @@
+/* Takes no room where it's rendered, e.g. between a list's header and its rows, where an empty box would still open a
+   gap. Its menu's items are in the top layer, and the anchor is where the pointer was. */
+.point-menu {
+    position: fixed;
+    width: 0;
+    height: 0;
+    overflow: visible;
+}
+
+/* An empty point the menu is anchored to, where the pointer was. */
+.point-menu-anchor {
+    position: fixed;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}

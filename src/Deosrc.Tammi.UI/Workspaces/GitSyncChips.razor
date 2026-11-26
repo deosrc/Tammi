@@ -1,25 +1,18 @@
-@* The ahead and behind counts of a branch (or the sum over a workspace's repositories) as filled chips with an arrow
-   and the count. Nothing is shown for a count of 0. *@
+@* The ahead and behind counts of a branch (or the sum over a workspace's repositories) as filled badges with an arrow
+   and the count. Ahead is work to push (warning); behind is commits to pull (informational). Nothing is shown for a
+   count of 0. *@
 @if (Ahead > 0 || Behind > 0)
 {
-    <span class="git-status-sync @(Inline ? "git-status-sync-inline" : null)">
+    <span class="git-sync-chips @(Inline ? null : "git-sync-chips-end")">
         @if (Ahead > 0)
         {
-            <span class="git-status-sync-chip git-status-ahead" title="@TitleFor(Ahead, "ahead of")">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M12 19V5M5 12l7-7 7 7" />
-                </svg>
-                @Ahead
-            </span>
+            <FluentBadge Appearance="BadgeAppearance.Filled" Color="BadgeColor.Warning"
+                         IconStart="@(new Icons.Filled.Size12.ArrowUp())" title="@TitleFor(Ahead, "ahead of")">@Ahead</FluentBadge>
         }
         @if (Behind > 0)
         {
-            <span class="git-status-sync-chip git-status-behind" title="@TitleFor(Behind, "behind")">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M12 5v14M19 12l-7 7-7-7" />
-                </svg>
-                @Behind
-            </span>
+            <FluentBadge Appearance="BadgeAppearance.Filled" Color="BadgeColor.Informative"
+                         IconStart="@(new Icons.Filled.Size12.ArrowDown())" title="@TitleFor(Behind, "behind")">@Behind</FluentBadge>
         }
     </span>
 }

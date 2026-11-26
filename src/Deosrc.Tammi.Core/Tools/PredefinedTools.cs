@@ -45,7 +45,8 @@ public static class PredefinedTools
     {
         Id = "devcontainer",
         Kind = ToolKind.File,
-        Name = "Dev Container - " + ToolPlaceholders.Format(ToolPlaceholders.MatchFolderName),
+        Name = "Dev Container",
+        MenuLabel = ToolMenuLabel.LaunchFolder,
         FilePatterns = [".devcontainer/devcontainer.json", ".devcontainer.json"],
         Executable = "devcontainer",
         Arguments =
@@ -66,7 +67,7 @@ public static class PredefinedTools
     {
         Id = "visual-studio",
         Kind = ToolKind.File,
-        Name = "Visual Studio - " + ToolPlaceholders.Format(ToolPlaceholders.FileName),
+        Name = "Visual Studio",
         FilePatterns = ["*.sln", "*.slnf", "*.slnx"],
         Executable = @"%CommonProgramFiles(x86)%\Microsoft Shared\MSEnv\VSLauncher.exe",
         Arguments = [ToolPlaceholders.Format(ToolPlaceholders.FilePath)],

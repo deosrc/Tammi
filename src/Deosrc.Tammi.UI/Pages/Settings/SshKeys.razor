@@ -8,16 +8,20 @@
 @inject Clipboard Clipboard
 
 @* The SSH keys in ~/.ssh. They aren't app settings, so they're read from and changed on disk. *@
-<div class="settings-field">
-    <h2 class="settings-field-title">SSH keys</h2>
-    <p class="settings-help">
-        The keys in <span class="settings-list-path">@KeyStore.KeyDirectory</span>, which git uses for SSH remotes. Every
-        SSH tool on this computer uses them, not only Tammi. Add a key to a service to clone and push over SSH.
-    </p>
+<div class="settings-field-group">
+    <div class="settings-field">
+        <h2 class="settings-field-title">SSH keys</h2>
+        <p class="settings-help">
+            The keys in <span class="settings-list-path">@KeyStore.KeyDirectory</span>, which git uses for SSH remotes. Every
+            SSH tool on this computer uses them, not only Tammi. Add a key to a service to clone and push over SSH.
+        </p>
+    </div>
 
     @if (_listError is not null)
     {
-        <p class="error">@_listError</p>
+        <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+            @_listError
+        </FluentMessageBar>
     }
     else if (_keys is null)
     {
@@ -32,84 +36,108 @@
         <ul class="settings-list">
             @foreach (var key in _keys)
             {
-                <li class="settings-list-item ssh-key">
-                    <div class="ssh-key-summary">
-                        <span class="settings-list-name">@key.Name</span>
-                        <span class="settings-list-status">@AlgorithmName(key.Algorithm)@(key.Comment is { } comment ? $" · {comment}" : "")</span>
-                        <span class="settings-list-path">@key.Fingerprint</span>
-                    </div>
-                    <div class="settings-field-row">
-                        <button type="button" class="button button-secondary" @onclick="() => CopyAsync(key)">Copy public key</button>
-                        <button type="button" class="button button-secondary" disabled="@_busy" @onclick="() => StartRemoving(key)">Remove</button>
-                    </div>
+                <li @key="key.Name">
+                    <FluentCard>
+                        <div class="ssh-key">
+                            <div class="ssh-key-summary">
+                                <span class="settings-list-name">@key.Name</span>
+                                <span class="settings-list-status">@AlgorithmName(key.Algorithm)@(key.Comment is { } comment ? $" · {comment}" : "")</span>
+                                <span class="settings-list-path">@key.Fingerprint</span>
+                            </div>
+                            <div class="settings-field-row">
+                                <FluentButton OnClick="() => CopyAsync(key)">Copy public key</FluentButton>
+                                <FluentButton Class="danger-button" Disabled="_busy" OnClick="() => StartRemoving(key)">Remove</FluentButton>
+                            </div>
 
-                    @foreach (var integration in SshKeyIntegrations)
-                    {
-                        <div class="settings-field-row ssh-key-service">
-                            <span class="status-dot status-@StatusClass(key, integration)" aria-hidden="true"></span>
-                            <span>@integration.Name: @StatusText(key, integration)</span>
-                            @if (UploadState(key, integration) != true)
+                            @foreach (var integration in SshKeyIntegrations)
                             {
-                                <button type="button" class="button button-secondary" disabled="@_busy"
-                                        @onclick="() => AddAsync(key, integration)">Add to @integration.Name</button>
-                            }
-                        </div>
-                    }
-
-                    @if (_unloaded.TryGetValue(key.Name, out var choices))
-                    {
-                        <div class="alert alert-warning ssh-key-unloaded" role="alert">
-                            <p>
-                                SSH won't use this key on its own. It only tries keys with default names, such as id_ed25519,
-                                unless <span class="settings-list-path">@KeyStore.ConfigPath</span> names the file with an
-                                <code>IdentityFile</code>. Git fetch, pull and push fail with "Permission denied (publickey)".
-                            </p>
-                            @if (choices.Count == 0)
-                            {
-                                <p class="settings-help">
-                                    Add a Host entry with <code>IdentityFile ~/.ssh/@key.Name</code> to that file, or rename the key
-                                    to a default name.
-                                </p>
-                            }
-                            else
-                            {
-                                <p>Add a Host entry for this key to your SSH config, before any <code>Host *</code> entry, for:</p>
-                                @foreach (var host in choices.Keys.ToList())
-                                {
-                                    <label class="settings-checkbox">
-                                        <input type="checkbox" checked="@choices[host]" disabled="@_busy"
-                                               @onchange="e => choices[host] = (bool)(e.Value ?? false)" />
-                                        @host
-                                    </label>
-                                }
-                                <div class="settings-field-row">
-                                    <button type="button" class="button" disabled="@(_busy || !choices.ContainsValue(true))"
-                                            @onclick="() => AddHostEntriesAsync(key, choices)">Add Host entry</button>
+                                <div class="settings-field-row ssh-key-service">
+                                    <StatusDot Tone="@StatusClass(key, integration)" />
+                                    <span>@integration.Name: @StatusText(key, integration)</span>
+                                    @if (UploadState(key, integration) != true)
+                                    {
+                                        <FluentButton Disabled="_busy" OnClick="() => AddAsync(key, integration)">
+                                            Add to @integration.Name
+                                        </FluentButton>
+                                    }
                                 </div>
                             }
-                        </div>
-                    }
 
-                    @if (_messages.TryGetValue(key.Name, out var message))
-                    {
-                        <p class="@(message.IsError ? "error" : "settings-help")">@message.Text</p>
-                    }
+                            @if (_unloaded.TryGetValue(key.Name, out var choices))
+                            {
+                                <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
+                                                  AllowDismiss="false">
+                                    <ChildContent>
+                                        <p>
+                                            SSH won't use this key on its own. It only tries keys with default names, such as id_ed25519,
+                                            unless <span class="settings-list-path">@KeyStore.ConfigPath</span> names the file with an
+                                            <code>IdentityFile</code>. Git fetch, pull and push fail with "Permission denied (publickey)".
+                                        </p>
+                                        @if (choices.Count == 0)
+                                        {
+                                            <p class="settings-help">
+                                                Add a Host entry with <code>IdentityFile ~/.ssh/@key.Name</code> to that file, or rename the key
+                                                to a default name.
+                                            </p>
+                                        }
+                                        else
+                                        {
+                                            <p>Add a Host entry for this key to your SSH config, before any <code>Host *</code> entry, for:</p>
+                                            @foreach (var host in choices.Keys.ToList())
+                                            {
+                                                <FluentCheckbox Label="@host" Disabled="_busy" Value="choices[host]"
+                                                                ValueChanged="ticked => choices[host] = ticked" />
+                                            }
+                                        }
+                                    </ChildContent>
+                                    <ActionsTemplate>
+                                        @if (choices.Count > 0)
+                                        {
+                                            <FluentButton Appearance="ButtonAppearance.Primary"
+                                                          Disabled="@(_busy || !choices.ContainsValue(true))"
+                                                          OnClick="() => AddHostEntriesAsync(key, choices)">
+                                                Add Host entry
+                                            </FluentButton>
+                                        }
+                                    </ActionsTemplate>
+                                </FluentMessageBar>
+                            }
 
-                    @if (_removing == key)
-                    {
-                        <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-ssh-key-title" aria-describedby="confirm-ssh-key-text">
-                            <h3 id="confirm-ssh-key-title" class="alert-title">Remove @key.Name?</h3>
-                            <p id="confirm-ssh-key-text">
-                                Both of its files are deleted from <span class="settings-list-path">@KeyStore.KeyDirectory</span>,
-                                and this can't be undone. Services you added the key to won't accept this computer
-                                any more, unless it has another key they know. Remove it from those services too.
-                            </p>
-                            <div class="settings-field-row">
-                                <button type="button" class="button button-danger" disabled="@_busy" @onclick="() => RemoveAsync(key)">Remove</button>
-                                <button type="button" class="button button-secondary" disabled="@_busy" @onclick="() => _removing = null">Cancel</button>
-                            </div>
+                            @if (_messages.TryGetValue(key.Name, out var message))
+                            {
+                                @if (message.IsError)
+                                {
+                                    <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine"
+                                                      AllowDismiss="false">
+                                        @message.Text
+                                    </FluentMessageBar>
+                                }
+                                else
+                                {
+                                    <p class="settings-help">@message.Text</p>
+                                }
+                            }
+
+                            @if (_removing == key)
+                            {
+                                <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
+                                                  AllowDismiss="false" Title="@($"Remove {key.Name}?")">
+                                    <ChildContent>
+                                        Both of its files are deleted from <span class="settings-list-path">@KeyStore.KeyDirectory</span>,
+                                        and this can't be undone. Services you added the key to won't accept this computer
+                                        any more, unless it has another key they know. Remove it from those services too.
+                                    </ChildContent>
+                                    <ActionsTemplate>
+                                        <FluentButton Class="danger-button" Appearance="ButtonAppearance.Primary" Disabled="_busy"
+                                                      OnClick="() => RemoveAsync(key)">
+                                            Remove
+                                        </FluentButton>
+                                        <FluentButton Disabled="_busy" OnClick="() => _removing = null">Cancel</FluentButton>
+                                    </ActionsTemplate>
+                                </FluentMessageBar>
+                            }
                         </div>
-                    }
+                    </FluentCard>
                 </li>
             }
         </ul>
@@ -117,58 +145,56 @@
 
     @if (_generating)
     {
-        <form class="settings-form ssh-key-generate" @onsubmit="GenerateAsync">
-            <div class="settings-field">
-                <label for="ssh-key-type">Type</label>
-                <select id="ssh-key-type" value="@_type" @onchange="OnTypeChanged">
-                    <option value="@SshKeyType.Ed25519">Ed25519 (recommended)</option>
-                    <option value="@SshKeyType.Rsa">RSA, 4096 bits (for older servers)</option>
-                </select>
-            </div>
-            <div class="settings-field">
-                <label for="ssh-key-name">File name</label>
-                <input id="ssh-key-name" class="settings-text" autocomplete="off" @bind="_name" @bind:after="OnNameEdited" />
-                <p class="settings-help">The private key's file name. The public key gets the same name with .pub after it.</p>
+        <form class="ssh-key-generate" @onsubmit="GenerateAsync">
+            <div class="settings-field-group">
+                <FluentSelect Label="Type" Items="KeyTypes" OptionText="@(type => TypeText(type))"
+                              @bind-Value="_type" @bind-Value:after="OnTypeChanged" />
+
+                <FluentTextInput Label="File name" AutoComplete="off" @bind-Value="_name" @bind-Value:after="OnNameEdited"
+                                 Message="The private key's file name. The public key gets the same name with .pub after it."
+                                 MessageCondition="FluentFieldCondition.Always" />
                 @if (!string.IsNullOrWhiteSpace(_name) && !SshKey.IsDefaultName(_name))
                 {
-                    <p class="warning" role="note">
+                    <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
+                                      AllowDismiss="false">
                         SSH only tries keys with default names, such as id_ed25519, on its own. With this name, git can't use
                         the key until your SSH config names it. After you generate it, the key shows a warning with an
                         "Add Host entry" button that adds the entry to @KeyStore.ConfigPath for you.
-                    </p>
+                    </FluentMessageBar>
                 }
-            </div>
-            <div class="settings-field">
-                <label for="ssh-key-comment">Comment</label>
-                <input id="ssh-key-comment" class="settings-text" autocomplete="off" @bind="_comment" />
-                <p class="settings-help">Helps you recognise the key. It's usually your email address.</p>
-            </div>
-            <div class="settings-field">
-                <label for="ssh-key-passphrase">Passphrase (optional)</label>
-                <input id="ssh-key-passphrase" type="password" class="settings-text" autocomplete="new-password" @bind="_passphrase" />
-                <p class="settings-help">
-                    Protects the key if someone copies it. Git asks for it when it uses the key, unless your SSH agent
-                    has it.
-                </p>
-            </div>
-            <div class="settings-field">
-                <label for="ssh-key-passphrase-confirm">Confirm passphrase</label>
-                <input id="ssh-key-passphrase-confirm" type="password" class="settings-text" autocomplete="new-password" @bind="_passphraseConfirm" />
-            </div>
-            @if (_generateError is not null)
-            {
-                <p class="error">@_generateError</p>
-            }
-            <div class="settings-field-row">
-                <button type="submit" class="button" disabled="@_busy">Generate</button>
-                <button type="button" class="button button-secondary" disabled="@_busy" @onclick="CancelGenerating">Cancel</button>
+
+                <FluentTextInput Label="Comment" AutoComplete="off" @bind-Value="_comment"
+                                 Message="Helps you recognise the key. It's usually your email address."
+                                 MessageCondition="FluentFieldCondition.Always" />
+
+                <FluentTextInput Label="Passphrase (optional)" TextInputType="TextInputType.Password"
+                                 AutoComplete="new-password" @bind-Value="_passphrase"
+                                 Message="Protects the key if someone copies it. Git asks for it when it uses the key, unless your SSH agent has it."
+                                 MessageCondition="FluentFieldCondition.Always" />
+
+                <FluentTextInput Label="Confirm passphrase" TextInputType="TextInputType.Password"
+                                 AutoComplete="new-password" @bind-Value="_passphraseConfirm" />
+
+                @if (_generateError is not null)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine"
+                                      AllowDismiss="false">
+                        @_generateError
+                    </FluentMessageBar>
+                }
+                <div class="settings-field-row">
+                    <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Disabled="_busy">
+                        Generate
+                    </FluentButton>
+                    <FluentButton Disabled="_busy" OnClick="CancelGenerating">Cancel</FluentButton>
+                </div>
             </div>
         </form>
     }
     else if (KeyStore.CanGenerate)
     {
         <div class="settings-field-row">
-            <button type="button" class="button" @onclick="StartGenerating">Generate key…</button>
+            <FluentButton Appearance="ButtonAppearance.Primary" OnClick="StartGenerating">Generate key…</FluentButton>
         </div>
     }
     else
@@ -439,15 +465,17 @@
 
     private void OnNameEdited() => _nameEdited = true;
 
-    private void OnTypeChanged(ChangeEventArgs e)
+    private static readonly SshKeyType[] KeyTypes = [SshKeyType.Ed25519, SshKeyType.Rsa];
+
+    private static string TypeText(SshKeyType type) => type == SshKeyType.Rsa
+        ? "RSA, 4096 bits (for older servers)"
+        : "Ed25519 (recommended)";
+
+    private void OnTypeChanged()
     {
-        if (Enum.TryParse(e.Value?.ToString(), out SshKeyType type))
+        if (!_nameEdited)
         {
-            _type = type;
-            if (!_nameEdited)
-            {
-                _name = KeyStore.SuggestName(type);
-            }
+            _name = KeyStore.SuggestName(_type);
         }
     }
 

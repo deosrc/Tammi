@@ -1,0 +1,10 @@
+/* An agent's logo, e.g. Claude's on the New menu and in tabs. It's shown in its brand colour. */
+.agent-icon {
+    flex: none;
+    width: 18px;
+    height: 18px;
+}
+
+.agent-icon-claude {
+    fill: var(--color-claude);
+}

@@ -1,0 +1,48 @@
+/* A file's diff, in place of the graph: a header with its path, then the diff, which scrolls. The diff's own table and
+   colours are in app.css. */
+.git-diff {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--colorNeutralBackground1);
+}
+
+.git-diff-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalM);
+  padding: var(--spacingVerticalS) var(--spacingHorizontalM);
+  border-bottom: 1px solid var(--colorNeutralStroke2);
+}
+
+.git-diff-title {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--fontWeightSemibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-diff-source {
+  flex: 1;
+  color: var(--colorNeutralForeground3);
+}
+
+.git-diff-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  container-type: inline-size;
+  /* Swiping sideways at the edge mustn't go back or forward in the web view's history. */
+  overscroll-behavior-x: none;
+}
+
+/* The settings, in a popover: a field under another. */
+.git-diff-settings-popover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalM);
+  padding: var(--spacingVerticalM);
+}

@@ -12,91 +12,38 @@
     <header class="git-diff-header">
         <span class="git-diff-title" title="@Title">@Title</span>
         <span class="git-diff-source">@SourceText</span>
-        <div class="segmented segmented-small" role="group" aria-label="Layout">
-            <button type="button" class="segmented-option" title="Unified" aria-label="Unified"
-                    aria-pressed="@(Current.DiffLayout == GitDiffLayout.Unified ? "true" : "false")"
-                    @onclick="() => Options.SetDiffLayoutAsync(GitDiffLayout.Unified)">
-                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <rect x="4" y="4" width="16" height="16" rx="2" />
-                    <path d="M8 9h8M8 12h8M8 15h8" />
-                </svg>
-            </button>
-            <button type="button" class="segmented-option" title="Side by side" aria-label="Side by side"
-                    aria-pressed="@(Current.DiffLayout == GitDiffLayout.SideBySide ? "true" : "false")"
-                    @onclick="() => Options.SetDiffLayoutAsync(GitDiffLayout.SideBySide)">
-                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <rect x="4" y="4" width="16" height="16" rx="2" />
-                    <path d="M12 4v16M7 9h2M7 12h2M7 15h2M15 9h2M15 12h2M15 15h2" />
-                </svg>
-            </button>
-        </div>
-        <div class="git-diff-settings">
-            <button type="button" class="button button-secondary button-icon" title="Diff settings"
-                    aria-label="Diff settings" aria-haspopup="true" aria-expanded="@(_settingsOpen ? "true" : "false")"
-                    @onclick="() => _settingsOpen = !_settingsOpen">
-                <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
-                    <circle cx="16" cy="7" r="2" />
-                    <circle cx="8" cy="17" r="2" />
-                </svg>
-            </button>
-            @if (_settingsOpen)
-            {
-                <div class="git-diff-settings-backdrop" @onclick="() => _settingsOpen = false"></div>
-                <div class="git-diff-settings-popover" role="dialog" aria-label="Diff settings"
-                     @onkeydown="OnSettingsKeyDown">
-                    <label>
-                        Whitespace
-                        <select value="@Current.DiffWhitespace" @onchange="OnWhitespaceChanged">
-                            <option value="@GitDiffWhitespace.Show">Show whitespace changes</option>
-                            <option value="@GitDiffWhitespace.IgnoreAmount">Ignore changes in the amount of whitespace</option>
-                            <option value="@GitDiffWhitespace.IgnoreAll">Ignore all whitespace</option>
-                            <option value="@GitDiffWhitespace.IgnoreAtEol">Ignore whitespace at the end of lines</option>
-                        </select>
-                    </label>
-                    <label class="git-diff-settings-check">
-                        <input type="checkbox" checked="@Current.DiffIgnoreBlankLines"
-                               @onchange="e => Options.SetDiffIgnoreBlankLinesAsync(e.Value is true)" />
-                        Ignore blank lines
-                    </label>
-                    <div class="git-diff-settings-field">
-                        <label for="git-diff-tab-width">Tab width (columns)</label>
-                        <div class="git-diff-stepper">
-                            <button type="button" class="button button-secondary" aria-label="Decrease"
-                                    disabled="@(Current.DiffTabWidth <= GitSettings.MinDiffTabWidth)" @onclick="() => Options.SetDiffTabWidthAsync(Current.DiffTabWidth - 1)">−</button>
-                            <input @key="_numberRevision" id="git-diff-tab-width" type="number" class="settings-number"
-                                   min="GitSettings.MinDiffTabWidth" max="GitSettings.MaxDiffTabWidth" step="1" value="@Current.DiffTabWidth" @onchange="OnTabWidthChanged" />
-                            <button type="button" class="button button-secondary" aria-label="Increase"
-                                    disabled="@(Current.DiffTabWidth >= GitSettings.MaxDiffTabWidth)" @onclick="() => Options.SetDiffTabWidthAsync(Current.DiffTabWidth + 1)">+</button>
-                        </div>
-                    </div>
-                    <div class="git-diff-settings-field">
-                        <label for="git-diff-context">Context lines</label>
-                        <div class="git-diff-stepper">
-                            <button type="button" class="button button-secondary" aria-label="Decrease"
-                                    disabled="@(Current.DiffContextLines <= 0)" @onclick="() => Options.SetDiffContextLinesAsync(Current.DiffContextLines - 1)">−</button>
-                            <input @key="_numberRevision" id="git-diff-context" type="number" class="settings-number"
-                                   min="0" max="GitDiffOptions.MaxContextLines" step="1" value="@Current.DiffContextLines" @onchange="OnContextLinesChanged" />
-                            <button type="button" class="button button-secondary" aria-label="Increase"
-                                    disabled="@(Current.DiffContextLines >= GitDiffOptions.MaxContextLines)" @onclick="() => Options.SetDiffContextLinesAsync(Current.DiffContextLines + 1)">+</button>
-                        </div>
-                    </div>
-                    <p class="settings-help">Only changes what the diff shows, never the files. Kept for the next diff.</p>
-                </div>
-            }
-        </div>
-        <button type="button" class="button button-secondary button-icon git-diff-close" title="Close the diff"
-                aria-label="Close the diff" @onclick="Graph.CloseDiff">
-            <svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
-        </button>
+        <ToggleButtonGroup TValue="GitDiffLayout" Small="true" Options="_layouts" Value="Current.DiffLayout"
+                           ValueChanged="layout => Options.SetDiffLayoutAsync(layout)" AriaLabel="Layout" />
+        <FluentButton Id="@_settingsButtonId" Appearance="ButtonAppearance.Subtle" Size="ButtonSize.Small" IconOnly="true"
+                      Title="Diff settings" aria-label="Diff settings" aria-haspopup="true"
+                      IconStart="@(new Icons.Regular.Size16.Options())" OnClick="() => _settingsOpen = !_settingsOpen" />
+        <FluentPopover AnchorId="@_settingsButtonId" Opened="_settingsOpen" OpenedChanged="opened => _settingsOpen = opened"
+                       Width="20rem">
+            <div class="git-diff-settings-popover" role="dialog" aria-label="Diff settings">
+                <FluentSelect Label="Whitespace" Items="_whitespaces" OptionText="@(whitespace => WhitespaceText(whitespace))"
+                              Value="Current.DiffWhitespace"
+                              ValueChanged="@((GitDiffWhitespace whitespace) => Options.SetDiffWhitespaceAsync(whitespace))" />
+                <FluentCheckbox Label="Ignore blank lines" Value="Current.DiffIgnoreBlankLines"
+                                ValueChanged="blank => Options.SetDiffIgnoreBlankLinesAsync(blank)" />
+                @* Recreated after a change that was replaced, so each input shows the saved value. *@
+                <FluentNumberInput @key="@($"tab-width-{_numberRevision}")" TValue="int?" Label="Tab width (columns)"
+                                   Min="GitSettings.MinDiffTabWidth" Max="GitSettings.MaxDiffTabWidth" Step="1"
+                                   Value="Current.DiffTabWidth" ValueChanged="OnTabWidthChanged" />
+                <FluentNumberInput @key="@($"context-lines-{_numberRevision}")" TValue="int?" Label="Context lines"
+                                   Min="0" Max="GitDiffOptions.MaxContextLines" Step="1"
+                                   Value="Current.DiffContextLines" ValueChanged="OnContextLinesChanged" />
+                <p class="settings-help">Only changes what the diff shows, never the files. Kept for the next diff.</p>
+            </div>
+        </FluentPopover>
+        <FluentButton Appearance="ButtonAppearance.Subtle" Size="ButtonSize.Small" IconOnly="true" Title="Close the diff"
+                      aria-label="Close the diff" IconStart="@(new Icons.Regular.Size16.Dismiss())"
+                      OnClick="Graph.CloseDiff" />
     </header>
 
     <div class="git-diff-body" @ref="_body">
         @if (Graph.DiffProblem is { } problem)
         {
-            <p class="error">Couldn't read the diff. @problem</p>
+            <PanelMessage>Couldn't read the diff. @problem</PanelMessage>
         }
         else if (Graph.ActiveDiff is not { } diff)
         {
@@ -188,36 +135,52 @@
         Settings.Changed += OnSettingsChanged;
     }
 
+    private static int _count;
+
+    private readonly string _settingsButtonId = $"git-diff-settings-{Interlocked.Increment(ref _count)}";
     private bool _settingsOpen;
     private int _numberRevision;
 
-    private void OnSettingsKeyDown(KeyboardEventArgs e)
+    private static readonly IReadOnlyList<ToggleButtonOption<GitDiffLayout>> _layouts =
+    [
+        new(GitDiffLayout.Unified, new Icons.Regular.Size20.TextAlignJustify(), "Unified"),
+        new(GitDiffLayout.SideBySide, new Icons.Regular.Size20.SplitVertical(), "Side by side"),
+    ];
+
+    private static readonly GitDiffWhitespace[] _whitespaces =
+        [GitDiffWhitespace.Show, GitDiffWhitespace.IgnoreAmount, GitDiffWhitespace.IgnoreAll, GitDiffWhitespace.IgnoreAtEol];
+
+    private static string WhitespaceText(GitDiffWhitespace whitespace) => whitespace switch
     {
-        if (e.Key == "Escape")
-        {
-            _settingsOpen = false;
-        }
-    }
+        GitDiffWhitespace.IgnoreAmount => "Ignore changes in the amount of whitespace",
+        GitDiffWhitespace.IgnoreAll => "Ignore all whitespace",
+        GitDiffWhitespace.IgnoreAtEol => "Ignore whitespace at the end of lines",
+        _ => "Show whitespace changes",
+    };
 
     // A value that isn't a whole number in range is replaced by the current one, by drawing the input again.
-    private async Task OnTabWidthChanged(ChangeEventArgs e)
+    private async Task OnTabWidthChanged(int? width)
     {
-        if (int.TryParse(e.Value?.ToString(), out var width))
+        if (width is { } value && value is >= GitSettings.MinDiffTabWidth and <= GitSettings.MaxDiffTabWidth)
         {
-            await Options.SetDiffTabWidthAsync(width);
+            await Options.SetDiffTabWidthAsync(value);
         }
-
-        _numberRevision++;
+        else
+        {
+            _numberRevision++;
+        }
     }
 
-    private async Task OnContextLinesChanged(ChangeEventArgs e)
+    private async Task OnContextLinesChanged(int? lines)
     {
-        if (int.TryParse(e.Value?.ToString(), out var lines))
+        if (lines is { } value && value is >= 0 and <= GitDiffOptions.MaxContextLines)
         {
-            await Options.SetDiffContextLinesAsync(lines);
+            await Options.SetDiffContextLinesAsync(value);
         }
-
-        _numberRevision++;
+        else
+        {
+            _numberRevision++;
+        }
     }
 
     private ElementReference _body;
@@ -252,7 +215,7 @@
                 await _module.DisposeAsync();
             }
         }
-        catch (JSDisconnectedException)
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException)
         {
             // The web view has gone.
         }
@@ -270,11 +233,6 @@
 
         StateHasChanged();
     });
-
-    private Task OnWhitespaceChanged(ChangeEventArgs e) =>
-        Enum.TryParse(e.Value?.ToString(), out GitDiffWhitespace whitespace)
-            ? Options.SetDiffWhitespaceAsync(whitespace)
-            : Task.CompletedTask;
 
     // A submodule's diff is the old and new commit, which the layout doesn't apply to.
     private static bool IsSubmodule(FileDiff diff) =>

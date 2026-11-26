@@ -4,7 +4,7 @@
 @using Deosrc.Tammi.UI.About
 @inject IProcessLauncher ProcessLauncher
 
-<p><a href="@AppRoutes.About">‹ About</a></p>
+<p><FluentLink Href="@AppRoutes.About">‹ About</FluentLink></p>
 
 <h1>Third-party software</h1>
 
@@ -13,40 +13,52 @@
 <ul class="third-party-list">
     @foreach (var component in ThirdPartySoftware.All)
     {
-        <li class="third-party-item">
-            <div class="third-party-header">
-                <span class="third-party-name">@component.Name</span>
-                @if (component.Platforms != ThirdPartyPlatforms.All)
-                {
-                    <span class="badge">@component.Platforms</span>
-                }
-            </div>
-            <div class="placeholder">@component.Description</div>
-            <div class="third-party-links">
-                <span>License: @component.License</span>
-                <a href="@component.ProjectUrl" @onclick="() => OpenExternal(component.ProjectUrl)"
-                   @onclick:preventDefault>Website</a>
-                @if (component.LicenseUrl is { } licenseUrl)
-                {
-                    <a href="@licenseUrl" @onclick="() => OpenExternal(licenseUrl)" @onclick:preventDefault>
-                        Read the license
-                    </a>
-                }
-            </div>
-            @if (component.LicenseFile is { } licenseFile)
-            {
-                <details class="license-text">
-                    <summary>License text</summary>
-                    <pre>@ThirdPartySoftware.ReadLicense(licenseFile)</pre>
-                </details>
-            }
+        <li @key="component.Name">
+            <FluentCard>
+                <div class="third-party-item">
+                    <div class="third-party-header">
+                        <span class="third-party-name">@component.Name</span>
+                        @if (component.Platforms != ThirdPartyPlatforms.All)
+                        {
+                            <FluentBadge Appearance="BadgeAppearance.Tint">@component.Platforms</FluentBadge>
+                        }
+                        <FluentButton Class="third-party-website" Size="ButtonSize.Small"
+                                      OnClick="() => OpenExternal(component.ProjectUrl)">
+                            Website
+                        </FluentButton>
+                    </div>
+                    <div class="placeholder">@component.Description</div>
+                    @if (component.LicenseFile is { } licenseFile)
+                    {
+                        <FluentAccordion Block="true">
+                            <FluentAccordionItem Header="@($"License: {component.License}")" Block="true">
+                                <pre class="license-text">@ThirdPartySoftware.ReadLicense(licenseFile)</pre>
+                            </FluentAccordionItem>
+                        </FluentAccordion>
+                    }
+                    else
+                    {
+                        <div class="third-party-links">
+                            <span>License: @component.License</span>
+                        </div>
+                    }
+                    @if (component.LicenseUrl is { } licenseUrl)
+                    {
+                        <div class="third-party-links">
+                            <FluentLink OnClick="() => OpenExternal(licenseUrl)">Read the license</FluentLink>
+                        </div>
+                    }
+                </div>
+            </FluentCard>
         </li>
     }
 </ul>
 
 @if (_error is not null)
 {
-    <p class="error" role="alert">@_error</p>
+    <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+        @_error
+    </FluentMessageBar>
 }
 
 @code {

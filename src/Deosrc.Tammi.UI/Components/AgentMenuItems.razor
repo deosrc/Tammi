@@ -1,0 +1,56 @@
+@using Deosrc.Tammi.Core.Agents
+
+@* A menu item for each agent that can be started. With Repositories, each has a submenu of where to start it: the
+   Workspace Folder or a repository; without, it starts straight away. Put it in a FluentMenuList. *@
+@foreach (var definition in AgentDefinitions)
+{
+    var agent = definition;
+    var name = string.IsNullOrWhiteSpace(agent.Name) ? WorkspaceAgents.DefaultName : agent.Name;
+    @* An agent's icon is a component, not a Fluent icon, so it's put in the item's start slot by hand, where the menu
+       keeps the room for an item's icon. *@
+    var content = (RenderFragment)(builder =>
+    {
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "slot", "start");
+        builder.AddAttribute(2, "class", "agent-menu-icon");
+        builder.OpenComponent<AgentIcon>(3);
+        builder.AddAttribute(4, "Definition", agent);
+        builder.CloseComponent();
+        builder.CloseElement();
+        builder.AddContent(5, name);
+    });
+    @if (Repositories is null)
+    {
+        <FluentMenuItem @key="agent" OnClick="() => OnStart.InvokeAsync((agent, null))">@content</FluentMenuItem>
+    }
+    else
+    {
+        <FluentMenuItem @key="agent">
+            <ChildContent>@content</ChildContent>
+            <MenuItems>
+                <PlaceMenuItems Repositories="Repositories" OnStart="repository => OnStart.InvokeAsync((agent, repository))" />
+            </MenuItems>
+        </FluentMenuItem>
+    }
+}
+
+@code {
+    /// <summary>
+    /// The agents that can be started, in the order they're listed.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<AgentDefinition> AgentDefinitions { get; set; } = [];
+
+    /// <summary>
+    /// The workspace's repositories, when an agent is started in the Workspace Folder or a repository.
+    /// <see langword="null"/> when they start straight away.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<WorkspaceRepository>? Repositories { get; set; }
+
+    /// <summary>
+    /// Raised to start an agent, in a repository or, with <see langword="null"/>, the Workspace Folder.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(AgentDefinition Definition, WorkspaceRepository? Repository)> OnStart { get; set; }
+}

@@ -2,51 +2,50 @@
 @inject IGitUserConfig GitUserConfig
 
 @* The commit author in the user's global git config. It isn't an app setting, so it's read from and saved to git. *@
-<div class="settings-field">
-    <h2 class="settings-field-title">Author</h2>
-    <p class="settings-help">
-        The name and email address git records on your commits. They're saved in your global git config, so they
-        apply to every git tool on this computer, not only Tammi. Leave one empty to remove it.
-    </p>
-</div>
-
-@if (_loadError is not null)
-{
-    <p class="error">@_loadError</p>
-}
-else if (_identity is null)
-{
-    <p class="placeholder">Reading your git config…</p>
-}
-else
-{
+<div class="settings-field-group">
     <div class="settings-field">
-        <label for="git-author-name">Name</label>
-        @* Recreated after each change, so the input shows the saved value, e.g. without surrounding spaces. *@
-        <input @key="_revision"
-               id="git-author-name"
-               class="settings-text"
-               autocomplete="name"
-               value="@_identity.Name"
-               @onchange="OnNameChanged" />
+        <h2 class="settings-field-title">Author</h2>
+        <p class="settings-help">
+            The name and email address git records on your commits. They're saved in your global git config, so they
+            apply to every git tool on this computer, not only Tammi. Leave one empty to remove it.
+        </p>
     </div>
 
-    <div class="settings-field">
-        <label for="git-author-email">Email</label>
-        <input @key="_revision"
-               id="git-author-email"
-               type="email"
-               class="settings-text"
-               autocomplete="email"
-               value="@_identity.Email"
-               @onchange="OnEmailChanged" />
-    </div>
-
-    @if (_saveError is not null)
+    @if (_loadError is not null)
     {
-        <p class="error">@_saveError</p>
+        <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+            @_loadError
+        </FluentMessageBar>
     }
-}
+    else if (_identity is null)
+    {
+        <p class="placeholder">Reading your git config…</p>
+    }
+    else
+    {
+        @* Recreated after each change (the keys change), so the input shows the saved value, e.g. without surrounding
+           spaces. *@
+        <FluentTextInput @key="@("name-" + _revision)"
+                         Label="Name"
+                         AutoComplete="name"
+                         Value="@_identity.Name"
+                         ValueChanged="OnNameChanged" />
+
+        <FluentTextInput @key="@("email-" + _revision)"
+                         Label="Email"
+                         TextInputType="TextInputType.Email"
+                         AutoComplete="email"
+                         Value="@_identity.Email"
+                         ValueChanged="OnEmailChanged" />
+
+        @if (_saveError is not null)
+        {
+            <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
+                @_saveError
+            </FluentMessageBar>
+        }
+    }
+</div>
 
 @code {
     private GitIdentity? _identity;
@@ -73,13 +72,13 @@ else
         }
     }
 
-    private Task OnNameChanged(ChangeEventArgs e) =>
-        SaveAsync(value => GitUserConfig.SetNameAsync(value), e.Value?.ToString());
+    private Task OnNameChanged(string? value) =>
+        SaveAsync(name => GitUserConfig.SetNameAsync(name), value, identity => identity.Name);
 
-    private Task OnEmailChanged(ChangeEventArgs e) =>
-        SaveAsync(value => GitUserConfig.SetEmailAsync(value), e.Value?.ToString());
+    private Task OnEmailChanged(string? value) =>
+        SaveAsync(email => GitUserConfig.SetEmailAsync(email), value, identity => identity.Email);
 
-    private async Task SaveAsync(Func<string?, Task> save, string? value)
+    private async Task SaveAsync(Func<string?, Task> save, string? value, Func<GitIdentity, string?> shown)
     {
         try
         {
@@ -102,6 +101,10 @@ else
             _loadError = $"Couldn't read your git config. {ex.Message}";
         }
 
-        _revision++;
+        // Recreating the inputs drops their focus, so it's only done when what's shown differs from what was typed.
+        if (_identity is null || !string.Equals(shown(_identity) ?? "", value ?? "", StringComparison.Ordinal))
+        {
+            _revision++;
+        }
     }
 }
