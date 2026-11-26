@@ -189,11 +189,15 @@ function allowReordering(scroller, dotNet) {
         const own = rects[index];
         // The tab stays among the tabs that can be moved: it can't go before the first or after the last.
         const offset = Math.min(Math.max(dx, rects[0].left - own.left), rects[rects.length - 1].right - own.right);
-        const centre = own.left + own.width / 2 + offset;
-        let target = 0;
+        // A tab is passed once the dragged tab's leading edge crosses its middle. The dragged tab's own middle isn't
+        // used: it stops with its edge at the first or last tab's, so its middle couldn't pass theirs if it's wider.
+        let target = index;
         rects.forEach((rect, i) => {
-            if (i !== index && rect.left + rect.width / 2 < centre) {
+            const middle = rect.left + rect.width / 2;
+            if (i > index && own.right + offset > middle) {
                 target++;
+            } else if (i < index && own.left + offset < middle) {
+                target--;
             }
         });
 
