@@ -133,7 +133,11 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
      their new branches, the Workspace Folder and any parent folders it created that are still empty. Anything it
      couldn't remove is listed. Since the metadata is written last, a workspace that's only partly created is never
      listed on Home.
-   - The new workspace then opens in a tab, unless there were warnings, which are shown first.
+   - Once it's created, Tammi starts the agent chosen in Settings → Agents for new workspaces (none by default), in
+     the Workspace Folder. An agent that can't start (e.g. its CLI isn't installed) doesn't undo the workspace: why is
+     listed with the warnings.
+   - The new workspace then opens in a tab, on the agent started with it (or else its dashboard), unless there were
+     warnings, which are shown first.
 
 ### Repositories on disk
 
@@ -614,6 +618,9 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     case and surrounding spaces, including the Supported Agents' names. A name that's already used is still saved,
     but shown as an error until it's changed.
   - Agents are offered in that order: the Supported Agents, then the Custom Agents.
+  - The agent to start when a workspace is created: **None** (the default) or one of the agents. It's recorded by
+    name. If no agent has that name now (e.g. it was renamed or removed), None is shown and no agent starts, but the
+    name is kept until the user chooses again, so an agent that gets the name back is started again.
   - The initial prompt style: **Prefill** (the default) or **Submit**. Prefill types the prompt into the agent's input
     about two seconds after it starts, without sending it, so the user can edit it and send it themselves. Submit passes
     it to the agent with its initial prompt arguments, so the agent acts on it straight away.

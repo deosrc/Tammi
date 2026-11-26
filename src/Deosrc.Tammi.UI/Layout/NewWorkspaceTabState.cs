@@ -1,3 +1,4 @@
+using Deosrc.Tammi.Core.Agents;
 using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Workspaces;
 using Deosrc.Tammi.UI.Workspaces;
@@ -9,7 +10,11 @@ namespace Deosrc.Tammi.UI.Layout;
 /// progress, so the flow can be resumed. The tab's close button, cancelling the flow or creating the workspace closes
 /// it and discards the progress.
 /// </summary>
-public sealed class NewWorkspaceTabState(ISettingsStore settings, WorkspaceCreator creator, WorkspaceTabs tabs)
+public sealed class NewWorkspaceTabState(
+    ISettingsStore settings,
+    WorkspaceCreator creator,
+    WorkspaceTabs tabs,
+    WorkspaceAgents agents)
 {
     public bool IsOpen => Session is not null;
 
@@ -34,8 +39,10 @@ public sealed class NewWorkspaceTabState(ISettingsStore settings, WorkspaceCreat
                     general.WorkspaceFolderNameFormat,
                     general.WorkspaceNameTemplate),
                 creator,
-                tabs);
-            Session.Completed += _ => Close();
+                tabs,
+                agents,
+                settings);
+            Session.Completed += (_, _) => Close();
             Changed?.Invoke();
         }
 
