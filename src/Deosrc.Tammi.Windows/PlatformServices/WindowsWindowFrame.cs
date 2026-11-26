@@ -1,5 +1,8 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Settings;
@@ -16,13 +19,15 @@ internal sealed class WindowsWindowFrame : IWindowFrame
     private const nint HtCaption = 2;
 
     private readonly ISettingsStore _settings;
+    private readonly ILogger<WindowsWindowFrame> _logger;
     private Microsoft.UI.Xaml.Window? _window;
     private bool _isSlim;
     private bool _isMaximized;
 
-    public WindowsWindowFrame(ISettingsStore settings)
+    public WindowsWindowFrame(ISettingsStore settings, ILogger<WindowsWindowFrame> logger)
     {
         _settings = settings;
+        _logger = logger;
         _isSlim = settings.Current.General.SlimWindow;
         settings.Changed += OnSettingsChanged;
     }
@@ -79,8 +84,9 @@ internal sealed class WindowsWindowFrame : IWindowFrame
         Changed?.Invoke();
     }
 
-    // MAUI extends its page into the title bar and draws a title there; with no title bar there's nothing to extend
-    // into. Without the setting, the title bar comes back as MAUI has it.
+    // Windows' title bar goes with the presenter's. MAUI also keeps space at the top of the page for a title bar of
+    // its own, drawn under Windows' one, and doesn't see the presenter's change: the space stays, empty but for the
+    // window's title. Without the setting, both come back as MAUI has them.
     private void ApplyTitleBar()
     {
         if (_window is null)
@@ -88,11 +94,33 @@ internal sealed class WindowsWindowFrame : IWindowFrame
             return;
         }
 
-        _window.ExtendsContentIntoTitleBar = !_isSlim;
         if (_window.AppWindow.Presenter is OverlappedPresenter presenter)
         {
             presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: !_isSlim);
         }
+
+        SetMauiTitleBarVisibility(!_isSlim);
+    }
+
+    // MAUI hides its title bar only when the window's style loses its caption, which the presenter leaves in place.
+    // The method that hides it isn't public, so it's found by name. If a MAUI update renames it, the space comes back
+    // but nothing else breaks.
+    private void SetMauiTitleBarVisibility(bool isVisible)
+    {
+        var mauiWindow = Microsoft.Maui.Controls.Application.Current?.Windows
+            .FirstOrDefault(window => ReferenceEquals(window.Handler?.PlatformView, _window));
+        var manager = mauiWindow?.Handler?.MauiContext?.Services.GetService<NavigationRootManager>();
+        var setVisibility = typeof(NavigationRootManager).GetMethod(
+            "SetTitleBarVisibility",
+            BindingFlags.Instance | BindingFlags.NonPublic,
+            [typeof(bool)]);
+        if (manager is null || setVisibility is null)
+        {
+            _logger.LogWarning("Couldn't show or hide MAUI's title bar: its NavigationRootManager.SetTitleBarVisibility wasn't found");
+            return;
+        }
+
+        setVisibility.Invoke(manager, [isVisible]);
     }
 
     public void Minimize() => MainThread.BeginInvokeOnMainThread(() => Presenter?.Minimize());
