@@ -12,9 +12,10 @@
 @inject Deosrc.Tammi.UI.Workspaces.WorkspaceViewState ViewState
 
 @* The app's main tabs: Home and Repositories, then a tab for each workspace, repository and flow that is open, in the
-   order they were opened, and Settings at the far end. *@
+   order they were opened unless the user has moved them, and Settings at the far end. Only the tabs between
+   Repositories and Settings can be moved. *@
 <TabBar Class="app-bar-tabs" AriaLabel="Main" FixedItems="FixedItems" Items="OpenItems" TrailingItems="SettingsItems"
-        OnClose="CloseAsync" />
+        OnClose="CloseAsync" OnMove="Move" />
 
 @code {
     private string _currentPath = AppRoutes.Home;
@@ -113,6 +114,9 @@
         }
     }
 
+    // The tabs are in the order of OrderedKeys, so the place among them is the place in the order.
+    private void Move(TabBarMove move) => TabOrder.Move(move.Item.Key, move.Index);
+
     private void CloseAsync(TabBarItem item)
     {
         if (MainTabOrder.IsWorkspaceKey(item.Key))
@@ -143,7 +147,8 @@
         }
     }
 
-    // The open tabs' keys, in the order they were opened (or, after a restart, the order they were saved in).
+    // The open tabs' keys, in the order they were opened (or, after a restart, the order they were saved in), unless
+    // the user has moved them.
     private IReadOnlyList<string> OrderedKeys()
     {
         var open = WorkspaceTabs.Tabs.Select(tab => MainTabOrder.WorkspaceKey(tab.WorkspaceId))

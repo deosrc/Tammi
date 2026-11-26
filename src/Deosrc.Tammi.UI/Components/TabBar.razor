@@ -6,7 +6,8 @@
    they don't all fit (the tab shown never is). Then come the end content, for something that is always after the tabs
    (e.g. a menu to open a new one), and the trailing tabs, which sit at the far end. When tabs are hidden, a More Tabs
    menu of the closable tabs comes just before the trailing tabs. The fixed and trailing tabs are always in sight, so
-   they aren't in the menu. *@
+   they aren't in the menu. With OnMove, the closable tabs can be put in another order, by dragging them or with
+   Ctrl+Shift+Left and Right. They stay between the fixed and trailing tabs. *@
 <nav class="tab-bar @Class" aria-label="@AriaLabel">
     @foreach (var item in FixedItems)
     {
@@ -92,6 +93,13 @@
     public EventCallback<TabBarItem> OnClose { get; set; }
 
     /// <summary>
+    /// Raised when the user moves one of <see cref="Items"/> to another place among them. Without it the tabs can't be
+    /// moved.
+    /// </summary>
+    [Parameter]
+    public EventCallback<TabBarMove> OnMove { get; set; }
+
+    /// <summary>
     /// Always after the tabs, and never hidden with them, e.g. a button that opens a new tab.
     /// </summary>
     [Parameter]
@@ -140,10 +148,45 @@
         }
     }
 
+    /// <summary>
+    /// Called by the browser when the user has moved a tab next to another: after it, or else before it.
+    /// </summary>
+    [JSInvokable]
+    public async Task MoveTab(string key, string otherKey, bool after)
+    {
+        var moved = Items.FirstOrDefault(item => item.Key == key);
+        if (moved is null || key == otherKey)
+        {
+            return;
+        }
+
+        var others = Items.Where(item => item.Key != key).ToList();
+        var index = others.FindIndex(item => item.Key == otherKey);
+        if (index < 0)
+        {
+            return;
+        }
+
+        if (after)
+        {
+            index++;
+        }
+
+        if (index != Items.ToList().IndexOf(moved))
+        {
+            await OnMove.InvokeAsync(new TabBarMove(moved, index));
+        }
+    }
+
+    private bool IsMovable(TabBarItem item, bool closable) => closable && OnMove.HasDelegate;
+
     private RenderFragment Tab(TabBarItem item, bool closable) =>
-        @<div class="tab-bar-tab @(item.Active ? "active" : null) @(closable ? "closable" : null)" @key="item.Key">
+        @<div class="tab-bar-tab @(item.Active ? "active" : null) @(closable ? "closable" : null) @(IsMovable(item, closable) ? "movable" : null)"
+              data-key="@item.Key" @key="item.Key">
+            @* Links can be dragged out of the page on their own: here a drag moves the tab instead. *@
             <a class="tab-bar-label @(item.Label is null ? "icon-only" : null)" href="@item.Href" title="@item.Title"
-               aria-label="@(item.Label is null ? item.Title : null)" aria-current="@(item.Active ? "page" : null)">
+               draggable="false" aria-label="@(item.Label is null ? item.Title : null)" aria-current="@(item.Active ? "page" : null)"
+               aria-keyshortcuts="@(IsMovable(item, closable) ? "Control+Shift+ArrowLeft Control+Shift+ArrowRight" : null)">
                 @if (item.Icon is not null)
                 {
                     <span class="tab-bar-slot">@item.Icon</span>

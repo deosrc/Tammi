@@ -318,6 +318,10 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   have failed: the one that most needs the user, in the order Error, Needs input, Working, then Idle or Running. It's
   shown like an agent's tab in the Workspace View (a spinner, an icon or a dot), and updates live. Agents that exited
   normally don't count.
+- **Moving tabs:** the main tabs can be put in another order by dragging them, or with Ctrl+Shift+Left and Right on a
+  focused tab. Only the tabs that can be closed move (workspaces, repositories, New workspace and AI Usage): Home and
+  Repositories are always first and Settings is always last, and no tab can be moved before or after them. A new tab
+  opens at the end.
 - **Reopening tabs:** the workspaces open in tabs, their order and the tab that was shown are kept in the app's data
   folder as they change. When the app starts, it opens those tabs again, and shows the one that was shown, if any.
   A workspace that's no longer listed, or can't be read, is skipped. Each workspace's own tabs are restored when its
@@ -505,7 +509,9 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   the workspace's tasks, its repositories' git status, its agents with their states, and its Pull Requests (open ones
   first) with their state, checks and review decision (approved, changes requested or review required; GitHub has no
   separate "rejected"). It uses the side panel's cards, so each is clicked the same way. Then come the
-  workspace's terminals, agents and Git Graphs, in the order they started or opened. A terminal's tab starts with a terminal icon. An agent's tab starts with the agent's icon, and ends (before its close button) with its state: a blue spinner while Working, a coloured bell icon when it Needs input, and otherwise a dot coloured by its state. The
+  workspace's terminals, agents and Git Graphs, in the order they started or opened, until the user moves them: they
+  can be dragged, or moved with Ctrl+Shift+Left and Right, but always stay between the dashboard and the **+** tab. A
+  new one opens at the end. The same goes for a repository's tab, whose own Git Graph is always first. A terminal's tab starts with a terminal icon. An agent's tab starts with the agent's icon, and ends (before its close button) with its state: a blue spinner while Working, a coloured bell icon when it Needs input, and otherwise a dot coloured by its state. The
   last is always a **+** tab, which opens a menu of things to start: **Terminal**, **Git** (see Git Graph), then each
   Agent Definition (in the order agents are offered). Terminal and each Agent Definition have a submenu of
   **Workspace** and **Repository: `<name>`** for each repository.
@@ -886,7 +892,7 @@ are left to other tools for now.
   - **Agent and Git Graph tabs are reopened after a restart.** Tammi keeps the agents and Git Graphs open in each
     workspace in `.tammi/open-tabs.json`, updating it as they open and close (not as Tammi closes and ends every agent).
     The first time a workspace is opened after Tammi starts, its agents are resumed from their recorded Agent
-    Sessions and its Git Graphs are opened, in their old order. The tab that was shown is shown again (the dashboard if it was the dashboard or a terminal). An agent whose session can't be resumed, or a graph
+    Sessions and its Git Graphs are opened, in their old order (as the user last arranged them). The tab that was shown is shown again (the dashboard if it was the dashboard or a terminal). An agent whose session can't be resumed, or a graph
     whose repository is no longer in the workspace, isn't reopened, and the view says so. Agents without a recorded
     session aren't kept. Terminals are left out, as keeping them would depend on the terminal supporting it.
   - **A repository's tab reopens its Git Graphs after a restart.** A Local Repository's tab (opened from the Repositories

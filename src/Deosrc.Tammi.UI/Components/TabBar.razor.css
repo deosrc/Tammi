@@ -17,6 +17,29 @@
     display: none;
 }
 
+/* A tab that can be moved isn't selected as text when it's dragged. */
+.tab-bar-tab.movable {
+    user-select: none;
+}
+
+/* While a tab is dragged, it follows the pointer above the others, which slide aside to make room for it. */
+.tab-bar-dragging .tab-bar-tab {
+    transition: transform 150ms ease;
+}
+
+.tab-bar-dragging .tab-bar-tab.dragging {
+    position: relative;
+    z-index: 1;
+    transition: none;
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+    cursor: grabbing;
+}
+
+.tab-bar-dragging .tab-bar-tab.dragging.active {
+    background: var(--color-bg);
+}
+
 /* At the far end of the bar, set apart from the tabs before it by a border on their start side. */
 .tab-bar-trailing {
     display: flex;
