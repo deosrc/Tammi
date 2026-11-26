@@ -204,7 +204,7 @@ public sealed class WorkspaceGitStatusMonitor : IDisposable
 
         try
         {
-            return loaded with { Status = _reader.ReadStatus(current.WorktreePath), Problem = null };
+            return loaded with { Status = _reader.ReadStatus(current.WorktreePath, current.Repository.MergeTarget), Problem = null };
         }
         catch (Exception ex) when (ex is GitException or LibGit2SharpException or IOException
             or UnauthorizedAccessException)

@@ -178,6 +178,23 @@ public sealed class GitSyncTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadStatus_CountsPushedCommitsOnBranch_AgainstMergeTarget()
+    {
+        var (_, mine, _) = await TwoClonesAsync();
+        await _repos.RunAsync(mine, "checkout", "-b", "feature");
+        Assert.Equal(0, _reader.ReadStatus(mine, "origin/main").CommitsOnBranch);
+        await _repos.CommitFileAsync(mine, "a.txt", "a", "Add a");
+        await _sync.PushAsync(mine, cancellationToken: Token);
+
+        RepositoryStatus status = _reader.ReadStatus(mine, "origin/main");
+
+        Assert.Equal(0, status.UnpushedCommitCount);
+        Assert.Equal(1, status.CommitsOnBranch);
+        Assert.Null(_reader.ReadStatus(mine).CommitsOnBranch);
+        Assert.Null(_reader.ReadStatus(mine, "origin/missing").CommitsOnBranch);
+    }
+
+    [Fact]
     public async Task PushAsync_UploadsCommits_AndUpdatesAheadCount()
     {
         var (_, mine, other) = await TwoClonesAsync();
