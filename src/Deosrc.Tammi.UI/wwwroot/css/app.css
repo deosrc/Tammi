@@ -274,9 +274,15 @@ a {
   font-size: 0.75rem;
 }
 
-/* The new release notice, at the right end of the footer. */
-.update-footer {
+.visualiser-toggle {
   margin-left: auto;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+}
+
+/* The new release notice, at the right end of the footer, after the visualiser toggle. */
+.update-footer {
+  margin-left: 0;
 }
 
 .usage-footer-title {

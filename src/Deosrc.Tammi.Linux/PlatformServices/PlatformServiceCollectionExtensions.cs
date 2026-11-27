@@ -4,6 +4,8 @@ using Deosrc.Tammi.Core.Credentials;
 using Deosrc.Tammi.Core.Platform;
 using Deosrc.Tammi.Core.Platform.Pty;
 using Deosrc.Tammi.Core.Settings;
+using Deosrc.Tammi.Core.Windowing;
+using Deosrc.Tammi.UI.Visualiser;
 
 namespace Deosrc.Tammi.Linux.PlatformServices;
 
@@ -32,6 +34,12 @@ internal static class PlatformServiceCollectionExtensions
                 provider.GetRequiredService<ISettingsStore>()));
         services.AddSingleton<IFilePicker>(provider =>
             new PhotinoFilePicker(provider.GetRequiredService<PhotinoBlazorApp>().MainWindow));
+        services.AddSingleton<IVisualiserWindow>(provider => new PhotinoVisualiserWindow(
+            provider.GetRequiredService<PhotinoBlazorApp>(),
+            provider.GetRequiredService<VisualiserFeed>(),
+            provider.GetRequiredService<WorkspaceOpenRequests>(),
+            provider.GetRequiredService<VisualiserWindowStateStore>(),
+            provider.GetRequiredService<ISettingsStore>()));
         return services;
     }
 }
