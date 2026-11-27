@@ -43,7 +43,7 @@
                 @if (_results?.Kind is null or TaskSearchKind.Assigned)
                 {
                     <p class="settings-help task-results-help">
-                        Open tasks assigned to you that aren't in a workspace yet. JIRA issues already in progress aren't
+                        Open tasks assigned to you that aren't in a workspace yet. Tasks already in progress aren't
                         listed.
                     </p>
                 }
@@ -89,6 +89,7 @@
                                         <TaskSourceIcon Source="Registry.Find(task.Source)" />
                                         <span class="task-key">@task.Key</span>
                                         <span class="task-title" title="@task.Title">@task.Title</span>
+                                        <TaskStatusBadge Task="task" />
                                         @if (_workspaceNames.TryGetValue(task.Reference, out var workspace))
                                         {
                                             <FluentBadge Appearance="BadgeAppearance.Tint" title="@($"Already in the workspace {workspace}")">
@@ -129,6 +130,7 @@
                             <TaskSourceIcon Source="Registry.Find(task.Source)" />
                             <span class="task-key">@task.Key</span>
                             <span class="task-title" title="@task.Title">@task.Title</span>
+                            <TaskStatusBadge Task="task" />
                         </div>
                         <FluentButton Class="card-remove" Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small"
                                       IconOnly="true" IconStart="@(new Icons.Regular.Size16.Dismiss())"

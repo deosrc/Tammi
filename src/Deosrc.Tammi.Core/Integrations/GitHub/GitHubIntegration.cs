@@ -28,9 +28,10 @@ public sealed partial class GitHubIntegration
     : ITaskIntegration, IRepositoryIntegration, IPullRequestIntegration, ISshKeyIntegration
 {
     /// <summary>
-    /// The search for the tasks assigned to the user: their open issues.
+    /// The search for the tasks assigned to the user: their open issues that aren't in progress. Issues without a
+    /// status, in repositories that don't have issue statuses, are included.
     /// </summary>
-    public const string AssignedSearch = "is:open assignee:@me archived:false";
+    public const string AssignedSearch = "is:open -category:started assignee:@me archived:false";
 
     private readonly GitHubIntegrationOptions _options;
     private readonly GitHubApiClient _api;
@@ -162,8 +163,8 @@ public sealed partial class GitHubIntegration
     }
 
     /// <summary>
-    /// Lists the user's open issues (<see cref="AssignedSearch"/>), most recently updated first. GitHub has no
-    /// in-progress state, so every open issue counts as still to do.
+    /// Lists the user's open issues that aren't In progress or In review (<see cref="AssignedSearch"/>), most recently
+    /// updated first. In repositories without issue statuses, every open issue counts as still to do.
     /// </summary>
     /// <returns>Up to <see cref="GitHubIntegrationOptions.MaxSearchResults"/> issues.</returns>
     /// <inheritdoc/>
@@ -664,8 +665,8 @@ public sealed partial class GitHubIntegration
             Description = string.IsNullOrEmpty(issue.Body) ? null : issue.Body,
             Updated = issue.UpdatedAt,
             RepositoryUrl = GetRepositoryUrl(url),
-            Status = StatusName(issue),
-            StatusCategory = issue.State switch
+            Status = issue.Status?.Name ?? StatusName(issue),
+            StatusCategory = issue.Status?.TaskCategory ?? issue.State switch
             {
                 "open" => TaskStatusCategory.ToDo,
                 "closed" => TaskStatusCategory.Done,
@@ -687,7 +688,9 @@ public sealed partial class GitHubIntegration
     }
 
     /// <summary>
-    /// Names an issue's status as GitHub shows it: open, or closed and why. GitHub has no in-progress state.
+    /// Names the status of an issue that has no <see cref="GitHubIssue.Status"/> (its repository doesn't have issue
+    /// statuses, or it was closed before they arrived): open, or closed and why. Without statuses, GitHub has no
+    /// in-progress state.
     /// </summary>
     private static string? StatusName(GitHubIssue issue) => (issue.State, issue.StateReason) switch
     {

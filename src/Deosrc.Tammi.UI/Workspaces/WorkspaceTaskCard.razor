@@ -41,20 +41,9 @@
         }
     }
 
-    private SidePanelCardTone Tone => WorkspaceTask.Task?.StatusCategory switch
-    {
-        TaskStatusCategory.InProgress => SidePanelCardTone.Info,
-        TaskStatusCategory.Done => SidePanelCardTone.Success,
-        _ => SidePanelCardTone.Neutral,
-    };
+    private SidePanelCardTone Tone => TaskStatusText.Tone(WorkspaceTask.Task?.StatusCategory);
 
-    private string? CategoryText => WorkspaceTask.Task?.StatusCategory switch
-    {
-        TaskStatusCategory.ToDo => "To do",
-        TaskStatusCategory.InProgress => "In progress",
-        TaskStatusCategory.Done => "Done",
-        _ => null,
-    };
+    private string? CategoryText => TaskStatusText.CategoryText(WorkspaceTask.Task?.StatusCategory);
 
     private string ProblemText => WorkspaceTask.Problem switch
     {
