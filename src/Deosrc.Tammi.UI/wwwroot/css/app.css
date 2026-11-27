@@ -707,6 +707,11 @@ a {
   white-space: nowrap;
 }
 
+/* A task's status badge keeps its size: the title before it gives way instead. */
+.task-status {
+  flex: none;
+}
+
 /* Choosing repositories */
 
 .repository-picker {
