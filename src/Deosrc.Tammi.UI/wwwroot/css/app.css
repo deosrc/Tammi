@@ -1309,6 +1309,13 @@ a {
   font-weight: 600;
 }
 
+/* The Repositories tab's name filter, above its table. */
+.repositories-filter {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: var(--space-3);
+}
+
 /* A row of the Repositories tab's table that opens a repository, as the rows of the grid are clickable. */
 .repository-row-open {
   cursor: pointer;
