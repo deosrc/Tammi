@@ -515,7 +515,7 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     colour of their [state](#agents) (blue, or the warning colour when it Needs input, with a tinted background) and
     their state as an icon and its name; then its recorded sessions that aren't running, most recently started first.
     A card has its agent's icon and the last title the agent set (see Terminals) at the top left, or else its agent's
-    name, with the name below when there is a title, and when it was last started at the top right; at the bottom, a
+    name, and when it was last started at the top right; at the bottom, a
     badge on the left with the repository it was started in (none if it was the Workspace Folder) and, on the right,
     the buttons: Show, which shows a running agent's tab, or for a past session, Resume, which opens it in a new tab,
     and Forget. A session whose agent can't resume it says why instead. Past sessions aren't in the side panel.

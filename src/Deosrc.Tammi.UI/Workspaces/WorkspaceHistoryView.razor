@@ -41,10 +41,6 @@
                         </div>
                         <div class="agent-session-time">@agent.SessionStartedAt.ToLocalTime().ToString("g")</div>
                     </div>
-                    @if (agent.DisplayName != agent.Name)
-                    {
-                        <p class="agent-card-detail">@agent.Name</p>
-                    }
                     <div class="agent-session-footer">
                         @if (WorkspaceAgents.RepositoryFolderOf(Workspace, agent.WorkingDirectory) is { } folder)
                         {
@@ -70,10 +66,6 @@
                         <div class="agent-session-name" title="@session.WorkingDirectory">@(session.LastTitle ?? session.AgentName)</div>
                         <div class="agent-session-time">@session.LastStartedAt.ToLocalTime().ToString("g")</div>
                     </div>
-                    @if (session.LastTitle is not null)
-                    {
-                        <p class="agent-card-detail">@session.AgentName</p>
-                    }
                     @if (cantResume is not null)
                     {
                         <p class="agent-card-detail warning">@cantResume</p>
