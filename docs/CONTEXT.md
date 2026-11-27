@@ -56,14 +56,17 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
    - The task list can be changed after the workspace is created.
    - **Finding tasks.** One search box covers every connected Task Source at once, and the results are combined,
      most recently updated first. What the user enters decides what's searched:
-     - **Nothing:** the tasks assigned to the user that are still to do: open GitHub issues, and JIRA issues whose
-       status is in the To Do category (not in progress or done). Tasks already in a workspace are left out.
+     - **Nothing:** the tasks assigned to the user that are still to do: open GitHub issues that aren't In progress
+       or In review, and JIRA issues whose status is in the To Do category (not in progress or done). Tasks already
+       in a workspace are left out.
      - **A link or reference** to a task, e.g. an issue's URL, `owner/repo#42` or `ABC-123`: that task, from each
        source that recognises it. This is the only way to find public tasks outside the user's organisations. A link
        that no source recognises isn't searched.
      - **Any other text:** a search of the text of the tasks of the user and their organisations that aren't done:
        open GitHub issues, and JIRA issues whose status isn't in the Done category (see
        [Integrations](#integrations)). Tasks already in a workspace are found too, and marked with its name.
+   - Each task found, and each chosen task, shows its Task Status as a chip coloured by its category, as in the
+     Workspace View's Tasks section, so tasks in different statuses can be told apart.
    - Search starts when the user stops typing. A source that fails doesn't stop the others: its error is shown
      with their results.
    - Tasks chosen from several searches and sources are kept together in one list.
@@ -134,7 +137,11 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
      their new branches, the Workspace Folder and any parent folders it created that are still empty. Anything it
      couldn't remove is listed. Since the metadata is written last, a workspace that's only partly created is never
      listed on Home.
-   - The new workspace then opens in a tab, unless there were warnings, which are shown first.
+   - Once it's created, Tammi starts the agent chosen in Settings → Agents for new workspaces (none by default), in
+     the Workspace Folder. An agent that can't start (e.g. its CLI isn't installed) doesn't undo the workspace: why is
+     listed with the warnings.
+   - The new workspace then opens in a tab, on the agent started with it (or else its dashboard), unless there were
+     warnings, which are shown first.
 
 ### Repositories on disk
 
@@ -349,8 +356,11 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     doesn't hold up the others.
   - A task that can't be read says why: its Task Source isn't connected, it wasn't found (or the user can't see it),
     or the source failed (with the error as a tooltip).
-  - **GitHub** issues are Open (to do), or Closed, Not planned or Duplicate (done), from the issue's state and why it
-    was closed. GitHub has no in-progress state. **JIRA** issues have their own status and its category.
+  - **GitHub** issues have GitHub's issue statuses, in repositories that have them (they're in preview, so not all
+    do yet): Backlog and Todo (to do), In progress and In review (in progress), and Done, Not planned and Duplicate
+    (done). An issue without one (its repository doesn't have statuses, or it was closed before they arrived) is Open
+    (to do), or Closed, Not planned or Duplicate (done), from the issue's state and why it was closed. **JIRA** issues
+    have their own status and its category.
 - **Side panel cards** that do something when clicked (a task's, an agent's and a repository's) do it wherever the card
   is clicked, and show it with a pointer and the card's colour on its border. Each card's name is also a button, so
   the keyboard can reach it.
@@ -665,6 +675,9 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     case and surrounding spaces, including the Supported Agents' names. A name that's already used is still saved,
     but shown as an error until it's changed.
   - Agents are offered in that order: the Supported Agents, then the Custom Agents.
+  - The agent to start when a workspace is created: **None** (the default) or one of the agents. It's recorded by
+    name. If no agent has that name now (e.g. it was renamed or removed), None is shown and no agent starts, but the
+    name is kept until the user chooses again, so an agent that gets the name back is started again.
   - The initial prompt style: **Prefill** (the default) or **Submit**. Prefill types the prompt into the agent's input
     about two seconds after it starts, without sending it, so the user can edit it and send it themselves. Submit passes
     it to the agent with its initial prompt arguments, so the agent acts on it straight away.
@@ -1019,8 +1032,9 @@ are left to other tools for now.
     the public key on the clipboard. A key GitHub says is already in use counts as added if it's on the user's account.
 - **Task keys** are GitHub's issue references, `owner/repo#number`. Pull requests aren't tasks.
 - **Finding tasks:**
-  - **Assigned:** the user's open issues (`is:open assignee:@me archived:false`). GitHub has no in-progress state, so
-    every open issue counts as still to do.
+  - **Assigned:** the user's open issues that aren't in progress (`is:open -category:started assignee:@me
+    archived:false`): In progress and In review issues are left out. Issues in repositories without issue statuses
+    have no category, so every open one counts as still to do.
   - **Text search** covers the open issues (`state:open`) in the user's own repositories, the organisations that own
     repositories they can reach (`org:`), and other users' repositories they collaborate on (`repo:`, so those users'
     other repositories aren't searched). Tammi reads these from the user's repositories and remembers them for 10 minutes. A search that covers

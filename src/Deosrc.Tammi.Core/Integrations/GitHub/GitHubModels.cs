@@ -16,6 +16,10 @@ public sealed record GitHubUser(string Login, string? Name);
 /// Why a closed issue was closed: <c>completed</c>, <c>not_planned</c> or <c>duplicate</c> (or <c>reopened</c> for an open
 /// one). Older issues don't have one.
 /// </param>
+/// <param name="Status">
+/// The issue's status, or <see langword="null"/> if its repository doesn't have issue statuses or the issue has none
+/// (e.g. one closed before they arrived).
+/// </param>
 internal sealed record GitHubIssue(
     int Number,
     string Title,
@@ -25,7 +29,8 @@ internal sealed record GitHubIssue(
     JsonElement? PullRequest,
     DateTimeOffset? UpdatedAt = null,
     string? State = null,
-    string? StateReason = null)
+    string? StateReason = null,
+    GitHubIssueStatus? Status = null)
 {
     /// <summary>
     /// GitHub's issue endpoints also return pull requests, which have a <c>pull_request</c> property.

@@ -5,8 +5,9 @@ using Deosrc.Tammi.Core.Workspaces;
 namespace Deosrc.Tammi.UI.Workspaces;
 
 /// <summary>
-/// The Repositories page's rows. They're kept here, not in the page, so coming back to the tab shows what was read
-/// last time straight away. They're read again when the user refreshes them or the catalogue is scanned again.
+/// The Repositories page's rows and name filter. They're kept here, not in the page, so coming back to the tab shows
+/// what was read last time, filtered as it was, straight away. The rows are read again when the user refreshes them or
+/// the catalogue is scanned again.
 /// </summary>
 public sealed class RepositoryListState : IDisposable
 {
@@ -30,6 +31,12 @@ public sealed class RepositoryListState : IDisposable
     /// The rows, sorted by name. Empty until the first read starts.
     /// </summary>
     public IReadOnlyList<RepositoryListRow> Rows { get; private set; } = [];
+
+    /// <summary>
+    /// The text the Repositories page's name filter holds, kept here so it's still there when the user comes back to
+    /// the tab.
+    /// </summary>
+    public string Filter { get; set; } = "";
 
     /// <summary>
     /// Whether the rows are being read.

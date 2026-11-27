@@ -1,3 +1,6 @@
+using System.Runtime.InteropServices;
+using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Workspaces;
 
 namespace Deosrc.Tammi.UI.Workspaces;
@@ -6,9 +9,17 @@ namespace Deosrc.Tammi.UI.Workspaces;
 /// One run of the Create Workspace flow. It outlives the page, so switching to another tab and back resumes it, and a
 /// creation that's running carries on meanwhile.
 /// </summary>
-public sealed class NewWorkspaceSession(WorkspaceDraft draft, WorkspaceCreator creator, WorkspaceTabs tabs)
+public sealed class NewWorkspaceSession(
+    WorkspaceDraft draft,
+    WorkspaceCreator creator,
+    WorkspaceTabs tabs,
+    WorkspaceAgents agents,
+    ISettingsStore settings)
 {
     private CancellationTokenSource? _creation;
+
+    // The agent started with the workspace, whose tab it opens on.
+    private WorkspaceAgent? _agent;
 
     public WorkspaceDraft Draft { get; } = draft;
 
@@ -30,9 +41,10 @@ public sealed class NewWorkspaceSession(WorkspaceDraft draft, WorkspaceCreator c
     public event Action? Changed;
 
     /// <summary>
-    /// Raised when the workspace was created without warnings, and its tab has been opened.
+    /// Raised when the workspace was created without warnings, and its tab has been opened. It comes with the agent
+    /// started with the workspace, whose tab to show, or <see langword="null"/> if none was started.
     /// </summary>
-    public event Action<Workspace>? Completed;
+    public event Action<Workspace, IMainAreaTab?>? Completed;
 
     public async Task CreateAsync()
     {
@@ -56,7 +68,11 @@ public sealed class NewWorkspaceSession(WorkspaceDraft draft, WorkspaceCreator c
         Changed?.Invoke();
         try
         {
-            Created = await creator.CreateAsync(Draft.ToCreationRequest(), progress, creation.Token);
+            var created = await creator.CreateAsync(Draft.ToCreationRequest(), progress, creation.Token);
+            var agentProblems = await StartAgentAsync(created.Workspace);
+            Created = agentProblems.Count == 0
+                ? created
+                : created with { Warnings = [.. created.Warnings, .. agentProblems] };
             if (Created.Warnings.Count == 0)
             {
                 OpenCreated();
@@ -93,7 +109,31 @@ public sealed class NewWorkspaceSession(WorkspaceDraft draft, WorkspaceCreator c
         if (Created?.Workspace is { } workspace)
         {
             tabs.Open(workspace.Id, workspace.Name);
-            Completed?.Invoke(workspace);
+            Completed?.Invoke(workspace, _agent);
+        }
+    }
+
+    /// <summary>
+    /// Starts the agent chosen in the settings to start when a workspace is created, if any, in the Workspace Folder.
+    /// </summary>
+    /// <returns>Why the agent couldn't start, if it couldn't. The workspace is kept either way.</returns>
+    private async Task<IReadOnlyList<string>> StartAgentAsync(Workspace workspace)
+    {
+        _agent = null;
+        if (settings.Current.Agents.DefinitionToStartOnWorkspaceCreation is not { } definition)
+        {
+            return [];
+        }
+
+        try
+        {
+            _agent = await agents.StartAsync(workspace, definition);
+            return [];
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or ExternalException
+            or ObjectDisposedException)
+        {
+            return [$"Couldn't start {definition.Name.Trim()}. {ex.Message}"];
         }
     }
 }

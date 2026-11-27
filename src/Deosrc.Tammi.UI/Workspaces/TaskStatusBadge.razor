@@ -1,0 +1,15 @@
+@* A task's Task Status as a tinted badge, coloured by its category, which is its tooltip. It shows nothing when the
+   task's source didn't say its status. *@
+@using Deosrc.Tammi.Core.Integrations
+
+@if (Task.Status is { } status)
+{
+    <FluentBadge Class="task-status" Appearance="BadgeAppearance.Tint"
+                 Color="TaskStatusText.Tone(Task.StatusCategory).ToBadgeColor()"
+                 title="@TaskStatusText.CategoryText(Task.StatusCategory)">@status</FluentBadge>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public TaskInfo Task { get; set; } = null!;
+}

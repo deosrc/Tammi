@@ -713,6 +713,11 @@ a {
   white-space: nowrap;
 }
 
+/* A task's status badge keeps its size: the title before it gives way instead. */
+.task-status {
+  flex: none;
+}
+
 /* Choosing repositories */
 
 .repository-picker {
@@ -1313,6 +1318,13 @@ a {
   margin: 0 0 var(--space-1);
   font-size: inherit;
   font-weight: 600;
+}
+
+/* The Repositories tab's name filter, above its table. */
+.repositories-filter {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: var(--space-3);
 }
 
 /* A row of the Repositories tab's table that opens a repository, as the rows of the grid are clickable. */

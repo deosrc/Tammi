@@ -13,7 +13,7 @@ public class GitHubIntegrationTests : IDisposable
     private const string Token = "github_pat_test";
 
     private static readonly string DefaultSearchPath = SearchPath(
-        "is:issue is:open assignee:@me archived:false", sort: "&sort=updated&order=desc");
+        "is:issue is:open -category:started assignee:@me archived:false", sort: "&sort=updated&order=desc");
 
     private readonly InMemoryCredentialStore _store = new();
     private readonly FakeGitHubApi _api = new();
@@ -98,7 +98,7 @@ public class GitHubIntegrationTests : IDisposable
 
         Assert.Equal(["deosrc/Condement#1", "deosrc/Condement#2", "deosrc/Condement#3"], tasks.Select(t => t.Key));
         RecordedRequest request = Assert.Single(_api.Requests);
-        Assert.Equal("is:issue is:open assignee:@me archived:false", request.Query("q"));
+        Assert.Equal("is:issue is:open -category:started assignee:@me archived:false", request.Query("q"));
         Assert.Equal("updated", request.Query("sort"));
     }
 
@@ -382,6 +382,63 @@ public class GitHubIntegrationTests : IDisposable
 
         Assert.Equal(status, task?.Status);
         Assert.Equal(category, task?.StatusCategory);
+    }
+
+    [Theory]
+    [InlineData("open", "Backlog", "backlog", TaskStatusCategory.ToDo)]
+    [InlineData("open", "Todo", "planned", TaskStatusCategory.ToDo)]
+    [InlineData("open", "In progress", "started", TaskStatusCategory.InProgress)]
+    [InlineData("open", "In review", "started", TaskStatusCategory.InProgress)]
+    [InlineData("closed", "Done", "completed", TaskStatusCategory.Done)]
+    [InlineData("closed", "Not planned", "not-planned", TaskStatusCategory.Done)]
+    [InlineData("closed", "Duplicate", "duplicate", TaskStatusCategory.Done)]
+    public async Task GetTaskAsync_ReadsTheIssueStatus_WhenTheRepositoryHasThem(
+        string state, string name, string category, TaskStatusCategory expected)
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        var issue = JsonNode.Parse(FakeGitHubApi.Recorded("issue.json"))!;
+        issue["state"] = state;
+        issue["status"] = new JsonObject { ["id"] = 8, ["name"] = name, ["category"] = category };
+        _api.Respond("repos/deosrc/Condement/issues/3", issue.ToJsonString());
+
+        TaskInfo? task = await github.GetTaskAsync("deosrc/Condement#3", CancellationToken);
+
+        Assert.Equal(name, task?.Status);
+        Assert.Equal(expected, task?.StatusCategory);
+    }
+
+    [Theory]
+    [InlineData("open", TaskStatusCategory.ToDo)]
+    [InlineData("closed", TaskStatusCategory.Done)]
+    public async Task GetTaskAsync_TakesTheCategoryFromTheState_WhenTheStatusCategoryIsUnknown(
+        string state, TaskStatusCategory expected)
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        var issue = JsonNode.Parse(FakeGitHubApi.Recorded("issue.json"))!;
+        issue["state"] = state;
+        issue["status"] = new JsonObject { ["id"] = 99, ["name"] = "Blocked", ["category"] = "blocked" };
+        _api.Respond("repos/deosrc/Condement/issues/3", issue.ToJsonString());
+
+        TaskInfo? task = await github.GetTaskAsync("deosrc/Condement#3", CancellationToken);
+
+        Assert.Equal("Blocked", task?.Status);
+        Assert.Equal(expected, task?.StatusCategory);
+    }
+
+    [Fact]
+    public async Task GetTaskAsync_NamesTheStatusFromTheState_WhenTheIssueHasNoStatus()
+    {
+        GitHubIntegration github = await CreateAuthenticatedAsync();
+        var issue = JsonNode.Parse(FakeGitHubApi.Recorded("issue.json"))!;
+        issue["state"] = "closed";
+        issue["state_reason"] = "not_planned";
+        issue["status"] = null;
+        _api.Respond("repos/deosrc/Condement/issues/3", issue.ToJsonString());
+
+        TaskInfo? task = await github.GetTaskAsync("deosrc/Condement#3", CancellationToken);
+
+        Assert.Equal("Not planned", task?.Status);
+        Assert.Equal(TaskStatusCategory.Done, task?.StatusCategory);
     }
 
     [Fact]
