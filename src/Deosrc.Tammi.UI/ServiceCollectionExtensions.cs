@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddTammiLogging();
         services.AddFluentUIComponents();
         services.TryAddSingleton<ISystemTheme, UndetectedSystemTheme>();
+        services.TryAddSingleton<IWindowFrame, TitledWindowFrame>();
 
         // One window per app, so the open tabs are shared app-wide.
         services.AddSingleton<WorkspaceTabs>();

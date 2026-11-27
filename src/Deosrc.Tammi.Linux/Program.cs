@@ -6,6 +6,7 @@ using Photino.NET;
 using Deosrc.Tammi.Core;
 using Deosrc.Tammi.Core.Agents;
 using Deosrc.Tammi.Core.Platform;
+using Deosrc.Tammi.Core.Settings;
 using Deosrc.Tammi.Core.Terminals;
 using Deosrc.Tammi.Core.Updates;
 using Deosrc.Tammi.Core.Windowing;
@@ -54,6 +55,8 @@ internal static class Program
         app.MainWindow
             .SetLogVerbosity(0)
             .SetTitle(AppInfo.Name)
+            // With the Slim Window setting on, no title bar: the app bar takes its place (see PhotinoWindowFrame).
+            .SetChromeless(PhotinoWindowFrame.IsSlim(app.Services.GetRequiredService<ISettingsStore>()))
             .SetIconFile(Path.Combine(AppContext.BaseDirectory, "tammi.png"))
             .SetMinSize(800, 600)
             // On Linux, Photino sends the maximum size along with the minimum size. Left unset it's -1, which

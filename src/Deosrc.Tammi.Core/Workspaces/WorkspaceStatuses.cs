@@ -66,7 +66,7 @@ public static class WorkspaceStatuses
             return WorkspaceStatus.Done;
         }
 
-        return summary.LocalChanges.Count > 0 || summary.Unpushed.Count > 0 || pullRequests.Count > 0
+        return summary.LocalChanges.Count > 0 || summary.Unpushed.Count > 0 || summary.OnBranch.Count > 0 || pullRequests.Count > 0
             || states.Contains(AgentState.Working)
             ? WorkspaceStatus.InDevelopment
             : WorkspaceStatus.Planning;

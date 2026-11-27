@@ -109,7 +109,7 @@ public sealed class AgentHookServer(ILogger<AgentHookServer>? logger = null) : I
                 client = await listener.AcceptTcpClientAsync(_stopping.Token).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException
-                || (ex is SocketException && _stopping.IsCancellationRequested))
+                || (ex is SocketException or InvalidOperationException && _stopping.IsCancellationRequested))
             {
                 return;
             }
