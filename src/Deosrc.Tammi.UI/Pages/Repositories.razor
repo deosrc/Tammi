@@ -35,7 +35,7 @@
         @* Focused when the tab opens, so typing filters the list straight away. *@
         <FluentTextInput Class="repositories-filter" TextInputType="TextInputType.Search" aria-label="Filter repositories"
                          AutoComplete="off" Autofocus="true" Immediate="true" Placeholder="Filter by name"
-                         @bind-Value="_filter" />
+                         @bind-Value="State.Filter" />
 
         var rows = FilteredRows;
         if (rows.Count == 0 && State.Rows.Count > 0)
@@ -111,13 +111,11 @@
 </div>
 
 @code {
-    private string _filter = "";
-
     private IReadOnlyList<RepositoryListRow> FilteredRows
     {
         get
         {
-            var filter = _filter.Trim();
+            var filter = State.Filter.Trim();
             return filter.Length == 0
                 ? State.Rows
                 : [.. State.Rows.Where(row => row.Repository.Name.Contains(filter, StringComparison.CurrentCultureIgnoreCase))];
