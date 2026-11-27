@@ -1075,7 +1075,13 @@ are left to other tools for now.
     session and opens the terminal without any code in the child. This needs glibc 2.29 or later.
   - Links in the terminal's output (plain `http(s)` URLs, and OSC 8 hyperlinks) open in the user's browser when clicked.
     Other schemes are ignored, as the output comes from a process and a link could otherwise start a program.
+  - Keys reach programs with all their modifiers when a program asks for a keyboard protocol: win32-input-mode,
+    which ConPTY asks for on Windows, and the kitty keyboard protocol on Linux (e.g. Claude Code, fish). For programs
+    that use legacy input (e.g. bash, zsh), Ctrl+Enter, Ctrl+Delete and Ctrl+Backspace, which it can't encode, are
+    translated to a line feed, Alt+D and Alt+Backspace. Copy and paste keys and the right-click stay with Tammi either
+    way.
   - xterm.js is vendored in the UI library (`wwwroot/lib/xterm`), so the app needs no network access or npm build.
+    It's a 6.1 beta, as the keyboard protocols aren't in a stable release yet.
 
 ## Open Questions
 

@@ -52,6 +52,13 @@ export function create(element, dotNet, options) {
     linkHandler: { activate: openLink, allowNonHttpProtocols: false },
     scrollback: 10000,
     theme,
+    // Keyboard protocols that send keys to programs with all their modifiers, once a program asks for one: ConPTY
+    // asks for win32-input-mode (CSI ? 9001 h), so console programs such as PowerShell get the real key events, and
+    // programs such as Claude Code and fish ask for the kitty keyboard protocol (CSI > flags u).
+    vtExtensions: {
+      win32InputMode: !!options.windowsBuildNumber,
+      kittyKeyboard: !options.windowsBuildNumber,
+    },
     windowsPty: options.windowsBuildNumber
       ? { backend: 'conpty', buildNumber: options.windowsBuildNumber }
       : undefined,
@@ -67,7 +74,21 @@ export function create(element, dotNet, options) {
   // Plain URLs in the output.
   terminal.loadAddon(new WebLinksAddon(openLink));
 
-  terminal.attachCustomKeyEventHandler(event => handleClipboardKeys(terminal, event));
+  // The keys whose key down was handled here (by event.code). Their key up isn't sent either: in win32-input-mode
+  // xterm.js sends key ups too, and the program would get the release of a key it never saw pressed.
+  const handledKeys = new Set();
+  terminal.attachCustomKeyEventHandler(event => {
+    if (event.type === 'keyup' && handledKeys.delete(event.code)) {
+      return false;
+    }
+
+    const send = handleKeys(terminal, event);
+    if (!send && event.type === 'keydown') {
+      handledKeys.add(event.code);
+    }
+
+    return send;
+  });
   const subscriptions = [
     terminal.onData(data => dotNet.invokeMethodAsync('OnInput', data)),
     terminal.onBinary(data => dotNet.invokeMethodAsync('OnBinaryInput', data)),
@@ -133,36 +154,15 @@ export function create(element, dotNet, options) {
 }
 
 /**
- * Copy and paste keys. Ctrl+Shift+C and Ctrl+Shift+V work everywhere. On Windows, as in Windows Terminal, Ctrl+C
- * also copies when text is selected (otherwise it interrupts), and Ctrl+V pastes.
+ * The keys handled here rather than sent as xterm.js encodes them. Copy and paste come first, as they're the
+ * terminal's own actions: Ctrl+Shift+C and Ctrl+Shift+V work everywhere, and on Windows, as in Windows Terminal,
+ * Ctrl+C also copies when text is selected (otherwise it interrupts), and Ctrl+V pastes. Then, only for programs that
+ * haven't asked for a keyboard protocol, a few Ctrl keys that legacy terminal input can't encode are translated.
  * @returns {boolean} false when the key was handled here, so xterm.js doesn't send it to the process.
  */
-function handleClipboardKeys(terminal, event) {
+function handleKeys(terminal, event) {
   if (event.type !== 'keydown' || !event.ctrlKey || event.altKey || event.metaKey) {
     return true;
-  }
-
-  // Ctrl+Enter. Terminals can't tell it from Enter, so send a line feed, which programs such as Claude Code treat as
-  // a newline rather than a submit.
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    terminal.input('\n');
-    return false;
-  }
-
-  // Ctrl+Delete deletes the next word. Shells don't bind xterm.js's sequence for it, but all bind Alt+D (ESC d).
-  if (event.key === 'Delete' && !event.shiftKey) {
-    event.preventDefault();
-    terminal.input('\x1bd');
-    return false;
-  }
-
-  // Ctrl+Backspace deletes the previous word. xterm.js sends ^H, which shells treat as a plain Backspace. Alt+Backspace
-  // (ESC DEL) is the word deletion that shells bind.
-  if (event.key === 'Backspace' && !event.shiftKey) {
-    event.preventDefault();
-    terminal.input('\x1b\x7f');
-    return false;
   }
 
   const key = event.key.toLowerCase();
@@ -175,6 +175,62 @@ function handleClipboardKeys(terminal, event) {
   if (key === 'v' && (event.shiftKey || isWindows)) {
     event.preventDefault();
     paste(terminal);
+    return false;
+  }
+
+  // A program that asked for a keyboard protocol gets every key as it was pressed, modifiers and all.
+  if (keyboardProtocolActive(terminal)) {
+    return true;
+  }
+
+  return translateLegacyKey(terminal, event);
+}
+
+/**
+ * Whether the program has asked for a keyboard protocol that carries modifiers: win32-input-mode (ConPTY asks for it
+ * on Windows builds that support it) or the kitty keyboard protocol.
+ */
+function keyboardProtocolActive(terminal) {
+  if (terminal.modes.win32InputMode) {
+    return true;
+  }
+
+  // xterm.js doesn't expose the kitty keyboard flags, so they're read from its core, which its own `modes` getter reads
+  // too. The vendored version is pinned (lib/xterm/README.md): check this still works when it's updated.
+  return (terminal._core?.coreService?.kittyKeyboard?.flags ?? 0) !== 0;
+}
+
+/**
+ * Ctrl keys that legacy terminal input can't encode, translated to the keys that shells and Claude Code bind for the
+ * same action. They're only a fallback, for programs such as bash and zsh that use legacy input, and on Windows builds
+ * whose ConPTY doesn't ask for win32-input-mode: a guess at the binding can't suit every program.
+ * @returns {boolean} false when the key was translated, so xterm.js doesn't send it to the process.
+ */
+function translateLegacyKey(terminal, event) {
+  if (event.shiftKey) {
+    return true;
+  }
+
+  // Ctrl+Enter. Terminals can't tell it from Enter, so send a line feed, which programs such as Claude Code treat as
+  // a newline rather than a submit.
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    terminal.input('\n');
+    return false;
+  }
+
+  // Ctrl+Delete deletes the next word. Shells don't bind xterm.js's sequence for it, but all bind Alt+D (ESC d).
+  if (event.key === 'Delete') {
+    event.preventDefault();
+    terminal.input('\x1bd');
+    return false;
+  }
+
+  // Ctrl+Backspace deletes the previous word. xterm.js sends ^H, which shells treat as a plain Backspace. Alt+Backspace
+  // (ESC DEL) is the word deletion that shells bind.
+  if (event.key === 'Backspace') {
+    event.preventDefault();
+    terminal.input('\x1b\x7f');
     return false;
   }
 
