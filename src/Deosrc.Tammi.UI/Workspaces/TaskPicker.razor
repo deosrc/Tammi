@@ -82,14 +82,14 @@
                         {
                             var chosen = Draft.ContainsTask(task.Reference);
                             @* The whole card toggles the task, so the checkbox ignores the mouse, which reaches the card
-                               instead. It still works with the keyboard. The Open button stops its click reaching the card. *@
+                               instead. It still works with the keyboard. The status and the open-in-browser button
+                               end the card, and the button stops its click reaching the card. *@
                             <CardListItem @key="task.Reference" Chosen="chosen" OnClick="() => Toggle(task)">
                                 <FluentCheckbox Class="task-checkbox" Value="chosen" ValueChanged="_ => Toggle(task)">
                                     <span class="task-choice-text">
                                         <TaskSourceIcon Source="Registry.Find(task.Source)" />
                                         <span class="task-key">@task.Key</span>
                                         <span class="task-title" title="@task.Title">@task.Title</span>
-                                        <TaskStatusBadge Task="task" />
                                         @if (_workspaceNames.TryGetValue(task.Reference, out var workspace))
                                         {
                                             <FluentBadge Appearance="BadgeAppearance.Tint" title="@($"Already in the workspace {workspace}")">
@@ -98,10 +98,12 @@
                                         }
                                     </span>
                                 </FluentCheckbox>
-                                <FluentButton Size="ButtonSize.Small" Title="@($"Open {task.Key} in the browser")"
-                                              StopPropagation="true" OnClick="() => Open(task)">
-                                    Open
-                                </FluentButton>
+                                <TaskStatusBadge Task="task" />
+                                <FluentButton Appearance="ButtonAppearance.Transparent" Size="ButtonSize.Small"
+                                              IconOnly="true" IconStart="@(new Icons.Regular.Size16.Open())"
+                                              Title="@($"Open {task.Key} in the browser")"
+                                              aria-label="@($"Open {task.Key} in the browser")"
+                                              StopPropagation="true" OnClick="() => Open(task)" />
                             </CardListItem>
                         }
                     </ul>
