@@ -59,6 +59,18 @@ public sealed class AgentSessionFileStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAsync_WithTitle_WritesItThatANewStoreLists()
+    {
+        var session = CreateSession(StartedAt) with { LastTitle = "Fix the bug" };
+
+        await CreateStore().RecordAsync(session, Token);
+
+        var json = JsonNode.Parse(await File.ReadAllTextAsync(FilePath, Token))!.AsObject();
+        Assert.Equal("Fix the bug", json["sessions"]![0]!["lastTitle"]!.GetValue<string>());
+        Assert.Equal([session], await CreateStore().ListAsync(Token));
+    }
+
+    [Fact]
     public async Task RecordAsync_KeepsOtherSessions_MostRecentlyStartedFirst()
     {
         var store = CreateStore();

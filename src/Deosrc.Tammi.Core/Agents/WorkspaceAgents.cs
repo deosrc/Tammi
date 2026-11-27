@@ -159,6 +159,13 @@ public sealed class WorkspaceAgents(
     }
 
     /// <summary>
+    /// How long a change of an agent's title waits before it's recorded with its Agent Session, so an agent that keeps
+    /// changing its title (e.g. to animate it while it works) doesn't write the sessions file each time. A title is also
+    /// recorded as soon as the agent ends.
+    /// </summary>
+    public static readonly TimeSpan TitleRecordDelay = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// How long a prefilled initial prompt waits after the agent starts, so the agent is ready for input.
     /// </summary>
     public static readonly TimeSpan PrefillDelay = TimeSpan.FromSeconds(2);
@@ -222,7 +229,8 @@ public sealed class WorkspaceAgents(
             workspace,
             definition,
             RepositoryFolderOf(workspace, session.WorkingDirectory),
-            () => launcher.Resume(definition, session, PtySize.Default));
+            () => launcher.Resume(definition, session, PtySize.Default),
+            session.LastTitle);
     }
 
     /// <summary>
@@ -327,7 +335,8 @@ public sealed class WorkspaceAgents(
         Workspace workspace,
         AgentDefinition definition,
         string? repositoryFolder,
-        Func<Agent> start)
+        Func<Agent> start,
+        string? lastTitle = null)
     {
         var agentName = string.IsNullOrWhiteSpace(definition.Name) ? DefaultName : definition.Name.Trim();
         var baseName = repositoryFolder is null ? agentName : $"{agentName} ({repositoryFolder})";
@@ -346,7 +355,12 @@ public sealed class WorkspaceAgents(
                 throw;
             }
 
-            agent = new WorkspaceAgent(workspace.Id, UniqueName(workspace.Id, baseName), started);
+            agent = new WorkspaceAgent(
+                workspace.Id,
+                UniqueName(workspace.Id, baseName),
+                started,
+                timeProvider.GetUtcNow(),
+                lastTitle);
             _agents.Add(agent);
         }
 
@@ -367,19 +381,66 @@ public sealed class WorkspaceAgents(
 
         var store = SessionsOf(workspace);
         agent.Agent.StateChanged += _ => Changed?.Invoke(agent.WorkspaceId);
-        agent.Session.TitleChanged += () => Changed?.Invoke(agent.WorkspaceId);
+        agent.Session.TitleChanged += () =>
+        {
+            Changed?.Invoke(agent.WorkspaceId);
+            _ = RecordTitleLaterAsync(agent, store);
+        };
 
         // Raised when the agent's hooks report its session, or that it has moved to another one.
-        agent.Agent.SessionIdChanged += changed => _ = RecordSessionAsync(agent, store);
+        agent.Agent.SessionIdChanged += changed =>
+        {
+            agent.NoteNewSession(timeProvider.GetUtcNow());
+            _ = RecordSessionAsync(agent, store);
+        };
         Changed?.Invoke(workspace.Id);
 
         await RecordSessionAsync(agent, store).ConfigureAwait(false);
+        _ = RecordTitleOnExitAsync(agent, store);
         return agent;
+    }
+
+    /// <summary>
+    /// Records the agent's session with its last title, a moment after the title changes (see
+    /// <see cref="TitleRecordDelay"/>). Changes made while it waits are recorded together.
+    /// </summary>
+    private async Task RecordTitleLaterAsync(WorkspaceAgent agent, IAgentSessionStore store)
+    {
+        if (!agent.ScheduleTitleRecord())
+        {
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(TitleRecordDelay, timeProvider).ConfigureAwait(false);
+        }
+        finally
+        {
+            agent.EndTitleRecord();
+        }
+
+        if (agent.TitleNeedsRecording)
+        {
+            await RecordSessionAsync(agent, store).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Records the agent's session once it ends, if its title has changed since it was last recorded.
+    /// </summary>
+    private async Task RecordTitleOnExitAsync(WorkspaceAgent agent, IAgentSessionStore store)
+    {
+        await agent.Agent.Ended.ConfigureAwait(false);
+        if (agent.TitleNeedsRecording)
+        {
+            await RecordSessionAsync(agent, store).ConfigureAwait(false);
+        }
     }
 
     private async Task RecordSessionAsync(WorkspaceAgent agent, IAgentSessionStore store)
     {
-        if (AgentSession.Of(agent.Agent, timeProvider.GetUtcNow()) is not { } session)
+        if (agent.SessionToRecord() is not { } session)
         {
             return;
         }

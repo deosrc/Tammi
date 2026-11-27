@@ -442,6 +442,86 @@ public sealed class WorkspaceAgentsTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task TitleChanges_AreRecordedWithTheSession_AfterTheDelay()
+    {
+        var agent = await _agents.StartAsync(_workspace, Resumable);
+        var startedAt = _time.GetUtcNow();
+        _time.Advance(TimeSpan.FromMinutes(1));
+
+        _pty.Sessions[0].Output("\u001b]0;First\u0007");
+        await WaitForAsync(() => agent.LastTitle == "First");
+        _pty.Sessions[0].Output("\u001b]0;Fix the bug\u0007");
+        await WaitForAsync(() => agent.LastTitle == "Fix the bug");
+        Assert.Null((await ListSessionsAsync()).Single().LastTitle);
+
+        _time.Advance(WorkspaceAgents.TitleRecordDelay);
+
+        var recorded = await WaitForSessionAsync(session => session.LastTitle == "Fix the bug");
+        Assert.Equal(startedAt, recorded.LastStartedAt);
+    }
+
+    [Fact]
+    public async Task AgentEnds_RecordsItsTitleAtOnce()
+    {
+        var agent = await _agents.StartAsync(_workspace, Resumable);
+        _pty.Sessions[0].Output("\u001b]0;Fix the bug\u0007");
+        await WaitForAsync(() => agent.LastTitle == "Fix the bug");
+
+        _pty.Sessions[0].Exit(0);
+
+        await WaitForSessionAsync(session => session.LastTitle == "Fix the bug");
+    }
+
+    [Fact]
+    public async Task TitleCleared_KeepsTheLastTitle()
+    {
+        var agent = await _agents.StartAsync(_workspace, Resumable);
+        _pty.Sessions[0].Output("\u001b]0;Fix the bug\u0007");
+        await WaitForAsync(() => agent.LastTitle == "Fix the bug");
+
+        _pty.Sessions[0].Output("\u001b]0;\u0007");
+        await WaitForAsync(() => agent.Session.Title is null);
+
+        Assert.Equal("Fix the bug", agent.LastTitle);
+        Assert.Equal(agent.Name, agent.DisplayName);
+    }
+
+    [Fact]
+    public async Task ResumeAsync_KeepsTheSessionsTitle()
+    {
+        var started = await _agents.StartAsync(_workspace, Resumable);
+        _pty.Sessions[0].Output("\u001b]0;Fix the bug\u0007");
+        await WaitForAsync(() => started.LastTitle == "Fix the bug");
+        await _agents.StopAsync(started);
+        var session = await WaitForSessionAsync(recorded => recorded.LastTitle == "Fix the bug");
+
+        var resumed = await _agents.ResumeAsync(_workspace, session);
+
+        Assert.Equal("Fix the bug", resumed.LastTitle);
+        Assert.Null(resumed.Session.Title);
+        Assert.Equal("Fix the bug", Assert.Single(await ListSessionsAsync()).LastTitle);
+    }
+
+    private Task<IReadOnlyList<AgentSession>> ListSessionsAsync() =>
+        _agents.SessionsOf(_workspace).ListAsync(TestContext.Current.CancellationToken);
+
+    private async Task<AgentSession> WaitForSessionAsync(Func<AgentSession, bool> condition)
+    {
+        for (var i = 0; i < 100; i++)
+        {
+            if ((await ListSessionsAsync()).SingleOrDefault(condition) is { } session)
+            {
+                return session;
+            }
+
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        Assert.Fail($"No recorded session matched: {string.Join(", ", await ListSessionsAsync())}");
+        return null!;
+    }
+
+    [Fact]
     public void RepositoryFolderOf_NamesTheFoldersRepository()
     {
         var repository = _workspace.Repositories[0];

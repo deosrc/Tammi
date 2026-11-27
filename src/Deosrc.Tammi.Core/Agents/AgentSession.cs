@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
@@ -10,19 +12,29 @@ namespace Deosrc.Tammi.Core.Agents;
 /// The folder the agent was started in. Agents keep their sessions per folder, so it's resumed there too.
 /// </param>
 /// <param name="LastStartedAt">When the session was started, or last resumed.</param>
-public sealed record AgentSession(string Id, string AgentName, string WorkingDirectory, DateTimeOffset LastStartedAt)
+/// <param name="LastTitle">
+/// The last title the agent set for its terminal in the session (see <see cref="Terminals.TerminalSession.Title"/>),
+/// which helps tell sessions apart, or <c>null</c> if it hasn't set one.
+/// </param>
+public sealed record AgentSession(
+    string Id,
+    string AgentName,
+    string WorkingDirectory,
+    DateTimeOffset LastStartedAt,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? LastTitle = null)
 {
     /// <summary>
     /// Records the session an agent is running.
     /// </summary>
     /// <param name="agent">The agent, just started or resumed.</param>
     /// <param name="startedAt">When it was started or resumed.</param>
+    /// <param name="lastTitle">The last title the agent set for its terminal in the session, if any.</param>
     /// <returns>The session, or <c>null</c> if the agent's session can't be resumed.</returns>
-    public static AgentSession? Of(Agent agent, DateTimeOffset startedAt)
+    public static AgentSession? Of(Agent agent, DateTimeOffset startedAt, string? lastTitle = null)
     {
         ArgumentNullException.ThrowIfNull(agent);
         return agent.SessionId is { } id
-            ? new AgentSession(id, agent.Definition.Name, agent.WorkingDirectory, startedAt)
+            ? new AgentSession(id, agent.Definition.Name, agent.WorkingDirectory, startedAt, lastTitle)
             : null;
     }
 

@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using Deosrc.Tammi.Core.Platform;
 
 namespace Deosrc.Tammi.Core.Tests.Agents;
@@ -9,6 +10,7 @@ internal sealed class FakePtySession : IPtySession
 {
     private readonly System.Text.StringBuilder _input = new();
     private readonly TaskCompletionSource<int> _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly Channel<byte[]> _output = Channel.CreateUnbounded<byte[]>();
 
     /// <summary>
     /// The exit code the process gets when the session is disposed while it's running, as a hang-up gives on Linux.
@@ -24,12 +26,37 @@ internal sealed class FakePtySession : IPtySession
 
     public Task<int> Exited => _exited.Task;
 
-    public void Exit(int exitCode) => _exited.TrySetResult(exitCode);
+    public void Exit(int exitCode)
+    {
+        _output.Writer.TryComplete();
+        _exited.TrySetResult(exitCode);
+    }
 
-    public void Crash() => _exited.TrySetException(new InvalidOperationException("The process couldn't be followed."));
+    public void Crash()
+    {
+        _output.Writer.TryComplete();
+        _exited.TrySetException(new InvalidOperationException("The process couldn't be followed."));
+    }
 
-    public ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
-        new(0);
+    /// <summary>
+    /// Has the "process" write <paramref name="text"/> to the terminal.
+    /// </summary>
+    public void Output(string text) => _output.Writer.TryWrite(System.Text.Encoding.UTF8.GetBytes(text));
+
+    /// <summary>
+    /// Returns what <see cref="Output"/> was given, a chunk at a time, until the "process" exits.
+    /// </summary>
+    public async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        if (!await _output.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false)
+            || !_output.Reader.TryRead(out var chunk))
+        {
+            return 0;
+        }
+
+        chunk.CopyTo(buffer);
+        return chunk.Length;
+    }
 
     /// <summary>
     /// Everything written to the terminal, as text.

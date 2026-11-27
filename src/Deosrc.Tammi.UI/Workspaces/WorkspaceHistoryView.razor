@@ -4,8 +4,9 @@
 @inject WorkspaceAgents Agents
 @inject ISettingsStore SettingsStore
 
-@* The History tab's content: a card for each of the workspace's past Agent Sessions, newest first, which can be resumed or
-   forgotten. *@
+@* The History tab's content: a card for each of the workspace's Agent Sessions. Those running in one of its agents come
+   first, highlighted with their state, and can be shown; then past ones, newest first, which can be resumed or
+   forgotten. Each is named by the last title its agent set, if any, to tell them apart. *@
 <div class="workspace-history">
     <h2>History</h2>
     @if (_error is not null)
@@ -20,21 +21,59 @@
     {
         @* Not read yet. *@
     }
-    else if (PastSessions.Count == 0)
+    else if (CurrentAgents.Count == 0 && PastSessions.Count == 0)
     {
-        <p class="placeholder">No past sessions. Sessions of agents that have closed show up here, to resume.</p>
+        <p class="placeholder">No sessions yet. Agents' sessions show up here, to resume once they've closed.</p>
     }
     else
     {
         <ul class="agent-session-list">
+            @foreach (var agent in CurrentAgents)
+            {
+                var tone = AgentStateText.CardTone(agent.State).ToString().ToLowerInvariant();
+                <li class="agent-session agent-session-current agent-session-@tone" @key="agent">
+                    <div class="agent-session-heading">
+                        <AgentIcon Definition="agent.Agent.Definition" />
+                        <div class="agent-session-name" title="@agent.WorkingDirectory">@agent.DisplayName</div>
+                        <div class="agent-session-state">
+                            <AgentStateIndicator State="agent.State" />
+                            @AgentStateText.Label(agent.State)
+                        </div>
+                        <div class="agent-session-time">@agent.SessionStartedAt.ToLocalTime().ToString("g")</div>
+                    </div>
+                    @if (agent.DisplayName != agent.Name)
+                    {
+                        <p class="agent-card-detail">@agent.Name</p>
+                    }
+                    <div class="agent-session-footer">
+                        @if (WorkspaceAgents.RepositoryFolderOf(Workspace, agent.WorkingDirectory) is { } folder)
+                        {
+                            <FluentBadge Class="agent-session-location" Appearance="BadgeAppearance.Tint" title="@agent.WorkingDirectory">@folder</FluentBadge>
+                        }
+                        <div class="agent-card-actions">
+                            <FluentButton Size="ButtonSize.Small" Appearance="ButtonAppearance.Primary"
+                                          OnClick="() => OnShow.InvokeAsync(agent)">Show</FluentButton>
+                        </div>
+                    </div>
+                </li>
+            }
             @foreach (var session in PastSessions)
             {
-                var cantResume = CantResumeReason(session);
+                var definition = session.FindDefinition(SettingsStore.Current.Agents.Definitions);
+                var cantResume = CantResumeReason(session, definition);
                 <li class="agent-session" @key="session.Id">
                     <div class="agent-session-heading">
-                        <div class="agent-session-name" title="@session.WorkingDirectory">@session.AgentName</div>
+                        @if (definition is not null)
+                        {
+                            <AgentIcon Definition="definition" />
+                        }
+                        <div class="agent-session-name" title="@session.WorkingDirectory">@(session.LastTitle ?? session.AgentName)</div>
                         <div class="agent-session-time">@session.LastStartedAt.ToLocalTime().ToString("g")</div>
                     </div>
+                    @if (session.LastTitle is not null)
+                    {
+                        <p class="agent-card-detail">@session.AgentName</p>
+                    }
                     @if (cantResume is not null)
                     {
                         <p class="agent-card-detail warning">@cantResume</p>
@@ -82,6 +121,10 @@
     [Parameter]
     public EventCallback<WorkspaceAgent> OnShow { get; set; }
 
+    // The workspace's running agents, in the order they started.
+    private IReadOnlyList<WorkspaceAgent> CurrentAgents =>
+        [.. Agents.For(Workspace.Id).Where(agent => !agent.HasExited)];
+
     // Sessions running in one of the workspace's agents are shown with the agents instead.
     private IReadOnlyList<AgentSession> PastSessions =>
         [.. _sessions.Where(session => !Agents.IsRunning(Workspace.Id, session.Id))
@@ -105,11 +148,11 @@
         _disposed.Dispose();
     }
 
-    private string? CantResumeReason(AgentSession session) =>
-        session.FindDefinition(SettingsStore.Current.Agents.Definitions) switch
+    private static string? CantResumeReason(AgentSession session, AgentDefinition? definition) =>
+        definition switch
         {
             null => $"No agent is called \"{session.AgentName}\" now.",
-            { CanResume: false } definition => $"{definition.Name} doesn't say how to resume sessions.",
+            { CanResume: false } => $"{definition.Name} doesn't say how to resume sessions.",
             _ => null,
         };
 
