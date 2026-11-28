@@ -257,6 +257,13 @@ a {
   margin: 0;
 }
 
+/* A search or filter box among a page's header actions, before its buttons. It narrows when the window does. */
+.page-header-search {
+  width: 320px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
 .app-footer {
   display: flex;
   flex: none;
@@ -1362,13 +1369,6 @@ a {
   font-weight: 600;
 }
 
-/* The Repositories tab's name filter, above its table. */
-.repositories-filter {
-  width: 100%;
-  max-width: 320px;
-  margin-bottom: var(--space-3);
-}
-
 /* A row of the Repositories tab's table that opens a repository, as the rows of the grid are clickable. */
 .repository-row-open {
   cursor: pointer;
@@ -2107,6 +2107,7 @@ a {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .home-layout-panel {

@@ -11,6 +11,13 @@
     <div class="page-header">
         <h1>Repositories</h1>
         <div class="page-header-actions">
+            @if (State.Rows.Count > 0 || State.IsLoading)
+            {
+                @* Focused when the tab opens, so typing filters the list straight away. *@
+                <FluentTextInput Class="page-header-search" TextInputType="TextInputType.Search"
+                                 aria-label="Filter repositories" AutoComplete="off" Autofocus="true" Immediate="true"
+                                 Placeholder="Filter by name" @bind-Value="State.Filter" />
+            }
             <FluentButton IconOnly="true" Loading="@State.IsLoading" IconStart="@(new Icons.Regular.Size16.ArrowSync())"
                           Title="Scan for repositories again and read their status again" aria-label="Refresh"
                           OnClick="State.RescanAndRefreshAsync" />
@@ -32,11 +39,6 @@
     }
     else
     {
-        @* Focused when the tab opens, so typing filters the list straight away. *@
-        <FluentTextInput Class="repositories-filter" TextInputType="TextInputType.Search" aria-label="Filter repositories"
-                         AutoComplete="off" Autofocus="true" Immediate="true" Placeholder="Filter by name"
-                         @bind-Value="State.Filter" />
-
         var rows = FilteredRows;
         if (rows.Count == 0 && State.Rows.Count > 0)
         {
