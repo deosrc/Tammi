@@ -128,7 +128,7 @@
         @if (_branchPrompt is { } branchPrompt)
         {
             <form class="git-graph-prompt" @onsubmit="SubmitBranchPromptAsync" @onsubmit:preventDefault="true">
-                <FluentTextInput Label="@(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")"
+                <AutofocusTextInput Label="@(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")"
                                  Value="@_branchName" ValueChanged="name => _branchName = name ?? string.Empty" Immediate="true"
                                  Autofocus="true" Spellcheck="false" Width="100%" />
                 <div class="git-graph-prompt-actions">
@@ -162,7 +162,7 @@
         @if (_tagPrompt is { } prompt)
         {
             <form class="git-graph-prompt" @onsubmit="() => SubmitTagPromptAsync(push: false)" @onsubmit:preventDefault="true">
-                <FluentTextInput Label="Tag name" Value="@_tagName" ValueChanged="name => _tagName = name ?? string.Empty"
+                <AutofocusTextInput Label="Tag name" Value="@_tagName" ValueChanged="name => _tagName = name ?? string.Empty"
                                  Immediate="true" Autofocus="true" Spellcheck="false" Width="100%" />
                 <div class="git-graph-prompt-actions">
                     <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Disabled="@(!CanSubmitTagPrompt)">

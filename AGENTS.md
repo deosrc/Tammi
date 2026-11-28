@@ -52,6 +52,8 @@ Pitfalls:
   `fill: currentColor !important` on it.
 - `FluentMultiSplitter` reports sizes only as percentages, and its `Min` and `Max` take only `px` or `%`. Use `Splitter`
   for pixel sizes, keyboard resizing and double-click reset.
+- Fluent's `Autofocus` throws, and ends the UI, when the input has gone before it's focused, e.g. Home's search when
+  the app starts and goes straight to the last tab. Use `AutofocusTextInput` instead of `FluentTextInput` with it.
 - WebKitGTK (the Linux web view) ignores an unprefixed `user-select`: write `-webkit-user-select` beside it.
 - A menu opened by a right-click closes as soon as the button is let go unless the pointer is inside it. `PointMenu`
   places the menu so it is.

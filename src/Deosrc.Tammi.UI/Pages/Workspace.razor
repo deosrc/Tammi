@@ -49,7 +49,7 @@ else if (_renaming && _listing?.Workspace is { } renamedWorkspace)
         <h1>Rename @renamedWorkspace.Name</h1>
         <form class="settings-form" @onsubmit="RenameAsync" @onsubmit:preventDefault>
             <div class="settings-field-group">
-                <FluentTextInput Label="Name" AutoComplete="off" Width="100%" Immediate="true" Autofocus="true"
+                <AutofocusTextInput Label="Name" AutoComplete="off" Width="100%" Immediate="true" Autofocus="true"
                                  @bind-Value="_newName" MessageCondition="FluentFieldCondition.Always"
                                  MessageState="@(RenameProblem is null ? null : MessageState.Error)"
                                  Message="@RenameProblem" />

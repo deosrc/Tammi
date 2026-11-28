@@ -14,7 +14,7 @@
             @if (State.Rows.Count > 0 || State.IsLoading)
             {
                 @* Focused when the tab opens, so typing filters the list straight away. *@
-                <FluentTextInput Class="page-header-search" TextInputType="TextInputType.Search"
+                <AutofocusTextInput Class="page-header-search" TextInputType="TextInputType.Search"
                                  aria-label="Filter repositories" AutoComplete="off" Autofocus="true" Immediate="true"
                                  Placeholder="Filter by name" @bind-Value="State.Filter" />
             }
