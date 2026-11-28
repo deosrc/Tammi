@@ -41,6 +41,11 @@ public sealed class WorkspacePullRequestLists : IDisposable
     /// <summary>
     /// Returns the list of an open workspace, or <see langword="null"/> if it hasn't been started.
     /// </summary>
+    /// <summary>
+    /// Raised when a workspace's list has been started: it's now live. It can be raised on any thread.
+    /// </summary>
+    public event Action? Started;
+
     public WorkspacePullRequestList? Find(string workspaceId)
     {
         lock (_lock)
@@ -82,6 +87,7 @@ public sealed class WorkspacePullRequestLists : IDisposable
         }
 
         list.Start();
+        Started?.Invoke();
         return list;
     }
 

@@ -379,11 +379,34 @@ public sealed class SettingsStoreTests : IDisposable
         }, TestContext.Current.CancellationToken);
 
         var agents = JsonNode.Parse(File.ReadAllText(SettingsPath))!["agents"]!.AsObject();
-        Assert.Equal(["customDefinitions", "initialPromptTemplate", "initialPromptStyle", "usageAgentName"], agents.Select(p => p.Key));
+        Assert.Equal(["customDefinitions", "initialPromptTemplate", "initialPromptStyle", "usageAgentName", "startOnWorkspaceCreation"], agents.Select(p => p.Key));
         var definition = Assert.Single(agents["customDefinitions"]!.AsArray())!.AsObject();
         Assert.Equal(
             ["name", "command", "arguments", "promptArguments", "sessionIdArguments", "resumeArguments"],
             definition.Select(p => p.Key));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesTheAgentToStartOnWorkspaceCreation_EvenIfNoAgentHasItsName()
+    {
+        await CreateStore().UpdateAsync(settings => settings with
+        {
+            Agents = settings.Agents with { StartOnWorkspaceCreation = "Codex" },
+        }, TestContext.Current.CancellationToken);
+
+        var reloaded = CreateStore().Current.Agents;
+        Assert.Equal("Codex", reloaded.StartOnWorkspaceCreation);
+        Assert.Null(reloaded.DefinitionToStartOnWorkspaceCreation);
+    }
+
+    [Fact]
+    public void Current_WithoutAnAgentToStartOnWorkspaceCreation_StartsNone()
+    {
+        WriteSettingsFile("""
+            { "version": 1, "agents": { "initialPromptStyle": "Submit" } }
+            """);
+
+        Assert.Null(CreateStore().Current.Agents.StartOnWorkspaceCreation);
     }
 
     [Fact]
