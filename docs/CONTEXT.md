@@ -510,12 +510,25 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - The header shows, right after the title, a chip for each state the agents are in, in the state's colour and holding
     the number of agents in it. On its right are two buttons: **History**, which opens the History tab, and
     **New Agent**, a menu of the Agent Definitions, each with where to start it (as the New menu's).
-  - The **History tab** (one per workspace, closed with its × like any tab) lists the workspace's recorded Agent
-    Sessions that aren't running as cards, most recently started first. A card has its agent's name at the top left and
-    when it was last started at the top right; at the bottom, a badge on the left with the repository it was started in
-    (none if it was the Workspace Folder) and, on the right, the buttons: Resume, which opens the session in a new
-    tab, and Forget. A session whose agent can't resume it says why instead. Past sessions aren't in the side panel.
+  - The **History tab** (one per workspace, closed with its × like any tab) lists the workspace's Agent Sessions as
+    cards. First come the sessions of its running agents, in the order they started, highlighted with an edge in the
+    colour of their [state](#agents) (blue, or the warning colour when it Needs input, with a tinted background) and
+    their state as a tinted badge at the top right; then its recorded sessions that aren't running, most recently
+    started first. A card has its agent's icon and the last title the agent set (see Terminals) at the top left, or
+    else its agent's name; under it, a line each for when the session was started, when it was last resumed (if it
+    has been) and, once it has ended, when it ended. A session recorded before Tammi kept when it was started says
+    when it was last started instead. At the bottom, a
+    badge on the left with the repository it was started in (none if it was the Workspace Folder) and, on the right,
+    the buttons: Show, which shows a running agent's tab, or for a past session, Resume, which opens it in a new tab,
+    and Forget. A session whose agent can't resume it says why instead. Past sessions aren't in the side panel.
     Like terminals, it stays when the workspace's tab closes; it isn't restored after a restart.
+  - An Agent Session is recorded as ended when its agent's process ends (including when Tammi closes), or when the
+    agent moves to another session (e.g. after Claude Code's `/clear`). Resuming it clears the end. When it was first
+    started is kept, so resuming it doesn't change that.
+  - An Agent Session's last title is recorded with it, a few seconds after the agent changes it (so a title that keeps
+    changing, e.g. animated while the agent works, isn't written each time) and as soon as the agent ends. Clearing
+    the title keeps the last one. A resumed session keeps its title until the agent sets another, and a new session
+    (e.g. after Claude Code's `/clear`) starts with the terminal's current title.
 - **Main area tabs:** the main area has its own row of tabs, below a small divider. The first is always the
   **dashboard** (an icon, no name), which the view shows until the user opens something else. The dashboard shows, in this order,
   the workspace's tasks, its repositories' git status, its agents with their states, and its Pull Requests (open ones
