@@ -32,7 +32,7 @@
                     {
                         <FluentAccordion Block="true">
                             <FluentAccordionItem Header="@($"License: {component.License}")" Block="true">
-                                <pre class="license-text">@ThirdPartySoftware.ReadLicense(licenseFile)</pre>
+                                <CopyOnClick Block="true" Class="license-text" What="the license">@ThirdPartySoftware.ReadLicense(licenseFile)</CopyOnClick>
                             </FluentAccordionItem>
                         </FluentAccordion>
                     }
@@ -57,7 +57,7 @@
 @if (_error is not null)
 {
     <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-        @_error
+        <CopyOnClick>@_error</CopyOnClick>
     </FluentMessageBar>
 }
 

@@ -21,7 +21,7 @@
             @if (_workspaces is { Count: > 0 })
             {
                 @* Focused when Home opens, so typing searches straight away. *@
-                <FluentTextInput Class="page-header-search" TextInputType="TextInputType.Search"
+                <AutofocusTextInput Class="page-header-search" TextInputType="TextInputType.Search"
                                  aria-label="Search workspaces" AutoComplete="off" Autofocus="true" Immediate="true"
                                  Placeholder="Search by name, task, repository or branch" @bind-Value="Search.Text" />
             }
@@ -85,7 +85,7 @@
             @if (_settingsError is not null)
             {
                 <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                    @_settingsError
+                    <CopyOnClick>@_settingsError</CopyOnClick>
                 </FluentMessageBar>
             }
         </FluentCard>
@@ -94,7 +94,7 @@
     @if (_indexProblem is not null)
     {
         <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-            @_indexProblem
+            <CopyOnClick>@_indexProblem</CopyOnClick>
         </FluentMessageBar>
     }
 

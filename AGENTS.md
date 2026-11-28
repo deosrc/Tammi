@@ -33,7 +33,12 @@ graph's virtualised commit table, its branch and tag labels, the splitters, the 
 
 - Reuse the shared components rather than building another: `SidePanel`, `SidePanelSection`, `SidePanelCard`,
   `SidePanelListItem`, `PanelMessage` (errors and confirmations in a panel), `PointMenu` (menus opened at the pointer,
-  e.g. by a right-click), `ToggleButtonGroup`, `Splitter`, `StatusDot` and `GitSyncChips`.
+  e.g. by a right-click), `ToggleButtonGroup`, `Splitter`, `StatusDot`, `GitSyncChips` and `CopyOnClick` (text copied
+  by clicking it).
+- Text can't be selected, except in fields and terminals. Mark text that's worth selecting `selectable` (e.g. a
+  diff's lines, a commit's message, a command, a path in settings). Wrap an error or warning message (but not a
+  confirmation with buttons), or other text to copy whole (e.g. a version or a scope), in `CopyOnClick` instead.
+  `PanelMessage` does this for errors.
 - Badges are filled for counters and tinted for everything else.
 - Page and tab titles are in title case.
 
@@ -48,6 +53,9 @@ Pitfalls:
   `fill: currentColor !important` on it.
 - `FluentMultiSplitter` reports sizes only as percentages, and its `Min` and `Max` take only `px` or `%`. Use `Splitter`
   for pixel sizes, keyboard resizing and double-click reset.
+- Fluent's `Autofocus` throws, and ends the UI, when the input has gone before it's focused, e.g. Home's search when
+  the app starts and goes straight to the last tab. Use `AutofocusTextInput` instead of `FluentTextInput` with it.
+- WebKitGTK (the Linux web view) ignores an unprefixed `user-select`: write `-webkit-user-select` beside it.
 - A menu opened by a right-click closes as soon as the button is let go unless the pointer is inside it. `PointMenu`
   places the menu so it is.
 

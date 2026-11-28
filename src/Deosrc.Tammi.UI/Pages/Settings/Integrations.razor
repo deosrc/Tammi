@@ -66,7 +66,7 @@ else
                         {
                             <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
                                               AllowDismiss="false">
-                                @warning
+                                <CopyOnClick>@warning</CopyOnClick>
                             </FluentMessageBar>
                         }
 
@@ -89,7 +89,7 @@ else
                             {
                                 <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine"
                                                   AllowDismiss="false">
-                                    @_panelError
+                                    <CopyOnClick>@_panelError</CopyOnClick>
                                 </FluentMessageBar>
                             }
                         }
@@ -116,7 +116,7 @@ else
                                     {
                                         <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine"
                                                           AllowDismiss="false">
-                                            @_panelError
+                                            <CopyOnClick>@_panelError</CopyOnClick>
                                         </FluentMessageBar>
                                     }
                                 </div>
@@ -174,7 +174,7 @@ else if (_adding == IntegrationService.Bitbucket)
             @if (_addError is not null)
             {
                 <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                    @_addError
+                    <CopyOnClick>@_addError</CopyOnClick>
                 </FluentMessageBar>
             }
         </div>
@@ -209,7 +209,7 @@ else if (_adding == IntegrationService.GitHub)
             @if (_addError is not null)
             {
                 <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                    @_addError
+                    <CopyOnClick>@_addError</CopyOnClick>
                 </FluentMessageBar>
             }
         </div>
@@ -247,7 +247,7 @@ else
             @if (_addError is not null)
             {
                 <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                    @_addError
+                    <CopyOnClick>@_addError</CopyOnClick>
                 </FluentMessageBar>
             }
         </div>

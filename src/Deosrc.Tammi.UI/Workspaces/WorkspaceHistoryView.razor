@@ -15,7 +15,7 @@
     }
     @if (_problem is not null)
     {
-        <PanelMessage Intent="MessageBarIntent.Warning">@_problem</PanelMessage>
+        <PanelMessage Intent="MessageBarIntent.Warning"><CopyOnClick>@_problem</CopyOnClick></PanelMessage>
     }
     @if (!_loaded)
     {

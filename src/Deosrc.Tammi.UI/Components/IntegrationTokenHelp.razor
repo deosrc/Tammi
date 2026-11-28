@@ -8,16 +8,16 @@
     {
         <p>An API token with scopes, used with your Atlassian account's email address. Create it for Bitbucket with these scopes:</p>
         <ul class="token-scopes">
-            <li><code>read:pullrequest:bitbucket</code></li>
-            <li><code>read:repository:bitbucket</code></li>
-            <li><code>read:user:bitbucket</code></li>
-            <li><code>read:workspace:bitbucket</code></li>
+            <li><CopyOnClick What="the scope"><code>read:pullrequest:bitbucket</code></CopyOnClick></li>
+            <li><CopyOnClick What="the scope"><code>read:repository:bitbucket</code></CopyOnClick></li>
+            <li><CopyOnClick What="the scope"><code>read:user:bitbucket</code></CopyOnClick></li>
+            <li><CopyOnClick What="the scope"><code>read:workspace:bitbucket</code></CopyOnClick></li>
         </ul>
         <p>They let @AppInfo.Name list your repositories, and show pull requests and their builds.</p>
         <p>To add SSH keys from Settings → Git, also give it these scopes:</p>
         <ul class="token-scopes">
-            <li><code>read:ssh-key:bitbucket</code></li>
-            <li><code>write:ssh-key:bitbucket</code></li>
+            <li><CopyOnClick What="the scope"><code>read:ssh-key:bitbucket</code></CopyOnClick></li>
+            <li><CopyOnClick What="the scope"><code>write:ssh-key:bitbucket</code></CopyOnClick></li>
         </ul>
         <p><FluentLink OnClick="() => Open.InvokeAsync(BitbucketTokenUrl)">Create a token</FluentLink></p>
     }
@@ -54,8 +54,8 @@
     {
         <p>An API token, used with your Atlassian account's email address. A token without scopes needs nothing more. A token with scopes needs these JIRA scopes:</p>
         <ul class="token-scopes">
-            <li><code>read:jira-user</code></li>
-            <li><code>read:jira-work</code></li>
+            <li><CopyOnClick What="the scope"><code>read:jira-user</code></CopyOnClick></li>
+            <li><CopyOnClick What="the scope"><code>read:jira-work</code></CopyOnClick></li>
         </ul>
         <p><FluentLink OnClick="() => Open.InvokeAsync(JiraCloudTokenUrl)">Create a token</FluentLink></p>
     }

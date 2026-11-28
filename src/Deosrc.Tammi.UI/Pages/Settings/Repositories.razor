@@ -29,10 +29,10 @@
                 @foreach (var folder in Current.MonitoredFolders)
                 {
                     <CardListItem @key="folder">
-                        <span class="settings-list-path">@folder</span>
+                        <span class="settings-list-path selectable">@folder</span>
                         @if (ProblemWith(folder) is { } problem)
                         {
-                            <span class="error">@problem</span>
+                            <span class="error"><CopyOnClick>@problem</CopyOnClick></span>
                         }
                         else if (!Catalogue.IsScanning && Snapshot.ScannedAt is not null)
                         {
@@ -49,7 +49,7 @@
                               Title="Folder Conflict">
                 <ChildContent>
                     <p>
-                        <span class="settings-list-path">@_pendingMonitoredFolder</span> holds
+                        <span class="settings-list-path selectable">@_pendingMonitoredFolder</span> holds
                         @(_pendingRemovals.Count == 1 ? "this manually added repository" : "these manually added repositories").
                         The scan will find @(_pendingRemovals.Count == 1 ? "it" : "them"), so adding the folder removes
                         @(_pendingRemovals.Count == 1 ? "it" : "them") from the manually added repositories. The folder
@@ -58,7 +58,7 @@
                     <ul class="settings-list">
                         @foreach (var repository in _pendingRemovals)
                         {
-                            <li><span class="settings-list-path">@repository</span></li>
+                            <li><span class="settings-list-path selectable">@repository</span></li>
                         }
                     </ul>
                 </ChildContent>
@@ -93,10 +93,10 @@
                 @foreach (var repository in Current.LocalRepositories)
                 {
                     <CardListItem @key="repository">
-                        <span class="settings-list-path">@repository</span>
+                        <span class="settings-list-path selectable">@repository</span>
                         @if (ProblemWith(repository) is { } problem)
                         {
-                            <span class="error">@problem</span>
+                            <span class="error"><CopyOnClick>@problem</CopyOnClick></span>
                         }
                         <FluentButton Class="danger-button" OnClick="() => RemoveLocalRepositoryAsync(repository)">Remove</FluentButton>
                     </CardListItem>
@@ -106,7 +106,7 @@
         @if (_addRepositoryError is not null)
         {
             <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                @_addRepositoryError
+                <CopyOnClick>@_addRepositoryError</CopyOnClick>
             </FluentMessageBar>
         }
         <div class="settings-field-row">
@@ -135,7 +135,7 @@
 @if (SaveError is not null)
 {
     <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-        @SaveError
+        <CopyOnClick>@SaveError</CopyOnClick>
     </FluentMessageBar>
 }
 

@@ -117,11 +117,11 @@
                                 <dd>@ToolText.Label(tool.Scope)</dd>
                             }
                             <dt>Command</dt>
-                            <dd><code>@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
+                            <dd><code class="selectable">@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
                             @if (executable is not null)
                             {
                                 <dt>Executable</dt>
-                                <dd><code>@executable</code></dd>
+                                <dd><code class="selectable">@executable</code></dd>
                             }
                         </dl>
                     }
@@ -186,7 +186,7 @@
                 {
                     <dl class="settings-values agent-status">
                         <dt>Command</dt>
-                        <dd><code>@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
+                        <dd><code class="selectable">@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
                     </dl>
                 }
 
@@ -221,7 +221,7 @@
                             @if (tool.FilePatterns.Count == 0)
                             {
                                 <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false">
-                                    This tool isn't offered until it has a file pattern.
+                                    <CopyOnClick>This tool isn't offered until it has a file pattern.</CopyOnClick>
                                 </FluentMessageBar>
                             }
                         }
@@ -235,13 +235,13 @@
                         @if (string.IsNullOrWhiteSpace(tool.Executable))
                         {
                             <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false">
-                                This tool isn't offered until it has an executable.
+                                <CopyOnClick>This tool isn't offered until it has an executable.</CopyOnClick>
                             </FluentMessageBar>
                         }
                         else if (executable is null)
                         {
                             <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false">
-                                Couldn't find this executable, so the tool isn't offered.
+                                <CopyOnClick>Couldn't find this executable, so the tool isn't offered.</CopyOnClick>
                             </FluentMessageBar>
                         }
 
@@ -266,16 +266,16 @@
                         {
                             <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
                                               AllowDismiss="false">
-                                @string.Join(", ", unavailable.Select(ToolPlaceholders.Format)) can only be used by file
-                                tools, so this tool isn't offered.
+                                <CopyOnClick>@string.Join(", ", unavailable.Select(ToolPlaceholders.Format)) can only be used by file
+                                tools, so this tool isn't offered.</CopyOnClick>
                             </FluentMessageBar>
                         }
                         @if (unknown.Count > 0)
                         {
                             <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
                                               AllowDismiss="false">
-                                @string.Join(", ", unknown.Select(ToolPlaceholders.Format)) isn't a placeholder, so it's
-                                passed as it is.
+                                <CopyOnClick>@string.Join(", ", unknown.Select(ToolPlaceholders.Format)) isn't a placeholder, so it's
+                                passed as it is.</CopyOnClick>
                             </FluentMessageBar>
                         }
 
@@ -304,7 +304,7 @@
                             @if (tool.Icon.CustomPath is not null && ImageOf(tool) is { DataUri: null })
                             {
                                 <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false">
-                                    Couldn't read this image, so the tool shows a generic icon.
+                                    <CopyOnClick>Couldn't read this image, so the tool shows a generic icon.</CopyOnClick>
                                 </FluentMessageBar>
                             }
                         }
@@ -320,7 +320,7 @@
                         {
                             <dl class="settings-values agent-command-preview">
                                 <dt>Opens as</dt>
-                                <dd><code>@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
+                                <dd><code class="selectable">@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
                             </dl>
                         }
                     </div>
@@ -338,7 +338,7 @@
 @if (SaveError is not null)
 {
     <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-        @SaveError
+        <CopyOnClick>@SaveError</CopyOnClick>
     </FluentMessageBar>
 }
 

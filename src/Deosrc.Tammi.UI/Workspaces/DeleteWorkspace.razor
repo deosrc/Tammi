@@ -22,7 +22,7 @@
 
         case Step.Failed:
             <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                @_error
+                <CopyOnClick>@_error</CopyOnClick>
             </FluentMessageBar>
             <div class="workspace-details-actions">
                 <FluentButton Appearance="ButtonAppearance.Primary" OnClick="PlanAsync">Check again</FluentButton>
@@ -49,7 +49,7 @@
             @if (!plan.MetadataRead)
             {
                 <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                    The workspace's metadata can't be read, so its worktrees were found by looking in its folder.
+                    <CopyOnClick>The workspace's metadata can't be read, so its worktrees were found by looking in its folder.</CopyOnClick>
                 </FluentMessageBar>
             }
             @if (plan.CouldLoseWork)
@@ -137,7 +137,7 @@
                 {
                     <CardListItem @key="result.Branch">
                         <span class="settings-list-path">@result.Branch.Branch</span>
-                        <span class="error">@result.Error</span>
+                        <span class="error"><CopyOnClick>@result.Error</CopyOnClick></span>
                     </CardListItem>
                 }
             </ul>

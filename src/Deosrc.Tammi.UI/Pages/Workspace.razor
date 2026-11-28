@@ -49,7 +49,7 @@ else if (_renaming && _listing?.Workspace is { } renamedWorkspace)
         <h1>Rename @renamedWorkspace.Name</h1>
         <form class="settings-form" @onsubmit="RenameAsync" @onsubmit:preventDefault>
             <div class="settings-field-group">
-                <FluentTextInput Label="Name" AutoComplete="off" Width="100%" Immediate="true" Autofocus="true"
+                <AutofocusTextInput Label="Name" AutoComplete="off" Width="100%" Immediate="true" Autofocus="true"
                                  @bind-Value="_newName" MessageCondition="FluentFieldCondition.Always"
                                  MessageState="@(RenameProblem is null ? null : MessageState.Error)"
                                  Message="@RenameProblem" />
@@ -78,7 +78,7 @@ else if (_listing is { Availability: not WorkspaceAvailability.Available } listi
     <div class="page workspace-details">
         <h1>@listing.Name</h1>
         <p class="warning"><strong>@WorkspaceAvailabilityText.Summary(listing.Availability)</strong></p>
-        <p class="workspace-details-problem">@listing.Problem</p>
+        <p class="workspace-details-problem"><CopyOnClick>@listing.Problem</CopyOnClick></p>
         <dl class="workspace-details-facts">
             <dt>Workspace Folder</dt>
             <dd>@listing.Folder</dd>
@@ -121,7 +121,7 @@ else
                         }
                         @if (_tasks?.ContextFileProblem is { } contextFileProblem)
                         {
-                            <p class="workspace-task-problem">@contextFileProblem</p>
+                            <p class="workspace-task-problem"><CopyOnClick>@contextFileProblem</CopyOnClick></p>
                         }
                     </ChildContent>
                 </SidePanelSection>

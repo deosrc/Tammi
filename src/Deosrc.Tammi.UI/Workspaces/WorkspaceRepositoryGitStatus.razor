@@ -33,7 +33,10 @@
         }
         else
         {
-            <p class="git-status-problem" title="@Repository.Problem">Couldn't read the status.</p>
+            @* Copies the problem itself, which its tooltip shows. *@
+            <p class="git-status-problem">
+                <CopyOnClick Text="@Repository.Problem"><span title="@Repository.Problem">Couldn't read the status.</span></CopyOnClick>
+            </p>
         }
     </ChildContent>
 </SidePanelCard>

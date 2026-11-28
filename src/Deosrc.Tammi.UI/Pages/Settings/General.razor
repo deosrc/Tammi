@@ -42,7 +42,7 @@
         <dl class="settings-values tool-placeholders">
             @foreach (var placeholder in WorkspaceNames.Placeholders)
             {
-                <dt><code>@WorkspaceNames.Format(placeholder)</code></dt>
+                <dt><CopyOnClick What="the placeholder"><code>@WorkspaceNames.Format(placeholder)</code></CopyOnClick></dt>
                 <dd>@PlaceholderDescription(placeholder)</dd>
             }
         </dl>
@@ -54,8 +54,8 @@
         @if (WorkspaceNames.FindUnknown(Current.WorkspaceNameTemplate).ToList() is { Count: > 0 } unknown)
         {
             <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false">
-                @string.Join(", ", unknown.Select(WorkspaceNames.Format)) @(unknown.Count == 1 ? "isn't a placeholder" : "aren't placeholders"),
-                so @(unknown.Count == 1 ? "it's" : "they're") left as written.
+                <CopyOnClick>@string.Join(", ", unknown.Select(WorkspaceNames.Format)) @(unknown.Count == 1 ? "isn't a placeholder" : "aren't placeholders"),
+                so @(unknown.Count == 1 ? "it's" : "they're") left as written.</CopyOnClick>
             </FluentMessageBar>
         }
         <dl class="settings-preview">
@@ -141,7 +141,7 @@
         @if (_openLogFolderError is not null)
         {
             <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                @_openLogFolderError
+                <CopyOnClick>@_openLogFolderError</CopyOnClick>
             </FluentMessageBar>
         }
     </div>
@@ -150,7 +150,7 @@
 @if (SaveError is not null)
 {
     <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-        @SaveError
+        <CopyOnClick>@SaveError</CopyOnClick>
     </FluentMessageBar>
 }
 

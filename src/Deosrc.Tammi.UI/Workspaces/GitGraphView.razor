@@ -55,14 +55,15 @@
         @* Only a failed fetch, pull or push is shown: the buttons' spinner says one is running. *@
         @if (Graph.SyncProblem is { } syncProblem)
         {
-            <PanelMessage OnDismiss="Graph.DismissSyncProblem">
+            @* The message and git's output copy separately, so opening the output doesn't copy. *@
+            <PanelMessage OnDismiss="Graph.DismissSyncProblem" CopyOnClick="false">
                 <ChildContent>
-                    <p>@syncProblem.Message</p>
+                    <p><CopyOnClick>@syncProblem.Message</CopyOnClick></p>
                     @if (syncProblem.Details.Length > 0 && syncProblem.Failure != GitSyncFailure.ForcePushRequired)
                     {
                         <details>
                             <summary>Git's output</summary>
-                            <pre class="git-graph-sync-details">@syncProblem.Details</pre>
+                            <CopyOnClick Block="true" Class="git-graph-sync-details" What="git's output">@syncProblem.Details</CopyOnClick>
                         </details>
                     }
                 </ChildContent>
@@ -78,7 +79,7 @@
 
         @if (Graph.Problem is { } problem)
         {
-            <p class="error git-graph-problem">Couldn't read the git graph. @problem</p>
+            <p class="error git-graph-problem"><CopyOnClick>Couldn't read the git graph. @problem</CopyOnClick></p>
         }
 
         @if (Graph.TagProblem is { } tagProblem)
@@ -127,7 +128,7 @@
         @if (_branchPrompt is { } branchPrompt)
         {
             <form class="git-graph-prompt" @onsubmit="SubmitBranchPromptAsync" @onsubmit:preventDefault="true">
-                <FluentTextInput Label="@(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")"
+                <AutofocusTextInput Label="@(branchPrompt.Kind == BranchPromptKind.Rename ? $"New name for {branchPrompt.Name}" : "Branch name")"
                                  Value="@_branchName" ValueChanged="name => _branchName = name ?? string.Empty" Immediate="true"
                                  Autofocus="true" Spellcheck="false" Width="100%" />
                 <div class="git-graph-prompt-actions">
@@ -161,7 +162,7 @@
         @if (_tagPrompt is { } prompt)
         {
             <form class="git-graph-prompt" @onsubmit="() => SubmitTagPromptAsync(push: false)" @onsubmit:preventDefault="true">
-                <FluentTextInput Label="Tag name" Value="@_tagName" ValueChanged="name => _tagName = name ?? string.Empty"
+                <AutofocusTextInput Label="Tag name" Value="@_tagName" ValueChanged="name => _tagName = name ?? string.Empty"
                                  Immediate="true" Autofocus="true" Spellcheck="false" Width="100%" />
                 <div class="git-graph-prompt-actions">
                     <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary" Disabled="@(!CanSubmitTagPrompt)">

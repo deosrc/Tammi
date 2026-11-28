@@ -2,6 +2,7 @@
 
 /* As a title bar, pressing the bar doesn't select its text or drag the wordmark's image. */
 .window-title-bar {
+    -webkit-user-select: none;
     user-select: none;
 }
 

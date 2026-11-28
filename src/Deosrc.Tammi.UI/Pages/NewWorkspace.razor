@@ -89,7 +89,7 @@
                                 {
                                     <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine"
                                                       AllowDismiss="false">
-                                        @folderProblem
+                                        <CopyOnClick>@folderProblem</CopyOnClick>
                                     </FluentMessageBar>
                                 }
                             </div>
@@ -126,7 +126,7 @@
                         {
                             <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
                                               AllowDismiss="false">
-                                @warning
+                                <CopyOnClick>@warning</CopyOnClick>
                             </FluentMessageBar>
                         }
                     }
@@ -147,30 +147,32 @@
                     {
                         <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine"
                                           AllowDismiss="false">
-                            @if (_failure.Problems.Count > 0)
-                            {
-                                <p>The workspace can't be created:</p>
-                                <ul>
-                                    @foreach (var problem in _failure.Problems)
-                                    {
-                                        <li>@problem</li>
-                                    }
-                                </ul>
-                            }
-                            else
-                            {
-                                <p>@_failure.Message</p>
-                            }
-                            @if (_failure.CleanupProblems.Count > 0)
-                            {
-                                <p>Some of what was created couldn't be removed again:</p>
-                                <ul>
-                                    @foreach (var problem in _failure.CleanupProblems)
-                                    {
-                                        <li>@problem</li>
-                                    }
-                                </ul>
-                            }
+                            <CopyOnClick Block="true">
+                                @if (_failure.Problems.Count > 0)
+                                {
+                                    <p>The workspace can't be created:</p>
+                                    <ul>
+                                        @foreach (var problem in _failure.Problems)
+                                        {
+                                            <li>@problem</li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p>@_failure.Message</p>
+                                }
+                                @if (_failure.CleanupProblems.Count > 0)
+                                {
+                                    <p>Some of what was created couldn't be removed again:</p>
+                                    <ul>
+                                        @foreach (var problem in _failure.CleanupProblems)
+                                        {
+                                            <li>@problem</li>
+                                        }
+                                    </ul>
+                                }
+                            </CopyOnClick>
                         </FluentMessageBar>
                         @if (_failure.CleanupProblems.Count == 0 && _failure.InnerException is not null)
                         {

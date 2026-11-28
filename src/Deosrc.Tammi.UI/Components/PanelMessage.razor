@@ -2,7 +2,17 @@
    confirmed, with its own buttons. *@
 <FluentMessageBar Class="panel-message" Intent="Intent" Layout="MessageBarLayout.MultiLine" Title="@Title"
                   AllowDismiss="@(OnDismiss.HasDelegate)" Visible="true" VisibleChanged="OnVisibleChanged" role="@Role">
-    <ChildContent>@ChildContent</ChildContent>
+    <ChildContent>
+        @* An error copies when clicked, e.g. to search for it or report it. *@
+        @if (Intent == MessageBarIntent.Error && CopyOnClick)
+        {
+            <CopyOnClick Block="true">@ChildContent</CopyOnClick>
+        }
+        else
+        {
+            @ChildContent
+        }
+    </ChildContent>
     <ActionsTemplate>@Actions</ActionsTemplate>
 </FluentMessageBar>
 
@@ -43,6 +53,13 @@
     /// </summary>
     [Parameter]
     public string Role { get; set; } = "alert";
+
+    /// <summary>
+    /// Whether an error copies its message when clicked: true by default. Turn it off when the message has controls of
+    /// its own, and copy its parts instead.
+    /// </summary>
+    [Parameter]
+    public bool CopyOnClick { get; set; } = true;
 
     private Task OnVisibleChanged(bool visible) => visible ? Task.CompletedTask : OnDismiss.InvokeAsync();
 }

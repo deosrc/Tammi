@@ -19,7 +19,7 @@
         else
         {
             <form class="task-search" @onsubmit="SearchNowAsync">
-                <FluentTextInput Class="task-query" TextInputType="TextInputType.Search" aria-label="Search tasks"
+                <AutofocusTextInput Class="task-query" TextInputType="TextInputType.Search" aria-label="Search tasks"
                                  AutoComplete="off" Autofocus="true" Immediate="true" Width="100%"
                                  Placeholder="Search your tasks, or paste a link or reference"
                                  Value="@_query" ValueChanged="OnQueryChanged" />
@@ -52,7 +52,7 @@
                 {
                     <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
                                       AllowDismiss="false">
-                        @error.SourceName: @error.Message
+                        <CopyOnClick>@error.SourceName: @error.Message</CopyOnClick>
                         @if (error.IsAuthentication)
                         {
                             <FluentLink Href="@AppRoutes.SettingsIntegrations">Check it in Settings › Integrations.</FluentLink>

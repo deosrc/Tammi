@@ -30,18 +30,18 @@
 
             <dl class="settings-values agent-status">
                 <dt>Command</dt>
-                <dd><code>@Agent.Definition.Command</code>@(_status?.ExecutablePath is { } path ? $" ({path})" : null)</dd>
+                <dd class="selectable"><code>@Agent.Definition.Command</code>@(_status?.ExecutablePath is { } path ? $" ({path})" : null)</dd>
                 @if (_status?.Version is { } version)
                 {
                     <dt>Version</dt>
-                    <dd>@version</dd>
+                    <dd class="selectable">@version</dd>
                 }
             </dl>
 
             @if (_status is { IsAvailable: false } status)
             {
                 <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                    @status.Problem
+                    <CopyOnClick>@status.Problem</CopyOnClick>
                 </FluentMessageBar>
                 <p>
                     <FluentLink OnClick="OpenInstallGuide">How to install @Agent.Name</FluentLink>
@@ -51,7 +51,7 @@
             @if (_openError is not null)
             {
                 <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                    @_openError
+                    <CopyOnClick>@_openError</CopyOnClick>
                 </FluentMessageBar>
             }
         </div>
