@@ -301,6 +301,10 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     Options, which they set the same way. Sources they haven't placed follow the others, alphabetically.
   - View Options shows the status order beside the other options when the window is wide enough.
   - Clicking a workspace's card opens it. There is no Open button.
+- **Search:** a search box above the workspaces narrows them, and the tabs and groups and their counts, to the ones that
+  match as the user types. Each word must be found, ignoring case, in the workspace's name, a task key (e.g.
+  `acme/api#42`), or a repository's folder name or branch; a workspace that can't be read matches by its name only. The
+  box is focused when Home opens, and keeps its text when the user leaves Home and comes back.
 - Each workspace shows a compact summary line (e.g. "2/3 repos changed · 1 agent needs input"). It can
   be expanded to show a breakdown for each repository and agent.
 - A repository counts as **changed** when it has uncommitted changes (staged, unstaged or untracked)

@@ -2084,6 +2084,13 @@ a {
   margin-bottom: var(--space-4);
 }
 
+/* Home's search box, above its tabs and groups. */
+.home-search {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: var(--space-3);
+}
+
 /* Home's tabs (by source or status), and the groups in a tab. */
 .home-tabs {
   margin-bottom: var(--space-4);

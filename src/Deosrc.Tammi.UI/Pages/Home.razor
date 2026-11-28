@@ -8,6 +8,7 @@
 @inject WorkspaceTabs WorkspaceTabs
 @inject NavigationManager Navigation
 @inject Deosrc.Tammi.UI.Workspaces.WorkspaceViewState ViewState
+@inject Deosrc.Tammi.UI.Workspaces.HomeSearchState Search
 @inject HomeGitStatus GitStatus
 @inject WorkspaceAgents Agents
 @inject ISettingsStore SettingsStore
@@ -101,36 +102,49 @@
     }
     else
     {
+        @* Focused when Home opens, so typing searches straight away. *@
+        <FluentTextInput Class="home-search" TextInputType="TextInputType.Search" aria-label="Search workspaces"
+                         AutoComplete="off" Autofocus="true" Immediate="true"
+                         Placeholder="Search by name, task, repository or branch" @bind-Value="Search.Text" />
+
         var general = SettingsStore.Current.General;
-        var tabs = Split(Entries(), general.HomeTabBy);
-        var current = tabs.FirstOrDefault(tab => tab.Key == _selectedTab) ?? tabs[0];
-        @if (general.HomeTabBy != HomeGrouping.None)
+        var entries = Entries().Where(entry => WorkspaceSearch.Matches(entry.Listing, Search.Text)).ToArray();
+        if (entries.Length == 0)
         {
-            <FluentTabs Class="home-tabs" ActiveTabId="@current.Key" ActiveTabIdChanged="id => _selectedTab = id">
-                @foreach (var tab in tabs)
-                {
-                    <FluentTab @key="tab.Key" Id="@tab.Key">
-                        <HeaderTemplate>
-                            @tab.Key @Count(tab.Entries.Count, tab.Status)
-                        </HeaderTemplate>
-                    </FluentTab>
-                }
-            </FluentTabs>
+            <p class="placeholder">No workspaces match.</p>
         }
-        @foreach (var group in Split(current.Entries, general.HomeGroupBy))
+        else
         {
-            <section class="home-group" @key="group.Key">
-                @if (general.HomeGroupBy != HomeGrouping.None)
-                {
-                    <h2 class="home-group-title">@group.Key @Count(group.Entries.Count, null)</h2>
-                }
-                <ul class="workspace-list">
-                    @foreach (var entry in group.Entries)
+            var tabs = Split(entries, general.HomeTabBy);
+            var current = tabs.FirstOrDefault(tab => tab.Key == _selectedTab) ?? tabs[0];
+            @if (general.HomeTabBy != HomeGrouping.None)
+            {
+                <FluentTabs Class="home-tabs" ActiveTabId="@current.Key" ActiveTabIdChanged="id => _selectedTab = id">
+                    @foreach (var tab in tabs)
                     {
-                        @Card(entry)
+                        <FluentTab @key="tab.Key" Id="@tab.Key">
+                            <HeaderTemplate>
+                                @tab.Key @Count(tab.Entries.Count, tab.Status)
+                            </HeaderTemplate>
+                        </FluentTab>
                     }
-                </ul>
-            </section>
+                </FluentTabs>
+            }
+            @foreach (var group in Split(current.Entries, general.HomeGroupBy))
+            {
+                <section class="home-group" @key="group.Key">
+                    @if (general.HomeGroupBy != HomeGrouping.None)
+                    {
+                        <h2 class="home-group-title">@group.Key @Count(group.Entries.Count, null)</h2>
+                    }
+                    <ul class="workspace-list">
+                        @foreach (var entry in group.Entries)
+                        {
+                            @Card(entry)
+                        }
+                    </ul>
+                </section>
+            }
         }
     }
 </div>
