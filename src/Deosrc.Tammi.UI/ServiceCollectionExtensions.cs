@@ -19,6 +19,7 @@ using Deosrc.Tammi.UI.Components;
 using Deosrc.Tammi.UI.Layout;
 using Deosrc.Tammi.Core.Installation;
 using Deosrc.Tammi.UI.Logging;
+using Deosrc.Tammi.UI.Visualiser;
 using Deosrc.Tammi.Core.Updates;
 using Deosrc.Tammi.UI.Workspaces;
 using Microsoft.Extensions.Logging;
@@ -58,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddTammiLogging();
         services.AddFluentUIComponents();
         services.TryAddSingleton<ISystemTheme, UndetectedSystemTheme>();
+        services.TryAddSingleton<IWindowFrame, TitledWindowFrame>();
 
         // One window per app, so the open tabs are shared app-wide.
         services.AddSingleton<WorkspaceTabs>();
@@ -105,6 +107,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<UsageTabState>();
         services.AddSingleton<NewWorkspaceTabState>();
         services.AddSingleton<EditWorkspaceSessions>();
+        services.AddSingleton<VisualiserFeed>();
+        services.AddSingleton<WorkspaceOpenRequests>();
         services.AddSingleton<ToolImages>();
         services.AddSingleton<WorkspaceTools>();
         services.AddSingleton<TerminalLauncher>();
@@ -115,9 +119,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<WorkspaceTabRestorer>();
         services.AddSingleton<WorkspaceViewState>();
         services.AddSingleton<RepositoryListState>();
+        services.AddSingleton<HomeSearchState>();
         services.AddSingleton<GitGraphViewOptions>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<WindowStateStore>();
+        services.AddSingleton<VisualiserWindowStateStore>();
         services.AddSingleton<LayoutStateStore>();
         services.AddSingleton<IWorkspaceStore, WorkspaceStore>();
         services.AddSingleton<WorkspaceGitStatusMonitors>();

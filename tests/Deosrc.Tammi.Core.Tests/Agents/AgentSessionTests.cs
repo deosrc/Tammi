@@ -16,6 +16,15 @@ public class AgentSessionTests
     }
 
     [Fact]
+    public async Task Of_WithTitle_RecordsIt()
+    {
+        var id = Guid.NewGuid().ToString();
+        await using var agent = new Agent(AgentDefinition.ClaudeCode, "/ws", new FakePtySession(), sessionId: id);
+
+        Assert.Equal("Fix the bug", AgentSession.Of(agent, StartedAt, "Fix the bug")!.LastTitle);
+    }
+
+    [Fact]
     public async Task Of_WithoutSessionId_ReturnsNull()
     {
         await using var agent = new Agent(new AgentDefinition("Test", "agent"), "/ws", new FakePtySession());

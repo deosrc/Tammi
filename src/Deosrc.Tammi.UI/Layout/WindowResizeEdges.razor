@@ -1,0 +1,47 @@
+@implements IDisposable
+@using Deosrc.Tammi.Core.Platform
+@inject IWindowFrame Frame
+
+@* Thin strips along the window's edges and corners that resize it, for platforms where removing the title bar also
+   removed the window's own resize borders. Those platforms also lose the window's shadow, so a 1px border outlines the
+   window, or it would blend into the windows behind it. A maximised window can't be resized and has nothing to blend
+   into, so they're gone then. Custom markup: Fluent has nothing for a window's edges. *@
+@if (!Frame.HasTitleBar && Frame.NeedsResizeEdges && !Frame.IsMaximized)
+{
+    <div class="window-outline" aria-hidden="true"></div>
+    @foreach (var edge in Enum.GetValues<WindowEdge>())
+    {
+        <div class="window-resize-edge @EdgeClass(edge)" aria-hidden="true"
+             @onmousedown="args => BeginResize(edge, args)" @onmousedown:preventDefault="true"></div>
+    }
+}
+
+@code {
+    protected override void OnInitialized() => Frame.Changed += OnFrameChanged;
+
+    public void Dispose() => Frame.Changed -= OnFrameChanged;
+
+    private void BeginResize(WindowEdge edge, MouseEventArgs args)
+    {
+        if (args.Button == 0)
+        {
+            Frame.BeginResize(edge, (int)Math.Round(args.ScreenX), (int)Math.Round(args.ScreenY));
+        }
+    }
+
+    private static string EdgeClass(WindowEdge edge) => edge switch
+    {
+        WindowEdge.NorthWest => "north-west",
+        WindowEdge.North => "north",
+        WindowEdge.NorthEast => "north-east",
+        WindowEdge.West => "west",
+        WindowEdge.East => "east",
+        WindowEdge.SouthWest => "south-west",
+        WindowEdge.South => "south",
+        WindowEdge.SouthEast => "south-east",
+        _ => throw new ArgumentOutOfRangeException(nameof(edge), edge, null),
+    };
+
+    // Raised on any thread.
+    private void OnFrameChanged() => InvokeAsync(StateHasChanged);
+}

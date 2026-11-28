@@ -17,8 +17,12 @@ public interface IGitRepositoryReader
     /// Reads the status of the repository at <paramref name="path"/>, including its submodules.
     /// </summary>
     /// <param name="path">The repository's working directory. Workspace Worktrees are supported.</param>
+    /// <param name="mergeTarget">
+    /// What the branch was created from, e.g. <c>origin/main</c>. When it resolves,
+    /// <see cref="RepositoryStatus.CommitsOnBranch"/> is read from it.
+    /// </param>
     /// <exception cref="GitRepositoryNotFoundException">There's no repository at <paramref name="path"/>.</exception>
-    RepositoryStatus ReadStatus(string path);
+    RepositoryStatus ReadStatus(string path, string? mergeTarget = null);
 
     /// <summary>
     /// Reads commits from the repository at <paramref name="path"/>, newest first in topological order (children

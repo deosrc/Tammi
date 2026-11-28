@@ -1,10 +1,26 @@
 /* The terminal fills the room its parent gives it. Its colours come from the xterm.js theme (Terminal.razor.js), which
    is dark in both app themes. xterm.js has no padding of its own, so the gap around the text is this element's padding,
-   which has the theme's background and which xterm.js's fit leaves out of the terminal's size. */
+   which has the theme's background. The vertical padding is smaller than the horizontal, because the room left over
+   from a whole number of rows adds to it (see .terminal-surface). */
 .terminal {
     flex: 1;
     min-height: 0;
-    padding: var(--spacingVerticalM) var(--spacingHorizontalM);
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacingVerticalS) var(--spacingHorizontalM);
     overflow: hidden;
     background-color: #1e1e1e;
+}
+
+/* The element xterm.js opens in, inside the padding. xterm.js's fit sizes the terminal to this element's computed
+   height and width, which with app.css's border-box sizing would include any padding on it: padding here would let
+   the last rows run past the bottom and be cut off. The terminal is a whole number of rows, so up to a row's height is
+   left over: it's centred, so the leftover is split between the top and bottom rather than all below the last row. */
+.terminal-surface {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
 }

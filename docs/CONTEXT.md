@@ -44,6 +44,7 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
 | **Supported Agent** | An agent CLI that Tammi knows how to start, with a built-in Agent Definition (e.g. Claude Code). It's always offered and isn't configured by the user. |
 | **Custom Agent** | An agent CLI the user sets up with their own Agent Definition (e.g. Codex CLI or Gemini CLI). |
 | **Tools** | Actions that open the workspace or a repository in a tool (IDE, terminal, file manager, …). |
+| **Visualiser** | A separate window that draws every workspace as a ball of animated plasma, grouped by source, with its agents orbiting it, so the status of everything can be seen at a glance. See [Visualiser](#visualiser-window). |
 
 ## Core Flow: Creating a Workspace
 
@@ -55,14 +56,17 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
    - The task list can be changed after the workspace is created.
    - **Finding tasks.** One search box covers every connected Task Source at once, and the results are combined,
      most recently updated first. What the user enters decides what's searched:
-     - **Nothing:** the tasks assigned to the user that are still to do: open GitHub issues, and JIRA issues whose
-       status is in the To Do category (not in progress or done). Tasks already in a workspace are left out.
+     - **Nothing:** the tasks assigned to the user that are still to do: open GitHub issues that aren't In progress
+       or In review, and JIRA issues whose status is in the To Do category (not in progress or done). Tasks already
+       in a workspace are left out.
      - **A link or reference** to a task, e.g. an issue's URL, `owner/repo#42` or `ABC-123`: that task, from each
        source that recognises it. This is the only way to find public tasks outside the user's organisations. A link
        that no source recognises isn't searched.
      - **Any other text:** a search of the text of the tasks of the user and their organisations that aren't done:
        open GitHub issues, and JIRA issues whose status isn't in the Done category (see
        [Integrations](#integrations)). Tasks already in a workspace are found too, and marked with its name.
+   - Each task found, and each chosen task, shows its Task Status as a chip coloured by its category, as in the
+     Workspace View's Tasks section, so tasks in different statuses can be told apart.
    - Search starts when the user stops typing. A source that fails doesn't stop the others: its error is shown
      with their results.
    - Tasks chosen from several searches and sources are kept together in one list.
@@ -133,7 +137,11 @@ with a view of their git state, AI agents working on the tasks, and shortcuts in
      their new branches, the Workspace Folder and any parent folders it created that are still empty. Anything it
      couldn't remove is listed. Since the metadata is written last, a workspace that's only partly created is never
      listed on Home.
-   - The new workspace then opens in a tab, unless there were warnings, which are shown first.
+   - Once it's created, Tammi starts the agent chosen in Settings → Agents for new workspaces (none by default), in
+     the Workspace Folder. An agent that can't start (e.g. its CLI isn't installed) doesn't undo the workspace: why is
+     listed with the warnings.
+   - The new workspace then opens in a tab, on the agent started with it (or else its dashboard), unless there were
+     warnings, which are shown first.
 
 ### Repositories on disk
 
@@ -278,8 +286,8 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - **Pull Requests** from each repository's workspace branch, as the same badges as the Workspace View's
     [Repositories section](#workspace-view-tab)
 - **Layout:** Home can split workspaces into tabs and into groups within a tab, each by **source** or **status**, or not
-  at all (None). They are chosen with the View Options button on Home, and can't both use the same split (unless both are
-  None). The default is tabs by status, groups by source. Empty tabs and groups aren't shown. With no tabs, or no
+  at all (None). They are chosen with the View Options button (a cog) on Home, and can't both use the same split
+  (unless both are None). The default is tabs by status, groups by source. Empty tabs and groups aren't shown. With no tabs, or no
   groups, their controls and headings are left out.
   - A workspace's **status** is its overall state, not a Task Status: **Requires Attention** (a Pull Request has failed
     checks, an agent needs input or failed, or the workspace can't be read), **Done** (every Pull Request is merged, so
@@ -293,6 +301,12 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     Options, which they set the same way. Sources they haven't placed follow the others, alphabetically.
   - View Options shows the status order beside the other options when the window is wide enough.
   - Clicking a workspace's card opens it. There is no Open button.
+- **Header:** Home's header has, in order, the search box, the View Options button (a cog) and the New workspace
+  button (a plus). The Repositories Tab's name filter sits in the same place in its header, before its buttons.
+- **Search:** the search box narrows the workspaces, and the tabs and groups and their counts, to the ones that
+  match as the user types. Each word must be found, ignoring case, in the workspace's name, a task key (e.g.
+  `acme/api#42`), or a repository's folder name or branch; a workspace that can't be read matches by its name only. The
+  box is focused when Home opens, and keeps its text when the user leaves Home and comes back.
 - Each workspace shows a compact summary line (e.g. "2/3 repos changed · 1 agent needs input"). It can
   be expanded to show a breakdown for each repository and agent.
 - A repository counts as **changed** when it has uncommitted changes (staged, unstaged or untracked)
@@ -304,7 +318,8 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - Changes and unpushed commits inside a submodule make its parent repository changed too.
 - **Keeping git status current:**
   - Workspaces open in a tab watch their worktrees for file changes and update live.
-  - Other workspaces refresh when Home is shown, and on a timer (interval in Settings).
+  - Other workspaces refresh when Home is shown, and on a timer (interval in Settings). The Visualiser's window does
+    the same while it's open: it reads them when it opens, and then on the timer.
   - Agent status is always live, because Tammi runs the agent processes itself.
   - A workspace's card shows its open agents below the git badges, after a divider: an indicator for each, in the order
     they started (a spinner while Working, a bell icon when it Needs input, otherwise a dot coloured by its state),
@@ -347,8 +362,11 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     doesn't hold up the others.
   - A task that can't be read says why: its Task Source isn't connected, it wasn't found (or the user can't see it),
     or the source failed (with the error as a tooltip).
-  - **GitHub** issues are Open (to do), or Closed, Not planned or Duplicate (done), from the issue's state and why it
-    was closed. GitHub has no in-progress state. **JIRA** issues have their own status and its category.
+  - **GitHub** issues have GitHub's issue statuses, in repositories that have them (they're in preview, so not all
+    do yet): Backlog and Todo (to do), In progress and In review (in progress), and Done, Not planned and Duplicate
+    (done). An issue without one (its repository doesn't have statuses, or it was closed before they arrived) is Open
+    (to do), or Closed, Not planned or Duplicate (done), from the issue's state and why it was closed. **JIRA** issues
+    have their own status and its category.
 - **Side panel cards** that do something when clicked (a task's, an agent's and a repository's) do it wherever the card
   is clicked, and show it with a pointer and the card's colour on its border. Each card's name is also a button, so
   the keyboard can reach it.
@@ -498,12 +516,25 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - The header shows, right after the title, a chip for each state the agents are in, in the state's colour and holding
     the number of agents in it. On its right are two buttons: **History**, which opens the History tab, and
     **New Agent**, a menu of the Agent Definitions, each with where to start it (as the New menu's).
-  - The **History tab** (one per workspace, closed with its × like any tab) lists the workspace's recorded Agent
-    Sessions that aren't running as cards, most recently started first. A card has its agent's name at the top left and
-    when it was last started at the top right; at the bottom, a badge on the left with the repository it was started in
-    (none if it was the Workspace Folder) and, on the right, the buttons: Resume, which opens the session in a new
-    tab, and Forget. A session whose agent can't resume it says why instead. Past sessions aren't in the side panel.
+  - The **History tab** (one per workspace, closed with its × like any tab) lists the workspace's Agent Sessions as
+    cards. First come the sessions of its running agents, in the order they started, highlighted with an edge in the
+    colour of their [state](#agents) (blue, or the warning colour when it Needs input, with a tinted background) and
+    their state as a tinted badge at the top right; then its recorded sessions that aren't running, most recently
+    started first. A card has its agent's icon and the last title the agent set (see Terminals) at the top left, or
+    else its agent's name; under it, a line each for when the session was started, when it was last resumed (if it
+    has been) and, once it has ended, when it ended. A session recorded before Tammi kept when it was started says
+    when it was last started instead. At the bottom, a
+    badge on the left with the repository it was started in (none if it was the Workspace Folder) and, on the right,
+    the buttons: Show, which shows a running agent's tab, or for a past session, Resume, which opens it in a new tab,
+    and Forget. A session whose agent can't resume it says why instead. Past sessions aren't in the side panel.
     Like terminals, it stays when the workspace's tab closes; it isn't restored after a restart.
+  - An Agent Session is recorded as ended when its agent's process ends (including when Tammi closes), or when the
+    agent moves to another session (e.g. after Claude Code's `/clear`). Resuming it clears the end. When it was first
+    started is kept, so resuming it doesn't change that.
+  - An Agent Session's last title is recorded with it, a few seconds after the agent changes it (so a title that keeps
+    changing, e.g. animated while the agent works, isn't written each time) and as soon as the agent ends. Clearing
+    the title keeps the last one. A resumed session keeps its title until the agent sets another, and a new session
+    (e.g. after Claude Code's `/clear`) starts with the terminal's current title.
 - **Main area tabs:** the main area has its own row of tabs, below a small divider. The first is always the
   **dashboard** (an icon, no name), which the view shows until the user opens something else. The dashboard shows, in this order,
   the workspace's tasks, its repositories' git status, its agents with their states, and its Pull Requests (open ones
@@ -540,6 +571,55 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - A session that's already running in one of the workspace's agents can't be resumed again.
   - **Copy and paste:** Ctrl+Shift+C and Ctrl+Shift+V on every platform. On Windows, as in Windows Terminal,
     Ctrl+C also copies when text is selected (otherwise it interrupts the process) and Ctrl+V pastes.
+
+### Visualiser (window)
+
+A separate window, not a tab, that shows the state of everything at once. Each workspace is a ball, and each of its
+open agents orbits it, throwing off particles that show what it's doing. It's opened with the **Visualiser** button at
+the right of the footer, which brings the window forward instead if it's already open. There is only ever one.
+
+- **Workspaces:** every workspace is drawn, whether or not its tab is open. Its colour is the colour of its status tab
+  on Home, and its status is worked out the same way (see [Home](#home)): **Requires Attention** is red, **In Review**
+  amber, **In Development** blue, **Done** green and **Planning** white. How it's drawn is a setting: a ball of
+  animated **Plasma** (the default, each ball running slightly faster or slower than the others so they drift out of
+  step) or a soft **Glow**.
+- **Layout:** workspaces are grouped by source as Home groups them (see [Home](#home)). Sources are always in
+  alphabetical order with "No task" last, whatever order Home is set to. A source's workspaces fill an offset grid:
+  rows of about equal length, each shifted half a space from the one above, so every workspace is the same distance
+  from its neighbours. The groups are boxes as big as their grids, and are set out in rows in the same way: a wide
+  group takes the room of as many cells as it needs, every other row is shifted half a cell, and the number of rows is
+  the one whose shape best fits the window. When the window is too small for everything, the workspaces, the agents'
+  orbits and their dots all shrink together (down to a fifth of their size) until it fits.
+- **Agents:** each of a workspace's agents orbits it as a dot in the colour of its state (see [agent states](#agents)):
+  blue while **Working**, amber when it **Needs input**, red on **Error**, and grey for anything else (**Running**,
+  **Idle** or **Exited**). A closed agent disappears.
+  - A working agent orbits faster, and its particles stream out behind it along the path it came by.
+  - An agent that needs input pulses slowly like a beacon, and one that failed throws off quick sparks. Running and idle
+    agents give off a faint drift, and an exited one hardly any.
+  - When an agent stops working, it throws out a one-off burst of particles in the colour of the state it moved to.
+    A setting turns this off.
+  - Agents keep running when a workspace's tab is closed (see [Lifetime](#agents)), so they stay in the visualiser.
+- **Interaction:**
+  - Hovering a workspace shows a tooltip with its name, status, source and how many agents it has (and how many are
+    working). Hovering an agent shows its name, its state and its workspace. The tooltip is a dark translucent panel
+    that glows in the colour of what's hovered, and a ring marks the hovered ball or dot.
+  - Clicking a workspace, or one of its agents, opens the workspace in the main window (or shows its tab if it's
+    already open) and brings the main window to the front.
+- **Keeping it current:** it follows agents as they change state, and git status and Pull Requests as they're read.
+  Statuses are read when the window opens and then every status refresh interval from Settings, as on Home, until it's
+  closed. Workspaces open in a tab are live, so they aren't read. While a workspace's status is being read again (for
+  example just after its tab opens), it keeps the status it last had, rather than briefly changing colour.
+- **Window:**
+  - It's titled "Tammi Visualiser" and stays above other windows by default (a setting).
+  - It opens at the smallest size it can be (400×300) until the user has resized it. Its size, position and whether it's
+    maximised are kept (see [Technical Constraints](#technical-constraints)). If it was left where no screen shows its
+    top left corner any more (for example a monitor was disconnected), it opens centred over the main window instead,
+    and if it would then go past the edge of the screen it goes back to its default size.
+  - Closing it only closes the visualiser: the main window, workspaces and agents are unaffected.
+  - Trails are drawn by fading each frame rather than clearing it. Where the fade stops depends on the web view's
+    engine, so the page measures it when it starts and fades to exactly the background colour, to leave no grey
+    patches where something was drawn.
+- **Settings:** the visualisation type, the burst and keeping the window on top are in Settings → Visualiser.
 
 ### Settings
 
@@ -614,6 +694,9 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
     case and surrounding spaces, including the Supported Agents' names. A name that's already used is still saved,
     but shown as an error until it's changed.
   - Agents are offered in that order: the Supported Agents, then the Custom Agents.
+  - The agent to start when a workspace is created: **None** (the default) or one of the agents. It's recorded by
+    name. If no agent has that name now (e.g. it was renamed or removed), None is shown and no agent starts, but the
+    name is kept until the user chooses again, so an agent that gets the name back is started again.
   - The initial prompt style: **Prefill** (the default) or **Submit**. Prefill types the prompt into the agent's input
     about two seconds after it starts, without sending it, so the user can edit it and send it themselves. Submit passes
     it to the agent with its initial prompt arguments, so the agent acts on it straight away.
@@ -643,6 +726,14 @@ Settings are grouped into sections, listed in a vertical tab list down the left 
 
 Lists of arguments (for the terminal shell and Custom Agents) are edited one argument per line, so they need no
 quoting. Blank lines are ignored.
+- **Visualiser**
+  - **Workspace visualisation:** how the visualiser draws each workspace: **Plasma** (the default), a ball of animated
+    plasma, or **Glow**, a soft glow. Either is in the colour of the workspace's status. It applies straight away,
+    including in a visualiser that's already open.
+  - **Burst when an agent finishes working:** a switch, on by default. When an agent stops working, it throws out a
+    one-off burst of particles in the colour of the state it moved to. It also applies straight away.
+  - **Keep the window on top:** a switch, on by default. It keeps the visualiser's window above other windows. It
+    also applies straight away.
 - **About:** the Tammi version, and the git CLI and libgit2 versions
 
 Changes are saved as soon as they're made. The settings live in `settings.json` in the app's Config folder (see
@@ -960,8 +1051,9 @@ are left to other tools for now.
     the public key on the clipboard. A key GitHub says is already in use counts as added if it's on the user's account.
 - **Task keys** are GitHub's issue references, `owner/repo#number`. Pull requests aren't tasks.
 - **Finding tasks:**
-  - **Assigned:** the user's open issues (`is:open assignee:@me archived:false`). GitHub has no in-progress state, so
-    every open issue counts as still to do.
+  - **Assigned:** the user's open issues that aren't in progress (`is:open -category:started assignee:@me
+    archived:false`): In progress and In review issues are left out. Issues in repositories without issue statuses
+    have no category, so every open one counts as still to do.
   - **Text search** covers the open issues (`state:open`) in the user's own repositories, the organisations that own
     repositories they can reach (`org:`), and other users' repositories they collaborate on (`repo:`, so those users'
     other repositories aren't searched). Tammi reads these from the user's repositories and remembers them for 10 minutes. A search that covers
@@ -1041,6 +1133,11 @@ are left to other tools for now.
 - **Window state:** Tammi opens its window at the size it had when it was last closed, maximised if it was then.
   The state is kept in `window-state.json` in the Data folder, apart from the settings. If it's missing or can't be
   read, the window opens at its default size.
+- **Visualiser window state:** the [Visualiser's](#visualiser-window) window keeps its own size, position and whether it's
+  maximised in `visualiser-window-state.json` in the Data folder, apart from the main window's state, so the two
+  windows never share a size. Sizes and positions are in pixels. They're saved as the window changes, after
+  changes have stopped, and when it closes. A maximised window keeps the size and position it had before. If the file is
+  missing or can't be read, the window opens at its default size, centred over the main window.
 - **Layout state:** the sizes the user gives parts of the window (so far, the width of a Git Graph's commit details and
   the height of its message body) are kept in `layout-state.json` in the Data folder, apart from the window state,
   which the host writes as the window closes. It's written each time the user finishes resizing. If it's missing or
@@ -1068,7 +1165,14 @@ are left to other tools for now.
     session and opens the terminal without any code in the child. This needs glibc 2.29 or later.
   - Links in the terminal's output (plain `http(s)` URLs, and OSC 8 hyperlinks) open in the user's browser when clicked.
     Other schemes are ignored, as the output comes from a process and a link could otherwise start a program.
+  - Keys reach programs with all their modifiers when a program asks for a keyboard protocol: win32-input-mode,
+    which ConPTY asks for on Windows, and the kitty keyboard protocol on Linux (e.g. Claude Code, fish). For programs
+    that use legacy input (e.g. bash, zsh), Ctrl+Enter, Ctrl+Delete and Ctrl+Backspace, which it can't encode, are
+    translated to a line feed, Alt+D and Alt+Backspace. Ctrl+Delete is translated with a protocol too, and Ctrl+Enter
+    with the kitty protocol, because Claude Code doesn't bind them as pressed. Copy and paste keys and the right-click
+    stay with Tammi either way.
   - xterm.js is vendored in the UI library (`wwwroot/lib/xterm`), so the app needs no network access or npm build.
+    It's a 6.1 beta, as the keyboard protocols aren't in a stable release yet.
 
 ## Open Questions
 

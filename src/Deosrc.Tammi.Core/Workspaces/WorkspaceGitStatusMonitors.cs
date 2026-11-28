@@ -33,6 +33,11 @@ public sealed class WorkspaceGitStatusMonitors : IDisposable
     /// <summary>
     /// Returns the monitor of an open workspace, or <see langword="null"/> if it isn't being monitored.
     /// </summary>
+    /// <summary>
+    /// Raised when a workspace's monitor has been started: it's now live. It can be raised on any thread.
+    /// </summary>
+    public event Action? Started;
+
     public WorkspaceGitStatusMonitor? Find(string workspaceId)
     {
         lock (_lock)
@@ -74,6 +79,7 @@ public sealed class WorkspaceGitStatusMonitors : IDisposable
         }
 
         monitor.Start();
+        Started?.Invoke();
         return monitor;
     }
 

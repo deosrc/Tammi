@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <RootNamespace>Deosrc.Tammi.Linux</RootNamespace>
+    <!-- For the source-generated GTK calls that move and resize the window. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

@@ -176,6 +176,28 @@
     <FluentButton Appearance="ButtonAppearance.Primary" OnClick="AddDefinitionAsync">Add custom agent</FluentButton>
 </div>
 
+<h2 class="settings-field-title">New workspaces</h2>
+
+<div class="settings-form">
+    <div class="settings-field-group">
+        @{
+            // The chosen agent's name as it's offered, or None (an empty string) if no agent has that name now. A
+            // name that's missing is kept in the settings until another choice is made, so an agent that gets the
+            // name back is chosen again.
+            var startOptions = StartOnCreationOptions(agents);
+            var startChoice = agents.DefinitionToStartOnWorkspaceCreation?.Name.Trim() ?? NoAgent;
+        }
+        <FluentSelect Label="Agent to start" Items="startOptions"
+                      OptionText="@(name => name == NoAgent ? "None" : name)"
+                      Value="startChoice"
+                      ValueChanged="@((string name) => UpdateAgentsAsync(a => a with { StartOnWorkspaceCreation = name == NoAgent ? null : name }))" />
+        <p class="settings-help">
+            Started in the Workspace Folder as soon as a workspace is created, and shown when it opens. If it can't
+            start, the workspace is still created, and why is listed with its warnings.
+        </p>
+    </div>
+</div>
+
 <h2 class="settings-field-title">Initial prompt</h2>
 
 <div class="settings-form">
@@ -265,6 +287,15 @@
     private const string SessionIdExample = "<session ID>";
 
     private static string Text(string? value) => value ?? "";
+
+    // The choice of no agent to start when a workspace is created. Agents with a blank name can't be chosen.
+    private const string NoAgent = "";
+
+    private static IReadOnlyList<string> StartOnCreationOptions(AgentSettings agents) =>
+        [NoAgent, .. agents.Definitions
+            .Select(definition => definition.Name?.Trim() ?? "")
+            .Where(name => name.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
 
     private static bool HasPromptPlaceholder(AgentDefinition definition) =>
         definition.PromptArguments.Any(argument =>

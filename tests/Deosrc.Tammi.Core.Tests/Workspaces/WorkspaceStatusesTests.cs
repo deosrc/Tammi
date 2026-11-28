@@ -1,4 +1,5 @@
 using Deosrc.Tammi.Core.Agents;
+using Deosrc.Tammi.Core.Git;
 using Deosrc.Tammi.Core.Integrations;
 using Deosrc.Tammi.Core.Workspaces;
 
@@ -23,6 +24,17 @@ public sealed class WorkspaceStatusesTests
     [Fact]
     public void No_changes_is_planning() =>
         Assert.Equal(WorkspaceStatus.Planning, WorkspaceStatuses.Of(Summary(), []));
+
+    [Fact]
+    public void Pushed_commits_on_branch_are_in_development()
+    {
+        var status = new RepositoryStatus { Path = "/ws/api", CommitsOnBranch = 2 };
+        var summary = new WorkspaceGitSummary([new HomeRepositoryStatus(
+            new WorkspaceRepositoryStatus(Repository, "/ws/api") { Status = status, IsLoaded = true },
+            new WorkspaceRepositoryPullRequests(Repository) { IsLoaded = true })]);
+
+        Assert.Equal(WorkspaceStatus.InDevelopment, WorkspaceStatuses.Of(summary, []));
+    }
 
     [Fact]
     public void Merged_is_done() =>

@@ -11,6 +11,13 @@
     <div class="page-header">
         <h1>Repositories</h1>
         <div class="page-header-actions">
+            @if (State.Rows.Count > 0 || State.IsLoading)
+            {
+                @* Focused when the tab opens, so typing filters the list straight away. *@
+                <FluentTextInput Class="page-header-search" TextInputType="TextInputType.Search"
+                                 aria-label="Filter repositories" AutoComplete="off" Autofocus="true" Immediate="true"
+                                 Placeholder="Filter by name" @bind-Value="State.Filter" />
+            }
             <FluentButton IconOnly="true" Loading="@State.IsLoading" IconStart="@(new Icons.Regular.Size16.ArrowSync())"
                           Title="Scan for repositories again and read their status again" aria-label="Refresh"
                           OnClick="State.RescanAndRefreshAsync" />
@@ -32,72 +39,91 @@
     }
     else
     {
-        @* A row opens the repository's git graph, once it's read and has no problem. *@
-        <FluentDataGrid Items="@State.Rows.AsQueryable()" ItemKey="@(row => row.Repository.Path)" ShowHover="true"
-                        RowClass="@(row => CanOpen(row) ? "repository-row-open" : null)"
-                        GridTemplateColumns="2fr 1.5fr 1fr 0.7fr 0.7fr 0.8fr"
-                        OnRowClick="@((FluentDataGridRow<RepositoryListRow> row) => OpenGit(row.Item))"
-                        aria-label="Repositories">
-            <TemplateColumn Title="Name" Tooltip="true" TooltipText="@(row => row.Repository.Path)">
-                @context.Repository.Name
-            </TemplateColumn>
-            <TemplateColumn Title="Branch">
-                @if (!context.IsLoaded)
-                {
-                    <FluentSkeleton Width="80px" />
-                }
-                else if (context.Problem is { } problem)
-                {
-                    @* An unreadable repository's problem takes the place of its status. *@
-                    <CopyOnClick><span class="error" title="@problem">@problem</span></CopyOnClick>
-                }
-                else
-                {
-                    @(context.Status?.Branch ?? "(detached)")
-                }
-            </TemplateColumn>
-            <TemplateColumn Title="Changes">
-                @if (!context.IsLoaded)
-                {
-                    <FluentSkeleton Width="60px" />
-                }
-                else if (context.Problem is null && context.Status is { } status
-                         && GitStatusText.UncommittedChangeCount(status) > 0)
-                {
-                    <FluentBadge Appearance="BadgeAppearance.Tint" Color="BadgeColor.Warning">Local changes</FluentBadge>
-                }
-            </TemplateColumn>
-            <TemplateColumn Title="Ahead">
-                @if (!context.IsLoaded)
-                {
-                    <FluentSkeleton Width="40px" />
-                }
-                else if (context.Problem is null)
-                {
-                    <GitSyncChips Ahead="context.Status?.AheadBy ?? 0" Behind="0" Upstream="@context.Status?.Upstream" Inline="true" />
-                }
-            </TemplateColumn>
-            <TemplateColumn Title="Behind">
-                @if (!context.IsLoaded)
-                {
-                    <FluentSkeleton Width="40px" />
-                }
-                else if (context.Problem is null)
-                {
-                    <GitSyncChips Ahead="0" Behind="context.Status?.BehindBy ?? 0" Upstream="@context.Status?.Upstream" Inline="true" />
-                }
-            </TemplateColumn>
-            <TemplateColumn Title="Workspaces">
-                @if (context.IsLoaded && context.Problem is null)
-                {
-                    @context.WorkspaceCount
-                }
-            </TemplateColumn>
-        </FluentDataGrid>
+        var rows = FilteredRows;
+        if (rows.Count == 0 && State.Rows.Count > 0)
+        {
+            <p class="placeholder">No repositories match.</p>
+        }
+        else
+        {
+            @* A row opens the repository's git graph, once it's read and has no problem. *@
+            <FluentDataGrid Items="@rows.AsQueryable()" ItemKey="@(row => row.Repository.Path)" ShowHover="true"
+                            RowClass="@(row => CanOpen(row) ? "repository-row-open" : null)"
+                            GridTemplateColumns="2fr 1.5fr 1fr 0.7fr 0.7fr 0.8fr"
+                            OnRowClick="@((FluentDataGridRow<RepositoryListRow> row) => OpenGit(row.Item))"
+                            aria-label="Repositories">
+                <TemplateColumn Title="Name" Tooltip="true" TooltipText="@(row => row.Repository.Path)">
+                    @context.Repository.Name
+                </TemplateColumn>
+                <TemplateColumn Title="Branch">
+                    @if (!context.IsLoaded)
+                    {
+                        <FluentSkeleton Width="80px" />
+                    }
+                    else if (context.Problem is { } problem)
+                    {
+                        @* An unreadable repository's problem takes the place of its status. *@
+                        <CopyOnClick><span class="error" title="@problem">@problem</span></CopyOnClick>
+                    }
+                    else
+                    {
+                        @(context.Status?.Branch ?? "(detached)")
+                    }
+                </TemplateColumn>
+                <TemplateColumn Title="Changes">
+                    @if (!context.IsLoaded)
+                    {
+                        <FluentSkeleton Width="60px" />
+                    }
+                    else if (context.Problem is null && context.Status is { } status
+                             && GitStatusText.UncommittedChangeCount(status) > 0)
+                    {
+                        <FluentBadge Appearance="BadgeAppearance.Tint" Color="BadgeColor.Warning">Local changes</FluentBadge>
+                    }
+                </TemplateColumn>
+                <TemplateColumn Title="Ahead">
+                    @if (!context.IsLoaded)
+                    {
+                        <FluentSkeleton Width="40px" />
+                    }
+                    else if (context.Problem is null)
+                    {
+                        <GitSyncChips Ahead="context.Status?.AheadBy ?? 0" Behind="0" Upstream="@context.Status?.Upstream" Inline="true" />
+                    }
+                </TemplateColumn>
+                <TemplateColumn Title="Behind">
+                    @if (!context.IsLoaded)
+                    {
+                        <FluentSkeleton Width="40px" />
+                    }
+                    else if (context.Problem is null)
+                    {
+                        <GitSyncChips Ahead="0" Behind="context.Status?.BehindBy ?? 0" Upstream="@context.Status?.Upstream" Inline="true" />
+                    }
+                </TemplateColumn>
+                <TemplateColumn Title="Workspaces">
+                    @if (context.IsLoaded && context.Problem is null)
+                    {
+                        @context.WorkspaceCount
+                    }
+                </TemplateColumn>
+            </FluentDataGrid>
+        }
     }
 </div>
 
 @code {
+    private IReadOnlyList<RepositoryListRow> FilteredRows
+    {
+        get
+        {
+            var filter = State.Filter.Trim();
+            return filter.Length == 0
+                ? State.Rows
+                : [.. State.Rows.Where(row => row.Repository.Name.Contains(filter, StringComparison.CurrentCultureIgnoreCase))];
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         State.Changed += OnStateChanged;

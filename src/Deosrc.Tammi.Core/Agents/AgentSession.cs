@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Deosrc.Tammi.Core.Agents;
 
 /// <summary>
@@ -10,19 +12,39 @@ namespace Deosrc.Tammi.Core.Agents;
 /// The folder the agent was started in. Agents keep their sessions per folder, so it's resumed there too.
 /// </param>
 /// <param name="LastStartedAt">When the session was started, or last resumed.</param>
-public sealed record AgentSession(string Id, string AgentName, string WorkingDirectory, DateTimeOffset LastStartedAt)
+/// <param name="CreatedAt">
+/// When the session was first started, or <c>null</c> if it isn't known, e.g. for a session recorded before Tammi kept
+/// it.
+/// </param>
+/// <param name="LastEndedAt">
+/// When the session last ended: when its agent's process ended, or the agent moved to another session. It's
+/// <c>null</c> while it's running, or if its end wasn't seen.
+/// </param>
+/// <param name="LastTitle">
+/// The last title the agent set for its terminal in the session (see <see cref="Terminals.TerminalSession.Title"/>),
+/// which helps tell sessions apart, or <c>null</c> if it hasn't set one.
+/// </param>
+public sealed record AgentSession(
+    string Id,
+    string AgentName,
+    string WorkingDirectory,
+    DateTimeOffset LastStartedAt,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? CreatedAt = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? LastEndedAt = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? LastTitle = null)
 {
     /// <summary>
     /// Records the session an agent is running.
     /// </summary>
     /// <param name="agent">The agent, just started or resumed.</param>
     /// <param name="startedAt">When it was started or resumed.</param>
+    /// <param name="lastTitle">The last title the agent set for its terminal in the session, if any.</param>
     /// <returns>The session, or <c>null</c> if the agent's session can't be resumed.</returns>
-    public static AgentSession? Of(Agent agent, DateTimeOffset startedAt)
+    public static AgentSession? Of(Agent agent, DateTimeOffset startedAt, string? lastTitle = null)
     {
         ArgumentNullException.ThrowIfNull(agent);
         return agent.SessionId is { } id
-            ? new AgentSession(id, agent.Definition.Name, agent.WorkingDirectory, startedAt)
+            ? new AgentSession(id, agent.Definition.Name, agent.WorkingDirectory, startedAt, LastTitle: lastTitle)
             : null;
     }
 

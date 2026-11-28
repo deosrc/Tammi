@@ -3,6 +3,7 @@ using Deosrc.Tammi.Core.Credentials;
 using Deosrc.Tammi.Core.Platform;
 using IFilePicker = Deosrc.Tammi.Core.Platform.IFilePicker;
 using Deosrc.Tammi.Core.Platform.Pty;
+using Deosrc.Tammi.UI.Visualiser;
 
 namespace Deosrc.Tammi.Windows.PlatformServices;
 
@@ -21,8 +22,11 @@ internal static class PlatformServiceCollectionExtensions
         services.AddSingleton<IFolderPicker, WindowsFolderPicker>();
         services.AddSingleton<IFilePicker, WindowsFilePicker>();
         services.AddSingleton<IAppCloser, WindowsAppCloser>();
+        services.AddSingleton<WindowsWindowFrame>();
+        services.AddSingleton<IWindowFrame>(provider => provider.GetRequiredService<WindowsWindowFrame>());
         services.AddSingleton<IPtyService, WindowsPtyService>();
         services.AddSingleton<IApplicationIconProvider, WindowsApplicationIconProvider>();
+        services.AddSingleton<IVisualiserWindow, MauiVisualiserWindow>();
         return services;
     }
 }

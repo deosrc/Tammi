@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Tammi Visualiser</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0b0b; }
+  canvas { display: block; width: 100%; height: 100%; }
+  /* Tooltips are dark glass: the page shows through them, and the hovered thing's colour glows at the edge. */
+  #tip {
+    position: fixed; left: 0; top: 0; z-index: 1; max-width: 260px; padding: 7px 10px;
+    border: 1px solid color-mix(in srgb, var(--c, #8a6cf0) 55%, transparent); border-radius: 8px;
+    background: rgba(11, 11, 13, 0.62); backdrop-filter: blur(6px);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--c, #8a6cf0) 35%, transparent);
+    color: #cfd2d6; font: 12px/1.4 system-ui, sans-serif; pointer-events: none;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  canvas.clickable { cursor: pointer; }
+  #tip.shown { opacity: 1; }
+  #tip b { display: block; color: #fff; font-weight: 600; }
+  #tip span { color: #8b9097; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="tip"></div>
+<script>
+// A proof-of-concept visualiser. Workspaces are glowing nodes, grouped around their task source. Each agent orbits its
+// workspace and throws off particles: lots when it's working, a slow pulse when it needs the user, a few when idle.
+// Each frame fades the last one instead of clearing it, which leaves the trails.
+
+const states = {
+  Working: { rate: 3, speed: 1.6, pulse: false, orbit: 3, trail: true },
+  NeedsInput: { rate: 0.5, speed: 0.4, pulse: true },
+  Error: { rate: 2, speed: 2.2, pulse: false },
+  Running: { rate: 0.3, speed: 0.3, pulse: false },
+  Idle: { rate: 0.2, speed: 0.25, pulse: false },
+  Exited: { rate: 0.05, speed: 0.15, pulse: false },
+};
+
+function create(canvas) {
+  const context = canvas.getContext("2d");
+  // An agent is the colour of its status dot in the app's dark theme: blue while working, amber when it needs the
+  // user, red on error, and grey otherwise (idle, running or ended).
+  const agentColours = { Working: "#4c9aff", NeedsInput: "#d29922", Error: "#ff7b72" };
+  const grey = "#9ba1a8";
+
+  let workspaces = [];
+  let particles = [];
+  let width = 0;
+  let height = 0;
+  let frame = 0;
+  let time = 0;
+  let last = performance.now();
+  let pointer = null;
+  let hoverKey = null;
+
+  const tip = document.getElementById("tip");
+  canvas.addEventListener("pointermove", (e) => (pointer = { x: e.clientX, y: e.clientY }));
+  canvas.addEventListener("pointerleave", () => (pointer = null));
+
+  // Each frame is faded rather than cleared, which leaves the trails. Colours are whole numbers, and the engine rounds
+  // the fade colour and each blend, so a pixel stops fading some way short of the colour it fades towards. If that's
+  // the background, a grey patch is left wherever something was drawn. Where it stops depends on the engine, on whether
+  // the canvas is drawn by the GPU, and on its size, so it's measured on this canvas itself before anything is drawn:
+  // the fade colour is the one that bright pixels settle nearest the dark level wanted, and the background is the
+  // colour they settle on, so there is nothing left to see.
+  const fadeAlpha = 0.14;
+  const wantedLevel = 11;
+  let fadeLevel = wantedLevel;
+  let backgroundColour = `rgb(${wantedLevel}, ${wantedLevel}, ${wantedLevel})`;
+  let calibrated = false;
+
+  const calibrateFade = () => {
+    const levels = 21;
+    const tile = 8;
+    if (!canvas.width || width < levels * tile) {
+      return;
+    }
+
+    calibrated = true;
+    const ratio = window.devicePixelRatio || 1;
+
+    // A tile of white for each fade colour, all faded together, so that one read of the canvas covers them all.
+    context.globalCompositeOperation = "source-over";
+    context.fillStyle = "rgb(255, 255, 255)";
+    context.fillRect(0, 0, levels * tile, tile);
+    for (let frame = 0; frame < 60; frame++) {
+      for (let level = 0; level < levels; level++) {
+        context.fillStyle = `rgba(${level}, ${level}, ${level}, ${fadeAlpha})`;
+        context.fillRect(level * tile, 0, tile, tile);
+      }
+    }
+
+    const row = context.getImageData(0, Math.floor((tile / 2) * ratio), Math.ceil(levels * tile * ratio), 1).data;
+    let best = null;
+    for (let level = 0; level < levels; level++) {
+      const k = Math.floor((level * tile + tile / 2) * ratio) * 4;
+      const settled = [row[k], row[k + 1], row[k + 2]];
+      const distance = Math.abs(Math.max(...settled) - wantedLevel);
+      if (best === null || distance < best.distance) {
+        best = { level, settled, distance };
+      }
+    }
+
+    fadeLevel = best.level;
+    backgroundColour = `rgb(${best.settled.join(", ")})`;
+    document.documentElement.style.background = backgroundColour;
+    document.body.style.background = backgroundColour;
+  };
+
+  const resize = () => {
+    const ratio = window.devicePixelRatio || 1;
+    width = canvas.clientWidth;
+    height = canvas.clientHeight;
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    if (!calibrated) {
+      calibrateFade();
+    }
+
+    context.fillStyle = backgroundColour;
+    context.fillRect(0, 0, width, height);
+  };
+  // On a resize the canvas is redrawn at its new size and the nodes move to their places in it.
+  const observer = new ResizeObserver(() => {
+    resize();
+    layout();
+  });
+  observer.observe(canvas);
+  resize();
+
+  // A workspace is the colour of its status tab on Home, in the app's dark theme. Grey (Planning) is white.
+  const statusColours = {
+    RequiresAttention: "#ff7b72",
+    InReview: "#d29922",
+    InDevelopment: "#4c9aff",
+    Planning: "#ffffff",
+    Done: "#3fb950",
+  };
+  const statusColour = (status) => statusColours[status] ?? "#ffffff";
+
+  // A workspace is a ball of plasma: drifting bands of light, worked out on a small grid and stretched over the node,
+  // in its status colour with the brighter bands tending to white, fading out towards the edge.
+  const plasmaSize = 40;
+  // Each workspace has a surface of its own. Some browsers draw a canvas onto another later than the drawImage call, so
+  // one surface shared by every workspace would show them all as the last one drawn.
+  const makePlasmaSurface = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = plasmaSize;
+    canvas.height = plasmaSize;
+    const surface = canvas.getContext("2d");
+    return { canvas, surface, image: surface.createImageData(plasmaSize, plasmaSize) };
+  };
+  const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
+  // How workspaces are drawn: "Plasma" or "Glow", as the settings say.
+  let workspaceVisualisation = "Plasma";
+
+  // Whether an agent that stops working bursts, as the settings say.
+  let burstWhenWorkingFinishes = true;
+
+  const drawGlow = (w) => {
+    const glow = context.createRadialGradient(w.x, w.y, 0, w.x, w.y, nodeRadius());
+    glow.addColorStop(0, statusColour(w.status) + "55");
+    glow.addColorStop(1, "transparent");
+    context.fillStyle = glow;
+    context.beginPath();
+    context.arc(w.x, w.y, nodeRadius(), 0, Math.PI * 2);
+    context.fill();
+  };
+
+  const drawPlasma = (w) => {
+    const [red, green, blue] = rgbOf(statusColour(w.status));
+    const t = time * 0.9 * w.plasmaSpeed + w.phase;
+    w.plasma ??= makePlasmaSurface();
+    const data = w.plasma.image.data;
+    for (let py = 0; py < plasmaSize; py++) {
+      for (let px = 0; px < plasmaSize; px++) {
+        // Position from the middle, from -1 to 1.
+        const x = (px + 0.5) / plasmaSize * 2 - 1;
+        const y = (py + 0.5) / plasmaSize * 2 - 1;
+        const distance = Math.hypot(x, y);
+        const v = (
+          Math.sin(x * 4 + t) +
+          Math.sin(y * 5 - t * 1.3) +
+          Math.sin((x + y) * 3.5 + t * 0.7) +
+          Math.sin(distance * 7 - t * 1.6)
+        ) / 8 + 0.5;
+        const edge = Math.max(0, 1 - distance);
+        // Brightness follows the bands, and only the brightest tend to white, so the status colour still shows.
+        const brightness = 0.4 + v * 0.45;
+        const white = v * v * v * v * 0.1;
+        const k = (py * plasmaSize + px) * 4;
+        data[k] = Math.min(255, red * brightness + 255 * white);
+        data[k + 1] = Math.min(255, green * brightness + 255 * white);
+        data[k + 2] = Math.min(255, blue * brightness + 255 * white);
+        data[k + 3] = 255 * Math.pow(edge, 1.2) * (0.3 + v * 0.7) * 0.75;
+      }
+    }
+    w.plasma.surface.putImageData(w.plasma.image, 0, 0);
+    // Smaller than the glow, so the agents' orbits and the hover ring sit just outside it.
+    const radius = nodeRadius() * 0.8;
+    context.drawImage(w.plasma.canvas, w.x - radius, w.y - radius, radius * 2, radius * 2);
+  };
+  const agentColour = (state) => agentColours[state] ?? grey;
+
+  // How big everything is, from 1 (full size) down so that every workspace fits in the window. It moves towards
+  // the size the layout needs, so sizes change smoothly as workspaces come and go or the window is resized.
+  let targetScale = 1;
+  let scale = 1;
+  const nodeRadius = () => 40 * scale;
+  const orbitRadius = () => 34 * scale;
+
+  // A source's workspaces fill an offset grid around its centre: rows of about equal length, each row shifted half a
+  // space from the one above, so every workspace is the same distance from its neighbours.
+  const gridOffsets = (count, spacing) => {
+    const columns = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / columns);
+    const points = [];
+    for (let i = 0; i < count; i++) {
+      const row = Math.floor(i / columns);
+      points.push({
+        x: (i - row * columns) * spacing + (row % 2 ? spacing / 2 : 0),
+        y: (row - (rows - 1) / 2) * spacing * Math.sqrt(3) / 2,
+      });
+    }
+    // The grid is then centred on its middle.
+    const middle = (Math.min(...points.map((p) => p.x)) + Math.max(...points.map((p) => p.x))) / 2;
+    return points.map((p) => ({ x: p.x - middle, y: p.y }));
+  };
+
+  // Splits boxes, in order, into the given number of rows so the widest row is as narrow as it can be.
+  const splitRows = (widths, rows, gap) => {
+    const n = widths.length;
+    const rowWidth = (from, to) => widths.slice(from, to).reduce((sum, w) => sum + w, 0) + gap * (to - from - 1);
+    // best[k][i]: the narrowest the widest row can be, with the first i boxes in k rows.
+    const best = Array.from({ length: rows + 1 }, () => Array(n + 1).fill(Infinity));
+    const cut = Array.from({ length: rows + 1 }, () => Array(n + 1).fill(0));
+    best[0][0] = 0;
+    for (let k = 1; k <= rows; k++) {
+      for (let i = k; i <= n; i++) {
+        for (let j = k - 1; j < i; j++) {
+          const widest = Math.max(best[k - 1][j], rowWidth(j, i));
+          if (widest < best[k][i]) {
+            best[k][i] = widest;
+            cut[k][i] = j;
+          }
+        }
+      }
+    }
+    const result = [];
+    for (let k = rows, i = n; k > 0; k--) {
+      result.unshift([cut[k][i], i]);
+      i = cut[k][i];
+    }
+    return result;
+  };
+
+  // Groups are boxes as big as their grids. They're set out in rows, like a grid in which a wide group takes the room
+  // of as many cells as it needs, and every other row is shifted half a cell across. The number of rows is the one
+  // whose shape fits the window best.
+  const arrange = (size) => {
+    // In the order Home lists them: alphabetical, with workspaces that have no task last.
+    const noTask = "No task";
+    const sources = [...new Set(workspaces.map((w) => w.source))].sort(
+      (a, b) => (a === noTask) - (b === noTask) || a.localeCompare(b, undefined, { sensitivity: "base" }));
+    const groups = sources.map((source) => workspaces.filter((w) => w.source === source));
+    const radius = 40 * size;
+    // Neighbours are a workspace-width apart, centre to centre.
+    const offsets = groups.map((group) => gridOffsets(group.length, radius * 2));
+    const pad = radius * 1.5;
+    const boxes = offsets.map((points) => ({
+      width: Math.max(...points.map((p) => p.x)) - Math.min(...points.map((p) => p.x)) + pad * 2,
+      height: Math.max(...points.map((p) => p.y)) - Math.min(...points.map((p) => p.y)) + pad * 2,
+    }));
+    const roomWidth = Math.max(width - 40, 1);
+    const roomHeight = Math.max(height - 40, 1);
+    const gap = radius;
+    const shift = boxes.length ? boxes.reduce((sum, b) => sum + b.width, 0) / boxes.length / 2 : 0;
+
+    let chosen = { ratio: 0, centres: [] };
+    for (let rows = 1; rows <= boxes.length; rows++) {
+      const spans = splitRows(boxes.map((b) => b.width), rows, gap);
+      const placed = [];
+      let top = 0;
+      let left = Infinity;
+      let right = -Infinity;
+      spans.forEach(([from, to], r) => {
+        const height = Math.max(...boxes.slice(from, to).map((b) => b.height));
+        const widthOfRow = boxes.slice(from, to).reduce((sum, b) => sum + b.width, 0) + gap * (to - from - 1);
+        // Rows are centred, and every other one is shifted half a cell.
+        let x = -widthOfRow / 2 + (r % 2 ? shift : 0);
+        left = Math.min(left, x);
+        right = Math.max(right, x + widthOfRow);
+        for (let i = from; i < to; i++) {
+          placed[i] = { x: x + boxes[i].width / 2, y: top + height / 2 };
+          x += boxes[i].width + gap;
+        }
+        top += height + gap;
+      });
+      const total = top - gap;
+      const centre = (left + right) / 2;
+      const ratio = Math.max((right - left) / roomWidth, total / roomHeight);
+      if (!chosen.centres.length || ratio < chosen.ratio) {
+        chosen = { ratio, centres: placed.map((p) => ({ x: p.x - centre, y: p.y - total / 2 })) };
+      }
+    }
+    return { sources, groups, offsets, centres: chosen.centres, ratio: chosen.ratio };
+  };
+
+  const layout = () => {
+    let size = 1;
+    while (size > 0.2 && arrange(size).ratio > 1) size -= 0.025;
+    targetScale = size;
+
+    const { groups, offsets, centres } = arrange(size);
+    groups.forEach((group, s) => {
+      group.forEach((w, i) => {
+        w.tx = width / 2 + centres[s].x + offsets[s][i].x;
+        w.ty = height / 2 + centres[s].y + offsets[s][i].y;
+      });
+    });
+  };
+
+  const update = (payload) => {
+    // A snapshot is the settings and the workspaces. (A bare list of workspaces is still accepted.)
+    const nodes = Array.isArray(payload) ? payload : payload.workspaces;
+    if (!Array.isArray(payload) && payload.workspaceVisualisation) {
+      workspaceVisualisation = payload.workspaceVisualisation;
+    }
+
+    if (!Array.isArray(payload) && typeof payload.burstWhenWorkingFinishes === "boolean") {
+      burstWhenWorkingFinishes = payload.burstWhenWorkingFinishes;
+    }
+
+    workspaces = nodes.map((node) => {
+      const old = workspaces.find((w) => w.id === node.id);
+      // An agent that has stopped working bursts in the colour of the state it moved to, once, on the next frame.
+      const agents = node.agents.map((agent) => {
+        const before = old?.agents.find((a) => a.id === agent.id);
+        const burst = burstWhenWorkingFinishes
+          && (before?.burst || (before?.state === "Working" && agent.state !== "Working"));
+        return { ...agent, burst };
+      });
+      return { ...node, agents, x: old?.x ?? width / 2, y: old?.y ?? height / 2, tx: 0, ty: 0, phase: old?.phase ?? Math.random() * 6,
+        plasma: old?.plasma,
+        // Each plasma ball runs a little faster or slower than the others (within 6%), so they drift out of step.
+        plasmaSpeed: old?.plasmaSpeed ?? 1 + (Math.random() - 0.5) * 0.12 };
+    });
+    layout();
+  };
+
+  const stateText = (state) => (state === "NeedsInput" ? "needs input" : state.toLowerCase());
+
+  // The agent under the pointer, else the workspace: what it is, in text, and the colour it glows.
+  const findHover = () => {
+    if (!pointer) return null;
+    const near = (x, y, r) => Math.hypot(pointer.x - x, pointer.y - y) <= r;
+    for (const w of workspaces) {
+      for (const agent of w.agents) {
+        if (agent.ex !== undefined && near(agent.ex, agent.ey, Math.max(orbitRadius() * 0.3, 6))) {
+          return {
+            key: `${w.id}/${agent.id}`, workspaceId: w.id, x: agent.ex, y: agent.ey, r: Math.max(orbitRadius() * 0.26, 5), colour: agentColour(agent.state),
+            title: agent.id, lines: [`Agent, ${stateText(agent.state)}`, `in ${w.name}`],
+          };
+        }
+      }
+    }
+    for (const w of workspaces) {
+      if (near(w.x, w.y, nodeRadius())) {
+        const working = w.agents.filter((a) => a.state === "Working").length;
+        const count = `${w.agents.length} agent${w.agents.length === 1 ? "" : "s"}`;
+        return {
+          key: w.id, workspaceId: w.id, x: w.x, y: w.y, r: nodeRadius(), colour: statusColour(w.status), title: w.name,
+          lines: [
+            w.statusLabel,
+            w.source === "No task" ? "No task source" : `Source: ${w.source}`,
+            w.agents.length ? `${count}${working ? `, ${working} working` : ""}` : "No agents",
+          ],
+        };
+      }
+    }
+    return null;
+  };
+
+  let hovered = null;
+
+  // Clicking a workspace, or one of its agents, asks the host to open the workspace.
+  canvas.addEventListener("click", () => {
+    if (!hovered) return;
+    if (window.external && window.external.sendMessage) {
+      window.external.sendMessage(JSON.stringify({ open: hovered.workspaceId }));
+    } else {
+      // A host without messages watches for this address instead.
+      location.href = "tammi://open/" + encodeURIComponent(hovered.workspaceId);
+    }
+  });
+
+  const showHover = (hover) => {
+    hovered = hover;
+    canvas.classList.toggle("clickable", !!hover);
+    if (!hover) {
+      hoverKey = null;
+      tip.classList.remove("shown");
+      return;
+    }
+    if (hover.key !== hoverKey) {
+      hoverKey = hover.key;
+      tip.replaceChildren();
+      const title = document.createElement("b");
+      title.textContent = hover.title;
+      tip.append(title);
+      for (const line of hover.lines) {
+        const row = document.createElement("span");
+        row.textContent = line;
+        tip.append(row, document.createElement("br"));
+      }
+      tip.lastChild.remove();
+      tip.style.setProperty("--c", hover.colour);
+      tip.classList.add("shown");
+    }
+
+    // Beside the pointer, kept inside the window.
+    const x = Math.min(pointer.x + 16, width - tip.offsetWidth - 8);
+    const y = Math.min(pointer.y + 16, height - tip.offsetHeight - 8);
+    tip.style.transform = `translate(${Math.max(x, 8)}px, ${Math.max(y, 8)}px)`;
+
+    // A soft ring round what's hovered.
+    context.strokeStyle = hover.colour + "aa";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.arc(hover.x, hover.y, hover.r, 0, Math.PI * 2);
+    context.stroke();
+  };
+
+  const step = (now) => {
+    frame = requestAnimationFrame(step);
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    time += dt;
+    scale += (targetScale - scale) * Math.min(dt * 3, 1);
+
+    // Fade the last frame rather than clearing it (see calibrateFade).
+    context.globalCompositeOperation = "source-over";
+    context.fillStyle = `rgba(${fadeLevel}, ${fadeLevel}, ${fadeLevel}, ${fadeAlpha})`;
+    context.fillRect(0, 0, width, height);
+    context.globalCompositeOperation = "lighter";
+
+    for (const w of workspaces) {
+      w.x += (w.tx - w.x) * Math.min(dt * 2, 1);
+      w.y += (w.ty - w.y) * Math.min(dt * 2, 1);
+
+      if (workspaceVisualisation === "Glow") {
+        drawGlow(w);
+      } else {
+        drawPlasma(w);
+      }
+
+      w.agents.forEach((agent, i) => {
+        const config = states[agent.state] ?? states.Running;
+        const angle = time * 0.6 * (config.speed + 0.3) * (config.orbit ?? 1) + w.phase + (i / w.agents.length) * Math.PI * 2;
+        const ex = w.x + Math.cos(angle) * orbitRadius();
+        const ey = w.y + Math.sin(angle) * orbitRadius();
+        agent.ex = ex;
+        agent.ey = ey;
+        const colour = agentColour(agent.state);
+        if (agent.burst) {
+          agent.burst = false;
+          for (let n = 0; n < 160; n++) {
+            const direction = Math.random() * Math.PI * 2;
+            const speed = 40 + Math.random() * 110;
+            particles.push({ x: ex, y: ey, vx: Math.cos(direction) * speed, vy: Math.sin(direction) * speed, life: 1, colour });
+          }
+        }
+        const rate = config.pulse ? config.rate + 6 * Math.max(0, Math.sin(time * 3)) ** 4 : config.rate;
+        for (let n = rate * dt * 60 * 0.5 + Math.random(); n >= 1; n--) {
+          // A trailing state's particles drift back along the path the agent came by, so they stream out behind it.
+          // The others are thrown out in every direction.
+          const direction = config.trail
+            ? angle - Math.PI / 2 + (Math.random() - 0.5) * 0.5
+            : Math.random() * Math.PI * 2;
+          const speed = config.trail ? 10 + Math.random() * 30 : (0.3 + Math.random()) * config.speed * 60;
+          particles.push({ x: ex, y: ey, vx: Math.cos(direction) * speed, vy: Math.sin(direction) * speed, life: 1, colour });
+        }
+        context.fillStyle = colour;
+        context.beginPath();
+        context.arc(ex, ey, Math.max(2.5 * scale, 1.5), 0, Math.PI * 2);
+        context.fill();
+      });
+    }
+
+    particles = particles.filter((p) => p.life > 0).slice(-4000);
+    for (const p of particles) {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt * 0.7;
+      context.globalAlpha = Math.max(p.life, 0);
+      context.fillStyle = p.colour;
+      context.fillRect(p.x, p.y, 2, 2);
+    }
+    context.globalAlpha = 1;
+    showHover(findHover());
+  };
+  frame = requestAnimationFrame(step);
+
+  return {
+    update,
+  };
+}
+
+// The host sends each snapshot of the workspaces as JSON: Photino as a web message, MAUI by calling visualiserUpdate.
+const visualiser = create(document.getElementById("canvas"));
+window.visualiserUpdate = (nodes) => visualiser.update(typeof nodes === "string" ? JSON.parse(nodes) : nodes);
+if (window.external && window.external.receiveMessage) {
+  window.external.receiveMessage((message) => window.visualiserUpdate(message));
+  // Tells Photino the page is ready for its first snapshot.
+  window.external.sendMessage("ready");
+}
+</script>
+</body>
+</html>

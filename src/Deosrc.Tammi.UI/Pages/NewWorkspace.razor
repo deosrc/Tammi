@@ -257,8 +257,11 @@
 
     private void OnSessionChanged() => InvokeAsync(StateHasChanged);
 
-    private void OnCompleted(Deosrc.Tammi.Core.Workspaces.Workspace workspace) =>
-        InvokeAsync(() => Navigation.NavigateTo(AppRoutes.Workspace(workspace.Id)));
+    // Shows the agent started with the workspace, if any, or else its dashboard.
+    private void OnCompleted(Deosrc.Tammi.Core.Workspaces.Workspace workspace, IMainAreaTab? tab) =>
+        InvokeAsync(() => Navigation.NavigateTo(tab is null
+            ? AppRoutes.Workspace(workspace.Id)
+            : AppRoutes.WorkspaceTab(workspace.Id, tab.Id)));
 
     // The steps are changed with the buttons, so the wizard's own way of changing them (clicking a step) is turned off.
     private static void KeepStep(FluentWizardStepChangeEventArgs args) => args.IsCancelled = true;

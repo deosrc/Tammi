@@ -48,6 +48,12 @@ public sealed record GeneralSettings
     public ThemePreference Theme { get; init; } = ThemePreference.Auto;
 
     /// <summary>
+    /// Whether the window's title bar is removed, with the app bar taking its place: the window controls at its end,
+    /// and its empty space moving and maximising the window.
+    /// </summary>
+    public bool SlimWindow { get; init; } = true;
+
+    /// <summary>
     /// The lowest level Tammi logs at.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter<LogLevel>))]
@@ -112,6 +118,7 @@ public sealed record GeneralSettings
         && WorkspaceFolderNameFormat == other.WorkspaceFolderNameFormat
         && WorkspaceNameTemplate == other.WorkspaceNameTemplate
         && Theme == other.Theme
+        && SlimWindow == other.SlimWindow
         && LogLevel == other.LogLevel
         && HomeTabBy == other.HomeTabBy
         && HomeGroupBy == other.HomeGroupBy
@@ -123,5 +130,5 @@ public sealed record GeneralSettings
     public override int GetHashCode() =>
         HashCode.Combine(
             HashCode.Combine(DefaultWorkspaceParentFolder, WorkspaceFolderNameFormat, WorkspaceNameTemplate, LogLevel, Theme),
-            HomeTabBy, HomeGroupBy, HomeSourceOrder, HomeCustomSourceOrder.Count, HomeStatusOrder.Count);
+            HomeTabBy, HomeGroupBy, HomeSourceOrder, HomeCustomSourceOrder.Count, HomeStatusOrder.Count, SlimWindow);
 }

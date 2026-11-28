@@ -17,10 +17,10 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
     public GitLibraryVersion LibraryVersion => s_libraryVersion.Value;
 
     /// <inheritdoc />
-    public RepositoryStatus ReadStatus(string path)
+    public RepositoryStatus ReadStatus(string path, string? mergeTarget = null)
     {
         using Repository repository = Open(path);
-        return ReadStatus(repository);
+        return ReadStatus(repository) with { CommitsOnBranch = CountCommitsOnBranch(repository, mergeTarget) };
     }
 
     /// <inheritdoc />
@@ -232,6 +232,36 @@ public sealed class GitRepositoryReader : IGitRepositoryReader
         {
             return null;
         }
+    }
+
+    private static int? CountCommitsOnBranch(Repository repository, string? mergeTarget)
+    {
+        Commit? tip = repository.Head.Tip;
+        if (tip is null || string.IsNullOrEmpty(mergeTarget))
+        {
+            return null;
+        }
+
+        Commit? target;
+        try
+        {
+            target = repository.Lookup<Commit>(mergeTarget);
+        }
+        catch (LibGit2SharpException)
+        {
+            return null;
+        }
+
+        if (target is null)
+        {
+            return null;
+        }
+
+        return repository.Commits.QueryBy(new CommitFilter
+        {
+            IncludeReachableFrom = tip,
+            ExcludeReachableFrom = target,
+        }).Count();
     }
 
     private static int CountUnpushedCommits(Repository repository)

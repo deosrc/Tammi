@@ -159,6 +159,13 @@ public sealed class WorkspaceAgents(
     }
 
     /// <summary>
+    /// How long a change of an agent's title waits before it's recorded with its Agent Session, so an agent that keeps
+    /// changing its title (e.g. to animate it while it works) doesn't write the sessions file each time. A title is also
+    /// recorded as soon as the agent ends.
+    /// </summary>
+    public static readonly TimeSpan TitleRecordDelay = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// How long a prefilled initial prompt waits after the agent starts, so the agent is ready for input.
     /// </summary>
     public static readonly TimeSpan PrefillDelay = TimeSpan.FromSeconds(2);
@@ -205,7 +212,7 @@ public sealed class WorkspaceAgents(
     /// The definition has no command or can't resume sessions, or the session's ID isn't one Tammi could have set.
     /// </exception>
     /// <exception cref="ObjectDisposedException">The app is closing.</exception>
-    public Task<WorkspaceAgent> ResumeAsync(Workspace workspace, AgentSession session)
+    public async Task<WorkspaceAgent> ResumeAsync(Workspace workspace, AgentSession session)
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(session);
@@ -218,11 +225,18 @@ public sealed class WorkspaceAgents(
             throw new InvalidOperationException("The session is already running.");
         }
 
-        return AddAsync(
+        // An agent that ran the session and has just ended may still be recording that, which mustn't replace the
+        // resumed session's record.
+        await Task.WhenAll(For(workspace.Id)
+            .Where(agent => string.Equals(agent.Agent.SessionId, session.Id, StringComparison.OrdinalIgnoreCase))
+            .Select(WaitForExitRecordedAsync)).ConfigureAwait(false);
+
+        return await AddAsync(
             workspace,
             definition,
             RepositoryFolderOf(workspace, session.WorkingDirectory),
-            () => launcher.Resume(definition, session, PtySize.Default));
+            () => launcher.Resume(definition, session, PtySize.Default),
+            session).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -235,17 +249,18 @@ public sealed class WorkspaceAgents(
     /// <summary>
     /// Stops an agent, and keeps it open (as Exited) until it's closed. Stopping one that has ended does nothing.
     /// </summary>
-    /// <returns>Completes once the agent has ended, or been given up on.</returns>
-    public Task StopAsync(WorkspaceAgent agent)
+    /// <returns>Completes once the agent has ended and its session been recorded as ended, or been given up on.</returns>
+    public async Task StopAsync(WorkspaceAgent agent)
     {
         ArgumentNullException.ThrowIfNull(agent);
-        return agent.Agent.StopAsync();
+        await agent.Agent.StopAsync().ConfigureAwait(false);
+        await WaitForExitRecordedAsync(agent).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Closes an agent, stopping it if it's running. Closing one that's already closed does nothing.
     /// </summary>
-    /// <returns>Completes once the agent has ended, or been given up on.</returns>
+    /// <returns>Completes once the agent has ended and its session been recorded as ended, or been given up on.</returns>
     public async Task CloseAsync(WorkspaceAgent agent)
     {
         ArgumentNullException.ThrowIfNull(agent);
@@ -260,7 +275,17 @@ public sealed class WorkspaceAgents(
 
         Changed?.Invoke(agent.WorkspaceId);
         await agent.Agent.StopAsync().ConfigureAwait(false);
+
+        // So its end is recorded before the app closes.
+        await WaitForExitRecordedAsync(agent).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Waits for an agent that has ended to record its session as ended. One whose process hasn't ended (e.g. it
+    /// couldn't be stopped) isn't waited for.
+    /// </summary>
+    private static Task WaitForExitRecordedAsync(WorkspaceAgent agent) =>
+        agent.Agent.Ended.IsCompleted ? agent.ExitRecorded : Task.CompletedTask;
 
     /// <summary>
     /// Closes all of a workspace's agents, e.g. before it's deleted.
@@ -327,7 +352,8 @@ public sealed class WorkspaceAgents(
         Workspace workspace,
         AgentDefinition definition,
         string? repositoryFolder,
-        Func<Agent> start)
+        Func<Agent> start,
+        AgentSession? resumed = null)
     {
         var agentName = string.IsNullOrWhiteSpace(definition.Name) ? DefaultName : definition.Name.Trim();
         var baseName = repositoryFolder is null ? agentName : $"{agentName} ({repositoryFolder})";
@@ -346,7 +372,12 @@ public sealed class WorkspaceAgents(
                 throw;
             }
 
-            agent = new WorkspaceAgent(workspace.Id, UniqueName(workspace.Id, baseName), started);
+            agent = new WorkspaceAgent(
+                workspace.Id,
+                UniqueName(workspace.Id, baseName),
+                started,
+                timeProvider.GetUtcNow(),
+                resumed);
             _agents.Add(agent);
         }
 
@@ -367,23 +398,81 @@ public sealed class WorkspaceAgents(
 
         var store = SessionsOf(workspace);
         agent.Agent.StateChanged += _ => Changed?.Invoke(agent.WorkspaceId);
-        agent.Session.TitleChanged += () => Changed?.Invoke(agent.WorkspaceId);
+        agent.Session.TitleChanged += () =>
+        {
+            Changed?.Invoke(agent.WorkspaceId);
+            _ = RecordTitleLaterAsync(agent, store);
+        };
 
         // Raised when the agent's hooks report its session, or that it has moved to another one.
-        agent.Agent.SessionIdChanged += changed => _ = RecordSessionAsync(agent, store);
+        agent.Agent.SessionIdChanged += changed =>
+        {
+            var ended = agent.NoteNewSession(timeProvider.GetUtcNow());
+            _ = RecordNewSessionAsync(agent, store, ended);
+        };
         Changed?.Invoke(workspace.Id);
 
         await RecordSessionAsync(agent, store).ConfigureAwait(false);
+        agent.ExitRecorded = RecordExitAsync(agent, store);
         return agent;
     }
 
-    private async Task RecordSessionAsync(WorkspaceAgent agent, IAgentSessionStore store)
+    private async Task RecordNewSessionAsync(WorkspaceAgent agent, IAgentSessionStore store, AgentSession? ended)
     {
-        if (AgentSession.Of(agent.Agent, timeProvider.GetUtcNow()) is not { } session)
+        if (ended is not null)
+        {
+            await RecordAsync(agent, store, ended).ConfigureAwait(false);
+        }
+
+        await RecordSessionAsync(agent, store).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Records the agent's session with its last title, a moment after the title changes (see
+    /// <see cref="TitleRecordDelay"/>). Changes made while it waits are recorded together.
+    /// </summary>
+    private async Task RecordTitleLaterAsync(WorkspaceAgent agent, IAgentSessionStore store)
+    {
+        if (!agent.ScheduleTitleRecord())
         {
             return;
         }
 
+        try
+        {
+            await Task.Delay(TitleRecordDelay, timeProvider).ConfigureAwait(false);
+        }
+        finally
+        {
+            agent.EndTitleRecord();
+        }
+
+        if (agent.TitleNeedsRecording)
+        {
+            await RecordSessionAsync(agent, store).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Records the agent's session as ended, with its last title, once its process ends.
+    /// </summary>
+    private async Task RecordExitAsync(WorkspaceAgent agent, IAgentSessionStore store)
+    {
+        await agent.Agent.Ended.ConfigureAwait(false);
+        agent.NoteEnded(timeProvider.GetUtcNow());
+        await RecordSessionAsync(agent, store).ConfigureAwait(false);
+    }
+
+    private async Task RecordSessionAsync(WorkspaceAgent agent, IAgentSessionStore store)
+    {
+        if (agent.SessionToRecord() is { } session)
+        {
+            await RecordAsync(agent, store, session).ConfigureAwait(false);
+        }
+    }
+
+    private async Task RecordAsync(WorkspaceAgent agent, IAgentSessionStore store, AgentSession session)
+    {
         try
         {
             await store.RecordAsync(session).ConfigureAwait(false);

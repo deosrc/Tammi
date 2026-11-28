@@ -33,6 +33,26 @@ public sealed record AgentSettings
     public string? UsageAgentName { get; init; }
 
     /// <summary>
+    /// The name of the agent started in the Workspace Folder when a workspace is created, or <c>null</c> (the default)
+    /// to start none. A name that matches no agent now (e.g. one that was renamed or removed) starts none, but is kept,
+    /// so the agent is started again if one gets that name back.
+    /// </summary>
+    public string? StartOnWorkspaceCreation { get; init; }
+
+    /// <summary>
+    /// The Agent Definition named by <see cref="StartOnWorkspaceCreation"/>, or <c>null</c> if it names none of
+    /// <see cref="Definitions"/>. Names match when they're the same apart from case and surrounding spaces.
+    /// </summary>
+    [JsonIgnore]
+    public AgentDefinition? DefinitionToStartOnWorkspaceCreation =>
+        string.IsNullOrWhiteSpace(StartOnWorkspaceCreation)
+            ? null
+            : Definitions.FirstOrDefault(definition => string.Equals(
+                definition.Name?.Trim(),
+                StartOnWorkspaceCreation.Trim(),
+                StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
     /// Every Agent Definition that can be started, in the order they're offered: the Supported Agents (see
     /// <see cref="SupportedAgent.All"/>), then the Custom Agents.
     /// </summary>
@@ -52,6 +72,7 @@ public sealed record AgentSettings
             ? InitialPrompt.DefaultTemplate
             : InitialPromptTemplate,
         InitialPromptStyle = Enum.IsDefined(InitialPromptStyle) ? InitialPromptStyle : InitialPromptStyle.Prefill,
+        StartOnWorkspaceCreation = string.IsNullOrWhiteSpace(StartOnWorkspaceCreation) ? null : StartOnWorkspaceCreation.Trim(),
     };
 
     /// <summary>
@@ -81,10 +102,11 @@ public sealed record AgentSettings
         && InitialPromptTemplate == other.InitialPromptTemplate
         && InitialPromptStyle == other.InitialPromptStyle
         && UsageAgentName == other.UsageAgentName
+        && StartOnWorkspaceCreation == other.StartOnWorkspaceCreation
         && (CustomDefinitions is null || other.CustomDefinitions is null
             ? CustomDefinitions == other.CustomDefinitions
             : CustomDefinitions.SequenceEqual(other.CustomDefinitions));
 
     /// <inheritdoc />
-    public override int GetHashCode() => HashCode.Combine(InitialPromptTemplate, InitialPromptStyle, CustomDefinitions?.Count, UsageAgentName);
+    public override int GetHashCode() => HashCode.Combine(InitialPromptTemplate, InitialPromptStyle, CustomDefinitions?.Count, UsageAgentName, StartOnWorkspaceCreation);
 }
