@@ -286,8 +286,8 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
   - **Pull Requests** from each repository's workspace branch, as the same badges as the Workspace View's
     [Repositories section](#workspace-view-tab)
 - **Layout:** Home can split workspaces into tabs and into groups within a tab, each by **source** or **status**, or not
-  at all (None). They are chosen with the View Options button on Home, and can't both use the same split (unless both are
-  None). The default is tabs by status, groups by source. Empty tabs and groups aren't shown. With no tabs, or no
+  at all (None). They are chosen with the View Options button (a cog) on Home, and can't both use the same split
+  (unless both are None). The default is tabs by status, groups by source. Empty tabs and groups aren't shown. With no tabs, or no
   groups, their controls and headings are left out.
   - A workspace's **status** is its overall state, not a Task Status: **Requires Attention** (a Pull Request has failed
     checks, an agent needs input or failed, or the workspace can't be read), **Done** (every Pull Request is merged, so
@@ -301,7 +301,9 @@ repositories…**, a flow of two steps that reuse the Create Workspace steps for
     Options, which they set the same way. Sources they haven't placed follow the others, alphabetically.
   - View Options shows the status order beside the other options when the window is wide enough.
   - Clicking a workspace's card opens it. There is no Open button.
-- **Search:** a search box above the workspaces narrows them, and the tabs and groups and their counts, to the ones that
+- **Header:** Home's header has, in order, the search box, the View Options button (a cog) and the New workspace
+  button (a plus). The Repositories Tab's name filter sits in the same place in its header, before its buttons.
+- **Search:** the search box narrows the workspaces, and the tabs and groups and their counts, to the ones that
   match as the user types. Each word must be found, ignoring case, in the workspace's name, a task key (e.g.
   `acme/api#42`), or a repository's folder name or branch; a workspace that can't be read matches by its name only. The
   box is focused when Home opens, and keeps its text when the user leaves Home and comes back.

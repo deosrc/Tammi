@@ -18,13 +18,19 @@
     <div class="page-header">
         <h1>Workspaces</h1>
         <div class="page-header-actions">
-            <FluentButton aria-expanded="@(_layoutOpen ? "true" : "false")" aria-controls="home-layout-panel"
-                          OnClick="() => _layoutOpen = !_layoutOpen">
-                View Options
-            </FluentButton>
-            <FluentAnchorButton Appearance="ButtonAppearance.Primary" Href="@AppRoutes.NewWorkspace">
-                New workspace
-            </FluentAnchorButton>
+            @if (_workspaces is { Count: > 0 })
+            {
+                @* Focused when Home opens, so typing searches straight away. *@
+                <FluentTextInput Class="page-header-search" TextInputType="TextInputType.Search"
+                                 aria-label="Search workspaces" AutoComplete="off" Autofocus="true" Immediate="true"
+                                 Placeholder="Search by name, task, repository or branch" @bind-Value="Search.Text" />
+            }
+            <FluentButton IconOnly="true" IconStart="@(new Icons.Regular.Size16.Settings())" Title="View Options"
+                          aria-label="View Options" aria-expanded="@(_layoutOpen ? "true" : "false")"
+                          aria-controls="home-layout-panel" OnClick="() => _layoutOpen = !_layoutOpen" />
+            <FluentAnchorButton Appearance="ButtonAppearance.Primary" IconOnly="true" Href="@AppRoutes.NewWorkspace"
+                                IconStart="@(new Icons.Regular.Size16.Add())" Title="New workspace"
+                                aria-label="New workspace" />
         </div>
     </div>
 
@@ -102,11 +108,6 @@
     }
     else
     {
-        @* Focused when Home opens, so typing searches straight away. *@
-        <FluentTextInput Class="home-search" TextInputType="TextInputType.Search" aria-label="Search workspaces"
-                         AutoComplete="off" Autofocus="true" Immediate="true"
-                         Placeholder="Search by name, task, repository or branch" @bind-Value="Search.Text" />
-
         var general = SettingsStore.Current.General;
         var entries = Entries().Where(entry => WorkspaceSearch.Matches(entry.Listing, Search.Text)).ToArray();
         if (entries.Length == 0)
