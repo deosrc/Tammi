@@ -78,7 +78,7 @@ else if (_listing is { Availability: not WorkspaceAvailability.Available } listi
     <div class="page workspace-details">
         <h1>@listing.Name</h1>
         <p class="warning"><strong>@WorkspaceAvailabilityText.Summary(listing.Availability)</strong></p>
-        <p class="workspace-details-problem">@listing.Problem</p>
+        <p class="workspace-details-problem"><CopyOnClick>@listing.Problem</CopyOnClick></p>
         <dl class="workspace-details-facts">
             <dt>Workspace Folder</dt>
             <dd>@listing.Folder</dd>
@@ -121,7 +121,7 @@ else
                         }
                         @if (_tasks?.ContextFileProblem is { } contextFileProblem)
                         {
-                            <p class="workspace-task-problem">@contextFileProblem</p>
+                            <p class="workspace-task-problem"><CopyOnClick>@contextFileProblem</CopyOnClick></p>
                         }
                     </ChildContent>
                 </SidePanelSection>

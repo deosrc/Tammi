@@ -22,7 +22,7 @@
 
         case Step.Failed:
             <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                @_error
+                <CopyOnClick>@_error</CopyOnClick>
             </FluentMessageBar>
             <div class="workspace-details-actions">
                 <FluentButton Appearance="ButtonAppearance.Primary" OnClick="PlanAsync">Check again</FluentButton>
@@ -137,7 +137,7 @@
                 {
                     <CardListItem @key="result.Branch">
                         <span class="settings-list-path">@result.Branch.Branch</span>
-                        <span class="error">@result.Error</span>
+                        <span class="error"><CopyOnClick>@result.Error</CopyOnClick></span>
                     </CardListItem>
                 }
             </ul>

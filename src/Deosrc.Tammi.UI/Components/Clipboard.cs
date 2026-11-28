@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
 namespace Deosrc.Tammi.UI.Components;
@@ -13,13 +14,21 @@ public sealed class Clipboard(IJSRuntime js) : IAsyncDisposable
     /// Copies text to the clipboard.
     /// </summary>
     /// <returns>Whether it was copied.</returns>
-    public async Task<bool> CopyAsync(string text)
+    public Task<bool> CopyAsync(string text) => InvokeAsync("copyText", text);
+
+    /// <summary>
+    /// Copies the text an element shows, as it's laid out, to the clipboard.
+    /// </summary>
+    /// <returns>Whether it was copied.</returns>
+    public Task<bool> CopyTextOfAsync(ElementReference element) => InvokeAsync("copyElementText", element);
+
+    private async Task<bool> InvokeAsync(string identifier, object argument)
     {
         try
         {
             _module ??= await js.InvokeAsync<IJSObjectReference>(
                 "import", "./_content/Deosrc.Tammi.UI/js/clipboard.js");
-            return await _module.InvokeAsync<bool>("copyText", text);
+            return await _module.InvokeAsync<bool>(identifier, argument);
         }
         catch (JSException)
         {

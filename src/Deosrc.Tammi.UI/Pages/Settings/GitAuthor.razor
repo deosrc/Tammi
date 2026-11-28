@@ -14,7 +14,7 @@
     @if (_loadError is not null)
     {
         <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-            @_loadError
+            <CopyOnClick>@_loadError</CopyOnClick>
         </FluentMessageBar>
     }
     else if (_identity is null)
@@ -41,7 +41,7 @@
         @if (_saveError is not null)
         {
             <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                @_saveError
+                <CopyOnClick>@_saveError</CopyOnClick>
             </FluentMessageBar>
         }
     }

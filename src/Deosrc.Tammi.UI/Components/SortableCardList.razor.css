@@ -15,6 +15,7 @@
 
 .sortable-card-list ::deep .sortable-item {
     align-items: stretch;
+    -webkit-user-select: auto;
     user-select: auto;
 }
 

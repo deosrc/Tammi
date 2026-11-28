@@ -117,11 +117,11 @@
                                 <dd>@ToolText.Label(tool.Scope)</dd>
                             }
                             <dt>Command</dt>
-                            <dd><code>@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
+                            <dd><code class="selectable">@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
                             @if (executable is not null)
                             {
                                 <dt>Executable</dt>
-                                <dd><code>@executable</code></dd>
+                                <dd><code class="selectable">@executable</code></dd>
                             }
                         </dl>
                     }
@@ -186,7 +186,7 @@
                 {
                     <dl class="settings-values agent-status">
                         <dt>Command</dt>
-                        <dd><code>@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
+                        <dd><code class="selectable">@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
                     </dl>
                 }
 
@@ -320,7 +320,7 @@
                         {
                             <dl class="settings-values agent-command-preview">
                                 <dt>Opens as</dt>
-                                <dd><code>@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
+                                <dd><code class="selectable">@CommandLinePreview.Format(tool.Executable, tool.Arguments)</code></dd>
                             </dl>
                         }
                     </div>
@@ -338,7 +338,7 @@
 @if (SaveError is not null)
 {
     <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-        @SaveError
+        <CopyOnClick>@SaveError</CopyOnClick>
     </FluentMessageBar>
 }
 

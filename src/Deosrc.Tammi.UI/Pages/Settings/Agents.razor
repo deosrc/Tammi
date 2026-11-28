@@ -58,7 +58,7 @@
                 {
                     <dl class="settings-values agent-status">
                         <dt>Command</dt>
-                        <dd><code>@definition.Command</code></dd>
+                        <dd><code class="selectable">@definition.Command</code></dd>
                     </dl>
                 }
                 else
@@ -151,18 +151,18 @@
                 {
                     <dl class="settings-values agent-command-preview">
                         <dt>Starts as</dt>
-                        <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildArguments(null))</code></dd>
+                        <dd><code class="selectable">@CommandLinePreview.Format(definition.Command, definition.BuildArguments(null))</code></dd>
                         @if (definition.AcceptsInitialPrompt)
                         {
                             <dt>With a prompt</dt>
-                            <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildArguments(PromptExample))</code></dd>
+                            <dd><code class="selectable">@CommandLinePreview.Format(definition.Command, definition.BuildArguments(PromptExample))</code></dd>
                         }
                         @if (definition.CanResume)
                         {
                             <dt>New session</dt>
-                            <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildArguments(PromptExample, SessionIdExample))</code></dd>
+                            <dd><code class="selectable">@CommandLinePreview.Format(definition.Command, definition.BuildArguments(PromptExample, SessionIdExample))</code></dd>
                             <dt>Resuming</dt>
-                            <dd><code>@CommandLinePreview.Format(definition.Command, definition.BuildResumeArguments(SessionIdExample))</code></dd>
+                            <dd><code class="selectable">@CommandLinePreview.Format(definition.Command, definition.BuildResumeArguments(SessionIdExample))</code></dd>
                         }
                     </dl>
                 }
@@ -249,7 +249,7 @@
 @if (SaveError is not null)
 {
     <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-        @SaveError
+        <CopyOnClick>@SaveError</CopyOnClick>
     </FluentMessageBar>
 }
 

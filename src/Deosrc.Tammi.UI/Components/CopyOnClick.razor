@@ -1,0 +1,88 @@
+@implements IDisposable
+@inject Clipboard Clipboard
+
+@* Text that copies itself to the clipboard when it's clicked (or focused and Enter or Space is pressed), e.g. an error
+   message or a scope to give a token. Like the rest of the app, its text can't be selected, so this is how it's copied.
+   It copies Text when given, or otherwise the text it shows. When copied, it's highlighted for a moment and a screen
+   reader is told. It's custom markup, as no Fluent component copies on click. *@
+@if (Block)
+{
+    <div class="@CssClass" title="@Tooltip" role="button" tabindex="0" @ref="_element"
+         @onclick="CopyAsync" @onclick:stopPropagation="true" @onkeydown="OnKeyDownAsync">@ChildContent</div>
+}
+else
+{
+    <span class="@CssClass" title="@Tooltip" role="button" tabindex="0" @ref="_element"
+          @onclick="CopyAsync" @onclick:stopPropagation="true" @onkeydown="OnKeyDownAsync">@ChildContent</span>
+}
+@* Outside the element, so it isn't copied with its text. *@
+<span class="visually-hidden" role="status">@(_copied ? "Copied" : null)</span>
+
+@code {
+    private static readonly TimeSpan CopiedFor = TimeSpan.FromSeconds(1.5);
+
+    private ElementReference _element;
+    private bool _copied;
+    private int _copies;
+    private bool _disposed;
+
+    /// <summary>
+    /// What it shows.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// The text to copy. Without it, the text shown is copied.
+    /// </summary>
+    [Parameter]
+    public string? Text { get; set; }
+
+    /// <summary>
+    /// What it copies, for its tooltip, e.g. "the versions". Without it, the tooltip is "Click to copy".
+    /// </summary>
+    [Parameter]
+    public string? What { get; set; }
+
+    /// <summary>
+    /// Whether it's a block (a <c>div</c>) rather than inline (a <c>span</c>).
+    /// </summary>
+    [Parameter]
+    public bool Block { get; set; }
+
+    /// <summary>
+    /// More classes for its element.
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string CssClass => $"copy-on-click{(_copied ? " copied" : null)}{(Class is null ? null : $" {Class}")}";
+
+    private string Tooltip => What is null ? "Click to copy" : $"Click to copy {What}";
+
+    private async Task CopyAsync()
+    {
+        bool copied = Text is null
+            ? await Clipboard.CopyTextOfAsync(_element)
+            : await Clipboard.CopyAsync(Text);
+        if (!copied || _disposed)
+        {
+            return;
+        }
+
+        // A later copy restarts the highlight, so only the last one takes it away.
+        int copy = ++_copies;
+        _copied = true;
+        StateHasChanged();
+        await Task.Delay(CopiedFor);
+        if (!_disposed && copy == _copies)
+        {
+            _copied = false;
+            StateHasChanged();
+        }
+    }
+
+    private Task OnKeyDownAsync(KeyboardEventArgs e) => e.Key is "Enter" or " " ? CopyAsync() : Task.CompletedTask;
+
+    public void Dispose() => _disposed = true;
+}

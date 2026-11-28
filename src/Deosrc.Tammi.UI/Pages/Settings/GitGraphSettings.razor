@@ -20,7 +20,7 @@
     @if (SaveError is not null)
     {
         <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-            @SaveError
+            <CopyOnClick>@SaveError</CopyOnClick>
         </FluentMessageBar>
     }
 </div>

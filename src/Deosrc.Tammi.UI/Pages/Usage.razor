@@ -33,7 +33,7 @@
             </div>
             @if (state.Error is not null)
             {
-                <PanelMessage Intent="MessageBarIntent.Warning">@state.Error</PanelMessage>
+                <PanelMessage Intent="MessageBarIntent.Warning"><CopyOnClick>@state.Error</CopyOnClick></PanelMessage>
             }
             @if (state.Usage is { } usage)
             {

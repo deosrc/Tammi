@@ -92,6 +92,26 @@ body {
   height: 100%;
 }
 
+/* Like a desktop app, text can't be selected, except where it's worth copying: what's typed in fields, and text
+   marked .selectable (e.g. a diff's lines, a commit's message, or a command). Text such as an error message or a
+   version is copied by clicking it instead (CopyOnClick). Terminals select their own text.
+   WebKitGTK, the Linux web view, only knows the -webkit- prefixed property, so every rule needs both. It also inherits
+   the property into Fluent's fields' shadow DOM, so their hosts let their text be selected again. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+fluent-text-input,
+fluent-textarea,
+[contenteditable]:not([contenteditable="false"]),
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 h1 {
   margin: 0 0 var(--space-4);
   font-size: 1.5rem;
@@ -1224,6 +1244,7 @@ a {
 /* A header that toggles its card when clicked. */
 .agent-definition-toggle {
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -1509,6 +1530,7 @@ a {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-chrome);
+  font-family: var(--fontFamilyMonospace);
   font-size: var(--font-size-small);
   white-space: pre-wrap;
 }
@@ -1597,6 +1619,7 @@ a {
   margin: var(--space-1) 0 0;
   overflow-x: auto;
   white-space: pre-wrap;
+  font-family: var(--fontFamilyMonospace);
   font-size: var(--font-size-small);
 }
 
@@ -1948,17 +1971,22 @@ a {
   padding: 0 var(--space-2);
   color: var(--color-text-muted);
   text-align: right;
+  -webkit-user-select: none;
   user-select: none;
 }
 
+/* A line's text can be selected and copied, but not its numbers or its +/- mark. */
 .git-diff-text {
   padding: 0 var(--space-2);
   white-space: pre;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .git-diff-mark {
   display: inline-block;
   width: 1.5ch;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -2129,6 +2157,11 @@ a {
 .about-logo {
   height: 64px;
   margin-bottom: 1rem;
+}
+
+/* The versions copy together, so the highlight is as wide as they are. */
+.about-versions {
+  width: fit-content;
 }
 
 /* A tool's icon image in a Fluent menu item's start slot, at the size of the item's Fluent icons. */

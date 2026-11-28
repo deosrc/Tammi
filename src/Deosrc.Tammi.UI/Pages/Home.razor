@@ -78,7 +78,7 @@
             @if (_settingsError is not null)
             {
                 <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                    @_settingsError
+                    <CopyOnClick>@_settingsError</CopyOnClick>
                 </FluentMessageBar>
             }
         </FluentCard>
@@ -87,7 +87,7 @@
     @if (_indexProblem is not null)
     {
         <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-            @_indexProblem
+            <CopyOnClick>@_indexProblem</CopyOnClick>
         </FluentMessageBar>
     }
 

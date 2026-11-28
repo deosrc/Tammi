@@ -19,6 +19,7 @@
 
 /* A tab that can be moved isn't selected as text when it's dragged. */
 .tab-bar-tab.movable {
+    -webkit-user-select: none;
     user-select: none;
 }
 

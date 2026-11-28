@@ -49,7 +49,7 @@
                 else if (context.Problem is { } problem)
                 {
                     @* An unreadable repository's problem takes the place of its status. *@
-                    <span class="error" title="@problem">@problem</span>
+                    <CopyOnClick><span class="error" title="@problem">@problem</span></CopyOnClick>
                 }
                 else
                 {

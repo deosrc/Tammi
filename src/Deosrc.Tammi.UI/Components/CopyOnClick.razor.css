@@ -1,0 +1,17 @@
+/* The copy cursor says that clicking copies. Its text can't be selected, so a drag doesn't seem to start a selection
+   that does nothing. */
+.copy-on-click {
+    cursor: copy;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: background-color 0.15s;
+}
+
+.copy-on-click:hover {
+    background-color: var(--colorSubtleBackgroundHover);
+}
+
+/* Highlighted for a moment once copied. */
+.copy-on-click.copied {
+    background-color: var(--colorStatusSuccessBackground2);
+}

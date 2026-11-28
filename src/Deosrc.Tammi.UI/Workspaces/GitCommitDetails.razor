@@ -35,7 +35,7 @@
             </span>
         </div>
 
-        <h2 class="git-commit-subject">@(commit?.Subject ?? stash!.Message)</h2>
+        <h2 class="git-commit-subject selectable">@(commit?.Subject ?? stash!.Message)</h2>
 
         @if (stash is not null)
         {
@@ -59,7 +59,7 @@
 
         @if (_hasBody)
         {
-            <div class="git-commit-body" tabindex="0" aria-label="Commit message" @ref="_message">@body</div>
+            <div class="git-commit-body selectable" tabindex="0" aria-label="Commit message" @ref="_message">@body</div>
             @* Resizes the body: drag it, or focus it and use Up and Down. *@
             <Splitter AriaLabel="Resize the commit message" @ref="_messageSplitter" />
         }

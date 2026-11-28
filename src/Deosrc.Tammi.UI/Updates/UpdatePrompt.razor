@@ -21,7 +21,7 @@
                     <span>Tammi @Updater.Available!.Version is installed. Restart Tammi to use it.</span>
                     break;
                 case UpdateStatus.Failed:
-                    <span>@Updater.Error</span>
+                    <CopyOnClick>@Updater.Error</CopyOnClick>
                     break;
             }
         </ChildContent>

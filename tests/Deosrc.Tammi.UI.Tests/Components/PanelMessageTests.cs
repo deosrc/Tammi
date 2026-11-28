@@ -12,6 +12,7 @@ public sealed class PanelMessageTests : BunitContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddFluentUIComponents();
+        Services.AddScoped<Clipboard>();
     }
 
     [Fact]
@@ -39,5 +40,22 @@ public sealed class PanelMessageTests : BunitContext
             .Add(p => p.OnDismiss, () => { })
             .AddChildContent("Failed"));
         Assert.Contains("dismiss", with.Markup, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AnErrorCopiesWhenClicked()
+    {
+        var error = Render<PanelMessage>(parameters => parameters.AddChildContent("Couldn't read the diff."));
+        Assert.Equal("Couldn't read the diff.", error.Find(".copy-on-click").TextContent);
+
+        var notCopied = Render<PanelMessage>(parameters => parameters
+            .Add(p => p.CopyOnClick, false)
+            .AddChildContent("Couldn't push."));
+        Assert.Empty(notCopied.FindAll(".copy-on-click"));
+
+        var warning = Render<PanelMessage>(parameters => parameters
+            .Add(p => p.Intent, MessageBarIntent.Warning)
+            .AddChildContent("Discard the changes?"));
+        Assert.Empty(warning.FindAll(".copy-on-click"));
     }
 }

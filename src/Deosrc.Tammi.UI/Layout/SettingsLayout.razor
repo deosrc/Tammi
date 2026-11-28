@@ -19,7 +19,7 @@
         @* Shown on every section until the settings are next saved. *@
         @if (SettingsStore.LoadProblem is { } loadProblem)
         {
-            <p class="error">@loadProblem</p>
+            <p class="error"><CopyOnClick>@loadProblem</CopyOnClick></p>
         }
         @Body
     </div>

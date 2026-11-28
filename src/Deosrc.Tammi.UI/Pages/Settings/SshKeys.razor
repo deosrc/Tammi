@@ -20,7 +20,7 @@
     @if (_listError is not null)
     {
         <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-            @_listError
+            <CopyOnClick>@_listError</CopyOnClick>
         </FluentMessageBar>
     }
     else if (_keys is null)
@@ -109,7 +109,7 @@
                                 {
                                     <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine"
                                                       AllowDismiss="false">
-                                        @message.Text
+                                        <CopyOnClick>@message.Text</CopyOnClick>
                                     </FluentMessageBar>
                                 }
                                 else
@@ -179,7 +179,7 @@
                 {
                     <FluentMessageBar Intent="MessageBarIntent.Error" Layout="MessageBarLayout.MultiLine"
                                       AllowDismiss="false">
-                        @_generateError
+                        <CopyOnClick>@_generateError</CopyOnClick>
                     </FluentMessageBar>
                 }
                 <div class="settings-field-row">
