@@ -10,13 +10,13 @@
 @if (Updater.IsDevelopmentBuild)
 {
     <FluentMessageBar Class="settings-banner" Intent="MessageBarIntent.Warning" AllowDismiss="false">
-        New version detection is disabled as this is a development build of Tammi
+        <CopyOnClick>New version detection is disabled as this is a development build of Tammi</CopyOnClick>
     </FluentMessageBar>
 }
 else if (!Updater.CanUpdate)
 {
     <FluentMessageBar Class="settings-banner" Intent="MessageBarIntent.Warning" AllowDismiss="false">
-        New version detection is disabled as the version of this copy of Tammi can't be read.
+        <CopyOnClick>New version detection is disabled as the version of this copy of Tammi can't be read.</CopyOnClick>
     </FluentMessageBar>
 }
 

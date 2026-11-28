@@ -49,7 +49,7 @@
             @if (!plan.MetadataRead)
             {
                 <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                    The workspace's metadata can't be read, so its worktrees were found by looking in its folder.
+                    <CopyOnClick>The workspace's metadata can't be read, so its worktrees were found by looking in its folder.</CopyOnClick>
                 </FluentMessageBar>
             }
             @if (plan.CouldLoseWork)

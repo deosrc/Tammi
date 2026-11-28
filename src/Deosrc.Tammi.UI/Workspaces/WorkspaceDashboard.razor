@@ -95,9 +95,11 @@
             {
                 @if (PullRequests.Repositories.Any(repository => repository.Problem is not null))
                 {
-                    <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false"
-                                      title="@string.Join(Environment.NewLine, PullRequests.Repositories.Select(repository => repository.Problem).OfType<string>())">
-                        Some pull requests couldn't be read.
+                    var problems = string.Join(Environment.NewLine,
+                        PullRequests.Repositories.Select(repository => repository.Problem).OfType<string>());
+                    @* Copies the problems themselves, which its tooltip shows. *@
+                    <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false">
+                        <CopyOnClick Text="@problems"><span title="@problems">Some pull requests couldn't be read.</span></CopyOnClick>
                     </FluentMessageBar>
                 }
                 @if (AllPullRequests.Count == 0)

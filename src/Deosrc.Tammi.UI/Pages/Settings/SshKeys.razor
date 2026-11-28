@@ -69,9 +69,11 @@
                                                   AllowDismiss="false">
                                     <ChildContent>
                                         <p>
-                                            SSH won't use this key on its own. It only tries keys with default names, such as id_ed25519,
-                                            unless <span class="settings-list-path">@KeyStore.ConfigPath</span> names the file with an
-                                            <code>IdentityFile</code>. Git fetch, pull and push fail with "Permission denied (publickey)".
+                                            <CopyOnClick>
+                                                SSH won't use this key on its own. It only tries keys with default names, such as id_ed25519,
+                                                unless <span class="settings-list-path">@KeyStore.ConfigPath</span> names the file with an
+                                                <code>IdentityFile</code>. Git fetch, pull and push fail with "Permission denied (publickey)".
+                                            </CopyOnClick>
                                         </p>
                                         @if (choices.Count == 0)
                                         {
@@ -157,9 +159,9 @@
                 {
                     <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
                                       AllowDismiss="false">
-                        SSH only tries keys with default names, such as id_ed25519, on its own. With this name, git can't use
+                        <CopyOnClick>SSH only tries keys with default names, such as id_ed25519, on its own. With this name, git can't use
                         the key until your SSH config names it. After you generate it, the key shows a warning with an
-                        "Add Host entry" button that adds the entry to @KeyStore.ConfigPath for you.
+                        "Add Host entry" button that adds the entry to @KeyStore.ConfigPath for you.</CopyOnClick>
                     </FluentMessageBar>
                 }
 

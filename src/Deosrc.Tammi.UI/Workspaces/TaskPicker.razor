@@ -52,7 +52,7 @@
                 {
                     <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
                                       AllowDismiss="false">
-                        @error.SourceName: @error.Message
+                        <CopyOnClick>@error.SourceName: @error.Message</CopyOnClick>
                         @if (error.IsAuthentication)
                         {
                             <FluentLink Href="@AppRoutes.SettingsIntegrations">Check it in Settings › Integrations.</FluentLink>

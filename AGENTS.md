@@ -36,8 +36,9 @@ graph's virtualised commit table, its branch and tag labels, the splitters, the 
   e.g. by a right-click), `ToggleButtonGroup`, `Splitter`, `StatusDot`, `GitSyncChips` and `CopyOnClick` (text copied
   by clicking it).
 - Text can't be selected, except in fields and terminals. Mark text that's worth selecting `selectable` (e.g. a
-  diff's lines, a commit's message, a command, a path in settings). Wrap an error message, or other text to copy whole
-  (e.g. a version or a scope), in `CopyOnClick` instead. `PanelMessage` does this for errors.
+  diff's lines, a commit's message, a command, a path in settings). Wrap an error or warning message (but not a
+  confirmation with buttons), or other text to copy whole (e.g. a version or a scope), in `CopyOnClick` instead.
+  `PanelMessage` does this for errors.
 - Badges are filled for counters and tinted for everything else.
 - Page and tab titles are in title case.
 

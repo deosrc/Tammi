@@ -54,8 +54,8 @@
         @if (WorkspaceNames.FindUnknown(Current.WorkspaceNameTemplate).ToList() is { Count: > 0 } unknown)
         {
             <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false">
-                @string.Join(", ", unknown.Select(WorkspaceNames.Format)) @(unknown.Count == 1 ? "isn't a placeholder" : "aren't placeholders"),
-                so @(unknown.Count == 1 ? "it's" : "they're") left as written.
+                <CopyOnClick>@string.Join(", ", unknown.Select(WorkspaceNames.Format)) @(unknown.Count == 1 ? "isn't a placeholder" : "aren't placeholders"),
+                so @(unknown.Count == 1 ? "it's" : "they're") left as written.</CopyOnClick>
             </FluentMessageBar>
         }
         <dl class="settings-preview">

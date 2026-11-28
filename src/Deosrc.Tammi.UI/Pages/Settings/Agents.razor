@@ -98,8 +98,8 @@
                     {
                         <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
                                           AllowDismiss="false">
-                            None of these arguments has <code>@AgentDefinition.PromptPlaceholder</code>, so the prompt
-                            won't be passed.
+                            <CopyOnClick>None of these arguments has <code>@AgentDefinition.PromptPlaceholder</code>, so the prompt
+                            won't be passed.</CopyOnClick>
                         </FluentMessageBar>
                     }
 
@@ -116,8 +116,8 @@
                     {
                         <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
                                           AllowDismiss="false">
-                            None of these arguments has <code>@AgentDefinition.SessionIdPlaceholder</code>, so the
-                            session can't be resumed.
+                            <CopyOnClick>None of these arguments has <code>@AgentDefinition.SessionIdPlaceholder</code>, so the
+                            session can't be resumed.</CopyOnClick>
                         </FluentMessageBar>
                     }
 
@@ -134,15 +134,15 @@
                     {
                         <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
                                           AllowDismiss="false">
-                            None of these arguments has <code>@AgentDefinition.SessionIdPlaceholder</code>, so the
-                            agent won't know which session to resume.
+                            <CopyOnClick>None of these arguments has <code>@AgentDefinition.SessionIdPlaceholder</code>, so the
+                            agent won't know which session to resume.</CopyOnClick>
                         </FluentMessageBar>
                     }
                     else if (definition.SessionIdArguments.Count > 0 != definition.ResumeArguments.Count > 0)
                     {
                         <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine"
                                           AllowDismiss="false">
-                            Set both the session ID arguments and the resume arguments to resume this agent's sessions.
+                            <CopyOnClick>Set both the session ID arguments and the resume arguments to resume this agent's sessions.</CopyOnClick>
                         </FluentMessageBar>
                     }
                 </div>
@@ -226,15 +226,15 @@
         @if (!agents.InitialPromptTemplate.Contains(InitialPrompt.ContextFilePlaceholder, StringComparison.Ordinal))
         {
             <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                The template doesn't have <code>@InitialPrompt.ContextFilePlaceholder</code>, so agents won't be told
-                where the context file is.
+                <CopyOnClick>The template doesn't have <code>@InitialPrompt.ContextFilePlaceholder</code>, so agents won't be told
+                where the context file is.</CopyOnClick>
             </FluentMessageBar>
         }
         @if (agents.InitialPromptTemplate.AsSpan().ContainsAny('\r', '\n'))
         {
             <FluentMessageBar Intent="MessageBarIntent.Warning" Layout="MessageBarLayout.MultiLine" AllowDismiss="false">
-                On Windows, agents whose command is a batch file (e.g. <code>claude.cmd</code>) can't be given a prompt
-                with several lines, so they won't start. Keep the template on one line to start them.
+                <CopyOnClick>On Windows, agents whose command is a batch file (e.g. <code>claude.cmd</code>) can't be given a prompt
+                with several lines, so they won't start. Keep the template on one line to start them.</CopyOnClick>
             </FluentMessageBar>
         }
         <div class="settings-field-row">
