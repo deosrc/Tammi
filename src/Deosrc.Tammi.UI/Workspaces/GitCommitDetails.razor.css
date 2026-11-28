@@ -29,20 +29,6 @@
   cursor: copy;
 }
 
-/* Beside the id, so the id stays in the middle. */
-.git-commit-copied {
-  position: absolute;
-  left: calc(50% + 4.5em);
-  color: var(--colorStatusSuccessForeground1);
-  font-size: var(--fontSizeBase200);
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.git-commit-copied.shown {
-  opacity: 1;
-}
-
 /* As the message writes it: no change of case. */
 .git-commit-subject {
   flex: none;

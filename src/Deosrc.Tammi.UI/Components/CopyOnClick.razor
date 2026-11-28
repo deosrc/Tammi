@@ -3,8 +3,8 @@
 
 @* Text that copies itself to the clipboard when it's clicked (or focused and Enter or Space is pressed), e.g. an error
    message or a scope to give a token. Like the rest of the app, its text can't be selected, so this is how it's copied.
-   It copies Text when given, or otherwise the text it shows. When copied, it's highlighted for a moment and a screen
-   reader is told. It's custom markup, as no Fluent component copies on click. *@
+   It copies Text when given, or otherwise the text it shows. When copied, it's highlighted and a "Copied!" tooltip shows
+   above it for a moment, and a screen reader is told. It's custom markup, as no Fluent component copies on click. *@
 @if (Block)
 {
     <div class="@CssClass" title="@Tooltip" role="button" tabindex="0" @ref="_element"
@@ -16,7 +16,7 @@ else
           @onclick="CopyAsync" @onclick:stopPropagation="true" @onkeydown="OnKeyDownAsync">@ChildContent</span>
 }
 @* Outside the element, so it isn't copied with its text. *@
-<span class="visually-hidden" role="status">@(_copied ? "Copied" : null)</span>
+<span class="visually-hidden" role="status">@(_copied ? "Copied!" : null)</span>
 
 @code {
     private static readonly TimeSpan CopiedFor = TimeSpan.FromSeconds(1.5);
@@ -74,6 +74,7 @@ else
         int copy = ++_copies;
         _copied = true;
         StateHasChanged();
+        await Clipboard.ShowCopiedAsync(_element);
         await Task.Delay(CopiedFor);
         if (!_disposed && copy == _copies)
         {

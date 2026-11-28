@@ -15,6 +15,7 @@ public sealed class CopyOnClickTests : BunitContext
         _clipboard = JSInterop.SetupModule("./_content/Deosrc.Tammi.UI/js/clipboard.js");
         _clipboard.Setup<bool>("copyText", _ => true).SetResult(true);
         _clipboard.Setup<bool>("copyElementText", _ => true).SetResult(true);
+        _clipboard.SetupVoid("showCopied", _ => true).SetVoidResult();
     }
 
     [Fact]
@@ -64,8 +65,9 @@ public sealed class CopyOnClickTests : BunitContext
 
         copy.WaitForAssertion(() =>
         {
-            Assert.Equal("Copied", copy.Find("[role=status]").TextContent);
+            Assert.Equal("Copied!", copy.Find("[role=status]").TextContent);
             Assert.Contains("copied", copy.Find(".copy-on-click").ClassList);
+            Assert.Single(_clipboard.Invocations["showCopied"]);
         });
     }
 
@@ -82,5 +84,17 @@ public sealed class CopyOnClickTests : BunitContext
         Assert.Equal("Click to copy the license", element.GetAttribute("title"));
         Assert.Equal("button", element.GetAttribute("role"));
         Assert.Equal("MIT License", element.TextContent);
+    }
+
+    [Fact]
+    public void ShowsNoTooltip_WhenItCouldNotCopy()
+    {
+        _clipboard.Setup<bool>("copyText", _ => true).SetResult(false);
+        var copy = Render<CopyOnClick>(parameters => parameters.Add(p => p.Text, "read:jira-work"));
+
+        copy.Find(".copy-on-click").Click();
+
+        Assert.Empty(_clipboard.Invocations["showCopied"]);
+        Assert.Equal("", copy.Find("[role=status]").TextContent);
     }
 }

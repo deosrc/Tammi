@@ -25,14 +25,13 @@
         var sha = commit?.Sha ?? stash!.Sha;
 
         <div class="git-commit-bar">
-            <FluentButton Class="git-commit-hash" Appearance="ButtonAppearance.Transparent"
+            <FluentButton Id="@_hashId" Class="git-commit-hash" Appearance="ButtonAppearance.Transparent"
                           Title="@($"Copy the {(stash is null ? "commit" : "stash")} id ({sha})")"
                           OnClick="() => CopyAsync(sha)">
                 @(stash is null ? GitGraphText.ShortSha(sha) : $"{stash.Name} {GitGraphText.ShortSha(sha)}")
             </FluentButton>
-            <span class="git-commit-copied @(_copied == sha ? "shown" : null)" role="status">
-                @(_copied == sha ? "Copied" : null)
-            </span>
+            @* The tooltip says it was copied, and this tells a screen reader. *@
+            <span class="visually-hidden" role="status">@(_copied == sha ? "Copied!" : null)</span>
         </div>
 
         <h2 class="git-commit-subject selectable">@(commit?.Subject ?? stash!.Message)</h2>
@@ -160,6 +159,8 @@
     private DotNetObjectReference<GitCommitDetails>? _self;
     private string? _shownSha;
     private string? _copied;
+    // The id button's id, for the "Copied!" tooltip to be shown above it.
+    private readonly string _hashId = $"git-commit-hash-{Guid.NewGuid():N}";
     private bool _hasBody;
     private bool _disposed;
     private bool _busy;
@@ -268,7 +269,7 @@
         await script.DisposeAsync();
     }
 
-    // Copies the full commit id, and says so for a moment.
+    // Copies the full commit id, and says so in a tooltip for a moment.
     private async Task CopyAsync(string sha)
     {
         if (!await Clipboard.CopyAsync(sha))
@@ -278,6 +279,7 @@
 
         _copied = sha;
         StateHasChanged();
+        await Clipboard.ShowCopiedAsync(_hashId);
         await Task.Delay(TimeSpan.FromSeconds(1.5));
         if (!_disposed && _copied == sha)
         {

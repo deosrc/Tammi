@@ -2241,3 +2241,32 @@ fluent-menu-list {
   max-width: 90vw;
   overflow-x: hidden;
 }
+
+/* The "Copied!" tooltip shown above text that's just been copied (clipboard.js). It's made by script, outside any
+   component, so its styles are here. It looks like Fluent's tooltip. A popover is centred in the window by default, so
+   the script places it instead. */
+.copied-tip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 4px 11px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--borderRadiusMedium);
+  background: var(--colorNeutralBackground1);
+  box-shadow: var(--shadow16);
+  color: var(--colorNeutralForeground1);
+  font-family: var(--fontFamilyBase);
+  font-size: var(--fontSizeBase200);
+  line-height: var(--lineHeightBase200);
+  white-space: nowrap;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  animation: copied-tip-in 0.1s ease-out;
+}
+
+@keyframes copied-tip-in {
+  from {
+    opacity: 0;
+  }
+}
