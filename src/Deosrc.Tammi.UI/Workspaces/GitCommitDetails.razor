@@ -330,8 +330,9 @@
     private RenderFragment Person(string name, string email, string role, DateTimeOffset? when) => __builder =>
     {
         <li class="git-commit-person">
-            <span class="git-commit-person-name">@name</span>
-            <span class="git-commit-person-email">@email</span>
+            @* The name and the email address each copy when clicked. *@
+            <CopyOnClick What="the name"><span class="git-commit-person-name">@name</span></CopyOnClick>
+            <CopyOnClick What="the email address"><span class="git-commit-person-email">@email</span></CopyOnClick>
             <span class="git-commit-person-role" title="@(when is { } at ? GitGraphText.FullDate(at) : null)">
                 @role@(when is { } date ? $" {GitGraphText.When(date, DateTimeOffset.Now).ToLowerInvariant()}" : null)
             </span>
