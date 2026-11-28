@@ -963,37 +963,42 @@ a {
   background: var(--color-surface);
 }
 
-/* The agent's name at the left and when the session was last started at the right. */
-.agent-session-heading,
-.agent-session-footer {
+/* The agent's title or name at the left and, for a running agent, its state at the right. */
+.agent-session-heading {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
   min-width: 0;
 }
 
-.agent-session-heading {
-  justify-content: space-between;
+/* The session's times, and the repository it was started in, at the left, with the buttons beside them at the
+   bottom right, so they take no line of their own. */
+.agent-session-body {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  min-width: 0;
 }
 
-.agent-session-time {
-  flex: none;
-}
-
-/* The repository the session was started in, at the left, and the buttons at the right. */
-.agent-session-footer {
-  justify-content: space-between;
+.agent-session-details {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .agent-session-location {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.agent-session-footer .agent-card-actions {
+.agent-session-body .agent-card-actions {
   flex: none;
-  margin-left: auto;
 }
 
 .agent-session-name {
@@ -1003,19 +1008,25 @@ a {
   white-space: nowrap;
 }
 
-/* An agent's title or name takes the heading's free space, pushing its state and time to the right. */
+/* An agent's title or name takes the heading's free space, pushing its state to the right. */
 .agent-session-heading .agent-session-name {
   flex: 1;
   min-width: 0;
 }
 
 .agent-session-state {
-  display: flex;
   flex: none;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--colorNeutralForeground2);
+}
+
+/* When the session started and ended, and why it can't be resumed, under its title. */
+.agent-session-detail {
+  margin: 0;
+  color: var(--colorNeutralForeground3);
   font-size: var(--fontSizeBase200);
+}
+
+.agent-session-detail.warning {
+  color: var(--colorStatusWarningForeground1);
 }
 
 /* A session running in one of the workspace's agents: highlighted with an edge in the colour of its state, as the

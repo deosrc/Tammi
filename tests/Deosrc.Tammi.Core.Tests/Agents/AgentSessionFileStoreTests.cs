@@ -59,14 +59,23 @@ public sealed class AgentSessionFileStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task RecordAsync_WithTitle_WritesItThatANewStoreLists()
+    public async Task RecordAsync_WithCreationEndAndTitle_WritesThemThatANewStoreLists()
     {
-        var session = CreateSession(StartedAt) with { LastTitle = "Fix the bug" };
+        var session = CreateSession(StartedAt) with
+        {
+            CreatedAt = StartedAt.AddDays(-1),
+            LastEndedAt = StartedAt.AddHours(1),
+            LastTitle = "Fix the bug",
+        };
 
         await CreateStore().RecordAsync(session, Token);
 
         var json = JsonNode.Parse(await File.ReadAllTextAsync(FilePath, Token))!.AsObject();
-        Assert.Equal("Fix the bug", json["sessions"]![0]!["lastTitle"]!.GetValue<string>());
+        var written = Assert.Single(json["sessions"]!.AsArray())!.AsObject();
+        Assert.Equal(
+            ["id", "agentName", "workingDirectory", "lastStartedAt", "createdAt", "lastEndedAt", "lastTitle"],
+            written.Select(p => p.Key));
+        Assert.Equal("Fix the bug", written["lastTitle"]!.GetValue<string>());
         Assert.Equal([session], await CreateStore().ListAsync(Token));
     }
 

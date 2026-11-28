@@ -35,17 +35,17 @@
                     <div class="agent-session-heading">
                         <AgentIcon Definition="agent.Agent.Definition" />
                         <div class="agent-session-name" title="@agent.WorkingDirectory">@agent.DisplayName</div>
-                        <div class="agent-session-state">
-                            <AgentStateIndicator State="agent.State" />
-                            @AgentStateText.Label(agent.State)
-                        </div>
-                        <div class="agent-session-time">@agent.SessionStartedAt.ToLocalTime().ToString("g")</div>
+                        <FluentBadge Class="agent-session-state" Appearance="BadgeAppearance.Tint"
+                                     Color="AgentStateText.CardTone(agent.State).ToBadgeColor()">@AgentStateText.Label(agent.State)</FluentBadge>
                     </div>
-                    <div class="agent-session-footer">
-                        @if (WorkspaceAgents.RepositoryFolderOf(Workspace, agent.WorkingDirectory) is { } folder)
-                        {
-                            <FluentBadge Class="agent-session-location" Appearance="BadgeAppearance.Tint" title="@agent.WorkingDirectory">@folder</FluentBadge>
-                        }
+                    <div class="agent-session-body">
+                        <div class="agent-session-details">
+                            <AgentSessionTimes CreatedAt="agent.SessionCreatedAt" LastStartedAt="agent.SessionStartedAt" />
+                            @if (WorkspaceAgents.RepositoryFolderOf(Workspace, agent.WorkingDirectory) is { } folder)
+                            {
+                                <FluentBadge Class="agent-session-location" Appearance="BadgeAppearance.Tint" title="@agent.WorkingDirectory">@folder</FluentBadge>
+                            }
+                        </div>
                         <div class="agent-card-actions">
                             <FluentButton Size="ButtonSize.Small" Appearance="ButtonAppearance.Primary"
                                           OnClick="() => OnShow.InvokeAsync(agent)">Show</FluentButton>
@@ -64,17 +64,20 @@
                             <AgentIcon Definition="definition" />
                         }
                         <div class="agent-session-name" title="@session.WorkingDirectory">@(session.LastTitle ?? session.AgentName)</div>
-                        <div class="agent-session-time">@session.LastStartedAt.ToLocalTime().ToString("g")</div>
                     </div>
-                    @if (cantResume is not null)
-                    {
-                        <p class="agent-card-detail warning">@cantResume</p>
-                    }
-                    <div class="agent-session-footer">
-                        @if (WorkspaceAgents.RepositoryFolderOf(Workspace, session.WorkingDirectory) is { } folder)
-                        {
-                            <FluentBadge Class="agent-session-location" Appearance="BadgeAppearance.Tint" title="@session.WorkingDirectory">@folder</FluentBadge>
-                        }
+                    <div class="agent-session-body">
+                        <div class="agent-session-details">
+                            <AgentSessionTimes CreatedAt="session.CreatedAt" LastStartedAt="session.LastStartedAt"
+                                               LastEndedAt="session.LastEndedAt" />
+                            @if (cantResume is not null)
+                            {
+                                <p class="agent-session-detail warning">@cantResume</p>
+                            }
+                            @if (WorkspaceAgents.RepositoryFolderOf(Workspace, session.WorkingDirectory) is { } folder)
+                            {
+                                <FluentBadge Class="agent-session-location" Appearance="BadgeAppearance.Tint" title="@session.WorkingDirectory">@folder</FluentBadge>
+                            }
+                        </div>
                         <div class="agent-card-actions">
                             <FluentButton Size="ButtonSize.Small" Appearance="ButtonAppearance.Primary"
                                           Disabled="@(cantResume is not null || _busy)"

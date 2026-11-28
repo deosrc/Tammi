@@ -1,0 +1,40 @@
+@* When an Agent Session was started, resumed and ended, a line each, on its card in the History tab. A session recorded
+   before its first start was kept only has when it was last started. *@
+@if (CreatedAt is { } createdAt)
+{
+    <p class="agent-session-detail">Started @Time(createdAt)</p>
+    @if (LastStartedAt != createdAt)
+    {
+        <p class="agent-session-detail">Resumed @Time(LastStartedAt)</p>
+    }
+}
+else
+{
+    <p class="agent-session-detail">Last started @Time(LastStartedAt)</p>
+}
+@if (LastEndedAt is { } endedAt)
+{
+    <p class="agent-session-detail">Ended @Time(endedAt)</p>
+}
+
+@code {
+    /// <summary>
+    /// When the session was first started, or <c>null</c> if it isn't known.
+    /// </summary>
+    [Parameter]
+    public DateTimeOffset? CreatedAt { get; set; }
+
+    /// <summary>
+    /// When the session was last started or resumed.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public DateTimeOffset LastStartedAt { get; set; }
+
+    /// <summary>
+    /// When the session last ended, or <c>null</c> if it's running or its end isn't known.
+    /// </summary>
+    [Parameter]
+    public DateTimeOffset? LastEndedAt { get; set; }
+
+    private static string Time(DateTimeOffset time) => time.ToLocalTime().ToString("g");
+}

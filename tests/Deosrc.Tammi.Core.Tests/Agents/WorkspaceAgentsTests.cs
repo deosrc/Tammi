@@ -211,6 +211,7 @@ public sealed class WorkspaceAgentsTests : IAsyncDisposable
 
         var resumed = await _agents.ResumeAsync(_workspace, session);
 
+        Assert.Equal(session.LastStartedAt, session.CreatedAt);
         var request = _pty.Requests[1].Request;
         Assert.Equal(["-a", "--resume", session.Id], request.Arguments);
         Assert.Equal(_workspace.GetWorktreePath(repository), request.WorkingDirectory);
@@ -218,6 +219,8 @@ public sealed class WorkspaceAgentsTests : IAsyncDisposable
         Assert.Equal("Resumable (api) 2", resumed.Name);
         var recorded = Assert.Single(await _agents.SessionsOf(_workspace).ListAsync(TestContext.Current.CancellationToken));
         Assert.Equal(_time.GetUtcNow(), recorded.LastStartedAt);
+        Assert.Equal(session.CreatedAt, recorded.CreatedAt);
+        Assert.Null(recorded.LastEndedAt);
     }
 
     [Fact]
@@ -470,6 +473,34 @@ public sealed class WorkspaceAgentsTests : IAsyncDisposable
         _pty.Sessions[0].Exit(0);
 
         await WaitForSessionAsync(session => session.LastTitle == "Fix the bug");
+    }
+
+    [Fact]
+    public async Task AgentEnds_RecordsWhenItsSessionEnded_AndResumingClearsIt()
+    {
+        var agent = await _agents.StartAsync(_workspace, Resumable);
+        var startedAt = _time.GetUtcNow();
+        Assert.Null(Assert.Single(await ListSessionsAsync()).LastEndedAt);
+        _time.Advance(TimeSpan.FromMinutes(10));
+
+        _pty.Sessions[0].Exit(0);
+
+        var ended = await WaitForSessionAsync(session => session.LastEndedAt == _time.GetUtcNow());
+        Assert.Equal(startedAt, ended.LastStartedAt);
+
+        await _agents.ResumeAsync(_workspace, ended);
+
+        Assert.Null(Assert.Single(await ListSessionsAsync()).LastEndedAt);
+    }
+
+    [Fact]
+    public async Task CloseAsync_RecordsTheSessionsEndBeforeItCompletes()
+    {
+        var agent = await _agents.StartAsync(_workspace, Resumable);
+
+        await _agents.CloseAsync(agent);
+
+        Assert.Equal(_time.GetUtcNow(), Assert.Single(await ListSessionsAsync()).LastEndedAt);
     }
 
     [Fact]
